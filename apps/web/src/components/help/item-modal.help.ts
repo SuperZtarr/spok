@@ -11,7 +11,7 @@ export const help: HelpEntry = {
     'Les contributions permettent de discuter sur l\'élément',
     'Créez des relations pour lier les éléments entre eux',
     'Les enfants sont listés en bas de la fiche',
-    'En mode Forum, « Plus de champs » affiche type, statut, dates, relations et tags',
+    '« Plus de champs » affiche type, statut, dates, relations et tags ; « Moins de champs » les masque (fiche ouverte réduite en Forum et JDR, complète ailleurs)',
   ],
   tour: [
     {
@@ -31,11 +31,11 @@ export const help: HelpEntry = {
       },
     },
     {
-      // Mode Forum seulement : la fiche s'ouvre réduite, les étapes Type → Tags n'apparaissent qu'une fois dépliée
+      // Présent dans tous les modes ; fiche réduite, les étapes Type → Tags n'apparaissent qu'une fois dépliée
       element: '[data-tour="item-more-fields"]',
       popover: {
-        title: 'Plus de champs',
-        description: 'La fiche s\'ouvre réduite : dépliez-la pour voir et modifier le type, le statut, les dates, les relations et les tags.',
+        title: 'Plus de champs / Moins de champs',
+        description: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et JDR, complète dans les autres modes.',
         side: 'bottom',
       },
     },

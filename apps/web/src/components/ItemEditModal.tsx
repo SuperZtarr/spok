@@ -4,13 +4,12 @@
  * assignation, tags, dates (début/fin/échéance), URL, relations, contributions (thread).
  * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
  * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
- * Modes d'interface (Forum/Projet/Exploration/Tous). En mode Forum, le modal est réduit à
- * Titre + Description (hauteur adaptée au contenu, 240px min / 40vh max, pour que les contributions
- * restent visibles juste dessous) + blocs media + Réactions/Contributions ; un toggle « Plus de champs »
- * (forumExpanded → showAll) révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants
- * et repasse en layout 3 colonnes. Toujours ouvert réduit (plus de dépliage auto, 2026-09-28) : une
- * ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
- * Hors Forum : showAll est toujours vrai, layout 3 colonnes complet.
+ * Fiche réduite ou complète, dans tous les modes d'interface : réduite = Titre + Description (hauteur adaptée au
+ * contenu, 240px min / 40vh max, pour que les contributions restent visibles juste dessous) + blocs media +
+ * Réactions/Contributions ; le bouton « Plus de champs / Moins de champs » (expanded → showAll), toujours affiché,
+ * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
+ * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
+ * Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
  * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown).
  * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
@@ -127,10 +126,11 @@ export function ItemEditModal({
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const adminMode = useAdminMode();
   const { mode: interfaceMode } = useInterfaceModeStore();
-  const isForumMode = interfaceMode === 'forum';
-  // Mode Forum : modal réduit (titre + description + contributions) ; toggle « Plus de champs »
-  // pour révéler Type / Statut / Priorité / Dates / Assigné / Dépendances / Parent / Tags / Enfants.
-  const [forumExpanded, setForumExpanded] = useState(false);
+  // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
+  // « Plus de champs / Moins de champs ». Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous.
+  // Non mémorisé : chaque fiche ouverte (ou changement de mode) repart du défaut.
+  const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'jdr';
+  const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
   const [visitorPreview, setVisitorPreview] = useState(false);
 
@@ -269,8 +269,12 @@ export function ItemEditModal({
   useEffect(() => {
     initializedItemIdRef.current = null;
     loadedItemRef.current = null;
-    setForumExpanded(false);
   }, [itemId]);
+
+  // Défaut réduit/complet du mode, à chaque fiche ouverte et à chaque changement de mode
+  useEffect(() => {
+    setExpanded(!collapsedByDefault);
+  }, [itemId, collapsedByDefault]);
 
   // Formulaire ← item : au premier chargement, puis à CHAQUE version plus récente du même item
   // (updatedAt) — refetch à l'ouverture après une modif faite dans une vue, absorption, cascade…
@@ -836,11 +840,11 @@ export function ItemEditModal({
   const TypeIcon = TYPE_ICONS[type];
   const typeConfig = (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[type];
   const contributionCount = item?.contributions?.length || 0;
-  // Hors Forum : tout est affiché. En Forum : seulement si le toggle est ouvert.
-  const showAll = !isForumMode || forumExpanded;
+  // Fiche complète (tous les champs, 3 colonnes) ou réduite — cf. expanded
+  const showAll = expanded;
 
   // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
-  // Hors Forum : rendus dans la colonne centrale. En Forum (colonne centrale supprimée) :
+  // Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
   // rendus sous la Description dans la colonne principale.
   const mediaSection = (
     <>
@@ -1008,18 +1012,16 @@ export function ItemEditModal({
                 <span className="hidden sm:inline">{visitorPreview ? 'Vue visiteur' : 'Voir comme visiteur'}</span>
               </button>
             )}
-            {isForumMode && (
-              <button
-                type="button"
-                onClick={() => setForumExpanded(v => !v)}
-                data-tour="item-more-fields"
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
-                title={forumExpanded ? 'Masquer les champs avancés' : 'Afficher tous les champs (type, statut, dates, tags…)'}
-              >
-                {forumExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                <span className="hidden sm:inline">{forumExpanded ? 'Moins de champs' : 'Plus de champs'}</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setExpanded(v => !v)}
+              data-tour="item-more-fields"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+              title={expanded ? 'Masquer les champs avancés' : 'Afficher tous les champs (type, statut, dates, tags…)'}
+            >
+              {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <span className="hidden sm:inline">{expanded ? 'Moins de champs' : 'Plus de champs'}</span>
+            </button>
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1033,8 +1035,8 @@ export function ItemEditModal({
             </div>
           </div>
 
-          {/* Forum replié : résumé cliquable des champs avancés renseignés (remplace le dépliage auto) */}
-          {isForumMode && !forumExpanded && item && (() => {
+          {/* Fiche réduite (tous modes) : résumé cliquable des champs avancés renseignés */}
+          {!expanded && item && (() => {
             const parts = buildForumSummary(item, {
               typeLabel: (t) => (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[t as ItemType]?.labelShort,
               statusLabel: (s) => (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((st) => st.id === s)?.label,
@@ -1045,7 +1047,7 @@ export function ItemEditModal({
             return (
               <button
                 type="button"
-                onClick={() => setForumExpanded(true)}
+                onClick={() => setExpanded(true)}
                 className="self-start -mt-1 mb-2 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
                 title="Afficher tous les champs"
               >
@@ -1057,7 +1059,7 @@ export function ItemEditModal({
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto pr-1">
 
-            {/* Layout : 3 colonnes hors Forum, 2 colonnes en Forum (colonne centrale supprimée) */}
+            {/* Layout : 3 colonnes fiche complète, 1 colonne fiche réduite (colonne centrale supprimée) */}
             <div className={`grid grid-cols-1 gap-6 ${showAll ? 'lg:grid-cols-[1fr,0.85fr,380px]' : ''}`}>
 
           {/* === LEFT COLUMN: description + contributions === */}
@@ -1078,7 +1080,7 @@ export function ItemEditModal({
                 />
               </div>
 
-              {/* Modal réduit (Forum non déplié) : blocs media sous la Description */}
+              {/* Fiche réduite : blocs media sous la Description */}
               {!showAll && mediaSection}
 
               {/* Reactions + Contributions */}
@@ -1213,7 +1215,7 @@ export function ItemEditModal({
 
           </div>{/* end left column */}
 
-          {/* === CENTER COLUMN === — Forum non déplié : supprimée (mediaSection sous la Description) */}
+          {/* === CENTER COLUMN === — fiche réduite : supprimée (mediaSection sous la Description) */}
           {showAll && <div className="space-y-6 min-w-0">
 
               {/* Type */}
@@ -1472,7 +1474,7 @@ export function ItemEditModal({
                 </div>
               </div>}
 
-              {/* Blocs media (URL/Diagramme/Image/Fichier) — hors Forum uniquement (en Forum : rendus sous la Description) */}
+              {/* Blocs media (URL/Diagramme/Image/Fichier) — fiche complète uniquement (réduite : rendus sous la Description) */}
               {mediaSection}
 
           </div>}{/* end center column */}
@@ -1486,7 +1488,7 @@ export function ItemEditModal({
                 <span className="text-xs text-muted-foreground font-mono select-all">{item.id}</span>
               </div>
 
-              {/* Parent (hidden in viewer mode ; Forum : sous le toggle « Plus de champs ») */}
+              {/* Parent (hidden in viewer mode ; sous le toggle « Plus de champs ») */}
               {showAll && canEdit && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -1624,7 +1626,7 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Tags — Forum : sous le toggle « Plus de champs » */}
+              {/* Tags — sous le toggle « Plus de champs » */}
               {showAll && (
               <div className="space-y-3" data-tour="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">

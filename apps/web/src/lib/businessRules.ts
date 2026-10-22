@@ -147,9 +147,9 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'forum-modal-reduced-with-summary',
-    page: 'Modale item (mode Forum)',
-    trigger: "Ouverture d'un item en mode d'interface Forum",
-    effect: "Modale toujours réduite (titre, description, média, réactions/contributions) — plus de dépliage automatique. Ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic ou « Plus de champs » = modale complète. Projet/Tous : modale complète",
+    page: 'Modale item (tous modes)',
+    trigger: "Ouverture d'un item / clic sur « Plus de champs » – « Moins de champs »",
+    effect: "Fiche réduite (titre, description, média, réactions/contributions) ou complète, bouton « Plus de champs / Moins de champs » présent dans tous les modes. Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet et Tous ; non mémorisé (chaque fiche ouverte et chaque changement de mode repartent du défaut). Fiche réduite : ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic = fiche complète",
     location: 'apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/item-edit-helpers.ts (buildForumSummary)',
   },
   {
