@@ -1,4 +1,5 @@
 /*
+ * LiveWindow — description de la copie présentée nettoyée par sanitizeHtml (règle user-html-sanitized).
  * LiveWindow — fenêtre flottante « en direct » de la séance active, rendue par LiveSessionHost sur TOUTES les
  * pages tant que la séance est LIVE. Onglet Direct : copie présentée (titre, « présenté par », description,
  * sous-items révélés) + pour l'animateur SEUL la section « À révéler » (PendingChildren).
@@ -19,6 +20,7 @@ import { AgendaPanel } from './AgendaPanel';
 import { PresenterPanel } from './PresenterPanel';
 import { PendingChildren } from './PendingChildren';
 import { PageHelpButton } from '../../help/PageHelpButton';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
 interface Props {
   state: LiveSessionState;
@@ -166,7 +168,7 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
               {current.item.description && (
                 <div
                   className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                  dangerouslySetInnerHTML={{ __html: current.item.description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(current.item.description) }}
                 />
               )}
               {current.item.url && current.item.type === 'IMAGE' && (

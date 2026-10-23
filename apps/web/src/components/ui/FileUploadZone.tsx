@@ -1,10 +1,12 @@
 /*
  * Zone de dépôt d'un document (drag & drop + clic) pour un item DOCUMENT.
  * Validation (extensions interdites, 25 Mo) : lib/uploadRules — ne pas redéfinir les règles ici.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  */
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, FileText, FileSpreadsheet, FileImage, FileArchive, File as FileIcon, Download } from 'lucide-react';
 import { validateUploadFile } from '../../lib/uploadRules';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 function getFileIcon(filename: string) {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -110,7 +112,7 @@ export function FileUploadZone({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{filename}</p>
           <a
-            href={currentUrl}
+            href={safeHref(currentUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"

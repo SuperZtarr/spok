@@ -1,4 +1,6 @@
-/* Vue Liens : items LINK en tableau avec métadonnées d'URL. */
+/* Vue Liens : items LINK en tableau avec métadonnées d'URL.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DndContext, pointerWithin, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
@@ -11,6 +13,7 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -55,7 +58,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
   return (
     <div className="inline-flex items-center group/link relative">
       <a
-        href={item.url || '#'}
+        href={safeHref(item.url) ?? '#'}
         target="_blank"
         rel="noopener noreferrer"
         data-tour="links-tag"

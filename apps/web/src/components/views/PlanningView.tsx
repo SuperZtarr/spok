@@ -1,4 +1,6 @@
-/* Vue Planning : agenda par périodes (jour/semaine) des items datés. */
+/* Vue Planning : agenda par périodes (jour/semaine) des items datés.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SpaceExportButton } from '../SpaceExportButton';
@@ -22,6 +24,7 @@ import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 // Get start of today (midnight)
 function getStartOfToday(): Date {
@@ -223,7 +226,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
         )}
         {item.url && (
           <a
-            href={item.url}
+            href={safeHref(item.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:text-blue-700 flex-shrink-0"

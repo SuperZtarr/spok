@@ -1,4 +1,6 @@
-/* Vue Types : items groupés par type d'item (colonnes façon kanban). */
+/* Vue Types : items groupés par type d'item (colonnes façon kanban).
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -26,6 +28,7 @@ import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 interface PortalGroup {
   spaceId: string;
@@ -175,7 +178,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
             <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
             {item.url && (
               <a
-                href={item.url}
+                href={safeHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:text-blue-700 flex-shrink-0"

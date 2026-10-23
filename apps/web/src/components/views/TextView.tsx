@@ -1,4 +1,5 @@
-/* Vue Texte : document continu des items (titres + descriptions) en lecture/édition. */
+/* Vue Texte : document continu des items (titres + descriptions) en lecture/édition.
+ * HTML de description / contributions toujours passé par sanitizeHtml (règle user-html-sanitized). */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';
@@ -14,6 +15,7 @@ import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
 interface Contribution {
   id: string;
@@ -442,7 +444,7 @@ function TextItem({
           {hasDescription && (
             <div
               className="prose prose-sm dark:prose-invert max-w-none text-foreground mt-1"
-              dangerouslySetInnerHTML={{ __html: item.description! }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
             />
           )}
           {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
@@ -465,7 +467,7 @@ function TextItem({
                   </div>
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                    dangerouslySetInnerHTML={{ __html: contrib.content }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(contrib.content) }}
                   />
                 </div>
               ))}

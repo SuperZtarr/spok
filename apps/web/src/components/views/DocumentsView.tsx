@@ -2,6 +2,7 @@
  * Vue Documents : items DOCUMENT en tableau (téléchargement, remplacement), groupés par parent.
  * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item
  * DOCUMENT par fichier, créé à la racine — réservé à canEdit et à l'espace courant (currentSpaceId).
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  */
 import { useMemo, useCallback } from 'react';
 import { useBulkUpload } from '../../hooks/useBulkUpload';
@@ -17,6 +18,7 @@ import { getTypeIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 function getFileIcon(url: string) {
   return getTypeIcon('DOCUMENT', url);
@@ -217,7 +219,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <a
-                        href={doc.url!}
+                        href={safeHref(doc.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -306,7 +308,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <a
-                              href={doc.url!}
+                              href={safeHref(doc.url)}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}

@@ -1,4 +1,6 @@
-/* Vue Liste : arborescence d'items (TreeItemRow inline), tri, DnD, RootDropZone — vue par défaut. */
+/* Vue Liste : arborescence d'items (TreeItemRow inline), tri, DnD, RootDropZone — vue par défaut.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
@@ -15,6 +17,7 @@ import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -392,7 +395,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                     )}
                     {item.url && (
                       <a
-                        href={item.url}
+                        href={safeHref(item.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 hover:text-blue-700"

@@ -1,4 +1,6 @@
-/* Nœuds React Flow de la MindMap : item, espace, portail — rendu et poignées. */
+/* Nœuds React Flow de la MindMap : item, espace, portail — rendu et poignées.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useState, useRef, useCallback, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
@@ -19,6 +21,7 @@ import { SidebarDropContext } from '../Layout';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 function FaviconImg({ src, domain, fallbackColor }: { src: string; domain: string; fallbackColor: string }) {
   const [failed, setFailed] = useState(false);
@@ -59,7 +62,7 @@ function ItemIllustration({ item, textColor }: { item: TreeItem; textColor: stri
     const faviconUrl = domain ? `https://icons.duckduckgo.com/ip3/${domain}.ico` : '';
     return (
       <a
-        href={url}
+        href={safeHref(url)}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
@@ -91,7 +94,7 @@ function ItemIllustration({ item, textColor }: { item: TreeItem; textColor: stri
     const DocIcon = getTypeIcon(item.type, url);
     return (
       <a
-        href={url}
+        href={safeHref(url)}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}

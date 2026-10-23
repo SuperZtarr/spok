@@ -1,4 +1,5 @@
 /* Paramètres communauté (/communities/:id/settings) : infos, visibilité, membres, référentiels, emails — OWNER.
+   Aperçu d'un e-mail envoyé : HTML nettoyé par sanitizeHtml (règle user-html-sanitized).
    Mode admin = mêmes droits que le OWNER partout (canEdit) : visibilité, contexte, gestion des membres
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
@@ -41,6 +42,7 @@ import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
 import type { StatusConfig, TypeLabelConfig, CommunityVisibility } from '@spok/shared';
+import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -1382,7 +1384,7 @@ function CommunityEmailsSection({ communityId }: { communityId: string }) {
                       <p className="text-xs font-medium text-muted-foreground mb-1">Contenu</p>
                       <div
                         className="text-sm bg-muted/30 rounded-md p-3 max-h-48 overflow-y-auto prose prose-sm dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: emailDetail.html }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(emailDetail.html) }}
                       />
                     </div>
 

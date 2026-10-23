@@ -1,6 +1,6 @@
 /*
  * TNR des routes /spaces/:spaceId/items : accès (membership direct/communauté), CRUD
- * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary.
+ * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary, URL d'item http(s) seulement.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
@@ -193,6 +193,40 @@ describe('Items routes', () => {
       const createArg = prisma.item.create.mock.calls[0][0]
       expect(createArg.data.spaceId).toBe(SPACE_ID)
       expect(createArg.data.createdById).toBe(USER_ID)
+    })
+
+    it('refuse une URL javascript: (création et modification)', async () => {
+      allowSpaceAccess()
+      const post = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/items`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { type: 'LINK', title: 'Piège', url: 'javascript:alert(1)' },
+      })
+      expect(post.statusCode).toBe(400)
+      expect(prisma.item.create).not.toHaveBeenCalled()
+
+      prisma.item.findFirst.mockResolvedValue(mockItem())
+      const patch = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { url: 'JavaScript:alert(1)' },
+      })
+      expect(patch.statusCode).toBe(400)
+      expect(prisma.item.update).not.toHaveBeenCalled()
+    })
+
+    it('accepte une URL https', async () => {
+      allowSpaceAccess()
+      prisma.item.create.mockResolvedValue(mockItem({ id: 'l', type: 'LINK', url: 'https://x.fr', tags: [] }))
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/items`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { type: 'LINK', title: 'Lien', url: 'https://x.fr' },
+      })
+      expect(res.statusCode).toBe(201)
     })
 
     it('should create item with tags', async () => {

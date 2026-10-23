@@ -4,6 +4,7 @@
  * toujours visible, statut, menu d'actions, indicateurs avant/après/imbrication drag & drop), layout
  * différent selon le contexte (ligne pleine largeur vs colonne fixe sticky à gauche d'un planning).
  * RootDropZone est co-localisée ici pour être réutilisée par toutes les arborescences (retour à la racine).
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  */
 import { ChevronDown, ChevronRight, GripVertical, ExternalLink } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
@@ -12,6 +13,7 @@ import { Badge } from '../ui/Badge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { getTypeIcon } from '../../constants/ui';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 // Zone de dépôt pour remonter un item à la racine de l'espace (drag & drop)
 export function RootDropZone({ isOver }: { isOver: boolean }) {
@@ -189,7 +191,7 @@ export function TreeItemRow({
 
         {isInline && item.url && (
           <a
-            href={item.url}
+            href={safeHref(item.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:text-blue-700 flex-shrink-0"

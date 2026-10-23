@@ -1,10 +1,12 @@
 /* Confirmation de suppression d'item : aperçu des enfants impactés, choix cascade/orphelins.
- * Libellé de priorité via PRIORITIES (constants/ui), jamais de table locale. */
+ * Libellé de priorité via PRIORITIES (constants/ui), jamais de table locale.
+ * Aperçu de description : htmlToText (jamais innerHTML, règle user-html-sanitized). */
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Calendar, Link as LinkIcon, User, Tag as TagIcon, Flag } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TYPE_ICONS, TYPE_LABELS, PRIORITIES } from '../constants/ui';
+import { htmlToText } from '../lib/sanitizeHtml';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -36,11 +38,8 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function stripHtml(html: string): string {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
-}
+// Texte brut sans exécuter le HTML (htmlToText, DOMParser) — innerHTML sur un div exécutait les onerror d'image
+const stripHtml = htmlToText;
 
 export function DeleteConfirmModal({
   isOpen,

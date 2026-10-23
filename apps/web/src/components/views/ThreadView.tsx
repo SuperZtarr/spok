@@ -1,4 +1,5 @@
-/* Vue Discussions : items en fils de discussion avec contributions (mode forum). */
+/* Vue Discussions : items en fils de discussion avec contributions (mode forum).
+ * HTML de description / contributions toujours passé par sanitizeHtml (règle user-html-sanitized). */
 import { useState, useMemo } from 'react';
 import { MessageSquare, ChevronDown, ChevronRight, Clock, ExternalLink } from 'lucide-react';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
@@ -11,6 +12,7 @@ import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shar
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
 interface ItemWithContributions extends Item {
   contributions?: ContributionWithAuthor[];
@@ -163,7 +165,7 @@ export function ThreadView({
           <div className="py-2">
             <div
               className="prose prose-sm dark:prose-invert max-w-none text-foreground [&>p]:my-0.5"
-              dangerouslySetInnerHTML={{ __html: contrib.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(contrib.content) }}
             />
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
               <span className="font-medium">{contrib.author.name}</span>
@@ -281,7 +283,7 @@ export function ThreadView({
                 <div className="mb-4 pb-4 border-b border-border/50">
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                    dangerouslySetInnerHTML={{ __html: node.description }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(node.description) }}
                   />
                   <p className="text-xs text-muted-foreground mt-2">
                     {node.createdBy?.name} · {formatRelativeDate(node.createdAt)}

@@ -15,6 +15,8 @@
  * MEMBER : modifie/supprime les items qu'il a créés OU qui lui sont assignés (canMemberManageItem, utils/itemOwnership.ts).
  * Dates liées au statut (PATCH et propagation aux descendants) : utils/statusDates.ts — source unique,
  * tous chemins confondus (modale, menu ⋯, Kanban, Today, MCP) ; ne complète que les dates vides.
+ * url : http(s) seulement (itemUrlField) — jamais javascript:/data: (règle user-html-sanitized). Le HTML des
+ * descriptions n'est PAS nettoyé ici : il l'est à l'affichage (web, lib/sanitizeHtml.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
@@ -36,6 +38,10 @@ import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 
+// URL d'item : http(s) seulement. z.string().url() accepte javascript:… (lien piégé exécuté au clic côté web).
+const HTTP_URL = /^https?:\/\//i;
+const itemUrlField = z.string().url().refine((u) => HTTP_URL.test(u), { message: "L'URL doit commencer par http:// ou https://" });
+
 // « Pas de statut » = null, jamais chaîne vide (le filtre status=none cherche null) — le web envoie '' à la création.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
 
@@ -44,7 +50,7 @@ const createItemSchema = z.object({
   title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
-  url: z.string().url().optional(),
+  url: itemUrlField.optional(),
   status: statusField,
   priority: z.number().int().min(1).max(4).optional(),
   dueDate: z.string().datetime().optional(),
@@ -60,7 +66,7 @@ const updateItemSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
-  url: z.string().url().nullable().optional(),
+  url: itemUrlField.nullable().optional(),
   status: statusField,
   priority: z.number().int().min(1).max(4).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),

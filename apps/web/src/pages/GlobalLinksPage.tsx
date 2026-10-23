@@ -4,6 +4,7 @@
  * communityId / spaceId, toujours intersecté avec les espaces lisibles). Chargement par pages de PAGE_SIZE avec
  * « Charger plus » et total affiché — jamais de coupe silencieuse. La recherche texte (titre, URL, espace) porte sur
  * les liens chargés : un avertissement le dit tant qu'il en reste à charger.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  */
 import { useState, useMemo } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
@@ -11,6 +12,7 @@ import { ExternalLink, Search, FolderOpen, Building2, ChevronRight } from 'lucid
 import type { SpaceWithRole } from '@spok/shared';
 import { userTasksApi, spacesApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
+import { safeHref } from '../lib/sanitizeHtml';
 
 const PAGE_SIZE = 200;
 
@@ -73,7 +75,7 @@ function LinkCard({ item }: { item: any }) {
 
   return (
     <a data-tour="global-links-link"
-      href={item.url || '#'}
+      href={safeHref(item.url) ?? '#'}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-full hover:bg-accent hover:border-primary/30 transition-colors shadow-sm"

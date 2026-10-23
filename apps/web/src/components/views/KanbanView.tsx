@@ -1,4 +1,6 @@
-/* Vue Kanban : colonnes par statut (référentiels), DnD des cartes, création rapide. */
+/* Vue Kanban : colonnes par statut (référentiels), DnD des cartes, création rapide.
+ * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -28,6 +30,7 @@ import { TagBadge } from '../ui/TagBadge';
 import { RoleGuard } from '../RoleGuard';
 import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { safeHref } from '../../lib/sanitizeHtml';
 
 // Format date for display
 function formatDate(dateString: string | null | undefined): string | null {
@@ -195,7 +198,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             })()}
             {item.url && (
               <a
-                href={item.url}
+                href={safeHref(item.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:text-blue-700 flex-shrink-0"
