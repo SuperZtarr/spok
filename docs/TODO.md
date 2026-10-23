@@ -189,7 +189,8 @@
 
 ### Evolutions (backlog récupéré depuis Projet SPOK)
 - [x] Organigramme à revoir : `OrgChartView` (membres/rôles d'un espace) faisait doublon avec `SpaceMembersManager` sur `SpaceSettingsPage` — moteur de layout extrait en composant partagé `BoxTreeDiagram` ; nouvelle vue admin `/admin/users/:userId/access` (arbre communautés→espaces avec accès effectif d'un utilisateur : direct/hérité de la visibilité/aucun) répond au vrai besoin identifié (voir qui a/pourrait avoir accès à quoi) — 2026-07-14
-- [ ] Nouveau type d'élément « Articles » (demande Thomas 2026-10-22) — à spécifier : différence avec Document / Note, champs et affichage propres, vues concernées ; touche l'enum `ItemType` (schéma Prisma, shared, API, MCP, référentiels par communauté, aide)
+- [x] Nouveau type d'élément « Article » (demande Thomas 2026-10-22) : page qui assemble des éléments existants (références, flux de blocs, lecture / impression / mobile, mode Composer, droits de l'auteur de la référence, avertissement « moins visible ») — plan docs/superpowers/plans/2026-10-23-type-article.md — 2026-10-23 (1fb22a4)
+- [ ] Article — suites possibles : rangées en colonnes, zone libre, modèles d'article, outils MCP de blocs, audit des blocs
 - [ ] Recherche dans la vue
 - [ ] Réduction de données
 - [ ] Identification d'élément

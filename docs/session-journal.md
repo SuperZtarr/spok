@@ -6,6 +6,13 @@
 
 ## EN COURS
 
+### Process : la place des items suit leur changement d'espace — 2026-10-23
+- Suite de l'incident « PJ Rodrigue ». utils/processPlacement.ts (moveProcessPlacement) appelé dans la transaction de bulk-move (item-move.ts) et de la conversion en espace (item-convert.ts) : couloirs et positions suivent, item séparé de son couloir → libre, place existante à l'arrivée remplacée. processPlacement.test.ts 5 tests (mock, sans base) + items.test 68/68, typecheck API OK, aide 411/411. businessRules process-placement-follows-move, conseil dans process.help.ts, spec « Vue Process » to_validate. Puis, accord Thomas : fiche d'aide créée pour MoveToSpaceModal (move-to-space.help.ts, registre pageHelp, « ? », tour move-targets / move-children / move-confirm, rappels HelpHint sur « Inclure les éléments enfants » et « Déplacer », écrits d'après bulk-move — pas d'annulation automatique) ; la modale invalide aussi process-nodes / process-lanes des deux espaces. Aide 414/414, typecheck web OK. Déplacement réel non testé (Docker local arrêté). NON COMMITÉ — pageHelp.ts et businessRules.ts contiennent aussi des ajouts Articles : commit par morceaux
+
+### Prod — process de « D&D5 Manu - Rodrigue » rattaché à « PJ Rodrigue » — 2026-10-23
+- Constat Thomas : process créé la veille introuvable. Lecture prod (accord Thomas) : données intactes ; déplacement groupé de 33 éléments (2026-10-22 00:35) vers PJ Rodrigue, mais process_nodes / process_lanes restés sur l'ancien spaceId → vue vide d'un côté, sans mise en page de l'autre. BUG : le déplacement d'éléments n'emmène pas leur place dans le process (à corriger).
+- Rattachement (accord explicite, script lancé par Thomas, écriture refusée à Claude) : sauvegarde _old/process-restore-prod-2026-10-23.json (non versionné) ; transaction : process recréé dans PJ supprimé (3 positions, 6 couloirs), 8 positions + 4 couloirs déplacés vers PJ ; recompte PJ 8/4, ancien 0/0. Script supprimé
+
 ### sanitizeHtml : classes limitées (revue sécurité) — 2026-10-23
 - MEP lot fiche : CI verte sur 60d488e (après correctif du bloc Article embarqué par erreur dans d0b6036). Revue sécurité auto : `class` libre → un contenu pouvait prendre fixed/inset-0/z-50 et recouvrir l'interface. Demande Thomas : restreindre. ALLOWED_CLASSES = classes de RichTextEditor + import du forum (+ spoiler) ; styles déjà filtrés par propriété (aucune position). businessRules user-html-sanitized complétée. Tests sanitize/clipboard/lecture/aide 429/429. Inventaire des classes en prod NON fait (lecture prod refusée par le contrôle de permissions) : une classe absente de la liste ferait perdre une mise en forme, rien de plus. NON COMMITÉ
 
@@ -33,6 +40,9 @@
 
 ### Fin de l'incident Railway — prod déployée sur f474990 — 2026-10-23
 - Demande Thomas (« redéploie »). Les 2 services étaient restés sur le build du 2026-10-21 01:45 (16f5841). `railway redeploy` ne relance que le dernier déploiement (ancien commit) → déploiement du commit f474990 via l'API Railway (serviceInstanceDeployV2) sur spok-api et spok-web : SUCCESS tous deux. Vérifié sur spok.space : le bundle contient les textes du 2026-10-22 (modale de fusion). Toutes les MEP des 21 et 22/10 sont en prod
+
+### Type « Article » — mise en œuvre — 2026-10-23
+- Plan exécuté (7 tâches, registre .superpowers/sdd/2026-10-23-type-article/progress.md). Type ARTICLE partout + référentiels personnalisés complétés ; table article_blocks ; routes item-article.ts (lecture + composition) ; page /spaces/:id/articles/:id, ArticleBlock, ArticleEditor, ArticleItemPicker, printArticle, useArticle ; aide article.help.ts ; businessRules (3 règles) ; spec SPOK « Article [ArticlePage] » (cmvl3yeg…) + « Types d'items » to_validate ; ARCHITECTURE et MODELE-DONNEES à jour. Tests : api referentiels 2/2, articleVisibility 5/5, item-article 13/13 ; web article + aide 418/418 ; tsc api/web OK. Écran : lecture desktop / 375 px / impression, Composer (ajout, gauche, note saisie, glisser, avertissement), bob sans Composer. Auto-relecture finale (pas de sous-agent). Commit 1fb22a4 (MEP 2026-10-23 : typecheck 5 paquets OK, TNR 1649/1649)
 
 ### Type « Article » — brainstorming et plan — 2026-10-23
 - Brainstorming (maquettes A/B/C, choix Thomas : flux de blocs A d'abord). Validé : blocs = références vers des éléments existants (réutilisables dans plusieurs articles), « Ajouter un texte » = nouvelle note, texte des notes modifiable sur place, lecteur voit le contenu sans accès à la source, droit évalué à la lecture sur l'auteur de la référence, avertissement si moins visible. Plan : docs/superpowers/plans/2026-10-23-type-article.md (7 tâches), en attente de relecture par Thomas
