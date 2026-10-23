@@ -3,7 +3,8 @@
  * frères. Utilisé par le DnD des vues (ListView, Gantt). Garde anti-cycle.
  * Copies de séance verrouillées : réorganisation libre ici, mais déplacement vers un autre espace refusé.
  * bulk-move (vers un autre espace) : un MEMBER ne déplace que des items qu'il a créés ou qui lui sont
- * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête.
+ * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête. La place des items dans la vue
+ * Process (positions, couloirs) part avec eux (moveProcessPlacement, même transaction).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -11,6 +12,7 @@ import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
+import { moveProcessPlacement } from '../utils/processPlacement.js';
 
 const moveItemSchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -344,6 +346,9 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
+
+      // Place dans la vue Process (positions, couloirs) : suit les éléments dans l'espace d'arrivée
+      await moveProcessPlacement(tx, allItemIds, request.params.spaceId, targetSpaceId);
     });
 
     // Audit log for BULK_MOVE - one log entry per item

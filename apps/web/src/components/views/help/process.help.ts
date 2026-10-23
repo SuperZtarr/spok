@@ -18,6 +18,7 @@ export const help: HelpEntry = {
     'Attrapez un couloir par son titre pour l\'écarter des autres : ses items le suivent ; « Réorganiser » le remet dans la pile',
     'Un lien vers l\'item d\'un couloir est conservé : il arrive sur le couloir, comme vers un sous-processus',
     'Tirez une relation vers l\'entrée d\'un couloir (poignée gauche) ou depuis sa sortie (poignée droite) : elle est créée avec l\'item du couloir',
+    'Déplacer des items vers un autre espace emporte leur place dans le process : positions et couloirs les suivent (un item parti sans son couloir y arrive libre)',
     'Double-cliquez sur le vide pour créer une note à cet endroit',
     'Tirez d\'un bord d\'un item vers un autre pour créer une relation',
     'Cliquez sur une flèche pour modifier ou supprimer la relation',

@@ -22,6 +22,7 @@ import { help as spaceHistoryPage } from '../pages/help/space-history.help';
 import { help as bookmarksHelp } from '../pages/help/bookmarks.help';
 import { help as profileHelp } from '../components/help/profile.help';
 import { help as liveWindowHelp } from '../components/help/live-window.help';
+import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
 import { help as globalGraphHelp } from '../pages/help/global-graph.help';
 import { help as globalSunburstHelp } from '../pages/help/global-sunburst.help';
@@ -59,6 +60,7 @@ export const PAGE_HELP = {
   profile: profileHelp,
   'live-window': liveWindowHelp,
   'merge-item': mergeItemHelp,
+  'move-to-space': moveToSpaceHelp,
   'global-graph': globalGraphHelp,
   'global-sunburst': globalSunburstHelp,
   'global-mindmap': globalMindmapHelp,

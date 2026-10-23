@@ -1,4 +1,7 @@
-/* Déplacement d'un item vers un autre espace : sélecteur groupé par communauté. */
+/* Déplacement d'un item vers un autre espace : sélecteur groupé par communauté (route bulk-move, item-move.ts).
+ * Props : currentSpaceId (espace de départ), itemIds (éléments à déplacer).
+ * Aide : fiche components/help/move-to-space.help.ts (« ? », tour move-targets / move-children / move-confirm,
+ * rappels pageHint sur « Inclure les éléments enfants » et « Déplacer »). */
 import { useState, useMemo, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +10,9 @@ import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
 import { DevModalBadge } from './ui/DevModalBadge';
+import { PageHelpButton } from '../help/PageHelpButton';
+import { HelpHint } from '../help/HelpHint';
+import { pageHint } from '../help/pageHint';
 
 interface MoveToSpaceModalProps {
   isOpen: boolean;
@@ -41,6 +47,11 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
       queryClient.invalidateQueries({ queryKey: ['items', selectedSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', currentSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['space', selectedSpaceId] });
+      // La place dans le process (positions, couloirs) a changé d'espace côté API (processPlacement.ts)
+      for (const id of [currentSpaceId, selectedSpaceId]) {
+        queryClient.invalidateQueries({ queryKey: ['process-nodes', id] });
+        queryClient.invalidateQueries({ queryKey: ['process-lanes', id] });
+      }
       onClose();
     },
   });
@@ -80,6 +91,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
             Déplacer vers un autre espace
           </h2>
           <DevModalBadge name="MoveToSpaceModal" />
+          <div className="ml-auto mr-8"><PageHelpButton pageKey="move-to-space" /></div>
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
@@ -113,7 +125,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="flex-1 overflow-y-auto mb-4">
+            <div className="flex-1 overflow-y-auto mb-4" data-tour="move-targets">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
@@ -147,15 +159,17 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
             </div>
             )}
 
-            <label className="flex items-center gap-2 mb-3 text-sm">
-              <input
-                type="checkbox"
-                checked={includeChildren}
-                onChange={(e) => setIncludeChildren(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span>Inclure les éléments enfants</span>
-            </label>
+            <HelpHint text={pageHint('move-to-space', 'includeChildren')} className="inline-flex self-start mb-3">
+              <label className="flex items-center gap-2 text-sm" data-tour="move-children">
+                <input
+                  type="checkbox"
+                  checked={includeChildren}
+                  onChange={(e) => setIncludeChildren(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span>Inclure les éléments enfants</span>
+              </label>
+            </HelpHint>
           </>
         )}
 
@@ -163,19 +177,22 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
           <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
-          <Button
-            onClick={() => bulkMoveMutation.mutate()}
-            disabled={!selectedSpaceId || bulkMoveMutation.isPending}
-          >
-            {bulkMoveMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Déplacement...
-              </>
-            ) : (
-              'Déplacer'
-            )}
-          </Button>
+          <HelpHint text={pageHint('move-to-space', 'confirm')}>
+            <Button
+              data-tour="move-confirm"
+              onClick={() => bulkMoveMutation.mutate()}
+              disabled={!selectedSpaceId || bulkMoveMutation.isPending}
+            >
+              {bulkMoveMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Déplacement...
+                </>
+              ) : (
+                'Déplacer'
+              )}
+            </Button>
+          </HelpHint>
         </div>
 
         {bulkMoveMutation.isError && (

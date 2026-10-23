@@ -1,10 +1,12 @@
 /* Conversion d'un item en espace : crée l'espace, migre les enfants en items racine.
- * Refusé sur copie de séance verrouillée (itemLock). */
+ * Refusé sur copie de séance verrouillée (itemLock). La place des items migrés dans la vue Process (positions,
+ * couloirs) part avec eux (moveProcessPlacement, même transaction). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
+import { moveProcessPlacement } from '../utils/processPlacement.js';
 
 const convertToSpaceSchema = z.object({
   spaceName: z.string().min(1),
@@ -167,6 +169,9 @@ export const itemConvertRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       });
+
+      // Place dans la vue Process (positions, couloirs) : suit les items dans le nouvel espace
+      await moveProcessPlacement(tx, allItemIds, request.params.spaceId, newSpace.id);
     });
 
     // Audit: log space creation

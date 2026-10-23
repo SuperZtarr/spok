@@ -125,6 +125,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/views/ProcessView.tsx, apps/web/src/components/views/process-utils.ts (layoutAsProcess), apps/web/src/components/views/ProcessUnplacedPanel.tsx, apps/web/src/hooks/useProcessNodes.ts, apps/api/src/routes/process-nodes.ts',
   },
   {
+    id: 'process-placement-follows-move',
+    page: 'Espace → vue Process ; déplacement vers un autre espace ; conversion d\'un item en espace',
+    trigger: "Des items changent d'espace (« Déplacer vers un autre espace », « Convertir en espace »)",
+    effect: "Leur place dans le process part avec eux, dans la même opération : positions et couloirs passent dans l'espace d'arrivée, disposition conservée. Un item déplacé sans son couloir y devient libre ; un item resté sur place dont le couloir est parti devient libre (comme à la suppression d'un couloir). Une place déjà présente à l'arrivée pour un de ces items est remplacée par celle qui arrive. Avant 2026-10-23 le process restait sur l'ancien espace (vue vide, items sans mise en page)",
+    location: 'apps/api/src/utils/processPlacement.ts (moveProcessPlacement), apps/api/src/routes/item-move.ts (bulk-move), apps/api/src/routes/item-convert.ts',
+  },
+  {
     id: 'personal-token-shown-once',
     page: 'Profil utilisateur',
     trigger: "Création d'un jeton d'accès Claude (MCP distant)",
