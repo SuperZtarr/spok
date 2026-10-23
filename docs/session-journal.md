@@ -6,6 +6,9 @@
 
 ## EN COURS
 
+### sanitizeHtml : classes limitées (revue sécurité) — 2026-10-23
+- MEP lot fiche : CI verte sur 60d488e (après correctif du bloc Article embarqué par erreur dans d0b6036). Revue sécurité auto : `class` libre → un contenu pouvait prendre fixed/inset-0/z-50 et recouvrir l'interface. Demande Thomas : restreindre. ALLOWED_CLASSES = classes de RichTextEditor + import du forum (+ spoiler) ; styles déjà filtrés par propriété (aucune position). businessRules user-html-sanitized complétée. Tests sanitize/clipboard/lecture/aide 429/429. Inventaire des classes en prod NON fait (lecture prod refusée par le contrôle de permissions) : une classe absente de la liste ferait perdre une mise en forme, rien de plus. NON COMMITÉ
+
 ### MEP lot fiche d'élément seul — 2026-10-23
 - Demande Thomas : MEP du lot fiche (mode lecture, Copier la fiche PNG, bouton visiteur retiré, HelpHint) sans Articles ni sanitizeHtml des vues/API. 20 fichiers isolés ; HEAD + lot seul vérifié dans une copie (typecheck web OK, TNR web 802/802). Restent NON COMMITÉS : Articles (schéma Prisma, API, MCP, shared), sanitizeHtml des vues / séance live / e-mails / items.ts, launch.json, dev-autostart.ps1
 

@@ -105,6 +105,7 @@
 - [x] Ouverture d'un espace en anonyme : GET /live-sessions/by-space partait et recevait 401 → useLiveSession ne requête que connecté — 2026-10-22 (a2e1a5f)
 - [x] Tour de la fiche d'élément, étape « Relations » : citait « dépend de, duplique, teste » → bloque, permet, entraîne, lié à — 2026-10-22 (be27c21)
 - [x] Fiche d'élément — mode lecture « Afficher » (ItemReadView, menu Afficher / Ouvrir, ?mode=lecture), « Copier la fiche » avec image intégrée en PNG (collage Word / mail), bouton admin « Voir comme visiteur » retiré (doublon d'Afficher), sanitizeHtml pour la fiche / l'impression, infobulles d'aide gardées dans la fenêtre (HelpHint) — 2026-10-23 (d0b6036)
+- [x] sanitizeHtml : classes limitées à celles de l'éditeur et de l'import du forum (revue sécurité : fixed / inset-0 / z-50 permettaient de recouvrir l'interface) — inventaire des classes en prod non fait — 2026-10-23 (HASH)
 - [ ] sanitizeHtml dans les vues, la séance live, les e-mails de communauté et l'API (itemUrlField) — travail présent mais non poussé avec le lot fiche le 2026-10-23
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)

@@ -198,7 +198,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'user-html-sanitized',
     page: 'Toutes (vues Texte, Discussions, modale item, vue lecture, séance live, e-mails de communauté, impression, copie de fiche, liens d\'items)',
     trigger: "Affichage d'un contenu écrit par un utilisateur, l'API ou le MCP (description, contribution, e-mail, URL d'item)",
-    effect: "Le HTML n'est jamais injecté tel quel : sanitizeHtml (liste blanche des balises de l'éditeur, aucun on*, URL http(s)/mailto/tel/relatives/data:image seulement) avant tout dangerouslySetInnerHTML ; extraction de texte par htmlToText (DOMParser, jamais innerHTML sur un élément de la page) ; liens vers item.url par safeHref (schéma non sûr → lien inerte). L'API refuse une URL d'item qui ne commence pas par http(s):// (400). Le HTML des descriptions n'est pas nettoyé à l'enregistrement : le contenu déjà en base est neutralisé à l'affichage",
+    effect: "Le HTML n'est jamais injecté tel quel : sanitizeHtml (liste blanche des balises de l'éditeur, aucun on*, URL http(s)/mailto/tel/relatives/data:image seulement, classes limitées à celles de l'éditeur et de l'import du forum — aucune classe de position ou de calque, pour qu'un contenu ne puisse pas recouvrir l'interface) avant tout dangerouslySetInnerHTML ; extraction de texte par htmlToText (DOMParser, jamais innerHTML sur un élément de la page) ; liens vers item.url par safeHref (schéma non sûr → lien inerte). L'API refuse une URL d'item qui ne commence pas par http(s):// (400). Le HTML des descriptions n'est pas nettoyé à l'enregistrement : le contenu déjà en base est neutralisé à l'affichage",
     location: 'apps/web/src/lib/sanitizeHtml.ts, apps/api/src/routes/items.ts (itemUrlField)',
   },
   {

@@ -63,4 +63,16 @@ describe('sanitizeHtml', () => {
   it('vide pour null', () => {
     expect(sanitizeHtml(null)).toBe('');
   });
+
+  it('retire les classes de position et de calque (contenu qui recouvrirait l\'interface)', () => {
+    const out = sanitizeHtml('<a href="https://x.fr" class="fixed inset-0 z-50 text-primary underline">ok</a>');
+    expect(out).toBe('<a href="https://x.fr" class="text-primary underline">ok</a>');
+    expect(sanitizeHtml('<div class="absolute top-0 left-0 w-screen h-screen">x</div>')).toBe('<div>x</div>');
+  });
+
+  it('garde les classes de l\'éditeur et de l\'import du forum', () => {
+    expect(sanitizeHtml('<blockquote class="border-l-4 border-primary/50 pl-4 my-3 py-2 bg-muted/50 rounded-r">c</blockquote>'))
+      .toBe('<blockquote class="border-l-4 border-primary/50 pl-4 my-3 py-2 bg-muted/50 rounded-r">c</blockquote>');
+    expect(sanitizeHtml('<span class="mention-user" data-id="u1">@Léa</span>')).toContain('class="mention-user"');
+  });
 });

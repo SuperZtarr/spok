@@ -7,6 +7,9 @@
  * - <iframe> gardée seulement vers youtube(-nocookie).com/embed (2 189 vidéos en prod, toutes youtube-nocookie) ;
  * - onerror gardé seulement s'il vaut EXACTEMENT this.style.display='none' (masque les images mortes ; code figé,
  *   non détournable) — tout autre on* est retiré.
+ * Classes : seules celles de l'éditeur et de l'import du forum sont gardées (ALLOWED_CLASSES), les autres retirées —
+ * sinon un contenu pourrait prendre fixed / inset-0 / z-50 de Tailwind et recouvrir l'interface (faux bouton,
+ * revue sécurité 2026-10-23). Une nouvelle classe produite par l'éditeur doit être ajoutée ici.
  * Utilisé par tous les rendus HTML de contenu (vues Texte / Discussions, modale item, vue lecture, séance live,
  * e-mails de communauté, impression, copie de fiche). safeHref : liens vers item.url ; htmlToText : texte brut.
  * Règle businessRules « user-html-sanitized ». Pas de dépendance (DOMParser du navigateur / jsdom). */
@@ -22,6 +25,16 @@ const ALLOWED_ATTRS = new Set([
   'href', 'src', 'alt', 'title', 'target', 'rel', 'class', 'colspan', 'rowspan', 'width', 'height', 'start',
   'type', 'checked', 'disabled', 'data-type', 'data-id', 'data-label', 'data-checked', 'data-mention', 'style',
   'loading', 'datetime', 'open',
+]);
+// Classes produites par RichTextEditor (liens, mentions) et par l'import du forum (scripts import-forum-v3 /
+// transform-forum-raw) — mise en forme seulement, aucune classe de position, de calque ni de taille d'écran
+const ALLOWED_CLASSES = new Set([
+  'text-primary', 'underline', 'hover:underline', 'hover:no-underline', 'break-all', 'mention-user', 'mention-item',
+  'text-center', 'text-xs', 'text-sm', 'text-muted-foreground', 'font-medium', 'font-mono',
+  'my-2', 'my-3', 'mb-1', 'mt-2', 'p-2', 'p-3', 'pl-4', 'pl-5', 'py-2',
+  'border-border', 'border-l-4', 'border-primary/50', 'bg-muted', 'bg-muted/50', 'rounded', 'rounded-r',
+  'max-w-full', 'h-auto', 'w-full', 'h-full', 'aspect-video', 'overflow-x-auto', 'list-disc', 'list-decimal', 'cursor-pointer',
+  'spoiler',
 ]);
 const IFRAME_ATTRS = new Set(['src', 'class', 'width', 'height', 'loading', 'frameborder', 'allowfullscreen', 'title']);
 const SAFE_URL = /^(https?:|mailto:|tel:|\/|#|\.{0,2}\/|data:image\/(png|jpe?g|gif|webp);)/i;
@@ -63,6 +76,11 @@ function cleanNode(node: Element): void {
       if (name === 'style') {
         const cleaned = cleanStyle(value);
         if (cleaned) child.setAttribute('style', cleaned); else child.removeAttribute(attr.name);
+        continue;
+      }
+      if (name === 'class') {
+        const kept = value.split(/\s+/).filter((c) => ALLOWED_CLASSES.has(c)).join(' ');
+        if (kept) child.setAttribute('class', kept); else child.removeAttribute(attr.name);
         continue;
       }
       const ok = (tag === 'iframe' ? IFRAME_ATTRS.has(name) : ALLOWED_ATTRS.has(name))
