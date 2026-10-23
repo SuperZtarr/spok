@@ -36,7 +36,6 @@
  * Contributions affichées via sanitizeHtml, liens vers url via safeHref (règle user-html-sanitized).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
- * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -894,14 +893,6 @@ export function ItemEditModal({
   // rendus sous la Description dans la colonne principale.
   const mediaSection = (
     <>
-      {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx) */}
-      {type === 'ARTICLE' && itemId && (
-        <HelpHint text={itemHints?.openArticle}>
-          <Link to={`/spaces/${spaceId}/articles/${itemId}`} onClick={onClose} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
-            Ouvrir l'article
-          </Link>
-        </HelpHint>
-      )}
       {/* URL — seulement pour le type LINK */}
       {type === 'LINK' && <div className="space-y-2">
         <label className="text-sm font-medium">URL</label>
