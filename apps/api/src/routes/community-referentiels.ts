@@ -1,10 +1,12 @@
 /*
  * Référentiels au niveau communauté (statuts, labels de types) : lecture, PUT (OWNER ou
  * admin en mode admin), reset (idem). Les espaces résolvent leurs référentiels ici (cf. routes/referentiels.ts).
+ * Lecture : types absents d'un référentiel personnalisé complétés par withDefaultTypeLabels (utils/referentiels.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
+import { withDefaultTypeLabels } from '../utils/referentiels.js';
 
 const statusConfigSchema = z.object({
   id: z.string().min(1),
@@ -65,7 +67,7 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
 
     const referentiels = parseReferentiels(community.referentiels);
     return {
-      referentiels: referentiels || DEFAULT_REFERENTIELS,
+      referentiels: referentiels ? withDefaultTypeLabels(referentiels) : DEFAULT_REFERENTIELS,
       isDefault: !referentiels,
     };
   });

@@ -69,6 +69,7 @@ export function createMockPrisma() {
     itemTemplate: mockModel(),
     processNode: mockModel(),
     processLane: mockModel(),
+    articleBlock: mockModel(),
     liveSession: mockModel(),
     liveSessionRole: mockModel(),
     liveSessionEntry: mockModel(),
@@ -151,8 +152,9 @@ export function getTestToken(app: FastifyInstance, payload = { userId: 'test-use
 /**
  * Builds a Fastify test app with items routes registered under /spaces/:spaceId/items.
  * Includes authenticate hook like production spaces plugin does.
+ * optionalAuth : authentification facultative comme en production (spaces.ts) — pour tester un lecteur anonyme.
  */
-export async function buildItemsTestApp(): Promise<{
+export async function buildItemsTestApp(options: { optionalAuth?: boolean } = {}): Promise<{
   app: FastifyInstance
   prisma: MockPrisma
 }> {
@@ -189,7 +191,10 @@ export async function buildItemsTestApp(): Promise<{
 
   // Register items routes with authenticate hook, like spaces.ts does
   await app.register(async (instance) => {
-    instance.addHook('preHandler', instance.authenticate)
+    instance.addHook(
+      'preHandler',
+      options.optionalAuth ? instance.optionalAuthenticate : instance.authenticate,
+    )
     await instance.register(itemsRoutes, { prefix: '/:spaceId/items' })
   }, { prefix: '/spaces' })
 

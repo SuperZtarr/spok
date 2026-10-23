@@ -30,6 +30,8 @@ erDiagram
     Item |o--o{ LiveSessionEntry : "item"
     Item ||--o{ ProcessNode : "item"
     Item ||--o{ ProcessLane : "item"
+    Item ||--o{ ArticleBlock : "article"
+    Item ||--o{ ArticleBlock : "item"
     ProcessLane |o--o{ ProcessNode : "lane"
     Item |o--o{ Reaction : "item"
     LiveSession |o--o| LiveSession : "previousSession"
@@ -49,6 +51,7 @@ erDiagram
     Space ||--o{ SpaceMembership : "space"
     Space |o--o{ Tag : "space"
     Tag ||--o{ ItemTag : "tag"
+    User |o--o{ ArticleBlock : "addedBy"
     User ||--o{ AuditLog : "user"
     User ||--o{ CalendarFeed : "user"
     User ||--o{ CommunityEmail : "sentBy"
@@ -91,6 +94,23 @@ Configuration globale (clé-valeur JSON)
 | `key` | String | PK |  |
 | `value` | Json |  |  |
 | `updatedAt` | DateTime | maj auto |  |
+
+### ArticleBlock (`article_blocks`)
+
+Bloc d'un article (item de type ARTICLE, 2026-10-23) : référence ordonnée vers un élément existant, qui reste où il est. Un élément au plus une fois par article ; il peut figurer dans plusieurs articles.
+
+| Champ | Type | Contraintes | Note |
+|---|---|---|---|
+| `id` | String | PK, cuid |  |
+| `articleId` | String | FK → Item (cascade) | l'article |
+| `itemId` | String | FK → Item (cascade) | l'élément référencé |
+| `position` | Int |  | ordre dans l'article |
+| `width` | String | défaut `full` | `full` / `wide` / `medium` |
+| `align` | String | défaut `center` | `center` / `left` / `right` (IMAGE, DIAGRAM) |
+| `addedById` | String? | FK → User (SetNull) | ses droits de lecture décident à la lecture si le bloc est montré ; null = indisponible |
+| `createdAt` | DateTime | défaut now |  |
+
+Unicité `(articleId, itemId)` ; index `itemId`.
 
 ### AuditLog (`audit_logs`)
 

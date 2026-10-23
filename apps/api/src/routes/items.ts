@@ -37,6 +37,7 @@ import { itemContributionRoutes } from './item-contributions.js';
 import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
+import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
 
 // URL d'item : http(s) seulement. z.string().url() accepte javascript:… (lien piégé exécuté au clic côté web).
 const HTTP_URL = /^https?:\/\//i;
@@ -46,7 +47,7 @@ const itemUrlField = z.string().url().refine((u) => HTTP_URL.test(u), { message:
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
 
 const createItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']),
   title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
@@ -62,7 +63,7 @@ const createItemSchema = z.object({
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
@@ -81,7 +82,7 @@ const updateItemSchema = z.object({
 });
 
 const querySchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']).optional(),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']).optional(),
   status: z.string().optional(),
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
@@ -310,7 +311,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemConvertRoutes);
     await authInstance.register(itemMergeRoutes);
     await authInstance.register(itemReactionRoutes);
+    await authInstance.register(itemArticleWriteRoutes);
   });
+
+  // Lecture d'un article (authentification facultative : un article public se lit en anonyme)
+  await fastify.register(itemArticleReadRoutes);
 
   // List items
   fastify.get<{ Params: { spaceId: string }; Querystring: z.infer<typeof querySchema> }>(

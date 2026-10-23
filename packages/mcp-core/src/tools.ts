@@ -25,7 +25,7 @@ const ALLOWED: Record<ToolProfile, Level[]> = {
   'public-read': ['read'],
 }
 
-const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'] as const
+const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const
 /** Miroir de RELATION_TYPES @spok/shared (l'API refuse tout autre type). */
 const RELATION_TYPE_VALUES = ['blocks', 'implements', 'drives', 'relates'] as const
 

@@ -67,6 +67,10 @@ import type {
   LiveSessionOngoing,
   LiveInvitee,
   LiveInviteCandidate,
+  ArticleView,
+  ArticleBlockView,
+  ArticleBlockWidth,
+  ArticleBlockAlign,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -909,6 +913,31 @@ export const communitiesApi = {
 // Vue Process : positions des items sur le canevas de l'espace (routes/process-nodes.ts)
 type ProcessNodePosition = { itemId: string; x: number; y: number; laneId?: string | null };
 type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number | null; y?: number | null };
+
+// Article (type ARTICLE) : blocs = références vers des éléments existants (routes/item-article.ts côté API).
+// addBlock : ApiError code LESS_VISIBLE (409) → demander confirmation puis renvoyer confirmLessVisible ; DUPLICATE_REFERENCE (409).
+export const articlesApi = {
+  get: (spaceId: string, articleId: string) =>
+    fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article`),
+
+  addBlock: (spaceId: string, articleId: string, body: { itemId: string; position?: number; confirmLessVisible?: boolean }) =>
+    fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/blocks`, { method: 'POST', body: JSON.stringify(body) }),
+
+  addText: (spaceId: string, articleId: string, position?: number) =>
+    fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/texts`, {
+      method: 'POST',
+      body: JSON.stringify(position === undefined ? {} : { position }),
+    }),
+
+  updateBlock: (spaceId: string, articleId: string, blockId: string, body: { width?: ArticleBlockWidth; align?: ArticleBlockAlign }) =>
+    fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/blocks/${blockId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
+  reorder: (spaceId: string, articleId: string, blockIds: string[]) =>
+    fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article/order`, { method: 'PUT', body: JSON.stringify({ blockIds }) }),
+
+  removeBlock: (spaceId: string, articleId: string, blockId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${articleId}/article/blocks/${blockId}`, { method: 'DELETE' }),
+};
 
 export const processApi = {
   list: (spaceId: string) =>

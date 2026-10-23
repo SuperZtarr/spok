@@ -174,6 +174,15 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     visible: true,
     order: 10,
   },
+  // Article : page qui assemble des éléments existants (blocs = table article_blocks)
+  ARTICLE: {
+    label: 'Articles',
+    labelShort: 'Art',
+    color: 'border-fuchsia-400',
+    bgHover: 'bg-fuchsia-50',
+    visible: true,
+    order: 11,
+  },
 };
 
 // =============================================================================

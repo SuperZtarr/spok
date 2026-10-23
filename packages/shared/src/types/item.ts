@@ -4,7 +4,7 @@ import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
 import type { HorizonBucket } from '../utils/horizon.js';
 
-export type ItemType = 'UNDEFINED' | 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM';
+export type ItemType = 'UNDEFINED' | 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM' | 'ARTICLE';
 
 export interface Item {
   id: string;

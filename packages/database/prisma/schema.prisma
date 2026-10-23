@@ -64,6 +64,7 @@ model User {
   liveSessionInvites          LiveSessionInvite[]     @relation("LiveSessionInvitee")
   liveSessionInvitesBy        LiveSessionInvite[]     @relation("LiveSessionInviter")
   personalAccessTokens        PersonalAccessToken[]
+  articleBlocksAdded          ArticleBlock[]     @relation("ArticleBlockAddedBy")
 
   @@map("users")
 }
@@ -359,6 +360,8 @@ model Item {
   liveSessionEntries LiveSessionEntry[]
   processNodes  ProcessNode[]
   processLanes  ProcessLane[]
+  articleBlocks ArticleBlock[] @relation("ArticleBlocks")
+  referencedIn  ArticleBlock[] @relation("ArticleReferences")
 
   @@index([spaceId])
   @@index([createdById])
@@ -366,6 +369,28 @@ model Item {
   @@index([parentId])
   @@index([sourceItemId])
   @@map("items")
+}
+
+// Bloc d'un article (type ARTICLE, 2026-10-23) : référence ordonnée vers un élément existant, qui reste où il est
+// (un même élément peut figurer dans plusieurs articles, une seule fois par article). width : full | wide | medium ;
+// align : center | left | right (gauche/droite pour IMAGE et DIAGRAM). addedById : la personne qui a ajouté la
+// référence — ses droits de lecture décident à la lecture si le bloc est montré (null = bloc indisponible).
+model ArticleBlock {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Item     @relation("ArticleBlocks", fields: [articleId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item     @relation("ArticleReferences", fields: [itemId], references: [id], onDelete: Cascade)
+  position  Int
+  width     String   @default("full")
+  align     String   @default("center")
+  addedById String?
+  addedBy   User?    @relation("ArticleBlockAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, itemId])
+  @@index([itemId])
+  @@map("article_blocks")
 }
 
 // Position d'un item sur le canevas de la vue Process de son espace (2026-10-20).
@@ -422,6 +447,7 @@ enum ItemType {
   IMAGE
   BUG
   DIAGRAM
+  ARTICLE
 }
 
 // Relations entre éléments

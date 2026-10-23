@@ -1,10 +1,12 @@
 /*
  * GET /spaces/:spaceId/referentiels — lecture seule : résout les référentiels de la communauté
  * parente ou renvoie les défauts. L'édition vit dans community-referentiels.ts.
+ * Les types absents d'un référentiel personnalisé (ajoutés depuis) sont complétés par withDefaultTypeLabels.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
+import { withDefaultTypeLabels } from '../utils/referentiels.js';
 
 function parseReferentiels(config: unknown): SpaceReferentiels | null {
   if (!config || typeof config !== 'object') return null;
@@ -38,7 +40,7 @@ export const referentielsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const referentiels = parseReferentiels(community?.referentiels);
       if (referentiels) {
-        return { referentiels, isDefault: false };
+        return { referentiels: withDefaultTypeLabels(referentiels), isDefault: false };
       }
     }
 

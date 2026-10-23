@@ -167,6 +167,27 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/constants/ui.ts (PRIORITIES)',
   },
   {
+    id: 'article-blocks-references',
+    page: 'Article (/spaces/:spaceId/articles/:itemId)',
+    trigger: 'Composition d\'un article (mode Composer)',
+    effect: "Un bloc est une référence vers un élément existant, qui reste à sa place : le corriger le corrige dans tous les articles qui le citent ; retirer le bloc ne supprime jamais l'élément. Un élément figure au plus une fois par article ; un article ne peut pas contenir d'article. « Texte » crée une nouvelle note dans l'espace de l'article. Seul qui peut modifier l'article (propriétaire de l'espace, ou membre auteur / assigné) compose ; on ne référence que ce qu'on peut lire soi-même (hors mode admin)",
+    location: 'apps/api/src/routes/item-article.ts, apps/web/src/components/article/ArticleEditor.tsx',
+  },
+  {
+    id: 'article-reader-sees-blocks',
+    page: 'Article',
+    trigger: 'Lecture d\'un article',
+    effect: "Le lecteur voit le contenu de chaque bloc sans recevoir d'accès à l'élément d'origine (lien vers sa fiche seulement s'il y a accès par ailleurs). Le bloc n'est montré que si la personne qui l'a ajouté peut encore lire l'élément, évalué à chaque lecture et hors mode admin ; sinon « contenu indisponible » et rien de son contenu n'est envoyé",
+    location: 'apps/api/src/routes/item-article.ts (resolveBlocks), apps/web/src/components/article/ArticleBlock.tsx',
+  },
+  {
+    id: 'article-less-visible-warning',
+    page: 'Article (mode Composer)',
+    trigger: 'Ajout d\'un élément moins visible que l\'article',
+    effect: "Avertissement à confirmer (pas d'interdiction) quand l'élément atteint moins de lecteurs que l'article : espace privé autre que celui de l'article, ou communauté réservée à ses membres différente, ou portée plus faible (privé < membres de la communauté < public)",
+    location: 'apps/api/src/utils/articleVisibility.ts (isLessVisible), apps/web/src/components/article/ArticleEditor.tsx',
+  },
+  {
     id: 'merge-targets-allowed-only',
     page: 'Modale « Fusionner avec… » (MergeItemModal)',
     trigger: 'Choix de la cible d\'une fusion',

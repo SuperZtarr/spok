@@ -8,7 +8,8 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 - Communauté → Espaces (arborescence) → Items.
 - Un item a un type : PROJECT (ensemble de travail avec dates), TASK (action à faire, statut + échéance),
   MEETING (réunion datée), NOTE (texte libre), DOCUMENT (texte long structuré), LINK (url obligatoire),
-  PERIOD (plage de dates sans action, ex. vacances, sprint), BUG (anomalie à corriger), IMAGE, DIAGRAM, CONFIG.
+  PERIOD (plage de dates sans action, ex. vacances, sprint), BUG (anomalie à corriger), IMAGE, DIAGRAM, CONFIG,
+  ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP).
   Les types réellement utilisés et leurs libellés dépendent de la communauté : voir get_space_conventions.
 - Hiérarchie (parentId) : décomposition. Un PROJECT contient des TASK ; une TASK peut contenir des sous-TASK.
   Le parent doit être dans le même espace.

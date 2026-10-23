@@ -20,6 +20,7 @@ import { SpaceOverviewPage } from './pages/SpaceOverviewPage';
 import { useParams } from 'react-router-dom';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
+import { ArticlePage } from './pages/ArticlePage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
@@ -107,6 +108,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/spaces\/[^/]+\/content$/, 'pages/SpacePage.tsx'],
   [/^\/spaces\/[^/]+\/settings$/, 'pages/SpaceSettingsPage.tsx'],
   [/^\/spaces\/[^/]+\/history$/, 'pages/SpaceHistoryPage.tsx'],
+  [/^\/spaces\/[^/]+\/articles\/[^/]+$/, 'pages/ArticlePage.tsx'],
   [/^\/spaces\/[^/]+$/, 'pages/SpacePage.tsx \u2192 views/OverviewView.tsx'],
   [/^\/communities\/[^/]+\/settings$/, 'pages/CommunitySettingsPage.tsx'],
   [/^\/communities\/[^/]+$/, 'pages/CommunityPage.tsx'],
@@ -209,6 +211,7 @@ export default function App() {
         <Route path="spaces/:spaceId/content" element={<SpaceContentRedirect />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
+        <Route path="spaces/:spaceId/articles/:itemId" element={<ArticlePage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />
         <Route path="admin" element={<AdminRoute><Navigate to="/admin/users" replace /></AdminRoute>} />

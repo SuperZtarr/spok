@@ -1,4 +1,5 @@
-/* Constantes UI partagées : icônes par type d'item (getTypeIcon), couleurs de statut, tailles. */
+/* Constantes UI partagées : icônes par type d'item (getTypeIcon), couleurs de statut, tailles.
+   Nouveau type d'item = une entrée dans chaque table ci-dessous (icône, libellés, groupe, colonne). */
 import {
   FileText,
   CheckSquare,
@@ -19,6 +20,7 @@ import {
   FileAudio,
   Presentation,
   HelpCircle,
+  Newspaper,
 } from 'lucide-react';
 import type { SVGProps } from 'react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
@@ -71,6 +73,7 @@ export const TYPE_ICONS: Record<string, IconComponent> = {
   IMAGE: Image,
   BUG: Bug,
   DIAGRAM: Workflow,
+  ARTICLE: Newspaper,
   // Legacy fallback
   APPOINTMENT: Calendar,
 };
@@ -91,6 +94,7 @@ export const TYPE_LABELS: Record<string, string> = {
   IMAGE: 'Image',
   BUG: 'Anomalie',
   DIAGRAM: 'Diagramme',
+  ARTICLE: 'Article',
   // Legacy fallback
   APPOINTMENT: 'Rendez-vous',
 };
@@ -109,6 +113,7 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   IMAGE: 'Image',
   BUG: 'Bug',
   DIAGRAM: 'Diagramme',
+  ARTICLE: 'Article',
   // Legacy fallback
   APPOINTMENT: 'RDV',
 };
@@ -119,7 +124,7 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
 export const TYPE_GROUPS: { id: string; label: string; types: ItemType[] }[] = [
   { id: 'default', label: 'Défaut', types: ['UNDEFINED', 'NOTE'] },
   { id: 'activities', label: 'Activités', types: ['PROJECT', 'TASK', 'MEETING', 'PERIOD', 'BUG'] },
-  { id: 'deliverables', label: 'Livrables', types: ['LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'DIAGRAM'] },
+  { id: 'deliverables', label: 'Livrables', types: ['LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'DIAGRAM', 'ARTICLE'] },
 ];
 
 // =============================================================================
@@ -137,6 +142,7 @@ export const TYPE_COLUMNS: { id: ItemType; label: string; color: string; bgHover
   { id: 'IMAGE', label: 'Images', color: 'border-pink-400', bgHover: 'bg-pink-50' },
   { id: 'BUG', label: 'Anomalies', color: 'border-red-400', bgHover: 'bg-red-50' },
   { id: 'DIAGRAM', label: 'Diagrammes', color: 'border-indigo-400', bgHover: 'bg-indigo-50' },
+  { id: 'ARTICLE', label: 'Articles', color: 'border-fuchsia-400', bgHover: 'bg-fuchsia-50' },
 ];
 
 // =============================================================================
