@@ -9,6 +9,11 @@ Ne pas déployer, demander validation
 Ne pas coder, reflechir a la proposition d'une solution 
 Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
 
+**Micro-correction** (moins d'une vingtaine de lignes, sans nouveau comportement — décision Thomas 2026-10-23) :
+pas de plan à valider ; dire en une phrase ce qui change, puis le faire. Si elle touche un composant, demander à
+Thomas si on actualise ses éléments de documentation (spec SPOK, fiche d'aide) plutôt que de les dérouler d'office.
+Tout le reste (nouveau comportement, plusieurs fichiers, choix d'architecture) : plan validé + trois couches de doc.
+
 ### Interdictions absolues
 - Ne JAMAIS modifier des données en production sans demande explicite
 - Ne JAMAIS commiter ou pusher sans demande explicite de l'utilisateur
@@ -21,6 +26,16 @@ Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
 - Les conversations sont séparées par thème mais partagent la même base de code
 - "commit et push" = commit + `git push origin master` = déploiement Railway prod
 - Tout enchaîner sans pause ni question intermédiaire
+
+### Une seule session fait les MEP (décision Thomas 2026-10-23)
+Plusieurs sessions codent en parallèle dans le même dossier : deux sessions qui commitent se volent leurs fichiers
+(index partagé, fichier modifié entre la vérification et le commit — CI cassée le 2026-10-23).
+- **Session de développement** : ne commite JAMAIS, ne pousse jamais, ne lance pas `pnpm dev:stop` / `dev:start`
+  si le dev tourne déjà. Lot terminé → l'inscrire dans la section « PRÊT POUR MEP » en haut de
+  `docs/session-journal.md` (nom du lot, fichiers exacts — lignes concernées pour un fichier partagé —, tests faits,
+  non vérifié). Thomas demande « MEP » ici → répondre que le lot est inscrit et que la MEP se fait depuis la session MEP.
+- **Session MEP** (session dédiée, titre « MEP ») : seule à commiter et pousser, sur demande de Thomas — skill
+  `spok-deploy` : un commit par lot, une vérification complète de l'ensemble, push, CI en tâche de fond, section vidée.
 
 ### Zones fragiles
 - **MindMap** : edges recalculés via `onInit`, portails placement fixe — ne pas modifier sans vérifier les edges
@@ -66,7 +81,7 @@ Format : bloc `/* ... */` ou JSDoc `/** ... */` avant les imports. Une ligne suf
 
 **Journalisation**
 - `docs/session-journal.md` : écrire après chaque action significative, garder la section EN COURS courte
-- `docs/TODO.md` : mettre à jour après chaque commit (date + hash)
+- `docs/TODO.md` : mettre à jour dans le commit du lot (date seule, pas de hash — `git log` le retrouve ; plus de commit « docs: TODO - hash »)
 
 ---
 

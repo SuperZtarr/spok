@@ -1,9 +1,13 @@
 ---
 name: spok-deploy
-description: Déployer SPOK en production. Enchaîne rebuild des packages, commit, mise à jour TODO.md, et push vers Railway. Déclencher quand l'utilisateur dit "deploy", "pousse en prod", "commit et push", ou demande de déployer.
+description: Déployer SPOK en production depuis la session MEP (seule session qui commite). Traite les lots inscrits « PRÊT POUR MEP » dans le journal — un commit par lot, une vérification complète, push vers Railway, CI en tâche de fond. Déclencher quand l'utilisateur dit "MEP", "deploy", "pousse en prod", "commit et push". Dans une autre session : ne pas commiter, renvoyer vers la session MEP.
 ---
 
 # spok-deploy — Déploiement en production
+
+> **Session MEP seulement** (décision Thomas 2026-10-23, CLAUDE.md « Une seule session fait les MEP ») : une seule
+> session commite et pousse. Si cette session n'est pas la session MEP (titre « MEP ») : ne rien commiter, inscrire
+> le lot dans « PRÊT POUR MEP » (`docs/session-journal.md`) et le dire à Thomas.
 
 > **Anti-tunnel** : entre chaque étape, si un message de l'utilisateur est arrivé, l'intégrer avant de poursuivre — il prime sur le déroulé de la skill.
 > **Exécution non bloquante** : `pnpm exec vitest run` et `gh run watch` tournent en arrière-plan (`run_in_background: true`), jamais en foreground — un message de Thomas doit pouvoir arriver pendant l'attente.
@@ -16,21 +20,29 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
    ```
    Obligatoire si `packages/shared/` ou `packages/database/` ont été modifiés.
 
-2. **Vérifier les fichiers modifiés**
+2. **Lire les lots et vérifier les fichiers modifiés**
    ```bash
    git -C C:/_dev/spok status
    git -C C:/_dev/spok diff --stat
    ```
-   Lister ce qui sera commité, identifier les changements.
+   - Lire la section **« PRÊT POUR MEP »** de `docs/session-journal.md` : chaque lot liste ses fichiers.
+   - Tout fichier modifié qui n'appartient à aucun lot inscrit (travail en cours d'une autre session) **reste hors
+     des commits** ; fichier partagé entre un lot prêt et un travail en cours → ne commiter que les lignes du lot.
+   - Une autre session a-t-elle des fichiers indexés (`git diff --cached`) ? → ne pas commiter, signaler à Thomas.
 
-3. **Mettre à jour `docs/TODO.md`**
-   - Cocher `[x]` les tâches terminées dans cette session
-   - Ajouter la date et le hash de commit (approximatif ou à compléter après)
+3. **Mettre à jour `docs/TODO.md`** — dans le commit du lot
+   - Cocher `[x]` les tâches terminées, avec la **date seule** (pas de hash : `git log` le retrouve, plus de commit
+     « docs: TODO - hash »)
    - Déplacer vers la section "Terminé" si applicable
 
 4. **Mettre à jour `docs/session-journal.md`**
-   - Mettre à jour la section **EN COURS** avec le contexte exact pour reprendre
+   - Retirer de « PRÊT POUR MEP » les lots poussés (une ligne dans EN COURS : lot, date, MEP)
    - Une ligne par action
+
+4 bis. **Vérification complète — une seule passe sur l'ensemble des lots à pousser**
+   - Typecheck des 5 paquets et TNR (`pnpm typecheck`, `pnpm exec vitest run`, en arrière-plan) sur l'état exact qui
+     sera commité : si des fichiers en cours d'autres sessions sont présents, vérifier dans une copie de l'index
+     (`git checkout-index -a --prefix=<scratchpad>/`, `node_modules` reliés par jonction) plutôt que sur le dossier
 
 5. **Contrôle documentation** — bloquant
    ```bash
@@ -48,12 +60,14 @@ description: Déployer SPOK en production. Enchaîne rebuild des packages, commi
      ```
      Rouge → fiche, registre ou repère manquant : corriger avant de commiter
 
-6. **Commiter**
+6. **Commiter — un commit par lot**
    ```bash
-   git -C C:/_dev/spok add <fichiers pertinents>
+   git -C C:/_dev/spok add <fichiers du lot>
    git -C C:/_dev/spok commit -m "type: description courte"
    ```
    Format commit : `feat|fix|refactor|docs|style|test|chore: description`
+   - Avant chaque commit : `git diff --cached --stat` = exactement les fichiers du lot (sinon une autre session a
+     indexé quelque chose : stop, signaler)
 
 7. **Pusher vers origin/master**
    ```bash

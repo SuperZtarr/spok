@@ -1,6 +1,6 @@
 ---
 name: spok-dev
-description: Cycle de développement SPOK — à invoquer à CHAQUE demande de modification de code (fonctionnalité, correctif, retouche d'interface, refactor, route API, vue, page, modale, bouton), avant de lire ou toucher le code. Appelle spok-doc avant (spec) et après (trois couches de documentation), impose plan validé, tests ciblés et liste de contrôle « terminé ». Ne pas utiliser pour une simple question sans modification, ni pour le déploiement (spok-deploy).
+description: Cycle de développement SPOK — à invoquer à CHAQUE demande de modification de code (fonctionnalité, correctif, retouche d'interface, refactor, route API, vue, page, modale, bouton), avant de lire ou toucher le code. Distingue micro-correction (sans plan à valider) et changement (spec, plan validé, trois couches de documentation via spok-doc), tests ciblés, liste de contrôle « terminé » ; ne commite jamais — le lot fini est inscrit « PRÊT POUR MEP » pour la session MEP. Ne pas utiliser pour une simple question sans modification, ni pour le déploiement (spok-deploy).
 ---
 
 # spok-dev — Cycle de développement SPOK
@@ -11,6 +11,16 @@ dans l'interface. Cette skill est la seule porte d'entrée du code : elle appell
 
 > Anti-tunnel : un message de Thomas en cours de route prime — reformuler son impact en une phrase, l'intégrer,
 > continuer. Découverte qui élargit le périmètre → signaler avant de traiter.
+
+## 0. Niveau du changement (décision Thomas 2026-10-23)
+
+- **Micro-correction** — moins d'une vingtaine de lignes, aucun nouveau comportement (libellé, placement, bug
+  local évident) : pas de plan à valider, dire en une phrase ce qui change puis le faire. Si elle touche un
+  composant, **demander à Thomas** si on actualise ses éléments de documentation (spec SPOK, fiche d'aide) au lieu
+  de dérouler la section 3 d'office. En-tête du fichier et tests ciblés restent obligatoires.
+- **Changement** — tout le reste (nouveau comportement, plusieurs fichiers, choix d'architecture) : cycle complet
+  ci-dessous (spec, plan validé, trois couches).
+- Doute sur le niveau → c'est un changement.
 
 ## 1. Avant de coder
 
@@ -46,5 +56,10 @@ Rappeler `spok-doc` et dérouler, pour chaque composant touché :
 Puis :
 - **Vérification du comportement** : suivre la skill `testing-protocol`.
 - `docs/session-journal.md` : une ligne (ce qui a été fait, tests, état « NON COMMITÉ »).
+- **Lot terminé → section « PRÊT POUR MEP »** en haut de `docs/session-journal.md` : nom du lot, fichiers exacts
+  (pour un fichier partagé avec un autre lot : les lignes / blocs concernés), tests faits, ce qui n'est pas vérifié.
 - Rendre compte à Thomas : ce qui change pour l'utilisateur, ce qui a été vérifié, ce qui ne l'a pas été.
-- Jamais de commit ni de push sans demande explicite (MEP → `spok-deploy`).
+- **Jamais de commit ni de push depuis une session de développement** : une seule session (« MEP ») commite et
+  pousse, via `spok-deploy` (CLAUDE.md, « Une seule session fait les MEP »). Thomas demande « MEP » ici → répondre
+  que le lot est inscrit et que la MEP se fait depuis la session MEP.
+- Ne pas lancer `pnpm dev:stop` / `dev:start` si le dev tourne déjà : il est partagé avec les autres sessions.
