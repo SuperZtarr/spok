@@ -1,6 +1,7 @@
-/* TNR de itemClipboard — conversion HTML → Markdown et rendu de la fiche (champs vides omis). */
+/* TNR de itemClipboard — conversion HTML → Markdown et rendu de la fiche (champs vides omis,
+ * image/schéma intégrés, fichier nommé). */
 import { describe, it, expect } from 'vitest';
-import { htmlToMarkdown, buildItemSheet, itemSheetToMarkdown, itemSheetToHtml, type ItemSheetSource } from './itemClipboard';
+import { htmlToMarkdown, buildItemSheet, itemSheetToMarkdown, itemSheetToHtml, withAbsoluteMediaUrl, itemSheetToClipboardHtml, type ItemSheetSource } from './itemClipboard';
 
 const labels = {
   typeLabel: (t: string) => ({ TASK: 'Tâche' } as Record<string, string>)[t],
@@ -78,8 +79,58 @@ describe('fiche', () => {
     expect(itemSheetToHtml(sheet)).toContain('<h1>Ma tâche</h1>');
   });
 
+  it('intègre l\'image d\'un item IMAGE ou DIAGRAM (HTML) et son adresse (Markdown)', () => {
+    for (const type of ['IMAGE', 'DIAGRAM'] as const) {
+      const sheet = buildItemSheet({ item: makeItem({ type, title: 'Schéma', url: 'https://r2.x/items/i1/1.webp' }), labels, relationLabel });
+      expect(itemSheetToHtml(sheet)).toContain('<img src="https://r2.x/items/i1/1.webp" alt="Schéma"');
+      expect(itemSheetToMarkdown(sheet)).toContain('![Schéma](https://r2.x/items/i1/1.webp)');
+    }
+  });
+
+  it('nomme le fichier d\'un DOCUMENT sans le préfixe horodaté', () => {
+    const url = 'https://r2.x/items/i1/1761200000000-compte_rendu%20v2.pdf';
+    const sheet = buildItemSheet({ item: makeItem({ type: 'DOCUMENT', url }), labels, relationLabel });
+    expect(itemSheetToHtml(sheet)).toContain(`📎 <a href="${url}">compte_rendu v2.pdf</a>`);
+    expect(itemSheetToHtml(sheet)).not.toContain('<img');
+    expect(itemSheetToMarkdown(sheet)).toContain(`**Fichier** : [compte_rendu v2.pdf](${url})`);
+  });
+
+  it('garde un LINK en lien brut', () => {
+    const sheet = buildItemSheet({ item: makeItem({ type: 'LINK', url: 'https://site.fr' }), labels, relationLabel });
+    expect(itemSheetToMarkdown(sheet)).toContain('**Lien** : https://site.fr');
+  });
+
   it('ignore une description vide (<p></p>)', () => {
     const sheet = buildItemSheet({ item: makeItem({ description: '<p></p>' }), labels, relationLabel });
     expect(sheet.descriptionHtml).toBeNull();
+  });
+});
+
+describe('image de la copie (Word / mail)', () => {
+  const imageSheet = (url: string) => buildItemSheet({ item: makeItem({ type: 'IMAGE', url }), labels, relationLabel });
+
+  it('rend absolue une adresse relative (upload local du dev), laisse une adresse complète intacte', () => {
+    expect(withAbsoluteMediaUrl(imageSheet('/api/local-uploads/items/a/b.webp'), 'http://localhost:3000').media?.url)
+      .toBe('http://localhost:3000/api/local-uploads/items/a/b.webp');
+    expect(withAbsoluteMediaUrl(imageSheet('https://r2.test/b.webp'), 'http://localhost:3000').media?.url)
+      .toBe('https://r2.test/b.webp');
+  });
+
+  it('intègre l\'image convertie en PNG quand la conversion réussit', async () => {
+    const html = await itemSheetToClipboardHtml(imageSheet('https://r2.test/b.webp'), async () => 'data:image/png;base64,AAA');
+    expect(html).toContain('<img src="data:image/png;base64,AAA"');
+    expect(html).not.toContain('r2.test');
+  });
+
+  it('garde l\'adresse de l\'image quand la conversion échoue', async () => {
+    const html = await itemSheetToClipboardHtml(imageSheet('https://r2.test/b.webp'), async () => null);
+    expect(html).toContain('<img src="https://r2.test/b.webp"');
+  });
+
+  it('ne convertit rien pour un document', async () => {
+    let called = false;
+    const sheet = buildItemSheet({ item: makeItem({ type: 'DOCUMENT', url: 'https://r2.test/1792094633080-plan.pdf' }), labels, relationLabel });
+    await itemSheetToClipboardHtml(sheet, async () => { called = true; return null; });
+    expect(called).toBe(false);
   });
 });

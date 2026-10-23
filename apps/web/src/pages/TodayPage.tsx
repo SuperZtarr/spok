@@ -9,6 +9,7 @@
  * Le marquage « fait » passe par itemsApi.update (status done) : une seule vérité, l'item.
  * Le placement (plannedStart/plannedDuration) vit sur DayPlanEntry, jamais sur l'item.
  * Section « À réviser » (spec 2026-07-19) : bac à trier + horizons dépassés, cf. ReviewQueueSection.
+ * Menu des items : « Afficher » ouvre la modale en mode lecture (editingItem.mode → initialMode).
  */
 import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
@@ -18,6 +19,7 @@ import { useAuthStore } from '@/stores/auth';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { buildItemMenuGroups } from '@/lib/itemMenuGroups';
 import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
+import type { ItemOpenMode } from '@/lib/itemOpenMode';
 import { useAgenda, useAgendaMutations, useCalendarFeeds, todayKey } from '@/hooks/useAgenda';
 import { useGlobalTaskFilters } from '@/hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '@/components/GlobalTaskFilterBar';
@@ -121,7 +123,7 @@ export function TodayPage() {
   };
 
   // Menu contextuel des items (liste, suggestions, blocs de grille) + modale d'édition
-  const [editingItem, setEditingItem] = useState<{ spaceId: string; itemId: string } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ spaceId: string; itemId: string; mode?: ItemOpenMode } | null>(null);
   const { data: spaceItemsData } = useQuery({
     queryKey: ['items', editingItem?.spaceId, { pageSize: 5000 }],
     queryFn: () => itemsApi.list(editingItem!.spaceId, { pageSize: 5000 }),
@@ -137,7 +139,7 @@ export function TodayPage() {
     .map((s) => ({ id: s.id, label: s.label }));
   const menuGroupsFor = (item: DayPlanItemDto): ItemActionGroup[] =>
     buildItemMenuGroups(item.id, {
-      onOpen: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
+      onOpen: (_id, mode) => setEditingItem({ spaceId: item.spaceId, itemId: item.id, mode }),
       onOpenInNewTab: () => window.open(`/spaces/${item.spaceId}/content?item=${item.id}`, '_blank'),
       onEdit: () => setEditingItem({ spaceId: item.spaceId, itemId: item.id }),
       onUpdateStatus: async (_id, status) => {
@@ -319,6 +321,7 @@ export function TodayPage() {
           }}
           spaceId={editingItem.spaceId}
           itemId={editingItem.itemId}
+          initialMode={editingItem.mode}
           allItems={(spaceItemsData?.data as Item[]) || []}
           canEdit={true}
           onNavigate={(newItemId) => setEditingItem({ ...editingItem, itemId: newItemId })}

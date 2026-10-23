@@ -1,5 +1,8 @@
 /* Aide utilisateur de la fiche d'un élément (ItemEditModal).
-   Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts. */
+   Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts.
+   hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
+   hints.readMode / readModeUnsaved / editMode / sheetMode : sélecteur Afficher / Modifier (data-tour item-mode-switch) ;
+   hints.print : Imprimer du mode Afficher. zones read-media / read-content : mode Aide sur ItemReadView. */
 import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
@@ -27,6 +30,14 @@ export const help: HelpEntry = {
       popover: {
         title: 'Titre',
         description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type de l\'élément.',
+        side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="item-mode-switch"]',
+      popover: {
+        title: 'Afficher / Modifier',
+        description: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
         side: 'bottom',
       },
     },
@@ -115,11 +126,25 @@ export const help: HelpEntry = {
       element: '[data-tour="item-actions"]',
       popover: {
         title: 'Actions',
-        description: 'Enregistrez, annulez, supprimez, imprimez ou exportez en PDF.',
+        description: 'Enregistrez, annulez, supprimez, imprimez, exportez en PDF ou copiez la fiche pour la coller ailleurs (Word, mail, Notion).',
         side: 'top',
       },
     },
   ],
+  hints: {
+    openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture.',
+    copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
+    copySheetDone: 'Fiche copiée',
+    print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',
+    readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (image ou schéma en grand). C\'est exactement ce que copie « Copier la fiche ». Rien ne peut y être modifié.',
+    readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
+    editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
+    sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
+  },
+  zones: {
+    'read-media': { title: 'Média', text: 'L\'image ou le schéma de l\'élément en grand ; cliquez pour le plein écran. Pour un document ou un lien : de quoi l\'ouvrir.' },
+    'read-content': { title: 'Contenu', text: 'Description, éléments enfants (cliquables), relations et contributions, en lecture seule — le même contenu que celui copié par « Copier la fiche ».' },
+  },
   fields: {
     startEnd: 'Début et fin : la période pendant laquelle l\'élément a lieu (barre du Gantt, calendrier).',
     dueDate: 'La date limite à respecter : elle classe l\'élément dans le Planning et le signale en retard une fois dépassée.',

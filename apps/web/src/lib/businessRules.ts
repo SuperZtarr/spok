@@ -195,6 +195,20 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/ReactionBar.tsx (readOnly), apps/web/src/components/ItemEditModal.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/hooks/useLiveSession.ts',
   },
   {
+    id: 'user-html-sanitized',
+    page: 'Toutes (vues Texte, Discussions, modale item, vue lecture, séance live, e-mails de communauté, impression, copie de fiche, liens d\'items)',
+    trigger: "Affichage d'un contenu écrit par un utilisateur, l'API ou le MCP (description, contribution, e-mail, URL d'item)",
+    effect: "Le HTML n'est jamais injecté tel quel : sanitizeHtml (liste blanche des balises de l'éditeur, aucun on*, URL http(s)/mailto/tel/relatives/data:image seulement) avant tout dangerouslySetInnerHTML ; extraction de texte par htmlToText (DOMParser, jamais innerHTML sur un élément de la page) ; liens vers item.url par safeHref (schéma non sûr → lien inerte). L'API refuse une URL d'item qui ne commence pas par http(s):// (400). Le HTML des descriptions n'est pas nettoyé à l'enregistrement : le contenu déjà en base est neutralisé à l'affichage",
+    location: 'apps/web/src/lib/sanitizeHtml.ts, apps/api/src/routes/items.ts (itemUrlField)',
+  },
+  {
+    id: 'item-open-mode-default',
+    page: "Modale d'un élément (toutes les pages qui l'ouvrent)",
+    trigger: "Ouverture d'un élément : menu ⋮ « Afficher » / « Ouvrir », clic dans une vue, adresse ?item=…[&mode=lecture]",
+    effect: "« Afficher » (ou &mode=lecture dans l'adresse) ouvre la vue lecture ; « Ouvrir » ouvre la fiche. Sans mode demandé (clic simple, lien sans mode) : fiche si l'espace est modifiable par l'utilisateur, lecture sinon (visiteur anonyme, membre en lecture seule). Le sélecteur Afficher / Modifier (Fiche sans droit d'édition) bascule à tout moment ; vers Afficher il est bloqué tant que la fiche a des modifications non enregistrées (la lecture montre la version enregistrée). Le mode est conservé en naviguant d'élément en élément dans la modale, remis au défaut à la fermeture. La vue lecture affiche exactement la fiche copiée par « Copier la fiche »",
+    location: 'apps/web/src/lib/itemOpenMode.ts, apps/web/src/components/ItemEditModal.tsx (readMode), apps/web/src/components/ItemReadView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/pages/SpacePage.tsx',
+  },
+  {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
     trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-JDR-Tous du header",

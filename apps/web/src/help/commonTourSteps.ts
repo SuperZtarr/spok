@@ -16,7 +16,7 @@ export const ITEM_MENU_STEP: TourStep[] = [
     element: '[data-tour="item-menu"]',
     popover: {
       title: 'Actions sur un élément',
-      description: 'Le menu ⋮ regroupe toutes les actions : ajouter un enfant, déplacer ou dupliquer vers un autre espace, fusionner, changer le statut, m\'assigner, supprimer…',
+      description: 'Le menu ⋮ regroupe toutes les actions : « Afficher » ouvre l\'élément en lecture (mise en page document, à copier ou imprimer), « Ouvrir » ouvre sa fiche (modifiable si vous en avez le droit) ; puis ajouter un enfant, déplacer ou dupliquer vers un autre espace, fusionner, changer le statut, m\'assigner, supprimer…',
       side: 'left',
     },
   },

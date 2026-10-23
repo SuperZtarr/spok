@@ -6,6 +6,34 @@
 
 ## EN COURS
 
+### MEP lot fiche d'élément seul — 2026-10-23
+- Demande Thomas : MEP du lot fiche (mode lecture, Copier la fiche PNG, bouton visiteur retiré, HelpHint) sans Articles ni sanitizeHtml des vues/API. 20 fichiers isolés ; HEAD + lot seul vérifié dans une copie (typecheck web OK, TNR web 802/802). Restent NON COMMITÉS : Articles (schéma Prisma, API, MCP, shared), sanitizeHtml des vues / séance live / e-mails / items.ts, launch.json, dev-autostart.ps1
+
+### Infobulles d'aide hors de la fenêtre — 2026-10-23
+- Constat Thomas (infobulle « Copier la fiche » coupée en haut). HelpHint ne passait dessous que si l'élément était à < 60 px du haut, sans tenir compte de la hauteur du texte. Correctif : placeHint (pur) sur la taille mesurée (useLayoutEffect, invisible avant placement) — au-dessus si ça tient, sinon dessous, sinon côté le plus large, toujours ramenée dans la fenêtre. HelpHint.test.ts 4 tests, aide 397/397, typecheck web OK. Non vérifié à l'écran. NON COMMITÉ
+
+### Copier la fiche : image intégrée en PNG (collage Word) — 2026-10-23
+- Retour Thomas : l'image ne se collait pas dans Word. Causes : adresse relative en dev (/api/local-uploads/…) + fichiers stockés en WebP. itemClipboard.ts : withAbsoluteMediaUrl, imageToPngDataUrl (fetch → canvas → PNG, 1280 px max), itemSheetToClipboardHtml (repli <img> sur l'adresse complète), HTML passé en promesse à ClipboardItem. Tests itemClipboard + aide 408/408, typecheck web OK. Spec « Copier la fiche » to_validate. Aide inchangée (déjà juste). Non vérifié : collage réel Word/mail, CORS du stockage R2 en prod (sinon repli). NON COMMITÉ
+
+### Bouton admin « Voir comme visiteur » retiré de la fiche — 2026-10-23
+- Décision Thomas : doublon d'« Afficher » (un visiteur ouvre la fiche en lecture, le bouton montrait un formulaire grisé que personne ne voit plus). ItemEditModal : état visitorPreview, bouton et useAdminMode retirés, en-tête complété. Aucune aide ni spec ne le citait (spec « Modale d'édition d'item » inchangée). Typecheck web OK, aide 393/393. Non vérifié à l'écran. NON COMMITÉ (même fichier que le mode lecture et Copier la fiche)
+
+### Copier la fiche : image, schéma et document inclus — 2026-10-23
+- Demande Thomas : la fiche copiée ne contenait que l'adresse du média. itemClipboard.ts : `link` → `media` ; IMAGE/DIAGRAM intégrés en `<img>` (URL publique R2, 640 px) et `![titre](url)` en Markdown ; DOCUMENT = lien « 📎 nom du fichier » (préfixe horodaté retiré, fileNameFromUrl) ; LINK inchangé. Aide : hints.copySheet / copySheetDone (HelpHint sur le bouton, remplace le title), étape Actions du tour complétée. Tests itemClipboard + aide 404/404, typecheck web OK. Spec SPOK « Copier la fiche » réécrite, to_validate. Collage réel (Word/mail) non vérifié — à faire par Thomas. NON COMMITÉ
+
+### Faille XSS : contenu utilisateur nettoyé à l'affichage, URL d'item http(s) — 2026-10-23
+- L'API ne filtrait ni le HTML (description, contributions) ni le schéma des URL (javascript: accepté). sanitizeHtml branché sur les 7 dangerouslySetInnerHTML (TextView ×2, ThreadView ×2, contributions ItemEditModal, LiveWindow, aperçu e-mail CommunitySettingsPage) ; htmlToText remplace innerHTML (itemExport stripHtml, DeleteConfirmModal) ; impression : titre/statut/libellés/couleur échappés, HTML nettoyé, image si URL sûre ; copie de fiche nettoyée ; safeHref sur les liens item.url (10 fichiers + modale). API items.ts : itemUrlField (http(s) seulement, 400 sinon). businessRules user-html-sanitized. Tests web 421/421, API items 63/63, typecheck web + api OK. Spec « Sécurité & Accès » complétée, to_validate. Non fait : nettoyage HTML côté API, recherche de contenus piégés en prod. NON COMMITÉ
+
+### Menu Afficher / Ouvrir + mode lecture de la modale item — 2026-10-23
+- Menu ⋮ : « Afficher » (onOpen(id,'read')) + « Ouvrir » (fiche, 'edit') pour tous, « Modifier » retiré. lib/itemOpenMode.ts (?mode=lecture, défaut lecture si !canEdit). ItemReadView.tsx (fiche = ItemSheet de Copier la fiche, média en grand). ItemEditModal : initialMode, sélecteur Afficher | Modifier/Fiche, Afficher bloqué si modifs non enregistrées. SpacePage : ?item traité à chaque apparition (avant : une seule fois → « Ouvrir » sur un item du même espace ne rouvrait rien) + ?mode. TodayPage branchée. lib/sanitizeHtml.ts (l'API ne filtre pas le HTML — faille XSS existante ailleurs : TextView, ThreadView, contributions de la modale, LiveWindow, NON traitée). Aide : hints, étape item-mode-switch, zones read-media/read-content, ITEM_MENU_STEP. businessRules item-open-mode-default. Tests 417/417, typecheck web OK. Specs SPOK : nouvel item cmvkoqozm0006es9latkqqfx7 + menu contextuel + Afficher/Ouvrir, to_validate. Vérif à l'écran à faire par Thomas. NON COMMITÉ
+
+### Fin de l'incident Railway — prod déployée sur f474990 — 2026-10-23
+- Demande Thomas (« redéploie »). Les 2 services étaient restés sur le build du 2026-10-21 01:45 (16f5841). `railway redeploy` ne relance que le dernier déploiement (ancien commit) → déploiement du commit f474990 via l'API Railway (serviceInstanceDeployV2) sur spok-api et spok-web : SUCCESS tous deux. Vérifié sur spok.space : le bundle contient les textes du 2026-10-22 (modale de fusion). Toutes les MEP des 21 et 22/10 sont en prod
+
+### Type « Article » — brainstorming et plan — 2026-10-23
+- Brainstorming (maquettes A/B/C, choix Thomas : flux de blocs A d'abord). Validé : blocs = références vers des éléments existants (réutilisables dans plusieurs articles), « Ajouter un texte » = nouvelle note, texte des notes modifiable sur place, lecteur voit le contenu sans accès à la source, droit évalué à la lecture sur l'auteur de la référence, avertissement si moins visible. Plan : docs/superpowers/plans/2026-10-23-type-article.md (7 tâches), en attente de relecture par Thomas
+- Constat : item-modal.help.ts et itemMenuGroups.anonymous.test.ts modifiés hors de cette session (entrées « Afficher » / « Ouvrir » du menu) — non touchés
+
 ### Nettoyage relations / TODO — 2026-10-22
 - Tour fiche d'élément, étape Relations : types actuels (bloque, permet, entraîne, lié à). seed.ts : dernière relation `depends` → `blocks` inversée (comme la migration prod). TODO : accusé de lecture (a2eb5d9), doublon « Sélecteur de vue » (annulé 15/10) et types de relation (069d869) cochés. Aide 393/393, typecheck database sans erreur. Seed non relancé. Commit be27c21
 

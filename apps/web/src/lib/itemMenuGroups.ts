@@ -3,10 +3,14 @@
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
  * « Marquer comme non lu » (groupe Ouvrir) : markItemUnread, sans callback à câbler ; présent pour tout utilisateur
  * connecté (même sans droit d'édition), absent pour un visiteur anonyme (lu via useAuthStore.getState()).
+ * Groupe Ouvrir : « Afficher » (onOpen(id, 'read'), modale en mode lecture) et « Ouvrir » (onOpen(id, 'edit'), fiche
+ * modifiable selon les droits) — pour tout le monde ; à défaut d'onOpen, onEdit sert d'« Ouvrir » (pas d'Afficher).
+ * L'ancienne entrée « Modifier » (doublon d'Ouvrir) est retirée (décision Thomas 2026-10-23).
  * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  */
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, Eye, EyeOff, Circle } from 'lucide-react';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle } from 'lucide-react';
+import type { ItemOpenMode } from './itemOpenMode';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 import { activityApi } from './api';
 import { queryClient } from './queryClient';
@@ -38,7 +42,8 @@ export const hasChildItems = (item?: object | null) => {
 };
 
 export interface ItemMenuCallbacks {
-  onOpen?: (id: string) => void;
+  /** Ouvre la modale de l'item dans le mode demandé (Afficher = 'read', Ouvrir = 'edit') */
+  onOpen?: (id: string, mode?: ItemOpenMode) => void;
   onOpenInNewTab?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -92,15 +97,16 @@ export function buildItemMenuGroups(
 
   // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
   const isLoggedIn = !!useAuthStore.getState().user;
+  const openFiche = onOpen ? () => onOpen(itemId, 'edit') : onEdit ? () => onEdit(itemId) : null;
   const group1: ItemAction[] = [
-    ...(onOpen ? [{ id: 'open', label: 'Ouvrir', icon: Eye, onClick: () => onOpen(itemId) }] : []),
+    ...(onOpen ? [{ id: 'view', label: 'Afficher', icon: BookOpen, onClick: () => onOpen(itemId, 'read') }] : []),
+    ...(openFiche ? [{ id: 'open', label: 'Ouvrir', icon: Pencil, onClick: openFiche }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
     ...(isLoggedIn ? [{ id: 'mark-unread', label: 'Marquer comme non lu', icon: EyeOff, onClick: () => { void markItemUnread(itemId); } }] : []),
   ];
 
-  // Groupe 2 — Modifier (write) : Modifier, Absorber, Éclater, Fusionner
+  // Groupe 2 — Modifier (write) : Absorber, Éclater, Fusionner (la fiche s'ouvre par « Ouvrir »)
   const group2: ItemAction[] = canEdit ? [
-    ...(onEdit ? [{ id: 'edit', label: 'Modifier', icon: Pencil, onClick: () => onEdit(itemId) }] : []),
     ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(itemId) }] : []),
     ...(onSplitDescription ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(itemId) }] : []),
     ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),

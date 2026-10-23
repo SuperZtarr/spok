@@ -6,6 +6,7 @@
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
+ * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Afficher / Ouvrir, liens partagés) — itemOpenMode.ts.
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
  * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
  * (liveSessionBarSlot → 3e ligne de la toolbar) ;
@@ -89,6 +90,7 @@ import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
+import { parseItemMode, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
@@ -145,6 +147,8 @@ export function SpacePage() {
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  // Mode demandé pour la modale (menu Afficher / Ouvrir via ?mode) ; remis à « défaut » à la fermeture
+  const [itemOpenMode, setItemOpenMode] = useState<ItemOpenMode | undefined>(undefined);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
@@ -577,12 +581,15 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // Ouvrir la modale si ?item=:itemId (lien "ouvrir dans un nouvel onglet" ou returnTo)
   // Ou restaurer depuis sessionStorage si item était ouvert avant F5 / reconnexion
+  // ?item est traité à CHAQUE apparition (menu « Afficher / Ouvrir » sur un item du même espace) ; la restauration
+  // sessionStorage, elle, une seule fois. &mode=lecture → modale en mode Afficher (itemOpenMode.ts).
   const itemParamHandledRef = useRef(false);
   useEffect(() => {
     const itemParam = searchParams.get('item');
-    if (itemParam && !itemParamHandledRef.current) {
+    if (itemParam) {
       itemParamHandledRef.current = true;
-      setSearchParams(prev => { prev.delete('item'); return prev; }, { replace: true });
+      setItemOpenMode(parseItemMode(searchParams.get(ITEM_MODE_PARAM)));
+      setSearchParams(prev => { prev.delete('item'); prev.delete(ITEM_MODE_PARAM); return prev; }, { replace: true });
       setEditingItemId(itemParam);
     } else if (!itemParam && !itemParamHandledRef.current) {
       itemParamHandledRef.current = true;
@@ -1662,7 +1669,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       {/* Edit modal */}
       <ItemEditModal
         isOpen={!!editingItemId}
-        onClose={() => setEditingItemId(null)}
+        onClose={() => { setEditingItemId(null); setItemOpenMode(undefined); }}
+        initialMode={itemOpenMode}
         spaceId={(() => {
           const editItem = allItems.find((i: Item) => i.id === editingItemId);
           return editItem?.spaceId || spaceId!;

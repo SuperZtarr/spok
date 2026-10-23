@@ -10,7 +10,14 @@
  * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
- * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown).
+ * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
+ * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
+ * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
+ * Afficher est bloqué tant qu'il y a des modifications non enregistrées (la lecture montre la version enregistrée).
+ * Plus de bouton admin « Voir comme visiteur » (retiré 2026-10-23, décision Thomas) : un visiteur ouvre la fiche en
+ * lecture, c'est donc « Afficher » qui montre ce qu'il voit — ne pas réintroduire un formulaire grisé.
+ * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown,
+ * image/schéma intégrés ; infobulle HelpHint lue dans item-modal.help.ts → hints.copySheet).
  * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
  * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
@@ -26,8 +33,10 @@
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
+ * Contributions affichées via sanitizeHtml, liens vers url via safeHref (règle user-html-sanitized).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
+ * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -45,12 +54,16 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen } from 'lucide-react';
+import { ItemReadView } from './ItemReadView';
+import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
+import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
 import { HelpButton } from '../help/HelpButton';
 import { PAGE_HELP } from '../help/pageHelp';
+import { HelpHint } from '../help/HelpHint';
 import { FieldHelp } from '../help/FieldHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
@@ -58,7 +71,6 @@ import { RuleHint } from './ui/RuleHint';
 import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES, TYPE_GROUPS } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
-import { useAdminMode } from './DevDbStatus';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
 import { DrawioEditor } from './ui/DrawioEditor';
@@ -102,6 +114,8 @@ interface ItemEditModalProps {
   onMerge?: (id: string) => void;
   onAbsorbChildren?: (id: string) => void;
   onSplitDescription?: (id: string) => void;
+  /** Mode demandé à l'ouverture (menu Afficher / Ouvrir, ?mode=lecture) ; absent = défaut selon canEdit (itemOpenMode.ts) */
+  initialMode?: ItemOpenMode;
 }
 
 export function ItemEditModal({
@@ -121,10 +135,10 @@ export function ItemEditModal({
   onMerge,
   onAbsorbChildren,
   onSplitDescription,
+  initialMode,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
-  const adminMode = useAdminMode();
   const { mode: interfaceMode } = useInterfaceModeStore();
   // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
   // « Plus de champs / Moins de champs ». Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous.
@@ -132,7 +146,11 @@ export function ItemEditModal({
   const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'jdr';
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
-  const [visitorPreview, setVisitorPreview] = useState(false);
+  // Mode Afficher (ItemReadView) ou Modifier / Fiche : fixé à chaque ouverture, conservé en naviguant d'item en item
+  const [readMode, setReadMode] = useState(false);
+  useEffect(() => {
+    if (isOpen) setReadMode(!!itemId && resolveItemMode(initialMode, canEditProp) === 'read');
+  }, [isOpen, initialMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -213,14 +231,14 @@ export function ItemEditModal({
   const isItemAssignee = !!user && !!item && item.assignedToId === user.id;
   // Copie de séance verrouillée : lecture seule (commentaires et tags restent possibles) — cf. itemLock.ts côté API
   const isLockedCopy = !!item?.lockedAt;
-  const canEdit = canEditProp && !visitorPreview && !isLockedCopy && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
-  const canEditTags = canEditProp && !visitorPreview && (canEdit || isLockedCopy);
+  const canEdit = canEditProp && !isLockedCopy && (isNewItem || isSpaceOwner || isItemAuthor || isItemAssignee);
+  const canEditTags = canEditProp && (canEdit || isLockedCopy);
   // Séance live active : actions « Ajouter à la préparation » / « Présenter en séance » du pied
   const liveInfo = useActiveLiveSessionStore((s) => s.info);
   const liveSpaceId = useActiveLiveSessionStore((s) => s.spaceId);
   const liveActions = (id: string) => buildLiveItemActions(id, liveInfo, liveSpaceId);
   // canInteract: any authenticated member can react and contribute (even if they can't edit the item)
-  const canInteract = canEditProp && !visitorPreview;
+  const canInteract = canEditProp;
 
   const { data: spaceMembers } = useQuery({
     queryKey: ['space-members', spaceId],
@@ -843,11 +861,47 @@ export function ItemEditModal({
   // Fiche complète (tous les champs, 3 colonnes) ou réduite — cf. expanded
   const showAll = expanded;
 
+  // Fiche de l'item (version enregistrée) : rendue par le mode Afficher et copiée par « Copier la fiche »
+  const buildSheet = () => buildItemSheet({
+    item: item as any,
+    children: item ? allItems.filter(i => i.parentId === item.id) : [],
+    spaceName,
+    parentTitle: item?.parentId ? allItems.find(i => i.id === item.parentId)?.title : null,
+    labels: {
+      typeLabel: (t) => (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[t as ItemType]?.labelShort,
+      statusLabel: (s) => (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((st) => st.id === s)?.label,
+      priorityLabel: (p) => PRIORITIES.find((pr) => pr.value === p)?.label,
+      formatDate: (iso) => formatDate(iso),
+    },
+    relationLabel: (relType, direction) => {
+      const meta = getRelationMeta(relType);
+      return direction === 'from' ? meta.label : meta.inverseLabel;
+    },
+  });
+  const copySheet = async () => {
+    await copyItemSheet(buildSheet());
+    setSheetCopied(true);
+    setTimeout(() => setSheetCopied(false), 2000);
+  };
+  const printSheet = () => {
+    if (!item) return;
+    printItem({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName });
+  };
+  const itemHints = PAGE_HELP['item-modal'].hints;
+
   // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
   // Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
   // rendus sous la Description dans la colonne principale.
   const mediaSection = (
     <>
+      {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx) */}
+      {type === 'ARTICLE' && itemId && (
+        <HelpHint text={itemHints?.openArticle}>
+          <Link to={`/spaces/${spaceId}/articles/${itemId}`} onClick={onClose} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
+            Ouvrir l'article
+          </Link>
+        </HelpHint>
+      )}
       {/* URL — seulement pour le type LINK */}
       {type === 'LINK' && <div className="space-y-2">
         <label className="text-sm font-medium">URL</label>
@@ -857,7 +911,7 @@ export function ItemEditModal({
             placeholder="https://..." />
         ) : null}
         {url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+          <a href={safeHref(url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
             <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
           </a>
         ) : null}
@@ -921,7 +975,7 @@ export function ItemEditModal({
             {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
           </>
         ) : url ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
+          <a href={safeHref(url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
             <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
           </a>
         ) : (
@@ -985,7 +1039,9 @@ export function ItemEditModal({
               {TypeIcon && <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
             <div className="flex-1 min-w-0" data-tour="item-title">
-              {canEdit ? (
+              {readMode ? (
+                <span className="text-sm text-muted-foreground">{typeConfig?.labelShort || type}</span>
+              ) : canEdit ? (
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -997,22 +1053,35 @@ export function ItemEditModal({
                 <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
               )}
             </div>
-            {adminMode && canEditProp && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setVisitorPreview(!visitorPreview); }}
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md flex-shrink-0 transition-colors ${
-                  visitorPreview
-                    ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-300'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-                title="Voir comme un visiteur"
-              >
-                <Eye className="w-3 h-3" />
-                <span className="hidden sm:inline">{visitorPreview ? 'Vue visiteur' : 'Voir comme visiteur'}</span>
-              </button>
+            {/* Sélecteur Afficher / Modifier (Fiche sans droit d'édition) — item existant seulement */}
+            {!isNewItem && (
+              <div className="flex items-center rounded-md bg-muted p-0.5 flex-shrink-0" role="group" aria-label="Mode d'affichage" data-tour="item-mode-switch">
+                <HelpHint text={itemHints?.[!readMode && hasChanges ? 'readModeUnsaved' : 'readMode']}>
+                  <button
+                    type="button"
+                    aria-pressed={readMode}
+                    disabled={!readMode && hasChanges}
+                    onClick={() => setReadMode(true)}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    <span className="hidden sm:inline">Afficher</span>
+                  </button>
+                </HelpHint>
+                <HelpHint text={itemHints?.[canEdit ? 'editMode' : 'sheetMode']}>
+                  <button
+                    type="button"
+                    aria-pressed={!readMode}
+                    onClick={() => setReadMode(false)}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${!readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                    <span className="hidden sm:inline">{canEdit ? 'Modifier' : 'Fiche'}</span>
+                  </button>
+                </HelpHint>
+              </div>
             )}
-            <button
+            {!readMode && <button
               type="button"
               onClick={() => setExpanded(v => !v)}
               data-tour="item-more-fields"
@@ -1021,7 +1090,7 @@ export function ItemEditModal({
             >
               {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               <span className="hidden sm:inline">{expanded ? 'Moins de champs' : 'Plus de champs'}</span>
-            </button>
+            </button>}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1035,6 +1104,39 @@ export function ItemEditModal({
             </div>
           </div>
 
+          {/* Mode Afficher : la fiche en document (même contenu que « Copier la fiche »), pied réduit à Fermer */}
+          {readMode && (
+            <>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <ItemReadView
+                  sheet={buildSheet()}
+                  onOpenChild={onNavigate}
+                  toolbar={(
+                    <>
+                      <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>
+                        <Button type="button" variant="ghost" size="sm" aria-label="Copier la fiche" onClick={copySheet}>
+                          {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
+                        </Button>
+                      </HelpHint>
+                      <HelpHint text={itemHints?.print}>
+                        <Button type="button" variant="ghost" size="sm" aria-label="Imprimer" onClick={printSheet}>
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                      </HelpHint>
+                    </>
+                  )}
+                  reactions={(
+                    <ReactionBar spaceId={spaceId} itemId={item.id} summary={(item as any).reactionSummary || []} readOnly={!user} />
+                  )}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
+                <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
+              </div>
+            </>
+          )}
+
+          {!readMode && (<>
           {/* Fiche réduite (tous modes) : résumé cliquable des champs avancés renseignés */}
           {!expanded && item && (() => {
             const parts = buildForumSummary(item, {
@@ -1148,7 +1250,7 @@ export function ItemEditModal({
                           ) : (
                             <>
                               {/* Content first */}
-                              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground [&>p]:my-0.5" dangerouslySetInnerHTML={{ __html: contribution.content }} />
+                              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground [&>p]:my-0.5" dangerouslySetInnerHTML={{ __html: sanitizeHtml(contribution.content) }} />
                               {/* Author + date + reactions + actions — compact line below */}
                               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
                                 <span className="font-medium">{contribution.author.name}</span>
@@ -1717,10 +1819,7 @@ export function ItemEditModal({
                   variant="ghost"
                   size="sm"
                   title="Imprimer"
-                  onClick={() => {
-                    const children = allItems.filter(i => i.parentId === item.id);
-                    printItem({ item: item as any, children, spaceName });
-                  }}
+                  onClick={printSheet}
                 >
                   <Printer className="w-4 h-4" />
                 </Button>
@@ -1736,35 +1835,17 @@ export function ItemEditModal({
                 >
                   <FileDown className="w-4 h-4" />
                 </Button>
+                <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  title={sheetCopied ? 'Fiche copiée' : 'Copier la fiche'}
-                  onClick={async () => {
-                    const sheet = buildItemSheet({
-                      item: item as any,
-                      children: allItems.filter(i => i.parentId === item.id),
-                      spaceName,
-                      parentTitle: item.parentId ? allItems.find(i => i.id === item.parentId)?.title : null,
-                      labels: {
-                        typeLabel: (t) => (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[t as ItemType]?.labelShort,
-                        statusLabel: (s) => (referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).find((st) => st.id === s)?.label,
-                        priorityLabel: (p) => PRIORITIES.find((pr) => pr.value === p)?.label,
-                        formatDate: (iso) => formatDate(iso),
-                      },
-                      relationLabel: (type, direction) => {
-                        const meta = getRelationMeta(type);
-                        return direction === 'from' ? meta.label : meta.inverseLabel;
-                      },
-                    });
-                    await copyItemSheet(sheet);
-                    setSheetCopied(true);
-                    setTimeout(() => setSheetCopied(false), 2000);
-                  }}
+                  aria-label="Copier la fiche"
+                  onClick={copySheet}
                 >
                   {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
                 </Button>
+                </HelpHint>
                 {user && (
                   <Button
                     type="button"
@@ -1834,6 +1915,7 @@ export function ItemEditModal({
               </Button>
             )}
           </div>
+          </>)}
         </form>
       ) : (
         <div className="py-8 text-center text-muted-foreground">

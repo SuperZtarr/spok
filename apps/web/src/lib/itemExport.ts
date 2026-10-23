@@ -1,13 +1,13 @@
-/* Export d'un item seul (contenu + contributions) en texte/HTML — menu contextuel des items. */
+/* Export d'un item seul (contenu + contributions) en texte/HTML — menu contextuel des items.
+ * Impression : titre et libellés échappés, description / contributions passées par sanitizeHtml, image seulement si
+ * son URL est sûre (règle user-html-sanitized) — la fenêtre d'impression est de la même origine que SPOK. */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Item, ItemWithRelations, ContributionWithAuthor } from '@spok/shared';
+import { htmlToText, sanitizeHtml, isSafeUrl } from './sanitizeHtml';
 
-function stripHtml(html: string): string {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return div.textContent || div.innerText || '';
-}
+// Texte brut sans exécuter le HTML (DOMParser) — innerHTML sur un div exécutait les onerror d'image
+const stripHtml = htmlToText;
 
 function formatDate(d?: string | null): string {
   if (!d) return '';
@@ -43,7 +43,7 @@ function buildPrintHtml(data: ItemExportData): string {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>${item.title}</title>
+  <title>${escapeHtml(item.title)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.5; }
@@ -72,7 +72,7 @@ function buildPrintHtml(data: ItemExportData): string {
   <h1>${escapeHtml(item.title)}</h1>
   <div class="meta">
     <span><strong>Type :</strong> ${item.type}</span>
-    ${item.status ? `<span><strong>Statut :</strong> ${item.status}</span>` : ''}
+    ${item.status ? `<span><strong>Statut :</strong> ${escapeHtml(item.status)}</span>` : ''}
     ${item.priority ? `<span><strong>Priorité :</strong> ${priorityLabels[item.priority] || item.priority}</span>` : ''}
     ${spaceName ? `<span><strong>Espace :</strong> ${escapeHtml(spaceName)}</span>` : ''}
     <br/>
@@ -88,7 +88,7 @@ function buildPrintHtml(data: ItemExportData): string {
   if (tags.length > 0) {
     html += `<div class="section">
       <div class="section-title">Tags</div>
-      <div>${tags.map(t => `<span class="tag" style="${t.color ? `border-color:${t.color};color:${t.color}` : ''}">${escapeHtml(t.name)}</span>`).join('')}</div>
+      <div>${tags.map(t => `<span class="tag" style="${t.color ? escapeHtml(`border-color:${t.color};color:${t.color}`) : ''}">${escapeHtml(t.name)}</span>`).join('')}</div>
     </div>`;
   }
 
@@ -96,12 +96,12 @@ function buildPrintHtml(data: ItemExportData): string {
   if (item.description?.trim()) {
     html += `<div class="section">
       <div class="section-title">Description</div>
-      <div class="description">${item.description}</div>
+      <div class="description">${sanitizeHtml(item.description)}</div>
     </div>`;
   }
 
   // Image / Diagram preview
-  if (item.url) {
+  if (item.url && isSafeUrl(item.url)) {
     html += `<div class="section">
       <div class="section-title">${item.type === 'DIAGRAM' ? 'Diagramme' : 'Image'}</div>
       <img src="${escapeHtml(item.url)}" class="image-preview" />
@@ -117,7 +117,7 @@ function buildPrintHtml(data: ItemExportData): string {
         ${children.map(c => `<tr>
           <td>${escapeHtml(c.title)}</td>
           <td>${c.type}</td>
-          <td>${c.status || '-'}</td>
+          <td>${escapeHtml(c.status || '-')}</td>
           <td>${c.priority ? (priorityLabels[c.priority] || c.priority) : '-'}</td>
         </tr>`).join('')}
       </table>
@@ -130,8 +130,8 @@ function buildPrintHtml(data: ItemExportData): string {
       <div class="section-title">Relations</div>
       <table>
         <tr><th>Direction</th><th>Type</th><th>Commentaire</th></tr>
-        ${relationsFrom.map(r => `<tr><td>→ sortante</td><td>${r.type}</td><td>${r.label || '-'}</td></tr>`).join('')}
-        ${relationsTo.map(r => `<tr><td>← entrante</td><td>${r.type}</td><td>${r.label || '-'}</td></tr>`).join('')}
+        ${relationsFrom.map(r => `<tr><td>→ sortante</td><td>${r.type}</td><td>${escapeHtml(r.label || '-')}</td></tr>`).join('')}
+        ${relationsTo.map(r => `<tr><td>← entrante</td><td>${r.type}</td><td>${escapeHtml(r.label || '-')}</td></tr>`).join('')}
       </table>
     </div>`;
   }
@@ -142,7 +142,7 @@ function buildPrintHtml(data: ItemExportData): string {
       <div class="section-title">Contributions (${contributions.length})</div>
       ${(contributions as ContributionWithAuthor[]).map(c => `<div class="contribution">
         <div><span class="author">${escapeHtml((c as any).author?.name || 'Anonyme')}</span> <span class="date">${formatDate(c.createdAt)}</span></div>
-        <div class="content">${c.content}</div>
+        <div class="content">${sanitizeHtml(c.content)}</div>
       </div>`).join('')}
     </div>`;
   }

@@ -5,12 +5,14 @@
  * mises à jour par drag dans le Gantt puis relues par ItemEditModal) doit appliquer
  * une mise à jour optimiste du cache React Query — sinon l'UI lit des données stales
  * pendant la fenêtre réseau entre le clic et la réponse du serveur.
+ * handleOpen(id, mode) : navigation vers l'item dans son espace, mode Afficher porté par ?mode=lecture.
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { Item, ItemType } from '@spok/shared';
 import { itemsApi } from '../lib/api';
+import { itemUrl, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Types for modal states
 export interface DeletingItem {
@@ -447,14 +449,13 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     splitMutation.mutate({ id, itemSpaceId });
   }, [resolveItemSpaceId, splitMutation]);
 
-  const handleOpen = useCallback((id: string) => {
-    const itemSpaceId = resolveItemSpaceId(id);
-    navigate(`/spaces/${itemSpaceId}/content?item=${id}`);
+  // Ouvre l'item dans son propre espace ; le mode (Afficher = 'read') passe dans l'adresse (itemOpenMode.ts)
+  const handleOpen = useCallback((id: string, mode?: ItemOpenMode) => {
+    navigate(itemUrl(resolveItemSpaceId(id), id, mode));
   }, [resolveItemSpaceId, navigate]);
 
   const handleOpenInNewTab = useCallback((id: string) => {
-    const itemSpaceId = resolveItemSpaceId(id);
-    window.open(`/spaces/${itemSpaceId}/content?item=${id}`, '_blank');
+    window.open(itemUrl(resolveItemSpaceId(id), id), '_blank');
   }, [resolveItemSpaceId]);
 
   const reorderMutation = useMutation({
