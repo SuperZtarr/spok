@@ -5,7 +5,9 @@
  *   seulement), « Ouvrir la fiche » si le lecteur a accès à l'élément, « Retirer » (l'élément n'est pas supprimé) ;
  * - note modifiable sur place (RichTextEditor) si item.canEdit, enregistrée par itemsApi.update après une pause de
  *   frappe ; sinon lecture seule ;
- * - insertion entre deux blocs et en fin : « Élément » (ArticleItemPicker) ou « Texte » (nouvelle note) ;
+ * - insertion entre deux blocs et en fin : « Élément » (ArticleItemPicker), « Texte » (nouvelle note) ou « Processus »
+ *   (ArticleProcessPicker) ; élément avec enfants / chaîne ou processus = ajout groupé : aperçu (articlesApi.previewBatch)
+ *   → ArticleBatchConfirm → state.addBatch (confirmLessVisible = aperçu.lessVisible) ;
  * - 409 LESS_VISIBLE → ConfirmModal (texte de la fiche) puis renvoi avec confirmLessVisible ; 409 DUPLICATE_REFERENCE → message.
  * Props : spaceId, articleId, article (ArticleView), state (retour de useArticle). Textes : pages/help/article.help.ts.
  */
@@ -15,9 +17,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Type, ExternalLink, Trash2, AlignCenter, AlignLeft, AlignRight } from 'lucide-react';
-import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView } from '@spok/shared';
-import { ApiError, itemsApi } from '../../lib/api';
+import { GripVertical, Plus, Type, ExternalLink, Trash2, AlignCenter, AlignLeft, AlignRight, Workflow } from 'lucide-react';
+import type { ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView } from '@spok/shared';
+import { ApiError, articlesApi, itemsApi } from '../../lib/api';
 import type { useArticle } from '../../hooks/useArticle';
 import { RichTextEditor } from '../ui/RichTextEditor';
 import { ConfirmModal } from '../ConfirmModal';
@@ -25,6 +27,8 @@ import { HelpHint } from '../../help/HelpHint';
 import { pageHint } from '../../help/pageHint';
 import { ArticleBlock } from './ArticleBlock';
 import { ArticleItemPicker } from './ArticleItemPicker';
+import { ArticleProcessPicker } from './ArticleProcessPicker';
+import { ArticleBatchConfirm } from './ArticleBatchConfirm';
 import { moveBlock } from './articleLayout';
 
 type ArticleState = ReturnType<typeof useArticle>;
@@ -126,9 +130,9 @@ function SortableBlock({ spaceId, articleId, block, state }: { spaceId: string; 
   );
 }
 
-function InsertBar({ onItem, onText }: { onItem: () => void; onText: () => void }) {
+function InsertBar({ onItem, onText, onProcess }: { onItem: () => void; onText: () => void; onProcess: () => void }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-1 opacity-60 hover:opacity-100 transition-opacity">
+    <div className="flex items-center justify-center gap-2 py-1 opacity-60 hover:opacity-100 transition-opacity" data-tour="article-insert">
       <HelpHint text={pageHint('article', 'addItem')}>
         <button type="button" onClick={onItem} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-border hover:bg-accent">
           <Plus className="w-3.5 h-3.5" /> Élément
@@ -139,6 +143,11 @@ function InsertBar({ onItem, onText }: { onItem: () => void; onText: () => void 
           <Type className="w-3.5 h-3.5" /> Texte
         </button>
       </HelpHint>
+      <HelpHint text={pageHint('article', 'addProcess')}>
+        <button type="button" onClick={onProcess} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-border hover:bg-accent">
+          <Workflow className="w-3.5 h-3.5" /> Processus
+        </button>
+      </HelpHint>
     </div>
   );
 }
@@ -146,6 +155,8 @@ function InsertBar({ onItem, onText }: { onItem: () => void; onText: () => void 
 export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId: string; articleId: string; article: ArticleView; state: ArticleState }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [pickAt, setPickAt] = useState<number | null>(null);
+  const [processAt, setProcessAt] = useState<number | null>(null);
+  const [batch, setBatch] = useState<{ source: ArticleBatchSource; position: number; preview: ArticleBatchPreview | null } | null>(null);
   const [confirm, setConfirm] = useState<{ itemId: string; position: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const ids = article.blocks.map((b) => b.id);
@@ -168,22 +179,58 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
     });
   };
 
+  // Ajout groupé : aperçu de l'API, puis confirmation (ArticleBatchConfirm) et insertion
+  const startBatch = (source: ArticleBatchSource, position: number) => {
+    setMessage(null);
+    setPickAt(null);
+    setProcessAt(null);
+    setBatch({ source, position, preview: null });
+    articlesApi.previewBatch(spaceId, articleId, source).then(
+      (preview) => setBatch((b) => (b && b.source === source ? { ...b, preview } : b)),
+      (e) => { setBatch(null); setMessage((e as Error).message); },
+    );
+  };
+  const confirmBatch = () => {
+    if (!batch?.preview) return;
+    state.addBatch.mutate({ source: batch.source, position: batch.position, confirmLessVisible: batch.preview.lessVisible }, {
+      onSuccess: () => setBatch(null),
+      onError: (e) => { setBatch(null); setMessage((e as Error).message); },
+    });
+  };
+  const pick = (itemId: string, w: { children: boolean; chain: boolean }) => {
+    const position = pickAt ?? article.blocks.length;
+    if (w.children || w.chain) startBatch({ kind: 'cluster', itemId, children: w.children, chain: w.chain }, position);
+    else add(itemId, position);
+  };
+  const bar = (position: number) => (
+    <InsertBar onItem={() => setPickAt(position)} onText={() => state.addText.mutate(position)} onProcess={() => setProcessAt(position)} />
+  );
+
   return (
     <div>
       {message && <p className="mb-2 text-sm text-destructive">{message}</p>}
-      <InsertBar onItem={() => setPickAt(0)} onText={() => state.addText.mutate(0)} />
+      {bar(0)}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           {article.blocks.map((b, i) => (
             <div key={b.id}>
               <SortableBlock spaceId={spaceId} articleId={articleId} block={b} state={state} />
-              <InsertBar onItem={() => setPickAt(i + 1)} onText={() => state.addText.mutate(i + 1)} />
+              {bar(i + 1)}
             </div>
           ))}
         </SortableContext>
       </DndContext>
 
-      <ArticleItemPicker isOpen={pickAt !== null} onClose={() => setPickAt(null)} spaceId={spaceId} articleId={articleId} onPick={(itemId) => add(itemId, pickAt ?? article.blocks.length)} />
+      <ArticleItemPicker isOpen={pickAt !== null} onClose={() => setPickAt(null)} spaceId={spaceId} articleId={articleId} onPick={pick} />
+      <ArticleProcessPicker isOpen={processAt !== null} onClose={() => setProcessAt(null)} spaceId={spaceId} articleId={articleId} onPick={(source) => startBatch(source, processAt ?? article.blocks.length)} />
+      <ArticleBatchConfirm
+        isOpen={!!batch}
+        preview={batch?.preview ?? null}
+        isLoading={!!batch && !batch.preview}
+        isPending={state.addBatch.isPending}
+        onClose={() => setBatch(null)}
+        onConfirm={confirmBatch}
+      />
       <ConfirmModal
         isOpen={!!confirm}
         onClose={() => setConfirm(null)}

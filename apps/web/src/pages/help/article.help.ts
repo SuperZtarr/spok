@@ -8,6 +8,7 @@ export const help: HelpEntry = {
   summary: 'Une page qui assemble, dans l\'ordre choisi, des éléments existants : notes, images, schémas, liens. Ils restent à leur place et peuvent servir dans plusieurs articles.',
   tips: [
     '« Composer » (si vous pouvez modifier l\'article) : ajouter, réordonner, régler ou retirer des blocs',
+    'Ajout groupé : un élément avec ses enfants ou avec les éléments qui en découlent, ou tout un processus (ou un couloir), en une fois — 100 éléments au plus, tels qu\'ils sont au moment de l\'ajout',
     'Un bloc affiche un élément existant : le corriger le corrige partout où il apparaît',
     'Le texte d\'une note se modifie directement dans l\'article ; les autres blocs s\'ouvrent dans leur fiche',
     'Chaque bloc montre ce qui compte pour son type : le titre et le texte ; la légende sous une image ; l\'icône du site pour un lien ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Tags, assignation et contributions n\'y figurent pas',
@@ -45,6 +46,14 @@ export const help: HelpEntry = {
         side: 'bottom',
       },
     },
+    {
+      element: '[data-tour="article-insert"]',
+      popover: {
+        title: 'Insérer ici',
+        description: 'En mode Composer : un élément (seul, avec ses enfants ou avec ce qui en découle), un texte, ou les éléments d\'un processus. Un ajout groupé est confirmé avec le nombre d\'éléments.',
+        side: 'top',
+      },
+    },
   ],
   hints: {
     unavailable: 'Contenu indisponible : la personne qui a ajouté ce bloc n\'a plus accès à l\'élément d\'origine.',
@@ -64,5 +73,14 @@ export const help: HelpEntry = {
     pickerScope: 'Cette communauté : éléments des espaces de la communauté de l\'article. Partout : tous les espaces que vous pouvez lire.',
     pickerRecent: 'Récents de cet espace — tapez au moins 2 caractères pour chercher. Les titres qui commencent par votre texte passent en premier, puis ceux qui le contiennent, puis les éléments dont le texte le contient (extrait affiché).',
     noteReadOnly: 'Vous ne pouvez pas modifier cette note : ouvrez sa fiche pour la lire.',
+    addProcess: 'Ajoute à cet endroit les éléments d\'un processus (vue Process d\'un espace), entier ou un seul couloir, dans l\'ordre de lecture : couloir par couloir, de gauche à droite, puis les éléments hors couloir.',
+    pickChildren: 'Ajoute aussi toute la descendance de l\'élément, chaque enfant juste après son parent.',
+    pickChain: 'Ajoute aussi les éléments qui en découlent : liens « Entraîne », « Bloque » et « Permet » partant de l\'élément, de proche en proche (« Lié à » n\'est pas suivi).',
+    batchConfirm: 'Ajoute ces éléments à cet endroit, chacun comme un bloc séparé, tels qu\'ils sont aujourd\'hui : ce qui sera ajouté plus tard à la grappe ou au processus n\'apparaîtra pas tout seul. Chaque bloc peut ensuite être retiré ou déplacé.',
+    batchSkipped: 'Sautés : éléments déjà présents dans l\'article, articles (un article ne contient pas d\'article) et éléments que vous ne pouvez pas lire.',
+    batchTooMany: 'Plus de 100 éléments : ajoutez une partie plus petite (un couloir, ou sans les éléments qui en découlent).',
+    batchEmpty: 'Rien à ajouter : tous ces éléments sont déjà dans l\'article ou ne peuvent pas y figurer.',
+    batchLessVisible: 'Certains de ces éléments sont moins visibles que l\'article (espace privé ou autre communauté) : tous les lecteurs de l\'article verront leur contenu, sans accès aux éléments eux-mêmes.',
+    processEmpty: 'Aucun processus dans cette portée : un processus se crée dans la vue Process d\'un espace.',
   },
 };

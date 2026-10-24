@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24 (4)
+- Lot poussé : Article, ajout groupé d'une grappe ou d'un processus (feat). build:packages, typecheck 6 paquets OK, TNR 1754/1754, en-têtes OK. Non vérifié à l'écran
+
+### Article : ajout groupé (grappe, processus) — 2026-10-24
+- Demande Thomas : ajouter une grappe d'éléments ou un processus avec ses éléments. Proposition directe validée (lot 1 : un bloc par élément, photo, 100 max, pas de schéma), plan exécuté inline (registre .superpowers/sdd/2026-10-24-article-grappes-processus/progress.md). Tests et doc : cf. lot. Lot 2 éventuel : bloc « schéma du processus » (changement de base). NON COMMITÉ
+
 ### MEP — 2026-10-24 (3)
 - Lot poussé : Article, recherche d'éléments à ajouter par pertinence (fix). build:packages, typecheck 6 paquets OK, TNR 1728/1728, en-têtes OK. Non vérifié à l'écran
 

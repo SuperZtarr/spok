@@ -17,13 +17,22 @@
  * hors mode admin (allReadableSpaceIds), portée communauté de l'article par défaut, sans ARTICLE ni éléments déjà
  * présents ; q vide = 15 récents de l'espace de l'article ; sinon titres (100 max) + descriptions/adresses (300 plus
  * récentes) classés par rankArticleCandidates (utils/articleCandidates.ts, texte visible seulement).
+ * Ajout groupé (même droit, 2026-10-24) : POST …/article/batch/preview { source } → ArticleBatchPreview ;
+ * POST …/article/batch { source, position?, confirmLessVisible? } → 201 { blocks } (400 TOO_MANY > 100, 400 EMPTY,
+ * 409 LESS_VISIBLE) ; GET …/article/processes?scope= → ArticleProcessSummary[]. Source = grappe (enfants et/ou chaîne
+ * de relations sortantes) ou processus d'un espace / d'un couloir, ordonnée par utils/articleBatch.ts ; articles,
+ * éléments présents et illisibles (hors mode admin) sautés et comptés. Photo au moment de l'ajout.
  * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
  * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_STATUSES } from '@spok/shared';
-import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate, ArticleView, ItemType, StatusConfig } from '@spok/shared';
+import type {
+  ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate,
+  ArticleProcessSummary, ArticleView, ItemType, StatusConfig,
+} from '@spok/shared';
+import { orderChain, orderCluster, orderDescendants, orderProcess } from '../utils/articleBatch.js';
 import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities, allReadableSpaceIds } from '../utils/articleAccess.js';
 import { rankArticleCandidates, type CandidateRow } from '../utils/articleCandidates.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
@@ -190,28 +199,190 @@ const visibilityOf = (map: Map<string, any>, spaceId: string): VisibilityInfo =>
   return { spaceId, visibility: v?.visibility ?? 'PRIVATE', communityId: v?.communityId ?? null, communityVisibility: v?.communityVisibility ?? null };
 };
 
+/** Espaces proposés par les sélecteurs du Composer : lisibles hors mode admin ; portée communauté de l'article
+ *  (son espace seul s'il n'a pas de communauté) sauf scopeAll. */
+async function pickerSpaces(prisma: any, articleSpaceId: string, userId: string, scopeAll: boolean) {
+  const articleSpace = await prisma.space.findUnique({ where: { id: articleSpaceId }, select: { id: true, communityId: true } });
+  const readable: string[] = await allReadableSpaceIds(prisma, userId);
+  const articleCommunityId: string | null = articleSpace?.communityId ?? null;
+  if (scopeAll) return { spaceIds: readable, readable, articleCommunityId };
+  const scoped: string[] = articleCommunityId
+    ? (await prisma.space.findMany({ where: { communityId: articleCommunityId }, select: { id: true } })).map((s: { id: string }) => s.id)
+    : [articleSpaceId];
+  const readableSet = new Set(readable);
+  return { spaceIds: scoped.filter((id) => readableSet.has(id)), readable, articleCommunityId };
+}
+
+const BATCH_MAX = 100;
+const batchSourceSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('cluster'), itemId: z.string().min(1), children: z.boolean(), chain: z.boolean() }),
+  z.object({ kind: z.literal('process'), spaceId: z.string().min(1), laneId: z.string().min(1).optional() }),
+]);
+const batchPreviewSchema = z.object({ source: batchSourceSchema });
+const batchInsertSchema = z.object({
+  source: batchSourceSchema,
+  position: z.number().int().min(0).optional(),
+  confirmLessVisible: z.boolean().optional(),
+});
+
+type BatchError = { status: 403 | 404; message: string };
+
+/** Éléments d'une source, ordonnés (articleBatch.ts), avant filtrage. */
+async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatchSource): Promise<string[] | BatchError> {
+  if (source.kind === 'process') {
+    const readable = await filterReadableSpaceIds(prisma, userId, [source.spaceId], false);
+    if (readable.length === 0) return { status: 403, message: 'You cannot read this process' };
+    const lanes = await prisma.processLane.findMany({ where: { spaceId: source.spaceId }, select: { id: true, itemId: true, position: true } });
+    if (source.laneId && !lanes.some((l: { id: string }) => l.id === source.laneId)) return { status: 404, message: 'Lane not found' };
+    const nodes = await prisma.processNode.findMany({ where: { spaceId: source.spaceId }, select: { itemId: true, laneId: true, x: true, y: true } });
+    return orderProcess(lanes, nodes, source.laneId);
+  }
+  const root = await prisma.item.findUnique({ where: { id: source.itemId }, select: { id: true, spaceId: true } });
+  if (!root) return { status: 404, message: 'Item not found' };
+  let descendants: string[] | null = null;
+  if (source.children) {
+    const rows: { id: string; parentId: string | null; position: number; createdAt: Date }[] = [];
+    const seen = new Set<string>([root.id]);
+    let frontier = [root.id];
+    while (frontier.length) {
+      const found = (await prisma.item.findMany({
+        where: { parentId: { in: frontier } },
+        select: { id: true, parentId: true, position: true, createdAt: true },
+      })).filter((r: { id: string }) => !seen.has(r.id));
+      found.forEach((r: { id: string }) => seen.add(r.id));
+      rows.push(...found);
+      frontier = found.map((r: { id: string }) => r.id);
+    }
+    descendants = orderDescendants(root.id, rows);
+  }
+  let chain: string[] | null = null;
+  if (source.chain) {
+    const relations: { fromItemId: string; toItemId: string; type: string }[] = [];
+    const seen = new Set<string>([root.id]);
+    let frontier = [root.id];
+    while (frontier.length) {
+      const found = await prisma.itemRelation.findMany({
+        where: { fromItemId: { in: frontier }, type: { in: ['blocks', 'implements', 'drives'] } },
+        select: { fromItemId: true, toItemId: true, type: true },
+      });
+      relations.push(...found);
+      frontier = found.map((r: { toItemId: string }) => r.toItemId).filter((id: string) => !seen.has(id));
+      frontier.forEach((id) => seen.add(id));
+    }
+    chain = orderChain(root.id, relations);
+  }
+  return orderCluster(root.id, descendants, chain);
+}
+
+/** Source résolue pour un article : ids retenus dans l'ordre + aperçu (comptes, limite, visibilité). */
+async function resolveBatch(prisma: any, article: { id: string; spaceId: string }, userId: string, source: ArticleBatchSource): Promise<{ ids: string[]; preview: ArticleBatchPreview } | BatchError> {
+  const ordered = await orderedSourceIds(prisma, userId, source);
+  if (!Array.isArray(ordered)) return ordered;
+  const infos: { id: string; type: string; spaceId: string }[] = ordered.length
+    ? await prisma.item.findMany({ where: { id: { in: ordered } }, select: { id: true, type: true, spaceId: true } })
+    : [];
+  const byId = new Map(infos.map((i) => [i.id, i]));
+  const present = new Set((await prisma.articleBlock.findMany({ where: { articleId: article.id }, select: { itemId: true } }))
+    .map((b: { itemId: string }) => b.itemId));
+  const readable = new Set(await filterReadableSpaceIds(prisma, userId, [...new Set(infos.map((i) => i.spaceId))], false));
+  const skipped = { present: 0, unreadable: 0, articles: 0 };
+  const ids: string[] = [];
+  for (const id of ordered) {
+    const info = byId.get(id);
+    if (!info) continue;
+    if (info.type === 'ARTICLE') skipped.articles++;
+    else if (present.has(id)) skipped.present++;
+    else if (!readable.has(info.spaceId)) skipped.unreadable++;
+    else ids.push(id);
+  }
+  const spaces = [...new Set(ids.map((id) => byId.get(id)!.spaceId))];
+  let lessVisible = false;
+  if (spaces.length) {
+    const vis = await getEffectiveVisibilities(prisma, [article.spaceId, ...spaces]);
+    lessVisible = spaces.some((s) => isLessVisible(visibilityOf(vis, article.spaceId), visibilityOf(vis, s)));
+  }
+  return { ids, preview: { count: ids.length, skipped, tooMany: ids.length > BATCH_MAX, lessVisible } };
+}
+
 const CANDIDATE_SELECT = {
   id: true, type: true, title: true, description: true, url: true, spaceId: true, updatedAt: true,
   space: { select: { name: true, communityId: true, community: { select: { name: true } } } },
 } as const;
 
 export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
+  // Ajout groupé : aperçu (comptes, limite, visibilité) puis insertion, même résolution de la source
+  fastify.post<{ Params: Params }>('/:id/article/batch/preview', async (request, reply) => {
+    const ctx = await requireArticleEditor(fastify, request, reply);
+    if (!ctx) return reply;
+    const { source } = batchPreviewSchema.parse(request.body);
+    const res = await resolveBatch(fastify.prisma, ctx.article, ctx.userId, source as ArticleBatchSource);
+    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, message: res.message });
+    return res.preview;
+  });
+
+  fastify.post<{ Params: Params }>('/:id/article/batch', async (request, reply) => {
+    const ctx = await requireArticleEditor(fastify, request, reply);
+    if (!ctx) return reply;
+    const { source, position, confirmLessVisible } = batchInsertSchema.parse(request.body);
+    const res = await resolveBatch(fastify.prisma, ctx.article, ctx.userId, source as ArticleBatchSource);
+    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, message: res.message });
+    const { ids, preview } = res;
+    if (preview.tooMany) return reply.status(400).send({ statusCode: 400, code: 'TOO_MANY', message: `At most ${BATCH_MAX} items at once` });
+    if (ids.length === 0) return reply.status(400).send({ statusCode: 400, code: 'EMPTY', message: 'Nothing to add' });
+    if (preview.lessVisible && !confirmLessVisible) {
+      return reply.status(409).send({ statusCode: 409, code: 'LESS_VISIBLE', message: 'Some items are less visible than the article' });
+    }
+    await fastify.prisma.$transaction(async (tx: any) => {
+      const count = await tx.articleBlock.count({ where: { articleId: ctx.article.id } });
+      const pos = position === undefined ? count : Math.min(position, count);
+      if (pos < count) {
+        await tx.articleBlock.updateMany({ where: { articleId: ctx.article.id, position: { gte: pos } }, data: { position: { increment: ids.length } } });
+      }
+      await tx.articleBlock.createMany({
+        data: ids.map((itemId, i) => ({ articleId: ctx.article.id, itemId, position: pos + i, addedById: ctx.userId })),
+      });
+    });
+    const rows = await fastify.prisma.articleBlock.findMany({
+      where: { articleId: ctx.article.id, itemId: { in: ids } },
+      orderBy: { position: 'asc' },
+      include: { item: { select: REF_ITEM_SELECT } },
+    });
+    return reply.status(201).send({ blocks: await resolveBlocks(fastify.prisma, rows, ctx.userId, request.isAdminMode) });
+  });
+
+  // Processus proposables : espaces lisibles (portée communauté par défaut) ayant au moins un élément placé
+  fastify.get<{ Params: Params; Querystring: { scope?: string } }>('/:id/article/processes', async (request, reply) => {
+    const ctx = await requireArticleEditor(fastify, request, reply);
+    if (!ctx) return reply;
+    const { spaceIds } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, request.query.scope === 'all');
+    if (spaceIds.length === 0) return [];
+    const counts: { spaceId: string; _count: { _all: number } }[] = await (fastify.prisma as any).processNode.groupBy({
+      by: ['spaceId'], where: { spaceId: { in: spaceIds } }, _count: { _all: true },
+    });
+    const withNodes = counts.filter((c) => c._count._all > 0).map((c) => c.spaceId);
+    if (withNodes.length === 0) return [];
+    const [spaces, lanes] = await Promise.all([
+      fastify.prisma.space.findMany({ where: { id: { in: withNodes } }, select: { id: true, name: true, community: { select: { name: true } } }, orderBy: { name: 'asc' } }),
+      fastify.prisma.processLane.findMany({ where: { spaceId: { in: withNodes } }, orderBy: { position: 'asc' }, select: { id: true, spaceId: true, item: { select: { title: true } } } }),
+    ]);
+    const nodeCount = new Map(counts.map((c) => [c.spaceId, c._count._all]));
+    const result: ArticleProcessSummary[] = spaces.map((s: { id: string; name: string; community: { name: string } | null }) => ({
+      spaceId: s.id,
+      spaceName: s.name,
+      communityName: s.community?.name ?? null,
+      nodeCount: nodeCount.get(s.id) ?? 0,
+      lanes: lanes.filter((l: { spaceId: string }) => l.spaceId === s.id).map((l: { id: string; item: { title: string } }) => ({ id: l.id, title: l.item.title })),
+    }));
+    return result;
+  });
+
   // Sélecteur « Ajouter un élément » : candidats lisibles hors mode admin (comme l'ajout), classés par pertinence
   fastify.get<{ Params: Params; Querystring: { q?: string; scope?: string } }>('/:id/article/candidates', async (request, reply) => {
     const ctx = await requireArticleEditor(fastify, request, reply);
     if (!ctx) return reply;
     const term = (request.query.q ?? '').trim();
     const scopeAll = request.query.scope === 'all';
-    const articleSpace = await fastify.prisma.space.findUnique({ where: { id: ctx.article.spaceId }, select: { id: true, communityId: true } });
-    const readable = await allReadableSpaceIds(fastify.prisma, ctx.userId);
-    let spaceIds = readable;
-    if (!scopeAll) {
-      const scoped = articleSpace?.communityId
-        ? (await fastify.prisma.space.findMany({ where: { communityId: articleSpace.communityId }, select: { id: true } })).map((s: { id: string }) => s.id)
-        : [ctx.article.spaceId];
-      const readableSet = new Set(readable);
-      spaceIds = scoped.filter((id: string) => readableSet.has(id));
-    }
+    const { spaceIds, readable, articleCommunityId } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, scopeAll);
     const present = (await fastify.prisma.articleBlock.findMany({ where: { articleId: ctx.article.id }, select: { itemId: true } }))
       .map((b: { itemId: string }) => b.itemId);
     const excluded = [...present, ctx.article.id];
@@ -247,7 +418,7 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       items: rankArticleCandidates(term, [...titleRows, ...textRows], {
         articleSpaceId: ctx.article.spaceId,
-        articleCommunityId: articleSpace?.communityId ?? null,
+        articleCommunityId,
       }),
     };
   });

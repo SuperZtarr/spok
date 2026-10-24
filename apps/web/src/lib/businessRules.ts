@@ -209,6 +209,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/item-article.ts (candidates), apps/api/src/utils/articleCandidates.ts, apps/web/src/components/article/ArticleItemPicker.tsx',
   },
   {
+    id: 'article-batch-insert',
+    page: 'Article (mode Composer)',
+    trigger: 'Ajout d\'un élément avec ses enfants / ce qui en découle, ou d\'un processus',
+    effect: "Insère plusieurs blocs d'un coup, un par élément, photo au moment de l'ajout (rien ne suit ensuite). Grappe : l'élément, sa descendance (chaque enfant après son parent), puis la chaîne des relations sortantes Entraîne / Bloque / Permet (pas Lié à). Processus : couloir par couloir (élément du couloir puis membres de gauche à droite), puis éléments hors couloir ; ou un seul couloir. Sautés et comptés : articles, éléments déjà présents, éléments illisibles hors mode admin. 100 éléments au plus ; confirmation avec le compte, avertissement « moins visible » une fois pour le lot",
+    location: 'apps/api/src/routes/item-article.ts (batch, processes), apps/api/src/utils/articleBatch.ts, apps/web/src/components/article/ArticleEditor.tsx, ArticleBatchConfirm.tsx, ArticleProcessPicker.tsx',
+  },
+  {
     id: 'merge-targets-allowed-only',
     page: 'Modale « Fusionner avec… » (MergeItemModal)',
     trigger: 'Choix de la cible d\'une fusion',

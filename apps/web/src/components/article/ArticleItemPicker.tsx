@@ -5,7 +5,9 @@
  * - à l'ouverture : récents de l'espace de l'article ; recherche dès 2 caractères, 250 ms après la frappe ;
  * - portée « Cette communauté » (défaut, remise à chaque ouverture) ou « Partout » ;
  * - partie trouvée en gras dans le titre et l'extrait (highlightSegments, aucun HTML injecté).
- * Props : isOpen, onClose, onPick(itemId), spaceId / articleId (article composé). L'avertissement « moins visible »
+ * - cases « Avec ses enfants » / « Avec les éléments qui en découlent » (décochées à chaque ouverture) : transmises
+ *   à onPick ; l'appelant fait alors un ajout groupé (aperçu + ArticleBatchConfirm) au lieu d'un ajout unitaire.
+ * Props : isOpen, onClose, onPick(itemId, { children, chain }), spaceId / articleId (article composé). L'avertissement « moins visible »
  * est géré par l'appelant. Textes : pages/help/article.help.ts (addItem, pickerScope, pickerRecent, pickerEmpty).
  */
 import { useEffect, useState } from 'react';
@@ -27,19 +29,23 @@ function Highlighted({ text, term }: { text: string; term: string }) {
 export function ArticleItemPicker({ isOpen, onClose, onPick, spaceId, articleId }: {
   isOpen: boolean;
   onClose: () => void;
-  onPick: (itemId: string) => void;
+  onPick: (itemId: string, with_: { children: boolean; chain: boolean }) => void;
   spaceId: string;
   articleId: string;
 }) {
   const [q, setQ] = useState('');
   const [scope, setScope] = useState<Scope>('community');
   const [term, setTerm] = useState('');
+  const [children, setChildren] = useState(false);
+  const [chain, setChain] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setQ('');
     setTerm('');
     setScope('community');
+    setChildren(false);
+    setChain(false);
   }, [isOpen]);
 
   useEffect(() => {
@@ -84,7 +90,21 @@ export function ArticleItemPicker({ isOpen, onClose, onPick, spaceId, articleId 
           ))}
         </div>
         </HelpHint>
-        {!term && <p className="text-xs text-muted-foreground">{pageHint('article', 'pickerRecent')}</p>}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <HelpHint text={pageHint('article', 'pickChildren')} className="inline-flex">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={children} onChange={(e) => setChildren(e.target.checked)} className="w-3.5 h-3.5 rounded" />
+              Avec ses enfants
+            </label>
+          </HelpHint>
+          <HelpHint text={pageHint('article', 'pickChain')} className="inline-flex">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={chain} onChange={(e) => setChain(e.target.checked)} className="w-3.5 h-3.5 rounded" />
+              Avec les éléments qui en découlent
+            </label>
+          </HelpHint>
+        </div>
+        {!term &&<p className="text-xs text-muted-foreground">{pageHint('article', 'pickerRecent')}</p>}
         <div className="max-h-[360px] overflow-y-auto border rounded-md divide-y">
           {!isFetching && items.length === 0 && (
             <div className="p-4 text-center text-sm text-muted-foreground">{pageHint('article', 'pickerEmpty')}</div>
@@ -92,7 +112,7 @@ export function ArticleItemPicker({ isOpen, onClose, onPick, spaceId, articleId 
           {items.map((i) => {
             const Icon = TYPE_ICONS[i.type] || TYPE_ICONS.NOTE;
             return (
-              <button key={i.id} type="button" onClick={() => onPick(i.id)} className="w-full px-3 py-2 text-left flex items-start gap-2 hover:bg-accent transition-colors">
+              <button key={i.id} type="button" onClick={() => onPick(i.id, { children, chain })} className="w-full px-3 py-2 text-left flex items-start gap-2 hover:bg-accent transition-colors">
                 <Icon className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm truncate"><Highlighted text={i.title} term={term} /></span>

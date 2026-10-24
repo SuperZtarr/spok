@@ -46,6 +46,28 @@ export type ArticleCandidate = {
   snippet: string | null;
 };
 
+/** Ajout groupé (POST …/article/batch[/preview]) : une grappe (élément + enfants et/ou chaîne de relations sortantes
+ *  blocks / implements / drives) ou le processus d'un espace (entier ou un couloir). Photo au moment de l'ajout. */
+export type ArticleBatchSource =
+  | { kind: 'cluster'; itemId: string; children: boolean; chain: boolean }
+  | { kind: 'process'; spaceId: string; laneId?: string };
+
+export type ArticleBatchPreview = {
+  count: number;
+  skipped: { present: number; unreadable: number; articles: number };
+  tooMany: boolean;
+  lessVisible: boolean;
+};
+
+/** Processus proposable (GET …/article/processes) : espace lisible ayant au moins un élément placé. */
+export type ArticleProcessSummary = {
+  spaceId: string;
+  spaceName: string;
+  communityName: string | null;
+  nodeCount: number;
+  lanes: { id: string; title: string }[];
+};
+
 export type ArticleView = {
   articleId: string;
   blocks: ArticleBlockView[];

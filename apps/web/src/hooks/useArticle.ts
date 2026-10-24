@@ -1,12 +1,13 @@
 /*
  * useArticle(spaceId, articleId) — état d'un article (type ARTICLE) : ArticleView sous queryKey ['article', spaceId, articleId].
  * Écritures : addBlock(itemId, { position, confirmLessVisible }) — rejette l'ApiError 409 LESS_VISIBLE à l'appelant, qui
- * demande confirmation puis rappelle avec confirmLessVisible ; addText(position) crée une note dans l'espace de l'article ;
+ * demande confirmation puis rappelle avec confirmLessVisible ; addBatch({ source, position, confirmLessVisible }) insère
+ * une grappe ou un processus (aperçu préalable par articlesApi.previewBatch) ; addText(position) crée une note dans l'espace de l'article ;
  * updateBlock(blockId, { width, align }) et reorder(blockIds) optimistes (cache restauré en cas d'échec) ;
  * removeBlock(blockId) retire la référence (l'élément n'est jamais supprimé). Réservé à ArticlePage / ArticleEditor.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ArticleBlockAlign, ArticleBlockWidth, ArticleView } from '@spok/shared';
+import type { ArticleBatchSource, ArticleBlockAlign, ArticleBlockWidth, ArticleView } from '@spok/shared';
 import { articlesApi } from '../lib/api';
 
 export function useArticle(spaceId: string | undefined, articleId: string | undefined) {
@@ -27,6 +28,11 @@ export function useArticle(spaceId: string | undefined, articleId: string | unde
 
   const addBlock = useMutation({
     mutationFn: (v: { itemId: string; position?: number; confirmLessVisible?: boolean }) => articlesApi.addBlock(spaceId!, articleId!, v),
+    onSuccess: refresh,
+  });
+
+  const addBatch = useMutation({
+    mutationFn: (v: { source: ArticleBatchSource; position?: number; confirmLessVisible?: boolean }) => articlesApi.addBatch(spaceId!, articleId!, v),
     onSuccess: refresh,
   });
 
@@ -65,5 +71,5 @@ export function useArticle(spaceId: string | undefined, articleId: string | unde
     onSuccess: refresh,
   });
 
-  return { ...query, article: query.data, refresh, addBlock, addText, updateBlock, reorder, removeBlock };
+  return { ...query, article: query.data, refresh, addBlock, addBatch, addText, updateBlock, reorder, removeBlock };
 }

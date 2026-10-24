@@ -69,6 +69,9 @@ import type {
   LiveInviteCandidate,
   ArticleView,
   ArticleCandidate,
+  ArticleBatchSource,
+  ArticleBatchPreview,
+  ArticleProcessSummary,
   ArticleBlockView,
   ArticleBlockWidth,
   ArticleBlockAlign,
@@ -920,6 +923,16 @@ type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number
 export const articlesApi = {
   get: (spaceId: string, articleId: string) =>
     fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article`),
+
+  // Ajout groupé (grappe ou processus) : aperçu puis insertion ; ApiError TOO_MANY / EMPTY (400), LESS_VISIBLE (409)
+  previewBatch: (spaceId: string, articleId: string, source: ArticleBatchSource) =>
+    fetchApi<ArticleBatchPreview>(`/spaces/${spaceId}/items/${articleId}/article/batch/preview`, { method: 'POST', body: JSON.stringify({ source }) }),
+
+  addBatch: (spaceId: string, articleId: string, body: { source: ArticleBatchSource; position?: number; confirmLessVisible?: boolean }) =>
+    fetchApi<{ blocks: ArticleBlockView[] }>(`/spaces/${spaceId}/items/${articleId}/article/batch`, { method: 'POST', body: JSON.stringify(body) }),
+
+  processes: (spaceId: string, articleId: string, scope: 'community' | 'all') =>
+    fetchApi<ArticleProcessSummary[]>(`/spaces/${spaceId}/items/${articleId}/article/processes?scope=${scope}`),
 
   // Sélecteur « Ajouter un élément » : classés par pertinence, q vide = récents de l'espace de l'article
   candidates: (spaceId: string, articleId: string, params: { q: string; scope: 'community' | 'all' }) =>
