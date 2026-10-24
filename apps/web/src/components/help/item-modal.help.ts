@@ -132,7 +132,8 @@ export const help: HelpEntry = {
     },
   ],
   hints: {
-    openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture.',
+    openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',
+    openArticleUnsaved: 'Enregistrez d\'abord : cet élément ne devient un article qu\'une fois le type « Article » enregistré.',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',

@@ -10,6 +10,8 @@
  * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
+ * « Ouvrir l'article » : actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré →
+ * grisé, hint openArticleUnsaved) ; départ via guardClose (modifications non enregistrées), espace = item.spaceId.
  * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
  * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
@@ -58,7 +60,7 @@ import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Lin
 import { ItemReadView } from './ItemReadView';
 import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
 import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
 import { HelpButton } from '../help/HelpButton';
@@ -138,6 +140,7 @@ export function ItemEditModal({
   initialMode,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const { mode: interfaceMode } = useInterfaceModeStore();
   // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
@@ -894,12 +897,19 @@ export function ItemEditModal({
   // rendus sous la Description dans la colonne principale.
   const mediaSection = (
     <>
-      {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx) */}
+      {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx).
+          Actif seulement si la fiche est ENREGISTRÉE en Article (sinon l'API répond « introuvable ») ;
+          le départ passe par la garde des modifications non enregistrées. */}
       {type === 'ARTICLE' && itemId && (
-        <HelpHint text={itemHints?.openArticle}>
-          <Link to={`/spaces/${spaceId}/articles/${itemId}`} onClick={onClose} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
+        <HelpHint text={item?.type === 'ARTICLE' ? itemHints?.openArticle : itemHints?.openArticleUnsaved}>
+          <button
+            type="button"
+            disabled={item?.type !== 'ARTICLE'}
+            onClick={() => guardClose(() => { onClose(); navigate(`/spaces/${item?.spaceId ?? spaceId}/articles/${itemId}`); })}
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          >
             Ouvrir l'article
-          </Link>
+          </button>
         </HelpHint>
       )}
       {/* URL — seulement pour le type LINK */}

@@ -111,6 +111,7 @@
 - [x] Vue d'ouverture d'un espace sans vue par défaut selon le contexte de sa communauté (Forum → Discussions, Projet → Gantt, JDR → Carte mentale, sinon Liste), option « Selon la communauté » dans les paramètres de l'espace, liens de la barre latérale et cartes d'espace — 2026-10-24
 - [x] Faille SSRF de l'aperçu de liens /url-meta : adresses privées / locales / réservées refusées (résolution DNS épinglée), redirections revalidées (3 sauts), lecture plafonnée à 512 Ko, 60 req/min/IP — 2026-10-24
 - [x] Modale « Dupliquer vers un espace » : choix remis à zéro à chaque ouverture, seconde modale morte de SpacePage retirée, fiche d'aide (« ? », tour, infobulles) — 2026-10-24
+- [x] Fiche d'élément : « Ouvrir l'article » actif seulement une fois l'élément enregistré en Article — 2026-10-24
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
