@@ -202,6 +202,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/article/ArticleBlock.tsx, articleBlockContent.ts, apps/api/src/routes/item-article.ts (resolveBlocks)',
   },
   {
+    id: 'article-picker-relevance',
+    page: 'Article (mode Composer, « Ajouter un élément »)',
+    trigger: 'Recherche d\'un élément à ajouter',
+    effect: "Ne propose que des éléments lisibles hors mode admin (comme l'ajout), sans articles ni éléments déjà présents. Portée « Cette communauté » par défaut, « Partout » sur demande. Classement : titre qui commence par le texte, puis titre qui le contient, puis texte visible de la description ou adresse (le HTML ne compte pas) ; à égalité, espace de l'article, même communauté, puis récence. 30 résultats au plus ; sans texte : 15 récents de l'espace de l'article",
+    location: 'apps/api/src/routes/item-article.ts (candidates), apps/api/src/utils/articleCandidates.ts, apps/web/src/components/article/ArticleItemPicker.tsx',
+  },
+  {
     id: 'merge-targets-allowed-only',
     page: 'Modale « Fusionner avec… » (MergeItemModal)',
     trigger: 'Choix de la cible d\'une fusion',

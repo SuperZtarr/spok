@@ -149,7 +149,6 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
   const [confirm, setConfirm] = useState<{ itemId: string; position: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const ids = article.blocks.map((b) => b.id);
-  const presentItemIds = new Set(article.blocks.map((b) => b.item?.id).filter((id): id is string => !!id));
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -184,7 +183,7 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
         </SortableContext>
       </DndContext>
 
-      <ArticleItemPicker isOpen={pickAt !== null} onClose={() => setPickAt(null)} excludeIds={presentItemIds} onPick={(itemId) => add(itemId, pickAt ?? article.blocks.length)} />
+      <ArticleItemPicker isOpen={pickAt !== null} onClose={() => setPickAt(null)} spaceId={spaceId} articleId={articleId} onPick={(itemId) => add(itemId, pickAt ?? article.blocks.length)} />
       <ConfirmModal
         isOpen={!!confirm}
         onClose={() => setConfirm(null)}

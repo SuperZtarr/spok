@@ -13,14 +13,19 @@
  * DUPLICATE_REFERENCE, 409 LESS_VISIBLE sans confirmLessVisible), POST …/article/texts (nouvelle NOTE + bloc),
  * PATCH …/article/blocks/:blockId (width/align), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
  * (retire la référence, ne supprime jamais l'élément).
+ * GET …/article/candidates?q=&scope=community|all (même droit) : éléments proposés par le sélecteur — espaces lisibles
+ * hors mode admin (allReadableSpaceIds), portée communauté de l'article par défaut, sans ARTICLE ni éléments déjà
+ * présents ; q vide = 15 récents de l'espace de l'article ; sinon titres (100 max) + descriptions/adresses (300 plus
+ * récentes) classés par rankArticleCandidates (utils/articleCandidates.ts, texte visible seulement).
  * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
  * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_STATUSES } from '@spok/shared';
-import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView, ItemType, StatusConfig } from '@spok/shared';
-import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities } from '../utils/articleAccess.js';
+import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate, ArticleView, ItemType, StatusConfig } from '@spok/shared';
+import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities, allReadableSpaceIds } from '../utils/articleAccess.js';
+import { rankArticleCandidates, type CandidateRow } from '../utils/articleCandidates.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { isLessVisible, type VisibilityInfo } from '../utils/articleVisibility.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
@@ -185,7 +190,68 @@ const visibilityOf = (map: Map<string, any>, spaceId: string): VisibilityInfo =>
   return { spaceId, visibility: v?.visibility ?? 'PRIVATE', communityId: v?.communityId ?? null, communityVisibility: v?.communityVisibility ?? null };
 };
 
+const CANDIDATE_SELECT = {
+  id: true, type: true, title: true, description: true, url: true, spaceId: true, updatedAt: true,
+  space: { select: { name: true, communityId: true, community: { select: { name: true } } } },
+} as const;
+
 export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
+  // Sélecteur « Ajouter un élément » : candidats lisibles hors mode admin (comme l'ajout), classés par pertinence
+  fastify.get<{ Params: Params; Querystring: { q?: string; scope?: string } }>('/:id/article/candidates', async (request, reply) => {
+    const ctx = await requireArticleEditor(fastify, request, reply);
+    if (!ctx) return reply;
+    const term = (request.query.q ?? '').trim();
+    const scopeAll = request.query.scope === 'all';
+    const articleSpace = await fastify.prisma.space.findUnique({ where: { id: ctx.article.spaceId }, select: { id: true, communityId: true } });
+    const readable = await allReadableSpaceIds(fastify.prisma, ctx.userId);
+    let spaceIds = readable;
+    if (!scopeAll) {
+      const scoped = articleSpace?.communityId
+        ? (await fastify.prisma.space.findMany({ where: { communityId: articleSpace.communityId }, select: { id: true } })).map((s: { id: string }) => s.id)
+        : [ctx.article.spaceId];
+      const readableSet = new Set(readable);
+      spaceIds = scoped.filter((id: string) => readableSet.has(id));
+    }
+    const present = (await fastify.prisma.articleBlock.findMany({ where: { articleId: ctx.article.id }, select: { itemId: true } }))
+      .map((b: { itemId: string }) => b.itemId);
+    const excluded = [...present, ctx.article.id];
+    const base = { type: { not: 'ARTICLE' as const }, id: { notIn: excluded } };
+
+    if (!term) {
+      const recent = readable.includes(ctx.article.spaceId)
+        ? await fastify.prisma.item.findMany({ where: { ...base, spaceId: ctx.article.spaceId }, orderBy: { updatedAt: 'desc' }, take: 15, select: CANDIDATE_SELECT })
+        : [];
+      const items: ArticleCandidate[] = recent.map((r: CandidateRow) => ({
+        id: r.id, type: r.type as ItemType, title: r.title, spaceId: r.spaceId, spaceName: r.space.name,
+        communityName: r.space.community?.name ?? null, snippet: null,
+      }));
+      return { items };
+    }
+
+    const inSpaces = { spaceId: { in: spaceIds } };
+    const titleRows: CandidateRow[] = await fastify.prisma.item.findMany({
+      where: { ...base, ...inSpaces, title: { contains: term, mode: 'insensitive' } },
+      take: 100,
+      select: CANDIDATE_SELECT,
+    });
+    const textRows: CandidateRow[] = await fastify.prisma.item.findMany({
+      where: {
+        ...base, ...inSpaces,
+        id: { notIn: [...excluded, ...titleRows.map((r) => r.id)] },
+        OR: [{ description: { contains: term, mode: 'insensitive' } }, { url: { contains: term, mode: 'insensitive' } }],
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 300,
+      select: CANDIDATE_SELECT,
+    });
+    return {
+      items: rankArticleCandidates(term, [...titleRows, ...textRows], {
+        articleSpaceId: ctx.article.spaceId,
+        articleCommunityId: articleSpace?.communityId ?? null,
+      }),
+    };
+  });
+
   fastify.post<{ Params: Params }>('/:id/article/blocks', async (request, reply) => {
     const ctx = await requireArticleEditor(fastify, request, reply);
     if (!ctx) return reply;

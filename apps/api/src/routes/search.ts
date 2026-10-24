@@ -3,7 +3,7 @@
  * /search (recherche rapide) : anonyme = résultats vides ; utilisateur = ses espaces directs.
  * /advanced (page Recherche, spec SPOK « Recherche [SearchPage] ») :
  * - périmètre = espaces LISIBLES : directs + communautés de l'utilisateur + communautés non privées,
- *   filtrés par la visibilité effective (filterReadableSpaceIds), anonyme compris ; admin en mode admin = tout ;
+ *   filtrés par la visibilité effective (allReadableSpaceIds, items.ts), anonyme compris ; admin en mode admin = tout ;
  * - dès 1 caractère, 10 résultats par page (pagination par section : page s'applique à chaque section) ;
  * - items et contributions triés communauté › espace › récence (regroupés à l'affichage, groupes contigus) ;
  * - filtres d'items (type, statut, priorité, tags) : appliqués aux items ET aux contributions (via leur item) ;
@@ -13,7 +13,7 @@
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
-import { filterReadableSpaceIds, readableSpaceIdsForUser } from './items.js';
+import { allReadableSpaceIds } from './items.js';
 
 interface AdvancedSearchQuery {
   q?: string;
@@ -60,15 +60,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     // (filterReadableSpaceIds) — anonyme compris : un sous-espace héritant d'un parent privé est exclu.
     let accessibleSpaceIds: string[] | null = null;
     if (!isAdmin) {
-      const [ownSpaceIds, publicSpaces] = await Promise.all([
-        userId ? readableSpaceIdsForUser(fastify.prisma, userId) : Promise.resolve([] as string[]),
-        fastify.prisma.space.findMany({
-          where: { type: 'GROUP', community: { visibility: { not: 'PRIVATE' } } },
-          select: { id: true },
-        }),
-      ]);
-      const publicReadable = await filterReadableSpaceIds(fastify.prisma, userId, publicSpaces.map(s => s.id));
-      accessibleSpaceIds = [...new Set([...ownSpaceIds, ...publicReadable])];
+      accessibleSpaceIds = await allReadableSpaceIds(fastify.prisma, userId);
     }
 
     const spaceFilter = accessibleSpaceIds ? { in: accessibleSpaceIds } : undefined;

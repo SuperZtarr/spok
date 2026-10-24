@@ -232,6 +232,23 @@ export async function readableSpaceIdsForUser(prisma: any, userId: string, isAdm
   return filterReadableSpaceIds(prisma, userId, [...direct.map((m: any) => m.spaceId), ...communitySpaces.map((s: any) => s.id)], isAdminMode);
 }
 
+/**
+ * Tous les espaces qu'une personne peut lire, anonyme compris, HORS mode admin : readableSpaceIdsForUser + espaces
+ * des communautés non privées filtrés par la visibilité effective. Utilisé par /search/advanced et par le
+ * sélecteur d'éléments d'un article (item-article.ts, candidats).
+ */
+export async function allReadableSpaceIds(prisma: any, userId: string | undefined): Promise<string[]> {
+  const [ownSpaceIds, publicSpaces] = await Promise.all([
+    userId ? readableSpaceIdsForUser(prisma, userId) : Promise.resolve([] as string[]),
+    prisma.space.findMany({
+      where: { type: 'GROUP', community: { visibility: { not: 'PRIVATE' } } },
+      select: { id: true },
+    }),
+  ]);
+  const publicReadable = await filterReadableSpaceIds(prisma, userId, publicSpaces.map((s: any) => s.id));
+  return [...new Set([...ownSpaceIds, ...publicReadable])];
+}
+
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {

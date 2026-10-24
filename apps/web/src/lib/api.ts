@@ -68,6 +68,7 @@ import type {
   LiveInvitee,
   LiveInviteCandidate,
   ArticleView,
+  ArticleCandidate,
   ArticleBlockView,
   ArticleBlockWidth,
   ArticleBlockAlign,
@@ -919,6 +920,12 @@ type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number
 export const articlesApi = {
   get: (spaceId: string, articleId: string) =>
     fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article`),
+
+  // Sélecteur « Ajouter un élément » : classés par pertinence, q vide = récents de l'espace de l'article
+  candidates: (spaceId: string, articleId: string, params: { q: string; scope: 'community' | 'all' }) =>
+    fetchApi<{ items: ArticleCandidate[] }>(
+      `/spaces/${spaceId}/items/${articleId}/article/candidates?${new URLSearchParams({ q: params.q, scope: params.scope }).toString()}`,
+    ),
 
   addBlock: (spaceId: string, articleId: string, body: { itemId: string; position?: number; confirmLessVisible?: boolean }) =>
     fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/blocks`, { method: 'POST', body: JSON.stringify(body) }),

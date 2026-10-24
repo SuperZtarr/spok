@@ -61,6 +61,8 @@ export const help: HelpEntry = {
     lessVisible: 'Cet élément est moins visible que l\'article (espace privé ou autre communauté) : tous les lecteurs de l\'article verront son contenu. Ils n\'auront pas accès à l\'élément lui-même.',
     duplicate: 'Cet élément figure déjà dans l\'article.',
     pickerEmpty: 'Aucun élément trouvé. Seuls les éléments que vous pouvez lire sont proposés, hors articles et éléments déjà présents.',
+    pickerScope: 'Cette communauté : éléments des espaces de la communauté de l\'article. Partout : tous les espaces que vous pouvez lire.',
+    pickerRecent: 'Récents de cet espace — tapez au moins 2 caractères pour chercher. Les titres qui commencent par votre texte passent en premier, puis ceux qui le contiennent, puis les éléments dont le texte le contient (extrait affiché).',
     noteReadOnly: 'Vous ne pouvez pas modifier cette note : ouvrez sa fiche pour la lire.',
   },
 };

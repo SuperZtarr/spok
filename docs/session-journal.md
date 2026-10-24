@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24 (3)
+- Lot poussé : Article, recherche d'éléments à ajouter par pertinence (fix). build:packages, typecheck 6 paquets OK, TNR 1728/1728, en-têtes OK. Non vérifié à l'écran
+
+### Article : recherche d'éléments à ajouter — 2026-10-24
+- Constat Thomas : la recherche du sélecteur sort des éléments sans rapport. Cause (code) : /search/advanced cherchait dans le HTML brut des descriptions, triait communauté › espace, coupait à 30. Correctif : route dédiée …/article/candidates (lisibles hors mode admin, portée communauté par défaut, exclusions côté API), classement pur rankArticleCandidates sur le texte visible, sélecteur réécrit (récents à l'ouverture, Cette communauté / Partout, extrait surligné). Helper allReadableSpaceIds extrait de search.ts. Tests et doc : cf. lot. NON COMMITÉ
+
 ### MEP — 2026-10-24 (2)
 - 4 lots poussés : /url-meta SSRF (fix), modale de duplication (fix), « Ouvrir l'article » (fix), blocs d'article par type (feat). businessRules par morceaux. build:packages, typecheck 6 paquets OK, TNR 1711/1711, en-têtes OK. Non vérifiés à l'écran (cf. lots)
 

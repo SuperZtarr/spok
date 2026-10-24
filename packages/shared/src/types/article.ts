@@ -34,6 +34,18 @@ export type ArticleBlockView = {
   };
 };
 
+/** Élément proposé par le sélecteur « Ajouter un élément » (GET …/article/candidates) ; snippet = extrait du texte
+ *  visible autour du terme, seulement quand la correspondance n'est pas dans le titre. */
+export type ArticleCandidate = {
+  id: string;
+  type: ItemType;
+  title: string;
+  spaceId: string;
+  spaceName: string;
+  communityName: string | null;
+  snippet: string | null;
+};
+
 export type ArticleView = {
   articleId: string;
   blocks: ArticleBlockView[];

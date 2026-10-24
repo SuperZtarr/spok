@@ -9,6 +9,7 @@ import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 
 const access = vi.hoisted(() => ({
   checkSpaceAccess: vi.fn(),
+  allReadableSpaceIds: vi.fn(),
   filterReadableSpaceIds: vi.fn(),
   getEffectiveVisibilities: vi.fn(),
 }))
@@ -191,5 +192,63 @@ describe('Article — composition', () => {
     expect(res.statusCode).toBe(204)
     expect(prisma.articleBlock.delete).toHaveBeenCalledWith({ where: { id: 'b1' } })
     expect(prisma.item.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe('Article — candidats du sélecteur', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+  const get = (qs: string) => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/art/article/candidates${qs}`, headers: auth() })
+  const cand = (id: string, title: string, spaceId = SPACE, description: string | null = null) => ({
+    id, type: 'NOTE', title, description, url: null, spaceId, updatedAt: new Date('2026-10-01T00:00:00Z'),
+    space: { name: 'E', communityId: 'c1', community: { name: 'C1' } },
+  })
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    access.checkSpaceAccess.mockReset().mockResolvedValue({ role: 'OWNER' })
+    access.allReadableSpaceIds.mockReset().mockResolvedValue([SPACE, 's2', 'autre-comm'])
+    prisma.item.findFirst.mockResolvedValue(ARTICLE)
+    prisma.space.findUnique.mockResolvedValue({ id: SPACE, communityId: 'c1' })
+    prisma.space.findMany.mockResolvedValue([{ id: SPACE }, { id: 's2' }, { id: 'non-lisible' }])
+    prisma.articleBlock.findMany.mockResolvedValue([{ itemId: 'deja' }])
+  })
+
+  it('classe par pertinence et exclut articles, l’article et les éléments déjà présents', async () => {
+    prisma.item.findMany
+      .mockResolvedValueOnce([cand('t2', 'Mon plan'), cand('t1', 'Plan B')])
+      .mockResolvedValueOnce([cand('d1', 'Autre', SPACE, '<p>un plan</p>'), cand('h1', 'Bruit', SPACE, '<p style="plan">x</p>')])
+    const res = await get('?q=plan')
+    expect(res.statusCode).toBe(200)
+    expect(res.json().items.map((i: any) => i.title)).toEqual(['Plan B', 'Mon plan', 'Autre'])
+    const [titleQuery, descQuery] = prisma.item.findMany.mock.calls.map((c: any) => c[0])
+    expect(titleQuery.where).toMatchObject({ type: { not: 'ARTICLE' }, id: { notIn: expect.arrayContaining(['deja', 'art']) } })
+    expect(titleQuery.take).toBe(100)
+    expect(descQuery).toMatchObject({ take: 300, orderBy: { updatedAt: 'desc' } })
+    expect(descQuery.where.id.notIn).toEqual(expect.arrayContaining(['deja', 'art', 't1', 't2']))
+  })
+
+  it('portée communauté par défaut, Partout sur demande ; hors mode admin', async () => {
+    prisma.item.findMany.mockResolvedValue([])
+    await get('?q=pl')
+    expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: [SPACE, 's2'] })
+    expect(access.allReadableSpaceIds).toHaveBeenCalledWith(expect.anything(), USER)
+    prisma.item.findMany.mockClear()
+    await get('?q=pl&scope=all')
+    expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: [SPACE, 's2', 'autre-comm'] })
+  })
+
+  it('terme vide : 15 récents de l’espace de l’article', async () => {
+    prisma.item.findMany.mockResolvedValue([cand('r1', 'Récent')])
+    const res = await get('')
+    expect(res.json().items).toEqual([expect.objectContaining({ id: 'r1', snippet: null })])
+    expect(prisma.item.findMany).toHaveBeenCalledTimes(1)
+    expect(prisma.item.findMany.mock.calls[0][0]).toMatchObject({ take: 15, orderBy: { updatedAt: 'desc' }, where: { spaceId: SPACE } })
+  })
+
+  it('403 si l’on ne peut pas composer l’article', async () => {
+    access.checkSpaceAccess.mockResolvedValue({ role: 'VIEWER' })
+    expect((await get('?q=plan')).statusCode).toBe(403)
   })
 })
