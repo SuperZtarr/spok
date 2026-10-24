@@ -237,6 +237,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/lib/sanitizeHtml.ts, apps/api/src/routes/items.ts (itemUrlField)',
   },
   {
+    id: 'url-meta-public-only',
+    page: 'Vue Liens, page Liens globale (aperçu titre / description / icône d\'un lien)',
+    trigger: "Appel de GET /url-meta?url=… (sans connexion possible)",
+    effect: "Le serveur n'interroge que des adresses publiques : le nom est résolu (toutes ses adresses) et refusé (400) si une seule est privée, locale ou réservée (127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 dont métadonnées cloud, 100.64/10, ::1, fc00::/7 dont réseau privé Railway, fe80::/10…) ; la connexion part vers l'adresse vérifiée. Redirections suivies à la main, 3 sauts au plus, chacun revalidé ; lecture plafonnée à 512 Ko ; 60 requêtes par minute et par IP. Erreur réseau ou page non HTML → aperçu vide",
+    location: 'apps/api/src/routes/url-meta.ts',
+  },
+  {
     id: 'item-open-mode-default',
     page: "Modale d'un élément (toutes les pages qui l'ouvrent)",
     trigger: "Ouverture d'un élément : menu ⋮ « Afficher » / « Ouvrir », clic dans une vue, adresse ?item=…[&mode=lecture]",
