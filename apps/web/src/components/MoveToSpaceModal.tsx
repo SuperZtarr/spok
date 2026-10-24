@@ -1,8 +1,10 @@
 /* Déplacement d'un item vers un autre espace : sélecteur groupé par communauté (route bulk-move, item-move.ts).
  * Props : currentSpaceId (espace de départ), itemIds (éléments à déplacer).
  * Aide : fiche components/help/move-to-space.help.ts (« ? », tour move-targets / move-children / move-confirm,
- * rappels pageHint sur « Inclure les éléments enfants » et « Déplacer »). */
-import { useState, useMemo, useRef } from 'react';
+ * rappels pageHint sur « Inclure les éléments enfants » et « Déplacer »).
+ * Chaque ouverture repart à zéro (aucun espace coché, recherche vide, enfants inclus) : le composant reste monté
+ * entre deux déplacements, l'ancien choix ne doit pas rester coché. */
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, FolderInput, Loader2, Search } from 'lucide-react';
@@ -26,6 +28,13 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>('');
   const [includeChildren, setIncludeChildren] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedSpaceId('');
+    setIncludeChildren(true);
+    setSearchQuery('');
+  }, [isOpen]);
 
   const effectiveIds = itemIds || [];
 

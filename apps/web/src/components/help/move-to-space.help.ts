@@ -9,6 +9,7 @@ export const help: HelpEntry = {
   summary: 'Envoie les éléments sélectionnés dans un autre espace : ils quittent celui-ci, avec leurs contributions et leur place dans le process.',
   tips: [
     'Choisissez l\'espace d\'arrivée : seuls les espaces où vous pouvez ajouter des éléments sont utiles (pas ceux où vous êtes lecteur)',
+    'Aucun espace n\'est coché à l\'ouverture, même juste après un autre déplacement : le choix précédent n\'est pas repris',
     '« Inclure les éléments enfants » emmène toute la descendance ; sinon les enfants restent ici et remontent à la racine',
     'Un élément dont le parent ne part pas arrive à la racine de l\'espace d\'arrivée',
     'Les tags sont repris par nom dans l\'espace d\'arrivée (créés s\'ils n\'y existent pas)',
