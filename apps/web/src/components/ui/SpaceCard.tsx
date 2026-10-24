@@ -2,7 +2,8 @@
    Prop visibility (optionnelle) : visibilité effective déjà résolue par l'appelant (espace → parent →
    communauté) + inheritedFrom ; la pastille n'apparaît que si elle est fournie.
    Pastille + raccourcis groupés sur une dernière ligne alignée à droite, sous le nom (le nom garde sa largeur) (showActions, défaut true ; false pour les aperçus des pages
-   de paramètres) : « vue par défaut » (/spaces/:id?view=<defaultView|list>, force la vue au lieu de la
+   de paramètres) : « vue par défaut » (/spaces/:id?view=<vue de l'espace, sinon du contexte de sa communauté, sinon
+   list> — resolveSpaceDefaultView, lib/spaceDefaultView.ts ; force la vue au lieu de la
    dernière utilisée) et paramètres (OWNER de l'espace ou admin en mode admin, même règle que la page).
    Boutons dans un Link : preventDefault + stopPropagation obligatoires. */
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,9 +13,10 @@ import { VisibilityPill } from './VisibilityPill';
 import { VIEW_MODES } from '../../stores/viewMode';
 import { getViewIcon } from '../../constants/viewIcons';
 import { useAdminMode } from '../DevDbStatus';
+import { useCommunityContexts } from '../../hooks/useCommunityContexts';
+import { resolveSpaceDefaultView } from '../../lib/spaceDefaultView';
 
 // Vue réellement ouverte quand l'espace n'a pas de vue par défaut (cf. SpacePage)
-const FALLBACK_VIEW = 'list';
 
 interface SpaceCardProps {
   space: SpaceWithRole;
@@ -31,7 +33,8 @@ export function SpaceCard({ space, onClick, activityCount, to, visibility, showA
   const navigate = useNavigate();
   const adminMode = useAdminMode();
   const canEditSettings = space.role === 'OWNER' || adminMode;
-  const defaultView = (space as any).defaultView || FALLBACK_VIEW;
+  const communityContexts = useCommunityContexts();
+  const defaultView = resolveSpaceDefaultView((space as any).defaultView, space.communityId ? communityContexts.get(space.communityId) : null);
   const viewMeta = VIEW_MODES.find(v => v.value === defaultView);
   const ViewIcon = getViewIcon(viewMeta?.icon ?? '');
 

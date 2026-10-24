@@ -14,6 +14,22 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24
+- 3 lots poussés + chore : démarrage auto du dev (fix), autorisations typecheck (chore), modale de déplacement (fix, SpacePage par morceaux), vue d'ouverture selon le contexte de la communauté (feat). Vérification de l'ensemble : typecheck 6 paquets OK, TNR 1654/1654, en-têtes OK. Non vérifiés à l'écran (cf. lots)
+
+### Incident Railway (fuite des variables d'env) — sécurisation 2026-10-24
+- Fait (par Thomas, guidé) : proxy TCP public Postgres supprimé ; mot de passe Postgres changé (`\password`) ; spok-api `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` ; JWT_SECRET / JWT_REFRESH_SECRET régénérés ; R2 « R2 Account Token » roll (secret seul) ; nouvelle clé Resend, ancienne « Onboarding » supprimée ; 7 variables API inutiles retirées de spok-web ; 2FA GitHub réactivée, apps Copilot SWE Agent et Sentry révoquées.
+- DÉCOUVERTE : `.github/workflows/backup.yml` déposait les pg_dump dans `spok-images/backups/` = bucket PUBLIC (r2.dev) depuis le 2026-04-08 → base complète téléchargeable ~6,5 mois. Dumps supprimés (404 vérifié), dump du 24/10 gardé en local + bucket privé `spok-backups`, workflow désactivé.
+- Reste : mot de passe SPOK de ztarr + info utilisateurs (hash bcrypt 10 exposés) ; évaluer notification CNIL ; refaire la sauvegarde (bucket privé, jeton dédié, accès base depuis GitHub) ; secrets GitHub du backup périmés ; jetons de reset de mot de passe stockés en clair (`auth.ts` l.316) → à hacher.
+
+### Vue d'ouverture des espaces selon le contexte de la communauté — 2026-10-24
+- Demande Thomas : espace sans vue par défaut → Forum Discussions, Projet Gantt, JDR Carte mentale, sinon Liste (contexte enregistré, pas la bascule de l'en-tête). lib/spaceDefaultView.ts (resolveSpaceDefaultView, spaceHref) + hook useCommunityContexts (cache ['communities'] de Layout). SpacePage attend le chargement de la communauté avant de choisir ; liens de la barre latérale et cartes d'espace ; paramètres : option « Selon la communauté (X) » (null). Aides, règle de gestion, spec. Lot inscrit PRÊT POUR MEP
+
+### Démarrage de session — 2026-10-24
+- Docker Desktop était arrêté → relancé, dev:start OK. Journal : lot « Organisation des sessions » (déjà poussé, fa95f3f) réinscrit à tort dans PRÊT POUR MEP → retiré ; lot dev-autostart.ps1 (non tracé) inscrit à sa place
+- Test réel en local du déplacement avec process (resté non vérifié le 23/10), menu ⋮ → « Déplacer vers un espace », space-dev → space-orga : « item F » (couloir) → couloir suivi (même id), ses 4 éléments restés sur place libérés ; « item E » (couloir resté sur place) → arrive libre à la même position (1214, 24) ; vue Process d'Organisation conforme. Base locale remise en l'état par SQL. Constats non traités : la modale garde l'espace choisi d'une ouverture à l'autre ; SpacePage l.155/1703 : showMoveModal jamais mis à true (modale sans itemIds, code mort)
+- Correction des deux (accord Thomas) : MoveToSpaceModal remet à zéro espace / recherche / enfants à chaque ouverture ; modale morte et son état retirés de SpacePage. Typecheck web OK. Inscrit PRÊT POUR MEP. NON COMMITÉ. Constat non traité : même schéma pour DuplicateToSpaceModal (showDuplicateModal) à vérifier
+
 ### Organisation des sessions et des consignes — 2026-10-23
 - Décisions Thomas : une seule session « MEP » commite et pousse, les autres inscrivent leurs lots dans « PRÊT POUR MEP » ; micro-correction (< ~20 lignes, sans nouveau comportement) sans plan à valider, avec question sur la mise à jour de la doc du composant ; plus de hash dans le TODO (date seule). Appliqué : CLAUDE.md projet et global, skills spok-dev et spok-deploy, cette section. MEP 2026-10-23 (docs seules, sans CI)
 

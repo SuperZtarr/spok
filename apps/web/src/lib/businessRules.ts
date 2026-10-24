@@ -125,6 +125,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/views/ProcessView.tsx, apps/web/src/components/views/process-utils.ts (layoutAsProcess), apps/web/src/components/views/ProcessUnplacedPanel.tsx, apps/web/src/hooks/useProcessNodes.ts, apps/api/src/routes/process-nodes.ts',
   },
   {
+    id: 'space-default-view-by-context',
+    page: 'Espace (ouverture) ; paramètres de l\'espace ; barre latérale ; cartes d\'espace',
+    trigger: "Ouverture d'un espace dont la vue par défaut n'est pas réglée (« Selon la communauté »)",
+    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, JDR → Carte mentale), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
+    location: 'apps/web/src/lib/spaceDefaultView.ts, apps/web/src/pages/SpacePage.tsx, apps/web/src/pages/SpaceSettingsPage.tsx, apps/web/src/components/Layout.tsx, apps/web/src/components/ui/SpaceCard.tsx',
+  },
+  {
     id: 'process-placement-follows-move',
     page: 'Espace → vue Process ; déplacement vers un autre espace ; conversion d\'un item en espace',
     trigger: "Des items changent d'espace (« Déplacer vers un autre espace », « Convertir en espace »)",

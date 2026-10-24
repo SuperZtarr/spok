@@ -1,5 +1,7 @@
 /**
  * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
+ * Vue d'ouverture : ?view= > vue en cours > vue de l'espace > vue du contexte de sa communauté > Liste
+ * (lib/spaceDefaultView.ts) — attend le chargement de la communauté avant de choisir.
  * Vue Process : reçoit les seuls items de l'espace courant (pas ceux des sous-espaces inclus — les positions
  * process_nodes sont par espace) et onCreateNote (double-clic sur le canevas = NOTE vide + modale).
  * Vues plein cadre (canevas, Gantt, PERT, Process…) : listées dans les 3 conteneurs (h-full / overflow-hidden) —
@@ -109,6 +111,7 @@ import { useMenuItems } from '../hooks/useMenuItems';
 import { EmptyHelp } from '../help/EmptyHelp';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
+import { resolveSpaceDefaultView } from '../lib/spaceDefaultView';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -191,7 +194,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     queryFn: () => spacesApi.getMembers(live.state!.session.parentSpaceId),
     enabled: live.state?.myRole === 'HOST',
   });
-  const { data: spaceCommunity } = useQuery({
+  const { data: spaceCommunity, isLoading: spaceCommunityLoading } = useQuery({
     queryKey: ['community', space?.communityId],
     queryFn: () => communitiesApi.get(space!.communityId!),
     enabled: !!space?.communityId && !live.isLiveSpace,
@@ -202,12 +205,15 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     viewReadyRef.current = false;
   }, [spaceId]);
 
-  // Apply space defaultView — priorité : URL ?view= > vue active en cours (sticky) > defaultView espace > list
+  // Apply space defaultView — priorité : URL ?view= > vue active en cours (sticky) > defaultView espace >
+  // vue du contexte de la communauté > list (resolveSpaceDefaultView, 2026-10-24)
   // La vue active en cours (viewMode) persiste entre espaces : si l'utilisateur navigue en "images", tous les espaces suivants s'ouvrent en images
   useEffect(() => {
     if (!space || space.id !== spaceId) return;
+    if (spaceCommunityLoading) return; // contexte de la communauté pas encore connu : attendre plutôt qu'ouvrir en Liste
     const urlView = searchParams.get('view') as Parameters<typeof setMode>[0] | null;
-    const targetMode = urlView || viewMode || (space.defaultView as Parameters<typeof setMode>[0]) || 'list';
+    const targetMode = urlView || viewMode
+      || (resolveSpaceDefaultView(space.defaultView, spaceCommunity?.context) as Parameters<typeof setMode>[0]);
     setMode(targetMode);
     viewReadyRef.current = true;
     setSearchParams(prev => {
@@ -215,7 +221,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       next.set('view', targetMode);
       return next;
     }, { replace: true });
-  }, [spaceId, space?.id, space?.defaultView, setMode, setSearchParams]);
+  }, [spaceId, space?.id, space?.defaultView, spaceCommunityLoading, spaceCommunity?.context, setMode, setSearchParams]);
   // Note: searchParams lu à l'exécution de l'effet, pas en dep (évite boucle)
 
   // Sync viewMode → URL lors des changements de vue par l'utilisateur

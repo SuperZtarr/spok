@@ -1,5 +1,7 @@
 /* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
-   Vue par défaut non réglée (defaultView null) : affichée « Liste », ce que SpacePage ouvre réellement.
+   Vue par défaut non réglée (defaultView null) : option « Selon la communauté (X) », X = vue du contexte de la
+   communauté choisie (lib/spaceDefaultView.ts, Liste si neutre) — ce que SpacePage ouvre réellement ; la choisir
+   renvoie null à l'API.
    Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
    Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
    Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
@@ -34,10 +36,11 @@ import { SpaceCard } from '../components/ui/SpaceCard';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
 import { VIEW_MODES } from '../stores/viewMode';
+import { contextDefaultView } from '../lib/spaceDefaultView';
 import { useGoBack } from '../hooks/useGoBack';
 
-// Vue ouverte par SpacePage quand l'espace n'a pas de vue par défaut
-const FALLBACK_DEFAULT_VIEW = 'list';
+// Choix « Selon la communauté » de la vue par défaut (envoyé null : vue du contexte de la communauté, sinon Liste)
+const BY_COMMUNITY = '';
 
 // Choix « Héritée » de la visibilité (envoyé null à l'API : visibilité du parent, sinon de la communauté)
 const INHERIT = 'INHERIT';
@@ -154,7 +157,7 @@ export function SpaceSettingsPage() {
   const [editParentId, setEditParentId] = useState<string>('');
   const [editDefaultRole, setEditDefaultRole] = useState<string>('');
   const [editVisibility, setEditVisibility] = useState<string>(INHERIT);
-  const [editDefaultView, setEditDefaultView] = useState<string>(FALLBACK_DEFAULT_VIEW);
+  const [editDefaultView, setEditDefaultView] = useState<string>(BY_COMMUNITY);
 
 
   // Initialize space info state
@@ -166,7 +169,7 @@ export function SpaceSettingsPage() {
       setEditParentId(space.parentId || '');
       setEditDefaultRole(space.defaultRole || '');
       setEditVisibility(space.visibility || INHERIT);
-      setEditDefaultView(space.defaultView || FALLBACK_DEFAULT_VIEW);
+      setEditDefaultView(space.defaultView || BY_COMMUNITY);
     }
   }, [space, editName]);
 
@@ -183,7 +186,7 @@ export function SpaceSettingsPage() {
     const newDefaultRole = (editDefaultRole || null) as Role | null;
     if (newDefaultRole !== (space.defaultRole || null)) updates.defaultRole = newDefaultRole;
     if (editVisibility !== (space.visibility || INHERIT)) updates.visibility = editVisibility === INHERIT ? null : editVisibility;
-    if (editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)) updates.defaultView = editDefaultView;
+    if (editDefaultView !== (space.defaultView || BY_COMMUNITY)) updates.defaultView = editDefaultView || null;
 
     if (Object.keys(updates).length > 0) {
       await updateSpaceMutation.mutateAsync(updates);
@@ -197,8 +200,11 @@ export function SpaceSettingsPage() {
     (editParentId || null) !== (space.parentId || null) ||
     (editDefaultRole || null) !== (space.defaultRole || null) ||
     editVisibility !== (space.visibility || INHERIT) ||
-    editDefaultView !== (space.defaultView || FALLBACK_DEFAULT_VIEW)
+    editDefaultView !== (space.defaultView || BY_COMMUNITY)
   );
+  // Vue qu'ouvrirait « Selon la communauté », d'après la communauté choisie dans le formulaire
+  const communityViewValue = contextDefaultView(communities?.find(c => c.id === editCommunityId)?.context);
+  const communityViewLabel = VIEW_MODES.find(v => v.value === communityViewValue)?.label ?? communityViewValue;
 
   useCtrlS(!!hasSpaceInfoChanges && !updateSpaceMutation.isPending, handleSaveSpaceInfo);
 
@@ -455,7 +461,10 @@ export function SpaceSettingsPage() {
                 <Select
                   value={editDefaultView}
                   onChange={(e) => setEditDefaultView(e.target.value)}
-                  options={VIEW_MODES.map((v) => ({ value: v.value, label: v.label }))}
+                  options={[
+                    { value: BY_COMMUNITY, label: `Selon la communauté (${communityViewLabel})` },
+                    ...VIEW_MODES.map((v) => ({ value: v.value, label: v.label })),
+                  ]}
                 />
                 <FieldHelp page="space-settings" field="defaultView" />
               </div>

@@ -5,7 +5,8 @@
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
  * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
- * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge.
+ * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge. Liens d'espace par
+ * spaceHref (lib/spaceDefaultView.ts) : ?view= = vue de l'espace, sinon celle du contexte de sa communauté (2026-10-24).
  * Monte DevZoneInspector (zones de dev) et HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone).
  * Actions d'espace dans la sidebar (2026-10-16) : au survol d'une ligne d'espace, « + » (nouveau sous-espace) et
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
@@ -31,6 +32,8 @@ import { SpaceDeleteConfirmModal } from './SpaceDeleteConfirmModal';
 import { useDeleteSpace, useReorderSpaces } from '../hooks/useSpaces';
 import { siblingOrder, shiftInOrder } from '../lib/spaceReorder';
 import { useAuthStore } from '../stores/auth';
+import { useCommunityContexts } from '../hooks/useCommunityContexts';
+import { spaceHref } from '../lib/spaceDefaultView';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
@@ -299,6 +302,7 @@ function SpaceTreeItem({
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expandedIds.has(node.id);
+  const communityContexts = useCommunityContexts();
 
   const { includeChildrenSpaceIds, toggleIncludeChildren } = useSpaceStore();
   const isIncludeChildren = includeChildrenSpaceIds.has(node.id);
@@ -342,7 +346,7 @@ function SpaceTreeItem({
           <span className="w-4 flex-shrink-0" />
         )}
         <Link
-          to={`/spaces/${node.id}${node.defaultView ? `?view=${node.defaultView}` : ''}`}
+          to={spaceHref(node, communityContexts)}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
           <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} />
@@ -397,6 +401,7 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, updateUser, logout, refreshToken } = useAuthStore();
+  const communityContexts = useCommunityContexts();
   const { initTheme } = useThemeStore();
   const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
   const interfaceMode = useInterfaceModeStore(s => s.mode);
@@ -1121,7 +1126,7 @@ export function Layout() {
                 {favoriteSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
-                      to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
+                      to={spaceHref(space, communityContexts)}
                       className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
@@ -1153,7 +1158,7 @@ export function Layout() {
                 {recentSpaces.map((space) => (
                   <div key={space.id} className="group flex items-center">
                     <Link
-                      to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
+                      to={spaceHref(space, communityContexts)}
                       className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                         currentSpaceId === space.id
                           ? 'bg-primary/10 text-primary font-medium'
@@ -1185,7 +1190,7 @@ export function Layout() {
                   <Link
                     key={space.id}
                     id={i === 0 ? 'sidebar-first-space' : undefined}
-                    to={`/spaces/${space.id}${space.defaultView ? `?view=${space.defaultView}` : ''}`}
+                    to={spaceHref(space, communityContexts)}
                     className={`flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
                       currentSpaceId === space.id
                         ? 'bg-primary/10 text-primary font-medium'
