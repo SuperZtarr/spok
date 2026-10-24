@@ -229,6 +229,7 @@
 
 - [x] Skill `spok-layout` : documente Layout.tsx/GlobalNavBar.tsx (anciens MainMenu.tsx/Sidebar.tsx, supprimés) — invariants, régressions passées (z-index, overflow-hidden, polling sidebar, largeur toggle), fichiers clés — ARCHITECTURE.md et CLAUDE.md mis à jour avec les noms de fichiers réels — 2026-07-14
 - [x] `dev-autostart.ps1` : attend la readiness (`:3000` + `:3001/health` = 200) puis ouvre Chrome sur localhost:3000 — plus d'actions manuelles au démarrage — 2026-08-31 (bea0bcd)
+- [x] `dev-autostart.ps1` : `Start-Process pnpm` ouvrait la boîte « ouvrir ce .ps1 avec… » (pnpm.ps1 via ShellExecute) → lancement par un PowerShell caché explicite — 2026-10-24
 - [x] Boutons Déconnexion / Mode admin / Mode dev (compact) + « Retourner à » déplacés de la section « Divers » du bandeau vers la row 1 du header, avant la vignette utilisateur (desktop uniquement, mobile inchangé) — 2026-08-31
 - [x] `DevZoneInspector` : inspecteur de zones dev-only — encadrés colorés permanents (`data-devzone`) sur sidebar/header/bandeau/toolbar/contenu + sous-zones sidebar, nom de la zone au survol, piloté par le mode dev — 2026-08-31
 - [x] Badges de nom de modale en mode dev : nouveau `DevModalBadge` (+ prop `devName` sur `Modal.tsx`), posé sur les 16 modales basées sur `Modal.tsx` et sur la quinzaine de modales maison (overlay fait main) — 2026-09-14 (e1f83e4)

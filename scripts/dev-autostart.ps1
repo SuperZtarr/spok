@@ -30,7 +30,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- 2. Lancement de la stack (non bloquant) ---
-Start-Process pnpm -ArgumentList 'dev:start' -WorkingDirectory 'C:/_dev/spok' -WindowStyle Hidden
+# Passer par un PowerShell caché explicite : `Start-Process pnpm` résout `pnpm.ps1` via
+# ShellExecute, que Windows ne sait pas exécuter (boîte "ouvrir ce .ps1 avec…").
+Start-Process powershell -ArgumentList @(
+    '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden',
+    '-Command', "Set-Location 'C:/_dev/spok'; pnpm dev:start"
+) -WindowStyle Hidden
 
 # --- 3. Attente de la readiness (ports qui servent du 200) ---
 $webUrl    = 'http://localhost:3000'
