@@ -195,6 +195,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/utils/articleVisibility.ts (isLessVisible), apps/web/src/components/article/ArticleEditor.tsx',
   },
   {
+    id: 'article-block-display-by-type',
+    page: 'Article',
+    trigger: 'Affichage d\'un bloc (lecture, Composer, impression)',
+    effect: "Contenu d'abord, champs vides omis, jamais de bloc vide (au moins le titre). Note : intertitre + texte ; Document : intertitre + texte + fichier joint ; Image / Schéma : image + légende titre et description ; Lien : icône du site (repli générique) + titre + adresse ; Réunion : date et heures ; Tâche / Bug : statut · échéance · priorité ; Projet : dates · statut ; Période : dates. Jamais tags, assigné, contributions, relations ni enfants. Libellé de statut résolu par l'API dans les référentiels de l'espace d'origine",
+    location: 'apps/web/src/components/article/ArticleBlock.tsx, articleBlockContent.ts, apps/api/src/routes/item-article.ts (resolveBlocks)',
+  },
+  {
     id: 'merge-targets-allowed-only',
     page: 'Modale « Fusionner avec… » (MergeItemModal)',
     trigger: 'Choix de la cible d\'une fusion',

@@ -10,6 +10,7 @@ export const help: HelpEntry = {
     '« Composer » (si vous pouvez modifier l\'article) : ajouter, réordonner, régler ou retirer des blocs',
     'Un bloc affiche un élément existant : le corriger le corrige partout où il apparaît',
     'Le texte d\'une note se modifie directement dans l\'article ; les autres blocs s\'ouvrent dans leur fiche',
+    'Chaque bloc montre ce qui compte pour son type : le titre et le texte ; la légende sous une image ; l\'icône du site pour un lien ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Tags, assignation et contributions n\'y figurent pas',
     'Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine',
     '« Imprimer » produit une version papier ou PDF propre',
   ],

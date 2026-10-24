@@ -13,10 +13,13 @@
  * DUPLICATE_REFERENCE, 409 LESS_VISIBLE sans confirmLessVisible), POST …/article/texts (nouvelle NOTE + bloc),
  * PATCH …/article/blocks/:blockId (width/align), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
  * (retire la référence, ne supprime jamais l'élément).
+ * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
+ * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView, ItemType } from '@spok/shared';
+import { DEFAULT_STATUSES } from '@spok/shared';
+import type { ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView, ItemType, StatusConfig } from '@spok/shared';
 import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities } from '../utils/articleAccess.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { isLessVisible, type VisibilityInfo } from '../utils/articleVisibility.js';
@@ -25,12 +28,32 @@ import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 type RefItem = {
   id: string; type: string; title: string; description: string | null; url: string | null; spaceId: string;
   createdById: string | null; assignedToId: string | null; lockedAt: Date | string | null;
+  status?: string | null; priority?: number | null;
+  startDate?: Date | string | null; endDate?: Date | string | null; dueDate?: Date | string | null;
 };
+
+const isoOrNull = (d: Date | string | null | undefined): string | null => {
+  if (!d) return null;
+  const date = new Date(d);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+/** Statuts de chaque espace : référentiels de sa communauté, sinon statuts par défaut. */
+async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<Map<string, StatusConfig[]>> {
+  const spaces: { id: string; community: { referentiels: unknown } | null }[] = spaceIds.length
+    ? (await prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, community: { select: { referentiels: true } } } })) ?? []
+    : [];
+  return new Map(spaces.map((s) => {
+    const statuses = (s.community?.referentiels as { statuses?: StatusConfig[] } | null)?.statuses;
+    return [s.id, Array.isArray(statuses) && statuses.length ? statuses : DEFAULT_STATUSES];
+  }));
+}
 type BlockRow = { id: string; position: number; width: string; align: string; addedById: string | null; item: RefItem };
 
 export const REF_ITEM_SELECT = {
   id: true, type: true, title: true, description: true, url: true, spaceId: true,
   createdById: true, assignedToId: true, lockedAt: true,
+  status: true, priority: true, startDate: true, endDate: true, dueDate: true,
 } as const;
 
 /** Droit de modifier un élément d'un espace donné, pour un rôle déjà résolu (OWNER libre, MEMBER auteur/assigné). */
@@ -49,6 +72,7 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
     adderReadable.set(adder, new Set(await filterReadableSpaceIds(prisma, adder, spaceIds, false)));
   }
   const readerReadable = new Set(await filterReadableSpaceIds(prisma, readerId, spaceIds, isAdminMode));
+  const statuses = await statusesBySpace(prisma, spaceIds);
   const readerRole = new Map<string, string | undefined>();
   if (readerId) {
     for (const spaceId of readerReadable) {
@@ -61,6 +85,8 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
     const available = !!r.addedById && !!adderReadable.get(r.addedById)?.has(r.item.spaceId);
     if (!available) return { ...base, available: false, item: null };
     const canOpen = readerReadable.has(r.item.spaceId);
+    const status = r.item.status && r.item.status !== 'undefined' ? r.item.status : null;
+    const statusList = statuses.get(r.item.spaceId) ?? DEFAULT_STATUSES;
     return {
       ...base,
       available: true,
@@ -70,6 +96,12 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
         title: r.item.title,
         description: r.item.description,
         url: r.item.url,
+        status,
+        statusLabel: status ? (statusList.find((s) => s.id === status)?.label ?? status) : null,
+        priority: r.item.priority ?? null,
+        startDate: isoOrNull(r.item.startDate),
+        endDate: isoOrNull(r.item.endDate),
+        dueDate: isoOrNull(r.item.dueDate),
         canOpen,
         canEdit: canOpen && canEditWithRole(readerRole.get(r.item.spaceId), r.item, readerId),
         spaceId: canOpen ? r.item.spaceId : null,

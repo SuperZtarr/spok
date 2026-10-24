@@ -74,6 +74,23 @@ describe('Article — lecture', () => {
     expect(res.json().canEditArticle).toBe(false)
   })
 
+  it('envoie statut (avec libellé), priorité et dates d’un bloc', async () => {
+    const task = { ...ref('t1', SPACE, 'Tâche'), type: 'TASK', status: 'todo', priority: 3, startDate: null, endDate: null, dueDate: new Date('2026-11-12T00:00:00Z') }
+    prisma.articleBlock.findMany.mockResolvedValue([block('b1', 0, task as never)])
+    prisma.space.findMany.mockResolvedValue([{ id: SPACE, community: { referentiels: { statuses: [{ id: 'todo', label: 'À lancer' }] } } }])
+    const b = (await read()).json().blocks[0]
+    expect(b.item).toMatchObject({ status: 'todo', statusLabel: 'À lancer', priority: 3, dueDate: '2026-11-12T00:00:00.000Z', startDate: null, endDate: null })
+  })
+
+  it('statut undefined ou espace sans communauté → libellés par défaut ou null', async () => {
+    const t = (id: string, status: string) => ({ ...ref(id, SPACE, id), type: 'TASK', status, priority: null, startDate: null, endDate: null, dueDate: null })
+    prisma.articleBlock.findMany.mockResolvedValue([block('b1', 0, t('u', 'undefined') as never), block('b2', 1, t('d', 'done') as never)])
+    prisma.space.findMany.mockResolvedValue([{ id: SPACE, community: null }])
+    const [u, d] = (await read()).json().blocks
+    expect(u.item).toMatchObject({ status: null, statusLabel: null })
+    expect(d.item).toMatchObject({ status: 'done', statusLabel: 'Terminé' })
+  })
+
   it('404 for non-article item', async () => {
     prisma.item.findFirst.mockResolvedValue({ ...ARTICLE, type: 'NOTE' })
     expect((await read()).statusCode).toBe(404)

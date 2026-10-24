@@ -14,6 +14,15 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24 (2)
+- 4 lots poussés : /url-meta SSRF (fix), modale de duplication (fix), « Ouvrir l'article » (fix), blocs d'article par type (feat). businessRules par morceaux. build:packages, typecheck 6 paquets OK, TNR 1711/1711, en-têtes OK. Non vérifiés à l'écran (cf. lots)
+
+### Blocs d'article : affichage par type — 2026-10-24
+- Conception (proposition directe, corrections Thomas : intertitre des notes, légende titre + description, icône du site) puis plan exécuté inline (4 tâches, registre .superpowers/sdd/2026-10-24-article-blocks-par-type/progress.md). API : statut + libellé (référentiels de l'espace d'origine), priorité, dates par bloc. Web : blockMetaLine / siteIconUrl, ArticleBlock réécrit. Icône prise sur /favicon.ico du site (pas /url-meta, faille SSRF confiée à la session « Sécuriser /url-meta »). Tests et doc : cf. lot. Écran non vérifié. NON COMMITÉ
+
+### « Ouvrir l'article » introuvable — 2026-10-24
+- Constat Thomas : à la création d'un article, le bouton de la fiche ouvre « Article introuvable ». Cause (lue dans le code, non reproduite) : bouton conditionné au type du formulaire, pas au type enregistré → API (type ≠ ARTICLE) 404 ; le Link fermait aussi la fiche sans garde (saisie perdue). Correctif : bouton actif si item.type enregistré = ARTICLE, sinon grisé + hint openArticleUnsaved ; départ via guardClose ; espace = item.spaceId. Aide 418/418, typecheck web OK, spec to_validate. Docker Desktop : ne démarre pas (aucun processus après 2 min 30). Inscrit PRÊT POUR MEP. NON COMMITÉ
+
 ### MEP — 2026-10-24
 - 3 lots poussés + chore : démarrage auto du dev (fix), autorisations typecheck (chore), modale de déplacement (fix, SpacePage par morceaux), vue d'ouverture selon le contexte de la communauté (feat). Vérification de l'ensemble : typecheck 6 paquets OK, TNR 1654/1654, en-têtes OK. Non vérifiés à l'écran (cf. lots)
 
@@ -28,7 +37,8 @@ _(aucun lot en attente)_
 ### Démarrage de session — 2026-10-24
 - Docker Desktop était arrêté → relancé, dev:start OK. Journal : lot « Organisation des sessions » (déjà poussé, fa95f3f) réinscrit à tort dans PRÊT POUR MEP → retiré ; lot dev-autostart.ps1 (non tracé) inscrit à sa place
 - Test réel en local du déplacement avec process (resté non vérifié le 23/10), menu ⋮ → « Déplacer vers un espace », space-dev → space-orga : « item F » (couloir) → couloir suivi (même id), ses 4 éléments restés sur place libérés ; « item E » (couloir resté sur place) → arrive libre à la même position (1214, 24) ; vue Process d'Organisation conforme. Base locale remise en l'état par SQL. Constats non traités : la modale garde l'espace choisi d'une ouverture à l'autre ; SpacePage l.155/1703 : showMoveModal jamais mis à true (modale sans itemIds, code mort)
-- Correction des deux (accord Thomas) : MoveToSpaceModal remet à zéro espace / recherche / enfants à chaque ouverture ; modale morte et son état retirés de SpacePage. Typecheck web OK. Inscrit PRÊT POUR MEP. NON COMMITÉ. Constat non traité : même schéma pour DuplicateToSpaceModal (showDuplicateModal) à vérifier
+- Correction des deux (accord Thomas) : MoveToSpaceModal remet à zéro espace / recherche / enfants à chaque ouverture ; modale morte et son état retirés de SpacePage. Typecheck web OK. Commité 6bcab57 (MEP). Constat : même schéma pour DuplicateToSpaceModal
+- DuplicateToSpaceModal (accord Thomas) : espace / recherche / enfants n'étaient pas remis à zéro (seuls copies et écart l'étaient, à la fermeture) → tout remis à zéro à l'ouverture, espace courant par défaut ; modale morte showDuplicateModal retirée de SpacePage. Puis (accord Thomas) fiche d'aide créée (duplicate-to-space.help.ts, registre, « ? », tour 4 étapes, rappels enfants / itérations / Dupliquer écrits d'après item-bulk.ts) et spec SPOK réécrite (to_validate). Aide 418/418, typecheck web OK. Inscrit PRÊT POUR MEP. NON COMMITÉ. Constat : bulk-duplicate crée dans l'espace d'arrivée TOUS les tags manquants de l'espace source, pas seulement ceux des éléments copiés
 
 ### Organisation des sessions et des consignes — 2026-10-23
 - Décisions Thomas : une seule session « MEP » commite et pousse, les autres inscrivent leurs lots dans « PRÊT POUR MEP » ; micro-correction (< ~20 lignes, sans nouveau comportement) sans plan à valider, avec question sur la mise à jour de la doc du composant ; plus de hash dans le TODO (date seule). Appliqué : CLAUDE.md projet et global, skills spok-dev et spok-deploy, cette section. MEP 2026-10-23 (docs seules, sans CI)
