@@ -295,7 +295,10 @@
       "Bash(awk 'NR>=650 && NR<=730' \"docs/superpowers/plans/2026-07-19-horizons-revue.md\")",
       "Bash(PGPASSWORD=spok psql -h localhost -p 5433 -U spok -d spok -c \"SELECT id, title, \\\\\"manualHorizon\\\\\", \\\\\"horizonSetAt\\\\\", status, \\\\\"updatedAt\\\\\" FROM \\\\\"Item\\\\\" WHERE title ILIKE '%Refonte authentification%';\")",
       "Bash(awk 'NR==954,NR==1027' docs/superpowers/plans/2026-07-19-horizons-revue.md)",
-      "Bash(sed -n '954,1027p' docs/superpowers/plans/2026-07-19-horizons-revue.md)"
+      "Bash(sed -n '954,1027p' docs/superpowers/plans/2026-07-19-horizons-revue.md)",
+      "Bash(pnpm --filter @spok/api typecheck)",
+      "Bash(pnpm --filter @spok/mcp typecheck)",
+      "Bash(pnpm --filter @spok/web typecheck)"
     ]
   },
   "hooks": {
