@@ -62,4 +62,6 @@ Puis :
 - **Jamais de commit ni de push depuis une session de développement** : une seule session (« MEP ») commite et
   pousse, via `spok-deploy` (CLAUDE.md, « Une seule session fait les MEP »). Thomas demande « MEP » ici → répondre
   que le lot est inscrit et que la MEP se fait depuis la session MEP.
-- Ne pas lancer `pnpm dev:stop` / `dev:start` si le dev tourne déjà : il est partagé avec les autres sessions.
+- Ne jamais lancer `pnpm dev:start` / `dev:stop` (ni redémarrer Docker) : seule la session « Start » démarre et
+  arrête le dev (CLAUDE.md, « Une seule session démarre/arrête le dev »). Dev arrêté ou en panne → le dire à Thomas
+  pour qu'il le demande à la session Start.

@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24 (6)
+- Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
+
+### Start — 2026-10-24
+- Docker Desktop ne démarrait plus : backend planté sur `remove ...\Docker\run\dockerInference: The file cannot be accessed by the system` (socket orphelin de 10 h, déjà vécu : `run_broken`, `run_broken_20260907`). Accord Thomas : `Docker\run` renommé `run.old`, Docker relancé, `pnpm dev:start` OK (API 3001 /health 200, web 3000 200, accueil affiché dans le navigateur intégré). Lot doc inscrit PRÊT POUR MEP. NON COMMITÉ
+
 ### MEP — 2026-10-24 (5)
 - Lot poussé : Article, sélecteur d'éléments à parcourir (feat). build:packages, typecheck 6 paquets OK, TNR 1774/1774, en-têtes OK. Non vérifié à l'écran. RESTE OUVERT (revue sécurité auto du lot ajout groupé) : clusterIds (item-article.ts) ne vérifie pas la lisibilité de la racine et parcourt enfants / chaîne sans plafond — jusqu'à 100 racines par requête → à corriger en session de dev
 

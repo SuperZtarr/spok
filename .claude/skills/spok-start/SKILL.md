@@ -5,6 +5,11 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
 
 # start-dev — Démarrage environnement SPOK
 
+> **Une seule session « Start » démarre et arrête le dev** (décision Thomas 2026-10-24, CLAUDE.md « Une seule
+> session démarre/arrête le dev »). Si cette session n'est pas la session Start et que le dev ne tourne pas : ne pas
+> lancer `pnpm dev:start` / `dev:stop`, le signaler à Thomas pour que la session Start s'en charge. Les étapes 4-5
+> (lecture du contexte, résumé) restent valables pour toute session.
+
 ## Séquence de démarrage
 
 0. **Détecter le contexte git** — Claude Desktop crée un worktree par conversation
@@ -22,16 +27,31 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    ```
    Si absent : `pnpm db:up`
 
-2. **Lancer le dev**
+   **Docker ne répond pas** (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`) :
+   - Lancer `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` puis attendre jusqu'à 3 min que
+     `docker info` réponde (boucle de 5 s, pas de `sleep` aveugle).
+   - Toujours rien → lire la fin de `%LOCALAPPDATA%\Docker\log\host\com.docker.backend.exe.log` (chercher
+     `backend crashed`).
+   - **Panne connue, récurrente** (2026-09-07, 2026-10-24) : `remove ...\AppData\Local\Docker\run\<socket>: The file
+     cannot be accessed by the system`. Docker s'est mal arrêté (veille, extinction) et laisse dans `Docker\run` des
+     sockets orphelins qu'il ne sait plus supprimer ; désactiver l'inférence ne suffit pas. Correctif (sans
+     suppression, accord Thomas 2026-10-24) : Docker Desktop fermé, renommer le dossier avec un nom daté puis relancer
+     ```powershell
+     Rename-Item "$env:LOCALAPPDATA\Docker\run" ("run_broken_" + (Get-Date -Format yyyyMMdd-HHmm))
+     ```
+     Docker recrée `run` vide. Les anciens `run_broken_*` / `run.old` ne se suppriment que sur demande de Thomas.
+   - Autre erreur → s'arrêter, citer la ligne du journal à Thomas, ne rien supprimer ni réinstaller.
+
+2. **Lancer le dev** — en tâche de fond (`run_in_background: true`)
    ```bash
    pnpm dev:start
    ```
-   (Lance PostgreSQL Docker + API port 3001 + Web port 3000)
+   (Lance PostgreSQL Docker + API port 3001 + Web port 3000). Vérifier ensuite que `http://localhost:3001/health`
+   et `http://localhost:3000` répondent 200.
 
-3. **Ouvrir le navigateur avec le plugin Chrome** (serveur MCP `claude-in-chrome`, outils `mcp__claude-in-chrome__*`) :
-   - Vérifier si Chrome tourne : `tasklist //FI "IMAGENAME eq chrome.exe"` ; sinon `Start-Process "chrome.exe"` puis attendre quelques secondes
-   - Naviguer directement vers `http://localhost:3000` via `mcp__claude-in-chrome__navigate` — c'est suffisant
-   - **INTERDIT** : `tabs_context_mcp` avec `createIfEmpty`, `tabs_create_mcp` avec un groupe, ou tout paramètre qui crée un groupe Chrome — chaque appel crée un nouveau groupe "Démarre" qui s'accumule à l'infini
+3. **Ouvrir l'appli dans le navigateur intégré** (outils `mcp__Claude_Browser__*`) : `preview_start` avec
+   `url: "http://localhost:3000"`, puis `read_console_messages` (erreurs). Ne pas utiliser le Chrome de Thomas
+   (`claude-in-chrome`) sauf demande explicite de sa part.
 
 4. **Lire le contexte de session** (en parallèle) :
    - `docs/session-journal.md` — section EN COURS

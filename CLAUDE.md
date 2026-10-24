@@ -37,6 +37,13 @@ Plusieurs sessions codent en parallèle dans le même dossier : deux sessions qu
 - **Session MEP** (session dédiée, titre « MEP ») : seule à commiter et pousser, sur demande de Thomas — skill
   `spok-deploy` : un commit par lot, une vérification complète de l'ensemble, push, CI en tâche de fond, section vidée.
 
+### Une seule session démarre/arrête le dev (décision Thomas 2026-10-24)
+Le dev local (Docker `spok-postgres-dev`, API 3001, web 3000) est partagé par toutes les sessions.
+- **Session Start** (session dédiée, titre « Start ») : seule à lancer `pnpm dev:start` / `pnpm dev:stop`, à démarrer
+  ou dépanner Docker Desktop — skill `spok-start` (procédure de la panne récurrente `Docker\run` incluse).
+- **Autres sessions** : ne lancent jamais `pnpm dev:start` / `dev:stop` ni Docker. Dev arrêté ou en panne → le
+  signaler à Thomas pour qu'il le demande à la session Start.
+
 ### Zones fragiles
 - **MindMap** : edges recalculés via `onInit`, portails placement fixe — ne pas modifier sans vérifier les edges
 - **Navigation globale / Sidebar** : `GlobalNavBar.tsx` et `Layout.tsx` (les anciens noms `MainMenu.tsx`/`Sidebar.tsx` n'existent plus) — bandeau Bootstrap plein hauteur sans hamburger, jamais de logique `layoutMode` avec mesure de largeur, style Notion/Linear pour la sidebar — lire le skill `spok-layout` avant toute modification
