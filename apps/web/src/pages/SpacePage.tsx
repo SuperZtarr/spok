@@ -152,7 +152,6 @@ export function SpacePage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   // Mode demandé pour la modale (menu Afficher / Ouvrir via ?mode) ; remis à « défaut » à la fermeture
   const [itemOpenMode, setItemOpenMode] = useState<ItemOpenMode | undefined>(undefined);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1700,9 +1699,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         <>
           {/* Move to space modal (single item) */}
           <MoveToSpaceModal isOpen={!!moveItemId} onClose={() => setMoveItemId(null)} currentSpaceId={spaceId!} itemIds={moveItemId ? [moveItemId] : undefined} />
-
-          {/* Duplicate to space modal (selection mode) */}
-          <DuplicateToSpaceModal isOpen={showDuplicateModal} onClose={() => setShowDuplicateModal(false)} currentSpaceId={spaceId!} />
 
           {/* Duplicate to space modal (single item) */}
           <DuplicateToSpaceModal isOpen={!!duplicateItemId} onClose={() => setDuplicateItemId(null)} currentSpaceId={spaceId!} itemIds={duplicateItemId ? [duplicateItemId] : undefined} />

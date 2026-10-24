@@ -23,6 +23,7 @@ import { help as bookmarksHelp } from '../pages/help/bookmarks.help';
 import { help as profileHelp } from '../components/help/profile.help';
 import { help as liveWindowHelp } from '../components/help/live-window.help';
 import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
+import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
 import { help as articleHelp } from '../pages/help/article.help';
 import { help as globalGraphHelp } from '../pages/help/global-graph.help';
@@ -62,6 +63,7 @@ export const PAGE_HELP = {
   'live-window': liveWindowHelp,
   'merge-item': mergeItemHelp,
   'move-to-space': moveToSpaceHelp,
+  'duplicate-to-space': duplicateToSpaceHelp,
   article: articleHelp,
   'global-graph': globalGraphHelp,
   'global-sunburst': globalSunburstHelp,

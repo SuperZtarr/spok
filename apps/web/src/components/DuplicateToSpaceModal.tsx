@@ -2,6 +2,10 @@
  * Duplication d'un item (et enfants) vers un autre espace, en N itérations optionnelles
  * décalées cumulativement d'une unité de temps (jour/semaine/mois/an) — pratique pour créer
  * une série récurrente. iterations=1 (défaut) = comportement classique, pas de décalage.
+ * Chaque ouverture repart à zéro (espace courant, recherche vide, enfants inclus, 1 copie) : le composant reste monté
+ * entre deux duplications, l'espace choisi la fois précédente ne doit pas rester coché.
+ * Aide : fiche components/help/duplicate-to-space.help.ts (« ? », tour duplicate-targets / duplicate-children /
+ * duplicate-iterations / duplicate-confirm, rappels pageHint sur enfants, itérations et « Dupliquer »).
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useDialogFocus } from '../hooks/useDialogFocus';
@@ -11,6 +15,9 @@ import { spacesApi, itemsApi } from '../lib/api';
 import { groupSpacesByCommunity } from '../lib/spaceGrouping';
 import { Button } from './ui/Button';
 import { DevModalBadge } from './ui/DevModalBadge';
+import { PageHelpButton } from '../help/PageHelpButton';
+import { HelpHint } from '../help/HelpHint';
+import { pageHint } from '../help/pageHint';
 
 interface DuplicateToSpaceModalProps {
   isOpen: boolean;
@@ -27,14 +34,16 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
   const [iterations, setIterations] = useState(1);
   const [offsetUnit, setOffsetUnit] = useState<'day' | 'week' | 'month' | 'year'>('week');
 
-  // Réinitialise les contrôles d'itération à chaque fermeture (évite de garder N=12
-  // pour la prochaine ouverture sur un autre item).
+  // Réinitialise tous les choix à chaque ouverture (évite de garder un autre espace ou N=12
+  // pour la prochaine duplication).
   useEffect(() => {
-    if (!isOpen) {
-      setIterations(1);
-      setOffsetUnit('week');
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    setSelectedSpaceId(currentSpaceId);
+    setIncludeChildren(true);
+    setSearchQuery('');
+    setIterations(1);
+    setOffsetUnit('week');
+  }, [isOpen, currentSpaceId]);
 
   const effectiveIds = itemIds || [];
 
@@ -101,6 +110,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
             Dupliquer vers un espace
           </h2>
           <DevModalBadge name="DuplicateToSpaceModal" />
+          <div className="ml-auto mr-8"><PageHelpButton pageKey="duplicate-to-space" /></div>
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
@@ -134,7 +144,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="max-h-60 overflow-y-auto mb-4">
+            <div className="max-h-60 overflow-y-auto mb-4" data-tour="duplicate-targets">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">
@@ -177,17 +187,20 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
             </div>
             )}
 
-            <label className="flex items-center gap-2 mb-4 text-sm">
-              <input
-                type="checkbox"
-                checked={includeChildren}
-                onChange={(e) => setIncludeChildren(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span>Inclure les éléments enfants</span>
-            </label>
+            <HelpHint text={pageHint('duplicate-to-space', 'includeChildren')} className="inline-flex self-start mb-4">
+              <label className="flex items-center gap-2 text-sm" data-tour="duplicate-children">
+                <input
+                  type="checkbox"
+                  checked={includeChildren}
+                  onChange={(e) => setIncludeChildren(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span>Inclure les éléments enfants</span>
+              </label>
+            </HelpHint>
 
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-6" data-tour="duplicate-iterations">
+              <HelpHint text={pageHint('duplicate-to-space', 'iterations')} className="inline-flex self-start">
               <label className="flex items-center gap-2 text-sm">
                 <span>Nombre d'itérations</span>
                 <input
@@ -199,6 +212,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
                   className="w-16 px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </label>
+              </HelpHint>
               {iterations > 1 && (
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Décalage entre chaque copie (dates conservées, décalées cumulativement)</p>
@@ -231,7 +245,9 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
           <Button variant="bordered" onClick={onClose}>
             Annuler
           </Button>
+          <HelpHint text={pageHint('duplicate-to-space', 'confirm')}>
           <Button
+            data-tour="duplicate-confirm"
             onClick={() => bulkDuplicateMutation.mutate()}
             disabled={!selectedSpaceId || bulkDuplicateMutation.isPending}
           >
@@ -247,6 +263,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
               </>
             )}
           </Button>
+          </HelpHint>
         </div>
 
         {bulkDuplicateMutation.isError && (
