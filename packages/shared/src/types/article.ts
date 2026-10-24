@@ -46,10 +46,11 @@ export type ArticleCandidate = {
   snippet: string | null;
 };
 
-/** Ajout groupé (POST …/article/batch[/preview]) : une grappe (élément + enfants et/ou chaîne de relations sortantes
- *  blocks / implements / drives) ou le processus d'un espace (entier ou un couloir). Photo au moment de l'ajout. */
+/** Ajout groupé (POST …/article/batch[/preview]) : des éléments cochés (1 à 100, ordre d'affichage), chacun avec ses
+ *  enfants et/ou la chaîne de ses relations sortantes blocks / implements / drives, ou le processus d'un espace
+ *  (entier ou un couloir). Photo au moment de l'ajout. */
 export type ArticleBatchSource =
-  | { kind: 'cluster'; itemId: string; children: boolean; chain: boolean }
+  | { kind: 'items'; itemIds: string[]; children: boolean; chain: boolean }
   | { kind: 'process'; spaceId: string; laneId?: string };
 
 export type ArticleBatchPreview = {
@@ -59,13 +60,26 @@ export type ArticleBatchPreview = {
   lessVisible: boolean;
 };
 
-/** Processus proposable (GET …/article/processes) : espace lisible ayant au moins un élément placé. */
-export type ArticleProcessSummary = {
+/** Espace proposé par le sélecteur à parcourir (GET …/article/browse/spaces) : lisible hors mode admin, dans la
+ *  portée ; itemCount sans les articles ; process renseigné seulement s'il a au moins un élément placé. */
+export type ArticleBrowseSpace = {
   spaceId: string;
-  spaceName: string;
+  name: string;
+  parentId: string | null;
   communityName: string | null;
-  nodeCount: number;
-  lanes: { id: string; title: string }[];
+  itemCount: number;
+  process: { nodeCount: number; lanes: { id: string; title: string }[] } | null;
+};
+
+/** Élément d'un espace pour l'arbre du sélecteur (GET …/article/browse/items, 500 au plus, articles exclus). */
+export type ArticleBrowseItem = {
+  id: string;
+  type: ItemType;
+  title: string;
+  status: string | null;
+  statusLabel: string | null;
+  parentId: string | null;
+  position: number;
 };
 
 export type ArticleView = {

@@ -215,7 +215,7 @@ describe('Article — candidats du sélecteur', () => {
     prisma.articleBlock.findMany.mockResolvedValue([{ itemId: 'deja' }])
   })
 
-  it('classe par pertinence et exclut articles, l’article et les éléments déjà présents', async () => {
+  it('classe par pertinence, exclut articles et l’article, garde les éléments déjà présents', async () => {
     prisma.item.findMany
       .mockResolvedValueOnce([cand('t2', 'Mon plan'), cand('t1', 'Plan B')])
       .mockResolvedValueOnce([cand('d1', 'Autre', SPACE, '<p>un plan</p>'), cand('h1', 'Bruit', SPACE, '<p style="plan">x</p>')])
@@ -223,10 +223,19 @@ describe('Article — candidats du sélecteur', () => {
     expect(res.statusCode).toBe(200)
     expect(res.json().items.map((i: any) => i.title)).toEqual(['Plan B', 'Mon plan', 'Autre'])
     const [titleQuery, descQuery] = prisma.item.findMany.mock.calls.map((c: any) => c[0])
-    expect(titleQuery.where).toMatchObject({ type: { not: 'ARTICLE' }, id: { notIn: expect.arrayContaining(['deja', 'art']) } })
+    expect(titleQuery.where).toMatchObject({ type: { not: 'ARTICLE' }, id: { notIn: ['art'] } })
     expect(titleQuery.take).toBe(100)
     expect(descQuery).toMatchObject({ take: 300, orderBy: { updatedAt: 'desc' } })
-    expect(descQuery.where.id.notIn).toEqual(expect.arrayContaining(['deja', 'art', 't1', 't2']))
+    expect(descQuery.where.id.notIn).toEqual(['art', 't2', 't1'])
+  })
+
+  it('portée espace : limitée à l’espace choisi s’il est lisible', async () => {
+    prisma.item.findMany.mockResolvedValue([])
+    await get('?q=pl&scope=space&spaceId=s2')
+    expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: ['s2'] })
+    prisma.item.findMany.mockClear()
+    await get('?q=pl&scope=space&spaceId=inconnu')
+    expect(prisma.item.findMany.mock.calls[0][0].where.spaceId).toEqual({ in: [] })
   })
 
   it('portée communauté par défaut, Partout sur demande ; hors mode admin', async () => {

@@ -71,7 +71,8 @@ import type {
   ArticleCandidate,
   ArticleBatchSource,
   ArticleBatchPreview,
-  ArticleProcessSummary,
+  ArticleBrowseSpace,
+  ArticleBrowseItem,
   ArticleBlockView,
   ArticleBlockWidth,
   ArticleBlockAlign,
@@ -931,13 +932,19 @@ export const articlesApi = {
   addBatch: (spaceId: string, articleId: string, body: { source: ArticleBatchSource; position?: number; confirmLessVisible?: boolean }) =>
     fetchApi<{ blocks: ArticleBlockView[] }>(`/spaces/${spaceId}/items/${articleId}/article/batch`, { method: 'POST', body: JSON.stringify(body) }),
 
-  processes: (spaceId: string, articleId: string, scope: 'community' | 'all') =>
-    fetchApi<ArticleProcessSummary[]>(`/spaces/${spaceId}/items/${articleId}/article/processes?scope=${scope}`),
+  // Sélecteur à parcourir : espaces de la portée (nombre d'éléments, processus) et éléments d'un espace (500 max)
+  browseSpaces: (spaceId: string, articleId: string, scope: 'community' | 'all') =>
+    fetchApi<ArticleBrowseSpace[]>(`/spaces/${spaceId}/items/${articleId}/article/browse/spaces?scope=${scope}`),
 
-  // Sélecteur « Ajouter un élément » : classés par pertinence, q vide = récents de l'espace de l'article
-  candidates: (spaceId: string, articleId: string, params: { q: string; scope: 'community' | 'all' }) =>
+  browseItems: (spaceId: string, articleId: string, browsedSpaceId: string) =>
+    fetchApi<{ items: ArticleBrowseItem[]; truncated: boolean }>(
+      `/spaces/${spaceId}/items/${articleId}/article/browse/items?${new URLSearchParams({ spaceId: browsedSpaceId }).toString()}`,
+    ),
+
+  // Recherche du sélecteur : classée par pertinence ; portée 'space' (avec spaceId), 'community' ou 'all'
+  candidates: (spaceId: string, articleId: string, params: { q: string; scope: 'space' | 'community' | 'all'; spaceId?: string }) =>
     fetchApi<{ items: ArticleCandidate[] }>(
-      `/spaces/${spaceId}/items/${articleId}/article/candidates?${new URLSearchParams({ q: params.q, scope: params.scope }).toString()}`,
+      `/spaces/${spaceId}/items/${articleId}/article/candidates?${new URLSearchParams({ q: params.q, scope: params.scope, ...(params.spaceId ? { spaceId: params.spaceId } : {}) }).toString()}`,
     ),
 
   addBlock: (spaceId: string, articleId: string, body: { itemId: string; position?: number; confirmLessVisible?: boolean }) =>

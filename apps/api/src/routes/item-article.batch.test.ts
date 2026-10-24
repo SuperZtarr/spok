@@ -1,6 +1,6 @@
 /*
  * TNR de l'ajout groupé dans un article (2026-10-24) : aperçu et insertion d'une grappe ou d'un processus, liste des
- * processus proposables. Mêmes simulacres que item-article.test.ts (droits pilotés par articleAccess).
+ * espaces et éléments à parcourir (sélecteur). Mêmes simulacres que item-article.test.ts (droits pilotés par articleAccess).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
@@ -39,7 +39,8 @@ describe('Article — ajout groupé', () => {
   const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
   const post = (path: string, payload: Record<string, unknown>) =>
     app.inject({ method: 'POST', url: `/spaces/${SPACE}/items/art/article${path}`, headers: auth(), payload })
-  const getProcesses = () => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/art/article/processes`, headers: auth() })
+  const getSpaces = () => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/art/article/browse/spaces`, headers: auth() })
+  const getItems = (spaceId: string) => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/art/article/browse/items?spaceId=${spaceId}`, headers: auth() })
   const children = (ids: string[], parentId: string, spaceId = SPACE) =>
     ids.forEach((id, i) => { known[id] = { type: 'NOTE', spaceId, parentId, position: i } })
 
@@ -78,7 +79,7 @@ describe('Article — ajout groupé', () => {
     known.art2 = { type: 'ARTICLE', spaceId: SPACE, parentId: 'root', position: 9 }
     known.p1 = { type: 'NOTE', spaceId: 'priv', parentId: 'root', position: 10 }
     present = ['c2']
-    const res = await post('/batch/preview', { source: { kind: 'cluster', itemId: 'root', children: true, chain: false } })
+    const res = await post('/batch/preview', { source: { kind: 'items', itemIds: ['root'], children: true, chain: false } })
     expect(res.statusCode).toBe(200)
     expect(res.json()).toEqual({ count: 3, skipped: { present: 1, unreadable: 1, articles: 1 }, tooMany: false, lessVisible: false })
   })
@@ -90,7 +91,7 @@ describe('Article — ajout groupé', () => {
     prisma.itemRelation.findMany.mockImplementation(async ({ where }: any) =>
       [{ fromItemId: 'root', toItemId: 'b', type: 'drives' }, { fromItemId: 'b', toItemId: 'c', type: 'blocks' }]
         .filter((r) => where.fromItemId.in.includes(r.fromItemId)))
-    const res = await post('/batch', { source: { kind: 'cluster', itemId: 'root', children: false, chain: true } })
+    const res = await post('/batch', { source: { kind: 'items', itemIds: ['root'], children: false, chain: true } })
     expect(res.statusCode).toBe(201)
     expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['root', 'b', 'c'])
   })
@@ -98,7 +99,7 @@ describe('Article — ajout groupé', () => {
   it('plus de 100 éléments : aperçu tooMany, insertion 400 TOO_MANY', async () => {
     known.root = { type: 'NOTE', spaceId: SPACE }
     children(Array.from({ length: 101 }, (_, i) => `k${i}`), 'root')
-    const source = { kind: 'cluster', itemId: 'root', children: true, chain: false }
+    const source = { kind: 'items', itemIds: ['root'], children: true, chain: false }
     expect((await post('/batch/preview', { source })).json().tooMany).toBe(true)
     const res = await post('/batch', { source })
     expect(res.statusCode).toBe(400)
@@ -125,7 +126,7 @@ describe('Article — ajout groupé', () => {
   it('moins visible : aperçu signalé, insertion à confirmer', async () => {
     readable = [SPACE, 's2', 'priv']
     known.root = { type: 'NOTE', spaceId: 'priv' }
-    const source = { kind: 'cluster', itemId: 'root', children: false, chain: false }
+    const source = { kind: 'items', itemIds: ['root'], children: false, chain: false }
     expect((await post('/batch/preview', { source })).json().lessVisible).toBe(true)
     const refused = await post('/batch', { source })
     expect(refused.statusCode).toBe(409)
@@ -136,7 +137,7 @@ describe('Article — ajout groupé', () => {
   it('lot vide : aperçu 0, insertion 400 EMPTY', async () => {
     known.root = { type: 'NOTE', spaceId: SPACE }
     present = ['root']
-    const source = { kind: 'cluster', itemId: 'root', children: false, chain: false }
+    const source = { kind: 'items', itemIds: ['root'], children: false, chain: false }
     expect((await post('/batch/preview', { source })).json()).toMatchObject({ count: 0, skipped: { present: 1 } })
     const res = await post('/batch', { source })
     expect(res.statusCode).toBe(400)
@@ -149,24 +150,66 @@ describe('Article — ajout groupé', () => {
     expect((await post('/batch/preview', { source: { kind: 'process', spaceId: SPACE, laneId: 'ailleurs' } })).statusCode).toBe(404)
   })
 
-  it('processus proposables : espaces lisibles avec au moins un élément placé', async () => {
+  it('plusieurs éléments cochés avec enfants : ordre reçu, sans doublon', async () => {
+    known.p = { type: 'NOTE', spaceId: SPACE }
+    known.c = { type: 'NOTE', spaceId: SPACE, parentId: 'p', position: 0 }
+    known.q = { type: 'NOTE', spaceId: SPACE }
+    const res = await post('/batch', { source: { kind: 'items', itemIds: ['p', 'c', 'q'], children: true, chain: false } })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['p', 'c', 'q'])
+  })
+
+  it('plus de 100 éléments cochés → 400 (validation)', async () => {
+    const itemIds = Array.from({ length: 101 }, (_, i) => `x${i}`)
+    expect((await post('/batch/preview', { source: { kind: 'items', itemIds, children: false, chain: false } })).statusCode).toBe(400)
+  })
+
+  it('espaces à parcourir : portée, nombre d’éléments, processus éventuel', async () => {
     prisma.space.findUnique.mockResolvedValue({ id: SPACE, communityId: 'c1' })
     prisma.space.findMany.mockImplementation(async ({ where }: any) => where?.communityId
       ? [{ id: SPACE }, { id: 's2' }, { id: 'priv' }]
-      : [{ id: SPACE, name: 'Espace 1', community: { name: 'C1' } }])
+      : [{ id: SPACE, name: 'Espace 1', parentId: null, community: { name: 'C1' } }, { id: 's2', name: 'Espace 2', parentId: SPACE, community: { name: 'C1' } }])
+    prisma.item.groupBy.mockResolvedValue([{ spaceId: SPACE, _count: { _all: 12 } }, { spaceId: 's2', _count: { _all: 3 } }])
     prisma.processNode.groupBy.mockResolvedValue([{ spaceId: SPACE, _count: { _all: 4 } }])
     prisma.processLane.findMany.mockResolvedValue([{ id: 'L1', spaceId: SPACE, item: { title: 'Couloir A' } }])
-    const res = await getProcesses()
+    const res = await getSpaces()
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual([{ spaceId: SPACE, spaceName: 'Espace 1', communityName: 'C1', nodeCount: 4, lanes: [{ id: 'L1', title: 'Couloir A' }] }])
-    expect(prisma.processNode.groupBy.mock.calls[0][0].where.spaceId).toEqual({ in: [SPACE, 's2'] })
+    expect(res.json()).toEqual([
+      { spaceId: SPACE, name: 'Espace 1', parentId: null, communityName: 'C1', itemCount: 12, process: { nodeCount: 4, lanes: [{ id: 'L1', title: 'Couloir A' }] } },
+      { spaceId: 's2', name: 'Espace 2', parentId: SPACE, communityName: 'C1', itemCount: 3, process: null },
+    ])
+    expect(prisma.item.groupBy.mock.calls[0][0].where).toMatchObject({ spaceId: { in: [SPACE, 's2'] }, type: { not: 'ARTICLE' } })
   })
 
-  it('non-éditeur → 403 sur les trois routes', async () => {
+  it('article dans un espace sans communauté : son espace seul', async () => {
+    prisma.space.findUnique.mockResolvedValue({ id: SPACE, communityId: null })
+    prisma.space.findMany.mockResolvedValue([])
+    await getSpaces()
+    expect(prisma.item.groupBy.mock.calls[0][0].where.spaceId).toEqual({ in: [SPACE] })
+  })
+
+  it('éléments d’un espace : champs, articles exclus, 500 au plus', async () => {
+    prisma.space.findMany.mockResolvedValue([{ id: SPACE, community: { referentiels: { statuses: [{ id: 'todo', label: 'À lancer' }] } } }])
+    prisma.item.findMany.mockResolvedValue(Array.from({ length: 501 }, (_, i) => ({ id: `i${i}`, type: 'TASK', title: `T${i}`, status: 'todo', parentId: null, position: i })))
+    const res = await getItems(SPACE)
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.items).toHaveLength(500)
+    expect(body.truncated).toBe(true)
+    expect(body.items[0]).toEqual({ id: 'i0', type: 'TASK', title: 'T0', status: 'todo', statusLabel: 'À lancer', parentId: null, position: 0 })
+    expect(prisma.item.findMany.mock.calls[0][0]).toMatchObject({ where: { spaceId: SPACE, type: { not: 'ARTICLE' } }, take: 501 })
+  })
+
+  it('éléments d’un espace illisible → 403', async () => {
+    expect((await getItems('priv')).statusCode).toBe(403)
+  })
+
+  it('non-éditeur → 403 sur les routes', async () => {
     access.checkSpaceAccess.mockResolvedValue({ role: 'VIEWER' })
-    const source = { kind: 'cluster', itemId: 'root', children: false, chain: false }
+    const source = { kind: 'items', itemIds: ['root'], children: false, chain: false }
     expect((await post('/batch/preview', { source })).statusCode).toBe(403)
     expect((await post('/batch', { source })).statusCode).toBe(403)
-    expect((await getProcesses()).statusCode).toBe(403)
+    expect((await getSpaces()).statusCode).toBe(403)
+    expect((await getItems(SPACE)).statusCode).toBe(403)
   })
 })

@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-24 (5)
+- Lot poussé : Article, sélecteur d'éléments à parcourir (feat). build:packages, typecheck 6 paquets OK, TNR 1774/1774, en-têtes OK. Non vérifié à l'écran. RESTE OUVERT (revue sécurité auto du lot ajout groupé) : clusterIds (item-article.ts) ne vérifie pas la lisibilité de la racine et parcourt enfants / chaîne sans plafond — jusqu'à 100 racines par requête → à corriger en session de dev
+
+### Article : sélecteur à parcourir — 2026-10-24
+- Constat Thomas : « la fenêtre de recherche est toujours inutilisable, on ne voit pas ce qui existe à disposition » (testé sur une version sans les lots du jour, non déployés ; dev local arrêté). Proposition validée puis plan exécuté inline (registre .superpowers/sdd/2026-10-24-article-selecteur-parcourable/progress.md) : fenêtre espaces | arbre, types, recherche, sélection multiple, présents grisés, onglet Processus. Écart TDD sur la tâche 1 (code avant tests) noté au registre. Session « Start » lancée à la demande de Thomas pour le démarrage du dev (Docker Desktop ne démarre plus). NON COMMITÉ
+
 ### MEP — 2026-10-24 (4)
 - Lot poussé : Article, ajout groupé d'une grappe ou d'un processus (feat). build:packages, typecheck 6 paquets OK, TNR 1754/1754, en-têtes OK. Non vérifié à l'écran
 

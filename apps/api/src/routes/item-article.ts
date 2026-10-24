@@ -13,14 +13,16 @@
  * DUPLICATE_REFERENCE, 409 LESS_VISIBLE sans confirmLessVisible), POST …/article/texts (nouvelle NOTE + bloc),
  * PATCH …/article/blocks/:blockId (width/align), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
  * (retire la référence, ne supprime jamais l'élément).
- * GET …/article/candidates?q=&scope=community|all (même droit) : éléments proposés par le sélecteur — espaces lisibles
- * hors mode admin (allReadableSpaceIds), portée communauté de l'article par défaut, sans ARTICLE ni éléments déjà
- * présents ; q vide = 15 récents de l'espace de l'article ; sinon titres (100 max) + descriptions/adresses (300 plus
- * récentes) classés par rankArticleCandidates (utils/articleCandidates.ts, texte visible seulement).
+ * Sélecteur à parcourir (même droit, espaces lisibles hors mode admin, portée pickerSpaces community | all | space) :
+ * GET …/article/browse/spaces?scope= → ArticleBrowseSpace[] (nombre d'éléments, processus éventuel) ;
+ * GET …/article/browse/items?spaceId= → { items: ArticleBrowseItem[] (500 max, sans ARTICLE), truncated } ;
+ * GET …/article/candidates?q=&scope=&spaceId= : recherche, sans ARTICLE ni l'article lui-même — les éléments déjà
+ * présents sont renvoyés (le web les grise) ; q vide = 15 récents de l'espace de l'article ; sinon titres (100 max) +
+ * descriptions/adresses (300 plus récentes) classés par rankArticleCandidates (texte visible seulement).
  * Ajout groupé (même droit, 2026-10-24) : POST …/article/batch/preview { source } → ArticleBatchPreview ;
  * POST …/article/batch { source, position?, confirmLessVisible? } → 201 { blocks } (400 TOO_MANY > 100, 400 EMPTY,
- * 409 LESS_VISIBLE) ; GET …/article/processes?scope= → ArticleProcessSummary[]. Source = grappe (enfants et/ou chaîne
- * de relations sortantes) ou processus d'un espace / d'un couloir, ordonnée par utils/articleBatch.ts ; articles,
+ * 409 LESS_VISIBLE). Source = éléments cochés (chacun avec enfants et/ou chaîne de relations sortantes, dans l'ordre
+ * reçu, sans doublon) ou processus d'un espace / d'un couloir, ordonnée par utils/articleBatch.ts ; articles,
  * éléments présents et illisibles (hors mode admin) sautés et comptés. Photo au moment de l'ajout.
  * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
  * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
@@ -30,7 +32,7 @@ import { z } from 'zod';
 import { DEFAULT_STATUSES } from '@spok/shared';
 import type {
   ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate,
-  ArticleProcessSummary, ArticleView, ItemType, StatusConfig,
+  ArticleBrowseItem, ArticleBrowseSpace, ArticleView, ItemType, StatusConfig,
 } from '@spok/shared';
 import { orderChain, orderCluster, orderDescendants, orderProcess } from '../utils/articleBatch.js';
 import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities, allReadableSpaceIds } from '../utils/articleAccess.js';
@@ -199,13 +201,14 @@ const visibilityOf = (map: Map<string, any>, spaceId: string): VisibilityInfo =>
   return { spaceId, visibility: v?.visibility ?? 'PRIVATE', communityId: v?.communityId ?? null, communityVisibility: v?.communityVisibility ?? null };
 };
 
-/** Espaces proposés par les sélecteurs du Composer : lisibles hors mode admin ; portée communauté de l'article
- *  (son espace seul s'il n'a pas de communauté) sauf scopeAll. */
-async function pickerSpaces(prisma: any, articleSpaceId: string, userId: string, scopeAll: boolean) {
+/** Espaces proposés par les sélecteurs du Composer : lisibles hors mode admin ; portée 'community' (défaut :
+ *  communauté de l'article, son espace seul s'il n'a pas de communauté), 'all', ou 'space' (spaceId seul). */
+async function pickerSpaces(prisma: any, articleSpaceId: string, userId: string, scope: string | undefined, spaceId?: string) {
   const articleSpace = await prisma.space.findUnique({ where: { id: articleSpaceId }, select: { id: true, communityId: true } });
   const readable: string[] = await allReadableSpaceIds(prisma, userId);
   const articleCommunityId: string | null = articleSpace?.communityId ?? null;
-  if (scopeAll) return { spaceIds: readable, readable, articleCommunityId };
+  if (scope === 'all') return { spaceIds: readable, readable, articleCommunityId };
+  if (scope === 'space' && spaceId) return { spaceIds: readable.includes(spaceId) ? [spaceId] : [], readable, articleCommunityId };
   const scoped: string[] = articleCommunityId
     ? (await prisma.space.findMany({ where: { communityId: articleCommunityId }, select: { id: true } })).map((s: { id: string }) => s.id)
     : [articleSpaceId];
@@ -214,8 +217,9 @@ async function pickerSpaces(prisma: any, articleSpaceId: string, userId: string,
 }
 
 const BATCH_MAX = 100;
+const BROWSE_MAX = 500;
 const batchSourceSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('cluster'), itemId: z.string().min(1), children: z.boolean(), chain: z.boolean() }),
+  z.object({ kind: z.literal('items'), itemIds: z.array(z.string().min(1)).min(1).max(BATCH_MAX), children: z.boolean(), chain: z.boolean() }),
   z.object({ kind: z.literal('process'), spaceId: z.string().min(1), laneId: z.string().min(1).optional() }),
 ]);
 const batchPreviewSchema = z.object({ source: batchSourceSchema });
@@ -237,10 +241,21 @@ async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatc
     const nodes = await prisma.processNode.findMany({ where: { spaceId: source.spaceId }, select: { itemId: true, laneId: true, x: true, y: true } });
     return orderProcess(lanes, nodes, source.laneId);
   }
-  const root = await prisma.item.findUnique({ where: { id: source.itemId }, select: { id: true, spaceId: true } });
-  if (!root) return { status: 404, message: 'Item not found' };
+  const out: string[] = [];
+  for (const itemId of source.itemIds) {
+    const ids = await clusterIds(prisma, itemId, source.children, source.chain);
+    if (ids) out.push(...ids);
+  }
+  if (out.length === 0) return { status: 404, message: 'Item not found' };
+  return [...new Set(out)];
+}
+
+/** Un élément avec, au choix, sa descendance et la chaîne de ses relations sortantes ; null s'il n'existe pas. */
+async function clusterIds(prisma: any, itemId: string, withChildren: boolean, withChain: boolean): Promise<string[] | null> {
+  const root = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true, spaceId: true } });
+  if (!root) return null;
   let descendants: string[] | null = null;
-  if (source.children) {
+  if (withChildren) {
     const rows: { id: string; parentId: string | null; position: number; createdAt: Date }[] = [];
     const seen = new Set<string>([root.id]);
     let frontier = [root.id];
@@ -256,7 +271,7 @@ async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatc
     descendants = orderDescendants(root.id, rows);
   }
   let chain: string[] | null = null;
-  if (source.chain) {
+  if (withChain) {
     const relations: { fromItemId: string; toItemId: string; type: string }[] = [];
     const seen = new Set<string>([root.id]);
     let frontier = [root.id];
@@ -350,42 +365,72 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({ blocks: await resolveBlocks(fastify.prisma, rows, ctx.userId, request.isAdminMode) });
   });
 
-  // Processus proposables : espaces lisibles (portée communauté par défaut) ayant au moins un élément placé
-  fastify.get<{ Params: Params; Querystring: { scope?: string } }>('/:id/article/processes', async (request, reply) => {
+  // Sélecteur à parcourir — espaces de la portée, avec nombre d'éléments et processus éventuel
+  fastify.get<{ Params: Params; Querystring: { scope?: string } }>('/:id/article/browse/spaces', async (request, reply) => {
     const ctx = await requireArticleEditor(fastify, request, reply);
     if (!ctx) return reply;
-    const { spaceIds } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, request.query.scope === 'all');
+    const { spaceIds } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, request.query.scope);
     if (spaceIds.length === 0) return [];
-    const counts: { spaceId: string; _count: { _all: number } }[] = await (fastify.prisma as any).processNode.groupBy({
-      by: ['spaceId'], where: { spaceId: { in: spaceIds } }, _count: { _all: true },
-    });
-    const withNodes = counts.filter((c) => c._count._all > 0).map((c) => c.spaceId);
-    if (withNodes.length === 0) return [];
-    const [spaces, lanes] = await Promise.all([
-      fastify.prisma.space.findMany({ where: { id: { in: withNodes } }, select: { id: true, name: true, community: { select: { name: true } } }, orderBy: { name: 'asc' } }),
-      fastify.prisma.processLane.findMany({ where: { spaceId: { in: withNodes } }, orderBy: { position: 'asc' }, select: { id: true, spaceId: true, item: { select: { title: true } } } }),
+    const prisma = fastify.prisma as any;
+    const [spaces, itemCounts, nodeCounts] = await Promise.all([
+      prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, name: true, parentId: true, community: { select: { name: true } } }, orderBy: { name: 'asc' } }),
+      prisma.item.groupBy({ by: ['spaceId'], where: { spaceId: { in: spaceIds }, type: { not: 'ARTICLE' } }, _count: { _all: true } }),
+      prisma.processNode.groupBy({ by: ['spaceId'], where: { spaceId: { in: spaceIds } }, _count: { _all: true } }),
     ]);
-    const nodeCount = new Map(counts.map((c) => [c.spaceId, c._count._all]));
-    const result: ArticleProcessSummary[] = spaces.map((s: { id: string; name: string; community: { name: string } | null }) => ({
+    const count = (rows: { spaceId: string; _count: { _all: number } }[]) => new Map(rows.map((r) => [r.spaceId, r._count._all]));
+    const items = count(itemCounts);
+    const nodes = count(nodeCounts);
+    const withProcess = [...nodes.entries()].filter(([, n]) => n > 0).map(([id]) => id);
+    const lanes: { id: string; spaceId: string; item: { title: string } }[] = withProcess.length
+      ? await prisma.processLane.findMany({ where: { spaceId: { in: withProcess } }, orderBy: { position: 'asc' }, select: { id: true, spaceId: true, item: { select: { title: true } } } })
+      : [];
+    const result: ArticleBrowseSpace[] = spaces.map((s: { id: string; name: string; parentId: string | null; community: { name: string } | null }) => ({
       spaceId: s.id,
-      spaceName: s.name,
+      name: s.name,
+      parentId: s.parentId,
       communityName: s.community?.name ?? null,
-      nodeCount: nodeCount.get(s.id) ?? 0,
-      lanes: lanes.filter((l: { spaceId: string }) => l.spaceId === s.id).map((l: { id: string; item: { title: string } }) => ({ id: l.id, title: l.item.title })),
+      itemCount: items.get(s.id) ?? 0,
+      process: (nodes.get(s.id) ?? 0) > 0
+        ? { nodeCount: nodes.get(s.id)!, lanes: lanes.filter((l) => l.spaceId === s.id).map((l) => ({ id: l.id, title: l.item.title })) }
+        : null,
     }));
     return result;
   });
 
+  // Sélecteur à parcourir — éléments d'un espace pour l'arbre (500 au plus, articles exclus)
+  fastify.get<{ Params: Params; Querystring: { spaceId?: string } }>('/:id/article/browse/items', async (request, reply) => {
+    const ctx = await requireArticleEditor(fastify, request, reply);
+    if (!ctx) return reply;
+    const spaceId = request.query.spaceId ?? '';
+    const readable = await filterReadableSpaceIds(fastify.prisma, ctx.userId, [spaceId], false);
+    if (!spaceId || readable.length === 0) return reply.forbidden('You cannot read this space');
+    const rows: { id: string; type: string; title: string; status: string | null; parentId: string | null; position: number }[] =
+      await fastify.prisma.item.findMany({
+        where: { spaceId, type: { not: 'ARTICLE' } },
+        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+        take: BROWSE_MAX + 1,
+        select: { id: true, type: true, title: true, status: true, parentId: true, position: true },
+      });
+    const statusList = (await statusesBySpace(fastify.prisma, [spaceId])).get(spaceId) ?? DEFAULT_STATUSES;
+    const items: ArticleBrowseItem[] = rows.slice(0, BROWSE_MAX).map((r) => {
+      const status = r.status && r.status !== 'undefined' ? r.status : null;
+      return {
+        id: r.id, type: r.type as ItemType, title: r.title, status,
+        statusLabel: status ? (statusList.find((s) => s.id === status)?.label ?? status) : null,
+        parentId: r.parentId, position: r.position,
+      };
+    });
+    return { items, truncated: rows.length > BROWSE_MAX };
+  });
+
   // Sélecteur « Ajouter un élément » : candidats lisibles hors mode admin (comme l'ajout), classés par pertinence
-  fastify.get<{ Params: Params; Querystring: { q?: string; scope?: string } }>('/:id/article/candidates', async (request, reply) => {
+  fastify.get<{ Params: Params; Querystring: { q?: string; scope?: string; spaceId?: string } }>('/:id/article/candidates', async (request, reply) => {
     const ctx = await requireArticleEditor(fastify, request, reply);
     if (!ctx) return reply;
     const term = (request.query.q ?? '').trim();
-    const scopeAll = request.query.scope === 'all';
-    const { spaceIds, readable, articleCommunityId } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, scopeAll);
-    const present = (await fastify.prisma.articleBlock.findMany({ where: { articleId: ctx.article.id }, select: { itemId: true } }))
-      .map((b: { itemId: string }) => b.itemId);
-    const excluded = [...present, ctx.article.id];
+    const { spaceIds, readable, articleCommunityId } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, request.query.scope, request.query.spaceId);
+    // Les éléments déjà présents restent proposés : le sélecteur les grise (« déjà ajouté »)
+    const excluded = [ctx.article.id];
     const base = { type: { not: 'ARTICLE' as const }, id: { notIn: excluded } };
 
     if (!term) {

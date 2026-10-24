@@ -1,7 +1,7 @@
 /*
  * Découpe un texte en segments pour mettre en gras chaque occurrence d'un terme, sans injecter de HTML (le
  * composant rend les segments match=true dans <strong>). Insensible à la casse et aux accents.
- * Utilisé par ArticleItemPicker (titre et extrait des éléments proposés).
+ * Utilisé par ArticleBrowser (titre et extrait des résultats de recherche).
  */
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
