@@ -4,8 +4,13 @@
    sans lister les boutons (rôle des infobulles). */
 import type { HelpZone } from './types';
 
+/** Infobulles de la barre latérale (lues par HelpHint dans Layout.tsx). */
+export const SIDEBAR_HINTS = {
+  process: (count: number) => `Cet espace contient un process (${count} élément${count > 1 ? 's' : ''} placé${count > 1 ? 's' : ''}) — vue Process de l'espace.`,
+};
+
 export const SHELL_ZONES: Record<string, HelpZone> = {
-  sidebar: { title: 'Barre latérale', text: 'Vos espaces et vos communautés. Cliquez sur un espace pour y entrer.' },
+  sidebar: { title: 'Barre latérale', text: 'Vos espaces et vos communautés. Cliquez sur un espace pour y entrer. Une petite icône après son nom signale qu\'il contient un process.' },
   'sidebar-logo': { title: 'Logo', text: 'Ramène à l\'accueil.' },
   'sidebar-guide': { title: 'Guide de démarrage', text: 'Relance la visite guidée des bases de SPOK.' },
   'sidebar-nav': { title: 'Navigation', text: 'Vos accès aux espaces : favoris, récents, vos espaces, vos communautés.' },

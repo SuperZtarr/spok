@@ -10,8 +10,9 @@
  * (absolues, calculées par la vue pour qu'ils ne bougent pas à l'écran).
  * Écritures optimistes (cache mis à jour tout de suite, restauré en cas d'échec, resynchronisé ensuite).
  * Réservé à ProcessView ; ne pas appeler processApi directement depuis une vue.
+ * Process devenu vide / non vide → invalide ['sidebar-spaces'] (indicateur process de la barre latérale).
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { processApi } from '../lib/api';
 import type { ProcessLane, ProcessPosition } from '../components/views/process-utils';
@@ -33,6 +34,16 @@ export function useProcessNodes(spaceId: string | undefined) {
     queryFn: () => processApi.list(spaceId!),
     enabled: !!spaceId,
   });
+  // Indicateur « process » de la barre latérale (processNodeCount de GET /spaces, staleTime infini) : rafraîchi
+  // seulement quand le process devient vide / non vide — pas à chaque déplacement de nœud
+  const hadProcess = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    const has = data.length > 0;
+    if (hadProcess.current !== null && hadProcess.current !== has) queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] });
+    hadProcess.current = has;
+  }, [data, queryClient]);
+
   const { data: lanesData } = useQuery({
     queryKey: lanesKey,
     queryFn: () => processApi.listLanes(spaceId!),

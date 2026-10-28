@@ -12,6 +12,8 @@
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
  * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
  * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
+ * Indicateur process (2026-10-28) : icône Workflow après le nom d'un espace dont processNodeCount > 0 (GET /spaces) ;
+ * la liste n'est rafraîchie que quand un process apparaît ou disparaît (useProcessNodes), jamais par polling.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -22,7 +24,7 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown,
+  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow,
   type LucideIcon,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
@@ -46,6 +48,8 @@ import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
 import { DevZoneInspector } from './DevZoneInspector';
 import { HelpModeOverlay } from '../help/HelpModeOverlay';
+import { HelpHint } from '../help/HelpHint';
+import { SIDEBAR_HINTS } from '../help/shellZones';
 import { NotificationBell } from './NotificationBell';
 import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
@@ -351,6 +355,12 @@ function SpaceTreeItem({
         >
           <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} />
           <span className="truncate">{node.name}</span>
+          {/* Indicateur : l'espace a un process (items placés dans sa vue Process) */}
+          {!!node.processNodeCount && (
+            <HelpHint text={SIDEBAR_HINTS.process(node.processNodeCount)} className="inline-flex flex-shrink-0">
+              <Workflow className="w-3 h-3 text-muted-foreground" aria-label="Contient un process" />
+            </HelpHint>
+          )}
         </Link>
         {onToggleFavorite && (
           <button

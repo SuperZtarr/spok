@@ -133,6 +133,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   }
 
   // List spaces (authenticated: all accessible; anonymous: public community spaces only)
+  // processNodeCount : nombre d'items placés dans la vue Process de l'espace (indicateur de la barre latérale)
   fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
     const { communityId } = request.query;
     const userId = request.user?.userId;
@@ -149,7 +150,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
           },
           include: {
-            _count: { select: { memberships: true, items: true } },
+            _count: { select: { memberships: true, items: true, processNodes: true } },
             community: { select: { id: true, name: true, avatarUrl: true } },
             parent: { select: { id: true, name: true } },
           },
@@ -161,6 +162,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           role,
           memberCount: s._count.memberships,
           itemCount: s._count.items,
+          processNodeCount: s._count.processNodes,
           isMember: false,
         }));
       }
@@ -174,7 +176,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       const spaces = await fastify.prisma.space.findMany({
         where: { communityId, type: 'GROUP', OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] },
         include: {
-          _count: { select: { memberships: true, items: true } },
+          _count: { select: { memberships: true, items: true, processNodes: true } },
           community: { select: { id: true, name: true, avatarUrl: true } },
           parent: { select: { id: true, name: true } },
         },
@@ -186,6 +188,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
+        processNodeCount: s._count.processNodes,
         isMember: false,
       }));
     }
@@ -230,7 +233,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         space: {
           include: {
             _count: {
-              select: { memberships: true, items: true },
+              select: { memberships: true, items: true, processNodes: true },
             },
             community: {
               select: {
@@ -268,6 +271,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       role: (m.space.communityId && ownedCommunityIds.has(m.space.communityId) ? 'OWNER' : m.role) as Role,
       memberCount: m.space._count.memberships,
       itemCount: m.space._count.items,
+      processNodeCount: m.space._count.processNodes,
       isMember: true,
       owner: (m.space as any).memberships?.[0]?.user || null,
     }));
@@ -303,7 +307,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         where: communitySpaceFilter,
         include: {
           _count: {
-            select: { memberships: true, items: true },
+            select: { memberships: true, items: true, processNodes: true },
           },
           community: {
             select: { id: true, name: true },
@@ -335,6 +339,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         role: roleById.get(s.id)!,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
+        processNodeCount: s._count.processNodes,
         isMember: false,
         owner: (s as any).memberships?.[0]?.user || null,
       }));
@@ -507,7 +512,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           space: {
             include: {
               _count: {
-                select: { memberships: true, items: true },
+                select: { memberships: true, items: true, processNodes: true },
               },
               community: {
                 select: { id: true, name: true },
@@ -536,7 +541,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         const adminSpace = await fastify.prisma.space.findUnique({
           where: { id: request.params.id },
           include: {
-            _count: { select: { memberships: true, items: true } },
+            _count: { select: { memberships: true, items: true, processNodes: true } },
             community: { select: { id: true, name: true } },
             parent: { select: { id: true, name: true } },
           },
@@ -560,7 +565,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       const space = await fastify.prisma.space.findUnique({
         where: { id: request.params.id },
         include: {
-          _count: { select: { memberships: true, items: true } },
+          _count: { select: { memberships: true, items: true, processNodes: true } },
           community: { select: { id: true, name: true } },
           parent: { select: { id: true, name: true } },
         },

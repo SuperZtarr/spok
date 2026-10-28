@@ -40,6 +40,8 @@ export interface SpaceWithRole extends Space {
   role: Role;
   memberCount?: number;
   itemCount?: number;
+  /** Items placés dans la vue Process de l'espace (GET /spaces) — > 0 : indicateur « process » de la barre latérale. */
+  processNodeCount?: number;
   isMember?: boolean;
   parent?: { id: string; name: string } | null;
   owner?: { id: string; name: string } | null;
