@@ -1,5 +1,6 @@
 /* Tests de NewSessionDialog (« Préparer la séance ») : éléments de premier niveau cochés par défaut,
- * « avec ses N sous-éléments » activé, envoi de la sélection, « Tout décocher » → préparation vide, invités cochés envoyés. */
+ * « avec ses N sous-éléments » activé, envoi de la sélection, « Tout décocher » → préparation vide, invités cochés envoyés,
+ * nom tiré de la date prévue (« Date de la séance »). */
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -33,7 +34,16 @@ describe('NewSessionDialog', () => {
     expect(queryByText('Accueil 1')).toBeNull()
     getByText('avec ses 2 sous-éléments')
     fireEvent.click(getByText('Créer la séance'))
-    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], [])
+    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], [], expect.stringMatching(/^Séance \d{4}-\d{2}-\d{2}$/))
+  })
+
+  it('la date prévue choisie donne le nom de la séance', async () => {
+    const { findByText, getByLabelText, getByText, onCreate } = renderDialog()
+    await findByText('Accueil')
+    fireEvent.change(getByLabelText(/Date de la séance/), { target: { value: '2026-11-05' } })
+    getByText('→ « Séance 2026-11-05 »')
+    fireEvent.click(getByText('Créer la séance'))
+    expect(onCreate.mock.calls[0][2]).toBe('Séance 2026-11-05')
   })
 
   it('« Tout décocher » crée une séance à préparation vide', async () => {
@@ -41,7 +51,7 @@ describe('NewSessionDialog', () => {
     await findByText('Accueil')
     fireEvent.click(getByText('Tout décocher'))
     fireEvent.click(getByText('Créer la séance'))
-    expect(onCreate).toHaveBeenCalledWith([], [])
+    expect(onCreate).toHaveBeenCalledWith([], [], expect.any(String))
   })
 
   it('invités cochés envoyés avec la création', async () => {
@@ -49,6 +59,6 @@ describe('NewSessionDialog', () => {
     await findByText('Accueil')
     fireEvent.click(await findByLabelText('Alice'))
     fireEvent.click(getByText('Créer la séance'))
-    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], ['u1'])
+    expect(onCreate).toHaveBeenCalledWith([{ sourceItemId: 'a', includeChildren: true }, { sourceItemId: 'b' }], ['u1'], expect.any(String))
   })
 })

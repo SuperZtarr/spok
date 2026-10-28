@@ -4,9 +4,10 @@
  * « avec ses N sous-éléments » activé s'il en a ; « Tout cocher » / « Tout décocher » ; « Créer la séance »
  * envoie la sélection à onCreate (champ agenda de POST /live-sessions). Tout décoché = séance à préparation vide.
  * La liste à cocher est AgendaChoiceList (partagée avec l'ajout groupé AddAgendaItemsDialog).
+ * « Date de la séance » (SessionDateField, aujourd'hui par défaut) : date PRÉVUE, qui donne le nom passé à onCreate.
  * Section « Invités » (InviteePicker) : membres de la communauté sans accès à l'espace (liste fournie par l'API) ;
  *   ils verront la séance, jamais l'espace. Liste vide → NoInviteCandidates (pourquoi + lien vers les membres).
- * Props : spaceId (espace parent), onCreate(agenda, invitees) — l'appelant crée la séance et gère erreur/navigation ;
+ * Props : spaceId (espace parent), onCreate(agenda, invitees, name) — l'appelant crée la séance et gère erreur/navigation ;
  * busy / error affichés tels quels ; onClose ferme sans rien créer.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -18,13 +19,15 @@ import { itemsApi, liveSessionsApi } from '../../lib/api';
 import { InviteePicker } from './InviteePicker';
 import { NoInviteCandidates } from './NoInviteCandidates';
 import { AgendaChoiceList } from './AgendaChoiceList';
+import { SessionDateField } from './SessionDateField';
+import { sessionNameFor, todayLocal } from './sessionName';
 import { buildAgendaChoices, defaultSelection, toAgendaPayload, type AgendaSelection } from './initialAgenda';
 
 type AgendaPayload = ReturnType<typeof toAgendaPayload>;
 
 export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
   spaceId: string;
-  onCreate: (agenda: AgendaPayload, invitees: string[]) => void;
+  onCreate: (agenda: AgendaPayload, invitees: string[], name: string) => void;
   onClose: () => void;
   busy?: boolean;
   error?: string | null;
@@ -38,12 +41,14 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
     queryFn: () => liveSessionsApi.inviteCandidates(spaceId),
   });
   const [invitees, setInvitees] = useState<string[]>([]);
+  const [date, setDate] = useState(todayLocal());
   const choices = useMemo(() => buildAgendaChoices(data?.data ?? []), [data]);
   const [selection, setSelection] = useState<Record<string, AgendaSelection>>({});
   useEffect(() => { setSelection(defaultSelection(choices)); }, [choices]);
 
   return (
     <Modal isOpen onClose={onClose} title="Préparer la séance" devName="NewSessionDialog">
+      <SessionDateField value={date} onChange={setDate} />
       <p className="text-sm text-muted-foreground mb-3">
         Éléments de l'espace à ajouter à la préparation, dans cet ordre. Vous pourrez la modifier ensuite.
       </p>
@@ -61,7 +66,7 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
       {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
       <div className="flex justify-end gap-2 mt-4">
         <Button type="button" variant="bordered" onClick={onClose} disabled={busy}>Annuler</Button>
-        <Button type="button" data-autofocus disabled={busy || isLoading} onClick={() => onCreate(toAgendaPayload(choices, selection), invitees)}>
+        <Button type="button" data-autofocus disabled={busy || isLoading || !date} onClick={() => onCreate(toAgendaPayload(choices, selection), invitees, sessionNameFor(date))}>
           {busy ? 'Création…' : 'Créer la séance'}
         </Button>
       </div>

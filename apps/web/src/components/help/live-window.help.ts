@@ -1,6 +1,7 @@
 /* Aide utilisateur de la fenêtre « en direct » d'une séance (LiveWindow).
    Lue par son point d'interrogation (PageHelpButton) et son tour — registre help/pageHelp.ts.
-   hints : infobulles du panneau Préparation (AgendaPanel) et texte de la fenêtre d'ajout groupé (AddAgendaItemsDialog). */
+   hints : infobulles du panneau Préparation (AgendaPanel), texte de la fenêtre d'ajout groupé (AddAgendaItemsDialog)
+   et aide du champ « Date de la séance » (SessionDateField : Préparer la séance, Créer la suite). */
 import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
@@ -15,6 +16,8 @@ export const help: HelpEntry = {
   ],
   // Panneau Préparation (AgendaPanel, bandeau et fenêtre en direct) et fenêtre d'ajout groupé (AddAgendaItemsDialog)
   hints: {
+    suiteIntro: 'Nouvelle séance préparée, liée à celle-ci (« Suite de … ») : elle reprend les présentateurs et les invités toujours autorisés, les éléments non présentés de la préparation, et recopie les éléments déjà présentés. Le fil et les commentaires ne sont pas repris.',
+    sessionDate:'Date prévue de la séance : elle donne son nom (« Séance AAAA-MM-JJ », suivi de (2) si ce nom existe déjà). Vous pourrez renommer l\'espace de séance ensuite.',
     addAgendaItems: 'Ajouter des éléments : choisissez des éléments de l\'espace parent, ajoutés à la fin de la préparation, dans l\'ordre de la liste, avec vous comme présentateur. Rien n\'est copié avant l\'affichage ; chaque ligne se retire ensuite avec ×.',
     addAgendaIntro: 'Éléments de premier niveau de l\'espace parent. Ceux qui ne sont pas encore dans la préparation sont cochés ; ceux qui y sont déjà sont décochés (les recocher les ajoute une seconde fois). Les éléments cochés sont ajoutés à la fin de la préparation, vous en êtes le présentateur.',
   },

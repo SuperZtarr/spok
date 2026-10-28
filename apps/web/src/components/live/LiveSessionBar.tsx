@@ -5,7 +5,7 @@
  * « Présentateurs » (host : choix parmi les membres de l'espace parent), « Invités » (host, toute séance : InviteesPanel —
  * invités qui voient la séance sans l'espace parent ; ajout tant que non terminée, retrait toujours), « Démarrer la séance » (host, préparée)
  * et « Terminer » (host, en direct, avec confirmation) ; séance terminée : « Créer la suite » (host, si pas encore
- * de suite) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
+ * de suite) → SuiteDialog (date prévue de la suite, qui la nomme) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
  * members = membres de l'espace PARENT (on peut désigner quelqu'un qui n'a pas encore rejoint).
  * Mobile : le bandeau passe à la ligne (flex-wrap) pour que tous les boutons restent visibles ; panneaux bornés à
  * la largeur de l'écran.
@@ -15,7 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
-import { defaultSessionName } from './sessionName';
+import { SuiteDialog } from './SuiteDialog';
 import type { LiveSessionState, SpaceMember } from '@spok/shared';
 import { SessionTimeline } from './SessionTimeline';
 import { PresenterPanel } from './PresenterPanel';
@@ -38,6 +38,7 @@ const STATUS_LABEL = { PREPARED: 'Séance préparée', LIVE: '● Séance en dir
 export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   const [panel, setPanel] = useState<Panel>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [suiteOpen, setSuiteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -55,8 +56,9 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Action impossible'); }
   };
 
-  const createSuite = () => run(async () => {
-    const suite = await liveSessionsApi.createSuite(state.session.id, defaultSessionName());
+  const createSuite = (name: string) => run(async () => {
+    const suite = await liveSessionsApi.createSuite(state.session.id, name);
+    setSuiteOpen(false);
     queryClient.invalidateQueries({ queryKey: ['spaces'] });
     queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); // barre latérale (Layout.tsx)
     queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); // bouton de l'en-tête
@@ -99,8 +101,9 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
       )}
       {isHost && isLive && <button className="text-red-600 hover:underline" onClick={() => setConfirmEnd(true)}>Terminer</button>}
       {isHost && status === 'ENDED' && !nextSession && (
-        <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={createSuite}>Créer la suite</button>
+        <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={() => { setError(null); setSuiteOpen(true); }}>Créer la suite</button>
       )}
+      {suiteOpen && <SuiteDialog error={error} onCreate={createSuite} onClose={() => setSuiteOpen(false)} />}
       {panel && (
         <div className="absolute right-4 top-full z-30 mt-1 w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background shadow-xl">
           {panel === 'agenda' && <AgendaPanel state={state} live={live} />}

@@ -2,7 +2,7 @@
  * ParentSessionsButton — bouton « Séances » de la barre d'outils d'un espace de communauté.
  * Liste les séances de l'espace (en direct d'abord), « Rejoindre » (devient membre de l'espace de séance
  * puis y navigue) ; « Nouvelle séance » visible seulement pour un OWNER de la communauté (canCreate),
- * nommée par la date locale du jour et créée « préparée ». Créer ou rejoindre en fait la séance active
+ * nommée d'après la date prévue choisie dans « Préparer la séance » (aujourd'hui par défaut) et créée « préparée ». Créer ou rejoindre en fait la séance active
  * (useActiveLiveSessionStore) et rafraîchit la barre latérale (['sidebar-spaces']). Une seule séance en cours par espace : si une séance est préparée ou en direct,
  * « Nouvelle séance » est remplacé par « Ouvrir la séance en cours » (l'API refuse aussi la création, 409).
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
@@ -17,7 +17,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Radio } from 'lucide-react';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
-import { defaultSessionName } from './sessionName';
 import { NewSessionDialog } from './NewSessionDialog';
 import { HelpHint } from '../../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
@@ -56,9 +55,9 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
     if (!isMember) await liveSessionsApi.join(id);
     return sessionSpaceId;
   });
-  const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>, invitees: string[]) => {
+  const create = async (agenda: Array<{ sourceItemId: string; includeChildren?: boolean }>, invitees: string[], name: string) => {
     setCreating(true);
-    await run(async () => (await liveSessionsApi.create(spaceId, defaultSessionName(), agenda, invitees)).session.spaceId);
+    await run(async () => (await liveSessionsApi.create(spaceId, name, agenda, invitees)).session.spaceId);
     setCreating(false);
   };
 
@@ -110,7 +109,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
           spaceId={spaceId}
           busy={creating}
           error={error}
-          onCreate={(agenda, invitees) => { void create(agenda, invitees); }}
+          onCreate={(agenda, invitees, name) => { void create(agenda, invitees, name); }}
           onClose={() => { setPreparing(false); setError(null); }}
         />
       )}
