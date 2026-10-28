@@ -7,6 +7,8 @@
  * et « Terminer » (host, en direct, avec confirmation) ; séance terminée : « Créer la suite » (host, si pas encore
  * de suite) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
  * members = membres de l'espace PARENT (on peut désigner quelqu'un qui n'a pas encore rejoint).
+ * Mobile : le bandeau passe à la ligne (flex-wrap) pour que tous les boutons restent visibles ; panneaux bornés à
+ * la largeur de l'écran.
  */
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -70,7 +72,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   };
 
   return (
-    <div className="relative flex items-center gap-3 border-b border-border px-4 py-2 text-sm">
+    <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2 text-sm">
       <span className={`font-medium ${isLive ? 'text-red-600' : status === 'PREPARED' ? 'text-orange-600' : 'text-muted-foreground'}`}>
         {STATUS_LABEL[status]}
       </span>
@@ -100,7 +102,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
         <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={createSuite}>Créer la suite</button>
       )}
       {panel && (
-        <div className="absolute right-4 top-full z-30 mt-1 w-[28rem] rounded-lg border border-border bg-background shadow-xl">
+        <div className="absolute right-4 top-full z-30 mt-1 w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background shadow-xl">
           {panel === 'agenda' && <AgendaPanel state={state} live={live} />}
           {panel === 'timeline' && (
             <SessionTimeline entries={state.entries} onOpenItem={(id) => { setPanel(null); onOpenItem(id); }} />
