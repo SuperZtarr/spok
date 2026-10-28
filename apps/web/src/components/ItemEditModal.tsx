@@ -20,7 +20,8 @@
  * lecture, c'est donc « Afficher » qui montre ce qu'il voit — ne pas réintroduire un formulaire grisé.
  * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown,
  * image/schéma intégrés ; infobulle HelpHint lue dans item-modal.help.ts → hints.copySheet).
- * Save explicite via bouton Enregistrer (orange vif, action principale — 2026-09-28), avec verrou
+ * Save explicite (2026-10-28) : « Enregistrer et quitter » (orange vif, submit — Entrée dans un champ) ferme après succès,
+ * « Enregistrer » (orange clair, Ctrl+S) garde la fiche ouverte (closeAfterSaveRef lu par updateMutation.onSuccess), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
  * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
  * Accusé de lecture à l'assignation sous « Assigné à » (assignmentReceipt de l'API) : « Vu par X le … » ou
@@ -34,7 +35,8 @@
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
- * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
+ * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions) ;
+ * le premier est grisé (« Déjà dans la préparation de … ») quand l'élément y est, d'après le cache de la séance (useLiveSession).
  * Contributions affichées via sanitizeHtml, liens vers url via safeHref (règle user-html-sanitized).
  * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
@@ -53,6 +55,7 @@ import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from 
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag, TypeLabelConfig } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
 import { buildLiveItemActions } from '../lib/liveItemActions';
+import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -244,7 +247,10 @@ export function ItemEditModal({
   // Séance live active : actions « Ajouter à la préparation » / « Présenter en séance » du pied
   const liveInfo = useActiveLiveSessionStore((s) => s.info);
   const liveSpaceId = useActiveLiveSessionStore((s) => s.spaceId);
-  const liveActions = (id: string) => buildLiveItemActions(id, liveInfo, liveSpaceId);
+  // Préparation de la séance active (cache partagé, sans flux) : bouton grisé si l'élément y est déjà
+  const { state: liveState } = useLiveSession(liveInfo ? liveSpaceId ?? undefined : undefined);
+  const liveActions = (id: string) =>
+    buildLiveItemActions(id, liveInfo, liveSpaceId, !!liveState?.agenda.some((a) => a.sourceItemId === id));
   // canInteract: any authenticated member can react and contribute (even if they can't edit the item)
   const canInteract = canEditProp;
 
@@ -281,6 +287,8 @@ export function ItemEditModal({
   const loadedItemRef = useRef<Item | null>(null);
   // Élément vide tout juste créé (« Nouveau »…) : supprimé s'il est refermé sans contenu (lib/emptyNewItem.ts)
   const draftItemIdRef = useRef<string | null>(null);
+  // Enregistrement en cours : fermer la fiche après succès (« Enregistrer et quitter ») ou non (« Enregistrer », Ctrl+S)
+  const closeAfterSaveRef = useRef(true);
 
   // Capture viewedAt from the list snapshot BEFORE marking as viewed
   const viewedAtRef = useRef<string | null | undefined>(undefined);
@@ -379,7 +387,8 @@ export function ItemEditModal({
         queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] }),
       ]);
       setConflictData(null);
-      onClose();
+      // « Enregistrer et quitter » ferme ; « Enregistrer » (et Ctrl+S) laisse la fiche ouverte, resynchronisée par la relecture
+      if (closeAfterSaveRef.current) onClose();
     },
     onError: (error) => {
       if (isConflictError(error)) {
@@ -683,8 +692,10 @@ export function ItemEditModal({
     onClose();
   }, [item, allItems, spaceId, queryClient, onClose]);
 
-  const doSubmit = () => {
+  const doSubmit = (closeAfter = true) => {
     if (!item) return;
+    closeAfterSaveRef.current = closeAfter;
+    const closeIfAsked = () => { if (closeAfter) onClose(); };
 
     const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
@@ -698,7 +709,7 @@ export function ItemEditModal({
         const tagUpdate = { updatedAt: item.updatedAt, tagIds: selectedTagIds };
         updateMutation.mutate(tagUpdate);
       } else {
-        onClose();
+        closeIfAsked();
       }
       return;
     }
@@ -796,7 +807,7 @@ export function ItemEditModal({
         updateMutation.mutate(updates);
       }
     } else {
-      onClose();
+      closeIfAsked();
     }
   };
 
@@ -819,12 +830,14 @@ export function ItemEditModal({
     setPendingCascade(null);
   };
 
+  // Envoi du formulaire (bouton « Enregistrer et quitter », Entrée dans un champ) : enregistre puis ferme
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    doSubmit();
+    doSubmit(true);
   };
 
-  useCtrlS(hasChanges && !updateMutation.isPending, doSubmit);
+  // Ctrl+S = « Enregistrer » : la fiche reste ouverte (2026-10-28)
+  useCtrlS(hasChanges && !updateMutation.isPending, () => doSubmit(false));
 
   // Build parent options excluding current item and its descendants
   const parentOptions = useMemo(() => {
@@ -1842,17 +1855,25 @@ export function ItemEditModal({
 
           {/* Footer — always visible */}
           <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
-            {canEditTags && (
-              <Button type="submit" disabled={!hasChanges || updateMutation.isPending}
-                className={`bg-orange-500 text-white hover:bg-orange-600 ${!hasChanges ? 'opacity-40' : ''}`}>
-                {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-              </Button>
-            )}
+            {canEditTags && (<>
+              <HelpHint text={itemHints?.saveAndClose}>
+                <Button type="submit" disabled={!hasChanges || updateMutation.isPending}
+                  className={`bg-orange-500 text-white hover:bg-orange-600 ${!hasChanges ? 'opacity-40' : ''}`}>
+                  {updateMutation.isPending && closeAfterSaveRef.current ? 'Enregistrement...' : 'Enregistrer et quitter'}
+                </Button>
+              </HelpHint>
+              <HelpHint text={itemHints?.save}>
+                <Button type="button" disabled={!hasChanges || updateMutation.isPending} onClick={() => doSubmit(false)}
+                  className={`bg-orange-200 text-orange-900 hover:bg-orange-300 ${!hasChanges ? 'opacity-40' : ''}`}>
+                  {updateMutation.isPending && !closeAfterSaveRef.current ? 'Enregistrement...' : 'Enregistrer'}
+                </Button>
+              </HelpHint>
+            </>)}
             <Button type="button" variant="bordered" onClick={() => guardClose(closeWithoutSaving)}>
               {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {itemId && liveActions(itemId).map((a) => (
-              <Button key={a.id} type="button" variant="bordered" onClick={a.onClick}>
+              <Button key={a.id} type="button" variant="bordered" onClick={a.onClick} disabled={a.disabled}>
                 <a.icon className="w-4 h-4 mr-1" />{a.label}
               </Button>
             ))}

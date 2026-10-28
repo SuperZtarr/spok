@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-29
+- 2 lots poussés : séance couleurs orange et aide du bandeau (feat), fiche « Enregistrer » / « Enregistrer et quitter » (feat). Typecheck OK, TNR 1788/1788, en-têtes OK
+
+### Séance (couleurs, aide) / fiche (enregistrements) — 2026-10-28
+- Deux lots inscrits PRÊT POUR MEP. NON COMMITÉ
+
 ### MEP — 2026-10-28 (4)
 - Lot poussé : barre d'espace, « Nouveau » et « Modèle » bleus pour toutes les vues (feat). Typecheck OK, TNR 1785/1785, en-têtes OK
 

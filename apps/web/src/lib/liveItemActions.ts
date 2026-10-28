@@ -7,6 +7,8 @@
  * L'espace source est résolu côté API (l'accès de l'utilisateur y est vérifié). Le résultat est posé dans le
  * cache ['live-session', spaceId] (préparation) ; l'affichage arrive par le flux. Pas de système de toast dans
  * l'app : les erreurs sont signalées par window.alert. Les libellés nomment la séance visée (séance active).
+ * Élément déjà dans la préparation (paramètre inAgenda, passé par la fiche de l'item) : action grisée « Déjà dans la
+ * préparation de … » (2026-10-28).
  * Vocabulaire : « préparation » partout (anciennement « programme », renommé le 2026-10-11, décision Thomas) ;
  * seul l'identifiant technique `agenda` (routes, champs, types) est conservé.
  */
@@ -32,12 +34,14 @@ export async function requestAddToAgenda(itemId: string, info: ActiveLiveInfo, l
   else await addToAgenda(info, liveSpaceId, itemId, false);
 }
 
-export function buildLiveItemActions(itemId: string, info: ActiveLiveInfo | null, liveSpaceId: string | null): ItemAction[] {
+/** inAgenda : l'élément est déjà dans la préparation (fiche de l'item, lu dans le cache de la séance) → action grisée. */
+export function buildLiveItemActions(itemId: string, info: ActiveLiveInfo | null, liveSpaceId: string | null, inAgenda = false): ItemAction[] {
   if (!info || info.myRole === 'PARTICIPANT' || info.status === 'ENDED') return [];
   const actions: ItemAction[] = [{
     id: 'live-add-agenda',
-    label: `Ajouter à la préparation de ${info.spaceName}`,
+    label: inAgenda ? `Déjà dans la préparation de ${info.spaceName}` : `Ajouter à la préparation de ${info.spaceName}`,
     icon: ListPlus,
+    disabled: inAgenda,
     onClick: () => { requestAddToAgenda(itemId, info, liveSpaceId).catch(report); },
   }];
   if (info.status === 'LIVE') {
