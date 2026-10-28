@@ -3,7 +3,8 @@
  * Invariants critiques : savedPositions.current persiste les positions manuelles entre
  * recalculs ; reorganizeRef.current capture le closure courant (pattern obligatoire).
  * Layout incrémental (spec 2026-07-15) : le layout complet ne s'exécute qu'au premier
- * rendu, sur changement de deps (repli/portails/focus) et au bouton « Réorganiser » ;
+ * rendu, sur changement de deps (repli/portails/focus/espaces enfants — ces derniers arrivent souvent après le
+ * premier rendu) et au bouton « Réorganiser » ;
  * tout changement structurel (ajout/suppression/reparentage) est traité par diff
  * (mindmap-incremental.ts) + ré-éventail local des seuls parents affectés.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
@@ -629,7 +630,10 @@ function MindMapViewInner({
 
   // Deps nécessitant un recalcul complet : repli/dépli, focus, portails.
   // items.length en est RETIRÉ : ajout/suppression passe par le chemin incrémental.
-  const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}`;
+  // Espaces enfants inclus : la liste des espaces de la communauté arrive souvent APRÈS le premier rendu (elle attend
+  // l'espace courant) — sans eux ici, les nœuds d'espaces enfants n'apparaissaient qu'après rechargement (2026-10-28).
+  const childSpacesSignature = childSpaces.map(s => `${s.id}:${s.name}`).join(',');
+  const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}|${childSpacesSignature}`;
 
   // Mise à jour des nœuds. Quatre chemins (spec 2026-07-15-mindmap-incremental-layout) :
   //  1. premier rendu OU deps (repli, focus, portails) → layout complet + applyPositions

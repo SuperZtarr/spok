@@ -14,8 +14,29 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-28
+- 8 lots poussés : éditeur riche focus, mode Afficher image double, bandeau séance mobile, séance ajout groupé, page communauté cartes, séance nom d'après la date, indicateur de process, carte mentale espaces enfants. Fichiers partagés des 3 lots séance (LiveSessionBar, NewSessionDialog, live-window.help) commités en versions intermédiaires. build:packages, typecheck 6 paquets OK, TNR 1781/1781, en-têtes OK
+
+### Séance datée, indicateur process, page communauté — 2026-10-28
+- Trois lots inscrits PRÊT POUR MEP. Reporté par Thomas : « même item plusieurs fois dans un process » (choix ouvert : liens sur une copie choisie ou sur toutes les copies ; impose migration de process_nodes @@unique([spaceId, itemId])). NON COMMITÉ
+
+### Séance : ajout groupé à la préparation — 2026-10-28
+- Panneau Préparation → « Ajouter des éléments » : liste de « Préparer la séance » (partagée), déjà présents décochés, ajout en fin via `/agenda/bulk`. Spec ajoutée en enfant de la fiche LiveSession (description du parent non réécrite : MCP ne rend que le texte aplati). Inscrit PRÊT POUR MEP. NON COMMITÉ
+
+### Bandeau de séance en mobile — 2026-10-28
+- Boutons de droite hors écran (une seule ligne sans retour) → passage à la ligne ; panneaux w-[28rem] bornés à 100vw-2rem. Inscrit PRÊT POUR MEP. NON COMMITÉ
+
+### Mode Afficher : image en double — 2026-10-28
+- Item prod cmmp7jaam00vjsnqookg9upmc (import Confluence) : description = `<img>` de la même URL que l'item (scripts fix-confluence-split-images / fix-drawio-attachments). buildItemSheet retire cette image de la description (affichage + Copier la fiche). Inscrit PRÊT POUR MEP. NON COMMITÉ
+
+### Modale item : cadre bleu dans la description — 2026-10-28
+- Cause : la règle globale `:focus-visible` (index.css) cible `[contenteditable]` en `!important` → contour décalé dans la surface TipTap. Contour retiré sur `.tiptap`, anneau de focus reporté sur le cadre du composant. Inscrit PRÊT POUR MEP. NON COMMITÉ
+
 ### MEP — 2026-10-24 (6)
 - Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
+
+### Start — 2026-10-28
+- Même panne Docker (`run\dockerInference` du 24 à 22 h 49) : procédure spok-start appliquée, `run` → `run_broken_20261028-0837`, Docker OK en 5 s, dev OK (API /health 200, web 200, accueil affiché dans le navigateur intégré, console sans erreur)
 
 ### Start — 2026-10-24
 - Docker Desktop ne démarrait plus : backend planté sur `remove ...\Docker\run\dockerInference: The file cannot be accessed by the system` (socket orphelin de 10 h, déjà vécu : `run_broken`, `run_broken_20260907`). Accord Thomas : `Docker\run` renommé `run.old`, Docker relancé, `pnpm dev:start` OK (API 3001 /health 200, web 3000 200, accueil affiché dans le navigateur intégré). Lot doc inscrit PRÊT POUR MEP. NON COMMITÉ
