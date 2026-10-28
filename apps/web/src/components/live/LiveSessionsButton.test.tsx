@@ -38,12 +38,12 @@ describe('LiveSessionsButton', () => {
     expect(container.querySelector('[data-testid="live-sessions-button"]')).toBeNull()
   })
 
-  it('badge = nombre de séances en direct, en rouge', async () => {
+  it('badge = nombre de séances en direct, en orange (couleur des séances)', async () => {
     api.ongoing.mockResolvedValue([s('a', 'LIVE'), s('c', 'LIVE'), s('b', 'PREPARED')])
     const { findByTestId } = renderButton()
     const btn = await findByTestId('live-sessions-button')
     expect(btn.textContent).toContain('2')
-    expect(btn.className).toContain('text-red-600')
+    expect(btn.className).toContain('text-orange-500')
   })
 
   it("« Rejoindre » rejoint puis fait de la séance la séance active", async () => {

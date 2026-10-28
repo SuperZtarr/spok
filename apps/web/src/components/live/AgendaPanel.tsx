@@ -6,6 +6,8 @@
  * Afficher (séance LIVE). Participants : lecture seule. compact = version resserrée pour la fenêtre en direct.
  * « Ajouter des éléments » (animateur/présentateurs, séance non terminée, aussi quand la préparation est vide) :
  * ajout groupé d'éléments de l'espace parent (AddAgendaItemsDialog) ; infobulle dans live-window.help.ts (hints).
+ * Phrase d'explication en tête (hors compact) : hints.agenda de live-session.help.ts (l'explication du bouton
+ * « Préparation » du bandeau est ici, pas en infobulle — décision Thomas 2026-10-28).
  * Les lignes sont des liens vers les sources : rien n'est copié avant « Afficher ».
  * Libellés affichés : « préparation » (anciennement « programme », renommé 2026-10-11).
  */
@@ -16,6 +18,7 @@ import { useAuthStore } from '../../stores/auth';
 import type { LiveSessionHandle } from '../../hooks/useLiveSession';
 import { HelpHint } from '../../help/HelpHint';
 import { PAGE_HELP } from '../../help/pageHelp';
+import { pageHint } from '../../help/pageHint';
 import { moveTarget, swapIds } from './agendaOrder';
 import { AddAgendaItemsDialog } from './AddAgendaItemsDialog';
 
@@ -64,6 +67,7 @@ export function AgendaPanel({ state, live, compact }: Props) {
 
   return (
     <div className={compact ? 'p-2' : 'p-3'}>
+      {!compact && <p className="text-xs text-muted-foreground mb-1">{pageHint('live-session', 'agenda')}</p>}
       {addButton && <div className="mb-1">{addButton}</div>}
       {error && <p className="text-xs text-red-600 mb-1">{error}</p>}
       <ol className={`divide-y divide-border text-sm overflow-auto ${compact ? 'max-h-full' : 'max-h-96'}`}>

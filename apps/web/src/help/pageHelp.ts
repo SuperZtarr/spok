@@ -22,6 +22,7 @@ import { help as spaceHistoryPage } from '../pages/help/space-history.help';
 import { help as bookmarksHelp } from '../pages/help/bookmarks.help';
 import { help as profileHelp } from '../components/help/profile.help';
 import { help as liveWindowHelp } from '../components/help/live-window.help';
+import { help as liveSessionHelp } from '../components/help/live-session.help';
 import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
@@ -61,6 +62,7 @@ export const PAGE_HELP = {
   bookmarks: bookmarksHelp,
   profile: profileHelp,
   'live-window': liveWindowHelp,
+  'live-session': liveSessionHelp,
   'merge-item': mergeItemHelp,
   'move-to-space': moveToSpaceHelp,
   'duplicate-to-space': duplicateToSpaceHelp,

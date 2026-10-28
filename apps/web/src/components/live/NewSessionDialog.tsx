@@ -3,6 +3,7 @@
  * Liste les éléments de premier niveau de l'espace parent (initialAgenda), tous cochés, chacun avec
  * « avec ses N sous-éléments » activé s'il en a ; « Tout cocher » / « Tout décocher » ; « Créer la séance »
  * envoie la sélection à onCreate (champ agenda de POST /live-sessions). Tout décoché = séance à préparation vide.
+ * Texte d'explication : hints.newSessionIntro de components/help/live-session.help.ts.
  * La liste à cocher est AgendaChoiceList (partagée avec l'ajout groupé AddAgendaItemsDialog).
  * « Date de la séance » (SessionDateField, aujourd'hui par défaut) : date PRÉVUE, qui donne le nom passé à onCreate.
  * Section « Invités » (InviteePicker) : membres de la communauté sans accès à l'espace (liste fournie par l'API) ;
@@ -19,6 +20,7 @@ import { itemsApi, liveSessionsApi } from '../../lib/api';
 import { InviteePicker } from './InviteePicker';
 import { NoInviteCandidates } from './NoInviteCandidates';
 import { AgendaChoiceList } from './AgendaChoiceList';
+import { pageHint } from '../../help/pageHint';
 import { SessionDateField } from './SessionDateField';
 import { sessionNameFor, todayLocal } from './sessionName';
 import { buildAgendaChoices, defaultSelection, toAgendaPayload, type AgendaSelection } from './initialAgenda';
@@ -49,9 +51,7 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
   return (
     <Modal isOpen onClose={onClose} title="Préparer la séance" devName="NewSessionDialog">
       <SessionDateField value={date} onChange={setDate} />
-      <p className="text-sm text-muted-foreground mb-3">
-        Éléments de l'espace à ajouter à la préparation, dans cet ordre. Vous pourrez la modifier ensuite.
-      </p>
+      <p className="text-sm text-muted-foreground mb-3">{pageHint('live-session', 'newSessionIntro')}</p>
       {isLoading ? (
         <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Chargement…</div>
       ) : choices.length === 0 ? (

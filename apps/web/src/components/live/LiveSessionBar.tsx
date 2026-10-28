@@ -7,6 +7,13 @@
  * et « Terminer » (host, en direct, avec confirmation) ; séance terminée : « Créer la suite » (host, si pas encore
  * de suite) → SuiteDialog (date prévue de la suite, qui la nomme) ; liens « Suite de … » / « Suite : … » vers les séances liées. Panneaux en popover simples, pas de modale.
  * members = membres de l'espace PARENT (on peut désigner quelqu'un qui n'a pas encore rejoint).
+ * Boutons orange (liveStyles.ts, 2026-10-28) : panneaux en orange clair, actions en orange vif, panneau ouvert = bouton
+ * cerclé ; « Terminer » aussi en orange vif (confirmation conservée).
+ * Aide (2026-10-28) : « ? » en tête du bandeau (fiche components/help/live-session.help.ts, tour sur les repères
+ * live-*) ; l'explication d'un bouton est affichée DANS ce qu'il ouvre (décision Thomas) : en tête du panneau
+ * (pageHint('live-session', <panneau>) — Préparation : par AgendaPanel), dans la confirmation de « Terminer », dans la
+ * fenêtre de « Créer la suite » ; seul « Démarrer », qui n'ouvre rien, a une infobulle. Zones du mode Aide
+ * live-session:bar / live-session:panel. Tout bouton ajouté = son texte dans la fiche.
  * Mobile : le bandeau passe à la ligne (flex-wrap) pour que tous les boutons restent visibles ; panneaux bornés à
  * la largeur de l'écran.
  */
@@ -16,6 +23,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
 import { SuiteDialog } from './SuiteDialog';
+import { LIVE_ACTION_CLASS, LIVE_PANEL_CLASS, LIVE_PANEL_ACTIVE } from './liveStyles';
+import { HelpHint } from '../../help/HelpHint';
+import { PageHelpButton } from '../../help/PageHelpButton';
+import { pageHint } from '../../help/pageHint';
 import type { LiveSessionState, SpaceMember } from '@spok/shared';
 import { SessionTimeline } from './SessionTimeline';
 import { PresenterPanel } from './PresenterPanel';
@@ -50,6 +61,9 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   const canPresent = state.myRole !== 'PARTICIPANT' && isLive;
   const presenterIds = new Set(state.roles.filter((r) => r.role === 'PRESENTER').map((r) => r.userId));
   const toggle = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
+  const hint = (key: string) => pageHint('live-session', key);
+  // Boutons à panneau (Préparation, Fil, Présenter, Présentateurs, Invités) : orange clair ; actions : orange vif
+  const btn = (p: Panel) => `${LIVE_PANEL_CLASS}${panel === p ? ` ${LIVE_PANEL_ACTIVE}` : ''}`;
 
   const run = async (fn: () => Promise<void>) => {
     setError(null);
@@ -74,8 +88,9 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   };
 
   return (
-    <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2 text-sm">
-      <span className={`font-medium ${isLive ? 'text-red-600' : status === 'PREPARED' ? 'text-orange-600' : 'text-muted-foreground'}`}>
+    <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2 text-sm" data-help-zone="live-session:bar">
+      <PageHelpButton pageKey="live-session" />
+      <span data-tour="live-status" className={`font-medium ${isLive || status === 'PREPARED' ? 'text-orange-600' : 'text-muted-foreground'}`}>
         {STATUS_LABEL[status]}
       </span>
       {isLive && (
@@ -91,21 +106,26 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
       )}
       {error && <span className="text-xs text-red-600">{error}</span>}
       <div className="flex-1" />
-      <button className="hover:underline" onClick={() => toggle('agenda')}>Préparation ({state.agenda.length})</button>
-      <button className="hover:underline" onClick={() => toggle('timeline')}>Fil</button>
-      {canPresent && <button className="hover:underline" onClick={() => toggle('present')}>Présenter</button>}
-      {isHost && status !== 'ENDED' && <button className="hover:underline" onClick={() => toggle('presenters')}>Présentateurs</button>}
-      {isHost && <button className="hover:underline" onClick={() => toggle('invitees')}>Invités</button>}
+      {/* Explications dans ce que chaque bouton ouvre (panneau, confirmation, fenêtre) — pas d'infobulle, sauf Démarrer */}
+      <button className={btn('agenda')} data-tour="live-agenda" onClick={() => toggle('agenda')}>Préparation ({state.agenda.length})</button>
+      <button className={btn('timeline')} data-tour="live-timeline" onClick={() => toggle('timeline')}>Fil</button>
+      {canPresent && <button className={btn('present')} data-tour="live-present" onClick={() => toggle('present')}>Présenter</button>}
+      {isHost && status !== 'ENDED' && <button className={btn('presenters')} data-tour="live-presenters" onClick={() => toggle('presenters')}>Présentateurs</button>}
+      {isHost && <button className={btn('invitees')} data-tour="live-invitees" onClick={() => toggle('invitees')}>Invités</button>}
       {isHost && status === 'PREPARED' && (
-        <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={() => run(live.start)}>Démarrer la séance</button>
+        <HelpHint text={hint('start')} className="inline-flex">
+          <button className={LIVE_ACTION_CLASS} data-tour="live-start" onClick={() => run(live.start)}>Démarrer la séance</button>
+        </HelpHint>
       )}
-      {isHost && isLive && <button className="text-red-600 hover:underline" onClick={() => setConfirmEnd(true)}>Terminer</button>}
+      {isHost && isLive && <button className={LIVE_ACTION_CLASS} data-tour="live-end" onClick={() => setConfirmEnd(true)}>Terminer</button>}
       {isHost && status === 'ENDED' && !nextSession && (
-        <button className="rounded bg-orange-500 px-2 py-0.5 text-white" onClick={() => { setError(null); setSuiteOpen(true); }}>Créer la suite</button>
+        <button className={LIVE_ACTION_CLASS} data-tour="live-suite" onClick={() => { setError(null); setSuiteOpen(true); }}>Créer la suite</button>
       )}
       {suiteOpen && <SuiteDialog error={error} onCreate={createSuite} onClose={() => setSuiteOpen(false)} />}
       {panel && (
-        <div className="absolute right-4 top-full z-30 mt-1 w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background shadow-xl">
+        <div className="absolute right-4 top-full z-30 mt-1 w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-background shadow-xl" data-help-zone="live-session:panel">
+          {/* Explication du panneau ouvert (Préparation : affichée par AgendaPanel lui-même) */}
+          {panel !== 'agenda' && <p className="px-3 pt-2 text-xs text-muted-foreground">{hint(panel)}</p>}
           {panel === 'agenda' && <AgendaPanel state={state} live={live} />}
           {panel === 'timeline' && (
             <SessionTimeline entries={state.entries} onOpenItem={(id) => { setPanel(null); onOpenItem(id); }} />
@@ -135,7 +155,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
         onClose={() => setConfirmEnd(false)}
         onConfirm={() => { setConfirmEnd(false); run(live.end); }}
         title="Terminer la séance"
-        message="Plus aucun élément ne pourra être présenté. L'espace de séance reste consultable et modifiable."
+        message={hint('end') ?? ''}
         confirmLabel="Terminer"
         confirmVariant="destructive"
       />

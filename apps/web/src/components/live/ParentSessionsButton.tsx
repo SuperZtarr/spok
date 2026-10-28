@@ -8,6 +8,7 @@
  * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
  * « Nouvelle séance » ouvre d'abord NewSessionDialog (« Préparer la séance ») : les éléments cochés de cet espace
  * forment la préparation initiale (champ agenda de la création) ; les invités cochés sont transmis (invitees).
+ * Bouton orange plein (LIVE_ACTION_CLASS, liveStyles.ts — décision Thomas 2026-10-28).
  * Aide : infobulle HelpHint (SPACE_TOOLBAR_HINTS.sessions) et repère de tour data-tour="toolbar-sessions"
  * (étape commune des tours de vues, help/commonTourSteps.ts) — pas de `title` natif.
  */
@@ -18,6 +19,7 @@ import { Radio } from 'lucide-react';
 import { liveSessionsApi } from '../../lib/api';
 import { useActiveLiveSessionStore } from '../../stores/activeLiveSession';
 import { NewSessionDialog } from './NewSessionDialog';
+import { LIVE_ACTION_CLASS } from './liveStyles';
 import { HelpHint } from '../../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
 
@@ -71,7 +73,7 @@ export function ParentSessionsButton({ spaceId, canCreate }: { spaceId: string; 
         <button
           type="button"
           data-tour="toolbar-sessions"
-          className="flex items-center gap-1 rounded px-2 py-1 text-sm hover:bg-muted"
+          className={LIVE_ACTION_CLASS}
           onClick={() => setOpen((o) => !o)}
         >
           <Radio className="h-4 w-4" /> Séances
