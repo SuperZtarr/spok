@@ -35,7 +35,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { useProcessNodes } from '../../hooks/useProcessNodes';
 import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
 import { buildItemMenuGroups, type ItemMenuCallbacks } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { RelationCreateDialog } from '../relations/RelationCreateDialog';
@@ -327,7 +326,6 @@ function ProcessCanvas({
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-devzone="contenu-barre-vue">
-        {canEdit && onNewItem && <NewItemButton onClick={onNewItem} />}
         {canEdit && (
           <HelpHint text={PH.reorganize}>
             <button

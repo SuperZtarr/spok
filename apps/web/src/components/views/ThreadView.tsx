@@ -10,7 +10,6 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, ContributionWithAuthor } from '@spok/shared';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
@@ -129,7 +128,7 @@ export function ThreadView({
   canEditItem,
   searchMatchIds,
   spaceId: _spaceId, spaceRole: _spaceRole,
-  onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+  spaceName, viewContainerRef, onStartTour, pulseHelp,
   treeSort: treeSortProp,
 }: ThreadViewProps) {
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
@@ -330,9 +329,6 @@ export function ThreadView({
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="thread" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

@@ -5,7 +5,6 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { TYPE_ICONS, TYPE_LABELS } from '../../constants/ui';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 type Dimension = 'status' | 'type' | 'assignee' | 'space';
@@ -70,7 +69,7 @@ function getDimensionLabel(value: string, dim: Dimension, referentiels?: SpaceRe
   }
 }
 
-export function CrossTableView({ items, onEdit, referentiels, highlightType, highlightStatus, searchMatchIds, canEdit = true, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: CrossTableViewProps) {
+export function CrossTableView({ items, onEdit, referentiels, highlightType, highlightStatus, searchMatchIds, spaceName, viewContainerRef, onStartTour, pulseHelp }: CrossTableViewProps) {
   const [rowDim, setRowDim] = useState<Dimension>('type');
   const [colDim, setColDim] = useState<Dimension>('status');
   const [expandedCell, setExpandedCell] = useState<string | null>(null);
@@ -167,9 +166,6 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="crossTable" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

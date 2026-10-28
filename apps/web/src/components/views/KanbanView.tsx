@@ -28,7 +28,6 @@ import { stripMarkup } from '../../lib/bbcode';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
 import { RoleGuard } from '../RoleGuard';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -380,7 +379,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
 
 export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: KanbanViewProps) {
+            spaceName, viewContainerRef, onStartTour, pulseHelp }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -494,9 +493,6 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="kanban" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

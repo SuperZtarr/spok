@@ -17,7 +17,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as imagesHelp } from './help/images.help';
@@ -169,7 +168,7 @@ interface ImagesViewProps {
 
 export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: ImagesViewProps) {
+            spaceName, viewContainerRef, onStartTour, pulseHelp }: ImagesViewProps) {
   const bulk = useBulkUpload(currentSpaceId, 'image');
   const canBulkUpload = canEdit && !!currentSpaceId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -263,9 +262,6 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
   const header = (
     <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-      {canEdit && onNewItem && (
-        <NewItemButton onClick={onNewItem} />
-      )}
       {canBulkUpload && <BulkUploadButton bulk={bulk} kind="image" />}
       <div className="flex-1" />
       <ViewHelpButton viewMode="images" onStartTour={onStartTour} pulse={pulseHelp} />

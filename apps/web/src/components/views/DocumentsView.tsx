@@ -16,7 +16,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { getTypeIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -95,7 +94,7 @@ interface DocumentsViewProps {
 
 export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: DocumentsViewProps) {
+            spaceName, viewContainerRef, onStartTour, pulseHelp }: DocumentsViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const bulk = useBulkUpload(currentSpaceId, 'document');
   const canBulkUpload = canEdit && !!currentSpaceId;
@@ -146,9 +145,6 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
 
   const header = (
     <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-      {canEdit && onNewItem && (
-        <NewItemButton onClick={onNewItem} />
-      )}
       {canBulkUpload && <BulkUploadButton bulk={bulk} kind="document" />}
       <div className="flex-1" />
       <ViewHelpButton viewMode="documents" onStartTour={onStartTour} pulse={pulseHelp} />

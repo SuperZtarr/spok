@@ -15,7 +15,6 @@ import { Badge } from '../ui/Badge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -121,7 +120,7 @@ type SortDir = 'asc' | 'desc';
 
 export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, canEdit = true, canEditItem,
-            spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
+            spaceName, viewContainerRef, onStartTour, pulseHelp,
             spaceId: _spaceId, spaceRole: _spaceRole, hideToolbar = false,
             treeSort: treeSortProp, onTreeSortChange: _onTreeSortChange }: ListViewProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
@@ -232,10 +231,6 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
       {!hideToolbar && <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {/* Gauche */}
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         {/* Droite */}
         <ViewHelpButton viewMode="list" onStartTour={onStartTour} pulse={pulseHelp} />

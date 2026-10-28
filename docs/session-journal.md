@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-28 (4)
+- Lot poussé : barre d'espace, « Nouveau » et « Modèle » bleus pour toutes les vues (feat). Typecheck OK, TNR 1785/1785, en-têtes OK
+
+### « Nouveau » / « Modèle » dans la barre d'espace — 2026-10-28
+- Inscrit PRÊT POUR MEP. Reste possible (non demandé) : retirer la propriété `onNewItem?` devenue inutile des interfaces de vues et des appels de SpacePage. NON COMMITÉ
+
 ### MEP — 2026-10-28 (3)
 - Lot poussé : écran « espace inaccessible » (fix). Typecheck OK, TNR 1785/1785, en-têtes OK. Builds Railway de e619ad8 restés QUEUED (incident Railway) — remplacés par ce push
 

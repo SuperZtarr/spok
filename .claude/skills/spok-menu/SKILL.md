@@ -189,8 +189,12 @@ SpacePage
 #### `#global-toolbar` — ordre gauche→droite
 
 ```
-[Filtre: Types|Statuts|Recherche]  [Highlight: Types|Statuts|Recherche]  [Position | A→Z à plat | A→Z par groupe]  → flex-1 ←  [Count] [Export] [Historique] [Paramètres]
+[Filtre: Types|Statuts|Recherche]  [Highlight: Types|Statuts|Recherche]  [Position | A→Z à plat | A→Z par groupe]  → flex-1 ←  [+ Nouveau] [Modèle] [Séances] [Count] [Historique] [Paramètres]
 ```
+
+⚠️ **Décision Thomas 2026-10-28** : « Nouveau » et « Modèle » (insérer un modèle) sont dans `toolbar-actions` (SpaceToolbar),
+en tête, **une seule fois pour toutes les vues**, tous deux bleus. Ils ne sont plus dans `#view-header` (remplace la
+décision 2026-06-13). Toutes les vues créaient de toute façon avec la même action (`handleNewItem` de SpacePage).
 
 | Zone | Contenu | Comportement |
 |------|---------|--------------|
@@ -198,7 +202,7 @@ SpacePage
 | **Highlight** | Types · Statuts · Barre de recherche | Dim/highlight sans filtrer |
 | **Ordre** | 3 boutons inline : Position \| A→Z à plat \| A→Z par groupe | Pas de dropdown |
 | Spacer | `<div className="flex-1" />` | |
-| **Droite** | Count · Historique · Paramètres | Dans cet ordre |
+| **Droite** | Nouveau · Modèle · Séances · Count · Historique · Paramètres | Dans cet ordre ; Nouveau / Modèle si `canEdit` |
 
 - Filtre et Highlight : **discrets** si vide, **foncés** si critère actif
 - Ordre : bouton actif = foncé
@@ -210,18 +214,17 @@ SpacePage
 Deux zones :
 
 ```
-[Nouveau] [boutons spécifiques vue]   →flex-1→   [Légende?] [Aide] [Export]
+[boutons spécifiques vue]   →flex-1→   [Légende?] [Aide] [Export]
 ```
 
 | Zone | Bouton | Présence | Notes |
 |------|--------|----------|-------|
-| Gauche | **Nouveau** | Vues éditables | Crée un item dans le contexte de la vue |
 | Gauche | **Boutons vue** | Spécifiques | ex: collapse MindMap, hide-deferred Gantt, zoom PERT… |
 | Droite | **Légende** | Optionnel | Uniquement si la vue a une légende (PERT, MindMap, Timeline…) |
 | Droite | **Aide** | Toutes les vues | Ouvre le tour / tooltip d'aide |
 | Droite | **Export** | Toutes les vues | Formats spécifiques à la vue (CSV, Excel, SVG, PNG…) |
 
-- **Ne contient jamais** : Types, Statuts, Recherche, Lumière, Ordre, Count, Historique, Paramètres — tout ça est dans `#global-toolbar`
+- **Ne contient jamais** : Nouveau, Modèle, Types, Statuts, Recherche, Lumière, Ordre, Count, Historique, Paramètres — tout ça est dans `#global-toolbar`
 
 ### Style des boutons d'état actif/inactif
 
@@ -234,7 +237,7 @@ Deux zones :
 className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
 ```
 
-- Bouton **Nouveau** : composant partagé `components/ui/NewItemButton.tsx` (bleu vif `bg-blue-600 text-white`, décision Thomas 2026-09-28) — ne jamais recopier ses classes dans une vue : `{canEdit && onNewItem && <NewItemButton onClick={onNewItem} />}`
+- Boutons **Nouveau** et **Modèle** : composants partagés `components/ui/NewItemButton.tsx` et `InsertTemplateButton.tsx`, même bleu (`PRIMARY_ACTION_CLASS`, décisions Thomas 2026-09-28 et 2026-10-28), rendus uniquement par `SpaceToolbar` — ne jamais les remettre dans une vue ni recopier leurs classes
 - Boutons icône seule (Historique, Paramètres) : `h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors`
 - Icônes : `w-3.5 h-3.5` pour les boutons texte, `w-4 h-4` pour les boutons icône seule
 - Labels : `<span className="hidden sm:inline">Label</span>` pour masquer sur mobile

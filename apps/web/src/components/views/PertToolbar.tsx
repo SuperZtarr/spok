@@ -10,7 +10,6 @@ import type { Item } from '@spok/shared';
 import { buildExportFilename, exportDataPDF, exportSvgAsPng, exportSvgAsPdf } from '../../lib/exportUtils';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { NewItemButton } from '../ui/NewItemButton';
 import { HelpHint } from '../../help/HelpHint';
 import { help as pertHelp } from './help/pert.help';
 
@@ -126,7 +125,6 @@ export function PertToolbar({
   zoom, onZoomIn, onZoomOut, onResetZoom,
   hasParents, hasCollapsed, onCollapseAll, onExpandAll,
   items, spaceName, svgRef,
-  onNewItem, canEdit,
   activeRelFilters = new Set(), onToggleRelFilter,
   pertRankSort = false, onTogglePertRankSort,
   totalItemCount, filteredItemCount,
@@ -136,10 +134,6 @@ export function PertToolbar({
 
   return (
     <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-      {canEdit && onNewItem && (
-        <NewItemButton onClick={onNewItem} />
-      )}
-      <div className="h-4 w-px bg-border mx-1" />
       {onTogglePertRankSort && (
         <HelpHint text={PH.rankSort}>
           <button

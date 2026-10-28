@@ -76,7 +76,6 @@ import { nodeTypes } from './mindmap-nodes';
 import { SPACE_NODE_ID, calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
 import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
-import { NewItemButton } from '../ui/NewItemButton';
 import { HelpHint } from '../../help/HelpHint';
 import { help as mindmapHelp } from './help/mindmap.help';
 
@@ -166,7 +165,7 @@ function MindMapViewInner({
   referentiels,
   canEdit,
   canEditItem,
-  onNewItem, onStartTour, pulseHelp,
+  onStartTour, pulseHelp,
   innerRef,
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
@@ -1387,10 +1386,6 @@ function MindMapViewInner({
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
-        <div className="h-4 w-px bg-border mx-1" />
         <CollapseToggleButton
           isCollapsed={collapsedIds.size > 0}
           onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}

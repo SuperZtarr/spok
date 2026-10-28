@@ -22,7 +22,6 @@ import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shar
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -376,7 +375,7 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
 
 export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: PlanningViewProps) {
+            spaceName, viewContainerRef, onStartTour, pulseHelp }: PlanningViewProps) {
   // Use referentiels or defaults
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
@@ -439,9 +438,6 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="planning" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

@@ -13,7 +13,6 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
@@ -123,7 +122,7 @@ function buildTree(items: ItemWithContributions[]): ItemWithContributions[] {
 export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, referentiels, canEdit, canEditItem, highlightType, highlightStatus, highlightColor, searchMatchIds,
             spaceId: _spaceId, spaceRole: _spaceRole,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+            spaceName, viewContainerRef, onStartTour, pulseHelp,
           }: TextViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -182,9 +181,6 @@ export function TextView({ items, currentSpaceId, portalGroups, onEdit, onDelete
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="text" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

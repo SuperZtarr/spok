@@ -26,7 +26,6 @@ import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -327,7 +326,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
 
 export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateType, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
-            spaceName, viewContainerRef, onStartTour, pulseHelp, onNewItem,
+            spaceName, viewContainerRef, onStartTour, pulseHelp,
             spaceId: _spaceId }: TypesViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -461,9 +460,6 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="types" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

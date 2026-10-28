@@ -27,7 +27,6 @@ import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 // ---------------------------------------------------------------------------
@@ -361,7 +360,7 @@ export function MembersKanbanView({
   referentiels,
   canEdit = true,
   canEditItem,
-  spaceRole: _spaceRole, onNewItem, exportSpaceName, viewContainerRef, onStartTour, pulseHelp,
+  spaceRole: _spaceRole, exportSpaceName, viewContainerRef, onStartTour, pulseHelp,
 }: MembersKanbanViewProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -504,9 +503,6 @@ export function MembersKanbanView({
     >
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="members" onStartTour={onStartTour} pulse={pulseHelp} />
         {exportSpaceName && viewContainerRef && (

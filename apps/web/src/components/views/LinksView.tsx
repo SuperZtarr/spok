@@ -11,7 +11,6 @@ import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
 
@@ -170,7 +169,7 @@ interface LinksViewProps {
 
 export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMove, referentiels, canEdit = true, canEditItem, portalGroups, currentSpaceId: _currentSpaceId,
-            onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp }: LinksViewProps) {
+            spaceName, viewContainerRef, onStartTour, pulseHelp }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
     if (!items) return [];
@@ -217,9 +216,6 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
 
   const header = (
     <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-      {canEdit && onNewItem && (
-        <NewItemButton onClick={onNewItem} />
-      )}
       <div className="flex-1" />
       <ViewHelpButton viewMode="links" onStartTour={onStartTour} pulse={pulseHelp} />
       {spaceName && viewContainerRef && (

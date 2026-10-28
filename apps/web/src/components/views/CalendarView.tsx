@@ -10,7 +10,6 @@ import listPlugin from '@fullcalendar/list';
 import type { EventInput, EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
-import { NewItemButton } from '../ui/NewItemButton';
 
 interface PortalGroup {
   spaceId: string;
@@ -76,7 +75,7 @@ export function CalendarView({
   highlightStatus,
   searchMatchIds,
   canEdit = true,
-  spaceId: _spaceId, spaceRole: _spaceRole, onNewItem, onStartTour, pulseHelp,
+  spaceId: _spaceId, spaceRole: _spaceRole, onStartTour, pulseHelp,
   spaceName, viewContainerRef,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null);
@@ -196,9 +195,6 @@ export function CalendarView({
   return (
     <div className="flex flex-col h-full">
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="calendar" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

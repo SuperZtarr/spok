@@ -11,6 +11,8 @@
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
  * la barre d'outils ne connaît pas la logique des séances live.
+ * Création (2026-10-28) : « Nouveau » (NewItemButton) et « Modèle » (InsertTemplateButton), bleus, en tête de
+ * toolbar-actions pour TOUTES les vues — les vues n'ont plus leur propre « Nouveau » dans #view-header.
  * Aide : chaque commande est enveloppée d'un HelpHint (textes dans help/spaceToolbar.hints.ts) — jamais de `title`
  * natif (contrôlé par help/coverage.test.ts) ; repères data-tour toolbar-* pour les étapes communes des tours.
  * Zones data-devzone toolbar-vues/ordre/filtre/apercu/actions : vocabulaire de DevZoneInspector ET zones du mode Aide
@@ -58,12 +60,13 @@ import {
   ArrowUpDown,
   GitMerge,
   Workflow,
-  LayoutTemplate,
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, VIEW_REGISTRY } from '@spok/shared';
 import { Button } from '../components/ui/Button';
+import { NewItemButton } from '../components/ui/NewItemButton';
+import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
 import type { ViewMode } from '../stores/viewMode';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
@@ -245,6 +248,7 @@ export function SpaceToolbar({
   treeSort,
   onTreeSortChange,
   canEdit,
+  onNewItem,
   onInsertTemplate,
   spaceId,
   spaceRole,
@@ -702,6 +706,9 @@ export function SpaceToolbar({
         </div>{/* end mobile filters wrapper */}
 
         <div className="ml-auto flex items-center gap-1 flex-shrink-0" data-devzone="toolbar-actions">
+          {/* Création : « Nouveau » + « Modèle », bleus, côte à côte, pour toutes les vues (2026-10-28) */}
+          {canEdit && onNewItem && <NewItemButton onClick={onNewItem} />}
+          {canEdit && onInsertTemplate && <InsertTemplateButton onClick={onInsertTemplate} />}
           {liveSessionsSlot}
           {/* Item count */}
           {showFiltersForView && (
@@ -731,13 +738,6 @@ export function SpaceToolbar({
             {(activeTypeFilter || activeStatusFilter) && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />}
           </button>
           </HelpHint>
-          {canEdit && onInsertTemplate && (
-            <HelpHint text={H.insertTemplate}>
-              <Button variant="ghost" size="sm" aria-label="Insérer un modèle" data-tour="toolbar-template" onClick={onInsertTemplate}>
-                <LayoutTemplate className="w-4 h-4" />
-              </Button>
-            </HelpHint>
-          )}
           {canEdit && (
             <HelpHint text={H.history}>
               {/* Un seul arrêt clavier : le lien porte le nom, le bouton n'est que l'habillage */}

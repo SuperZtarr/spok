@@ -49,7 +49,6 @@ import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as timelineHelp } from './help/timeline.help';
@@ -111,7 +110,7 @@ interface TimelineViewProps {
 
 
 export function TimelineView({ items, relations, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, onUpdateRelation, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onMove, spaceId, referentiels, highlightType, highlightStatus, highlightColor, searchMatchIds, canEdit = true, canEditItem, spaceName = '',
-onNewItem, onStartTour, pulseHelp,
+onStartTour, pulseHelp,
 treeSort: treeSortProp,
 }: TimelineViewProps) {
   const queryClient = useQueryClient();
@@ -1110,10 +1109,6 @@ treeSort: treeSortProp,
     <div className="flex flex-col h-full" ref={viewContainerRef}>
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
-        <div className="h-4 w-px bg-border mx-1" />
         {/* Navigation */}
         <HelpHint text={TH.previous}>
           <Button variant="bordered" size="sm" onClick={goToPrevious} aria-label="Précédent">

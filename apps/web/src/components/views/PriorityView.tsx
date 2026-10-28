@@ -22,7 +22,6 @@ import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { NewItemButton } from '../ui/NewItemButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 // ---------------------------------------------------------------------------
@@ -333,7 +332,6 @@ export function PriorityView({
   referentiels,
   canEdit = true,
   canEditItem,
-  onNewItem,
   spaceName,
   viewContainerRef,
   onStartTour,
@@ -415,9 +413,6 @@ export function PriorityView({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {canEdit && onNewItem && (
-          <NewItemButton onClick={onNewItem} />
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="priority" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (

@@ -112,7 +112,6 @@ import { useAuthStore } from '../stores/auth';
 import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { EmptyHelp } from '../help/EmptyHelp';
-import { NewItemButton } from '../components/ui/NewItemButton';
 import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
 import { resolveSpaceDefaultView } from '../lib/spaceDefaultView';
 
@@ -1079,7 +1078,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'graph' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="graph" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1106,7 +1104,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'sunburst' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="sunburst" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1129,7 +1126,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'relations' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="relations" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1152,7 +1148,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'bubble' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="bubble" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1175,7 +1170,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'radialTree' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="radialTree" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1197,7 +1191,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'treemap' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="treemap" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1219,7 +1212,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'burndown' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="burndown" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1241,7 +1233,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'cfd' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="cfd" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1263,7 +1254,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'chord' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="chord" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1302,7 +1292,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'heatmap' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="heatmap" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1325,7 +1314,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'ego' ? (
             <div className="flex flex-col h-full overflow-hidden">
               <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-                {canEdit && <NewItemButton onClick={handleNewItem} />}
                 <div className="flex-1" />
                 <ViewHelpButton viewMode="ego" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
                 {space?.name && viewContainerRef && (
@@ -1540,15 +1528,11 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               pulseHelp={pulseHelp}
             />
           ) : itemsData?.data.length === 0 ? (
-            <EmptyHelp mode="tree" title="Aucun élément" icon={FileText} className="p-8">
-              {canEdit && <NewItemButton onClick={handleNewItem} />}
-            </EmptyHelp>
+            <EmptyHelp mode="tree" title="Aucun élément" icon={FileText} className="p-8">            </EmptyHelp>
           ) : (
             /* Tree view (default) */
             <div className="flex flex-col h-full overflow-hidden">
             <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-              {canEdit && <NewItemButton onClick={handleNewItem} />}
-              <div className="h-4 w-px bg-border mx-1" />
               <CollapseToggleButton isCollapsed={!hasExpandedItems} onToggle={handleToggleExpand} />
               <div className="flex-1" />
               <ViewHelpButton viewMode="tree" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
