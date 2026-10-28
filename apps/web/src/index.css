@@ -247,3 +247,8 @@
   outline: 2px solid hsl(var(--ring)) !important;
   outline-offset: 2px !important;
 }
+/* Éditeur TipTap : le focus est porté par le cadre du composant (focus-within dans RichTextEditor),
+ * pas par la surface éditable — sinon un second cadre apparaît à l'intérieur de l'éditeur. */
+.tiptap[contenteditable="true"]:focus-visible {
+  outline: none !important;
+}

@@ -7,6 +7,8 @@
  *   2. minHeight / defaultMaxHeight — zone qui grandit avec le contenu jusqu'à un plafond puis scrolle.
  *      defaultMaxHeight accepte px (number) ou une valeur CSS (ex. "40vh" en mode Forum, pour laisser
  *      les contributions visibles sous la description). minHeight reste en px (utilisé par le resize).
+ *
+ * Focus : anneau sur le cadre complet (focus-within), jamais sur la surface .tiptap (cf. index.css).
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from '@tiptap/react';
@@ -441,7 +443,7 @@ export function RichTextEditor({ content, onChange, placeholder, editable = true
   });
 
   return (
-    <div className="rounded-md border border-input shadow-sm overflow-hidden">
+    <div className="rounded-md border border-input shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-ring">
 
       {/* Toolbar */}
       {editable && (
