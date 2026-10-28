@@ -1,5 +1,6 @@
 /* Aide utilisateur de la page « Espaces » (/spaces).
-   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts.
+   hints unavailable* : textes de l'écran « espace inaccessible » (SpaceUnavailable, page d'un espace). */
 import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
@@ -50,4 +51,9 @@ export const help: HelpEntry = {
       },
     },
   ],
+  // Écran « espace inaccessible » de la page d'un espace (components/SpaceUnavailable.tsx)
+  hints: {
+    unavailableAnonymous: 'Cet espace n\'est pas public. Connectez-vous pour y accéder : après connexion, « Retourner à » vous ramène ici.',
+    unavailable: 'Espace introuvable ou accès refusé : il a peut-être été supprimé, ou vous n\'en êtes pas membre.',
+  },
 };

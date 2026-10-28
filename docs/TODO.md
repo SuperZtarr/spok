@@ -126,6 +126,7 @@
 - [x] Carte mentale : espaces enfants absents au premier affichage (signature des espaces enfants dans les dépendances) — 2026-10-28
 - [x] Fiche d'élément : zone de contribution absente après changement d'item (réponse en cours de l'item précédent remise à zéro) — 2026-10-28
 - [x] Fiche d'élément : un élément tout juste créé et refermé vide sans enregistrement est supprimé — 2026-10-28
+- [x] Page d'un espace : écran « espace inaccessible » (inexistant, privé, non connecté) au lieu d'un espace vide — 2026-10-28
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)

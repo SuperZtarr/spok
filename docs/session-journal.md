@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-28 (3)
+- Lot poussé : écran « espace inaccessible » (fix). Typecheck OK, TNR 1785/1785, en-têtes OK. Builds Railway de e619ad8 restés QUEUED (incident Railway) — remplacés par ce push
+
+### Espace inaccessible — 2026-10-28
+- Onglet resté sur un espace privé après perte de session (pas d'expiration sans session, spec) → « Espace » vide. Écran SpaceUnavailable. Inscrit PRÊT POUR MEP. NON COMMITÉ
+
 ### MEP — 2026-10-28 (2)
 - 3 lots poussés : spok-start renommage préventif Docker run (docs), zone de contribution après changement d'item (fix, ItemEditModal en version intermédiaire), élément vide refermé supprimé (feat). Typecheck 6 paquets OK, TNR 1785/1785, en-têtes OK. Non vérifiés à l'écran
 
@@ -42,6 +48,7 @@ _(aucun lot en attente)_
 - Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
 
 ### Start — 2026-10-28
+- 19 h 26 : ports 2022-3201 réservés par Hyper-V (bank/liste/voyages/Lost Horizon bloqués) car plage dynamique TCP à 1024. Thomas a remis 49152+16384 et relancé winnat. Vérifié : plus que 3000-3001 (administré) et 50000-50059 ; Docker et dev SPOK restés debout
 - 19 h 03 : sockets du matin encore dans `run` → renommé d'office avant lancement (`run_broken_20261028-1903`), Docker OK en 5 s, dev OK en 24 s (API /health 200, web 200, navigateur intégré)
 - Même panne Docker (`run\dockerInference` du 24 à 22 h 49) : procédure spok-start appliquée, `run` → `run_broken_20261028-0837`, Docker OK en 5 s, dev OK (API /health 200, web 200, accueil affiché dans le navigateur intégré, console sans erreur)
 

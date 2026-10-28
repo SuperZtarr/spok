@@ -14,6 +14,8 @@
  * (liveSessionBarSlot → 3e ligne de la toolbar) ;
  * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem : OWNER, auteur ou assigné). Dans un espace de communauté
  * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
+ * Espace non chargeable (401/403/404, sans nouvelle tentative) : écran SpaceUnavailable à la place de la barre et de la
+ * vue — « Se connecter » pour un visiteur, « Accueil » sinon (2026-10-28).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
@@ -37,7 +39,8 @@ import {
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
-import { spacesApi, itemsApi, communitiesApi } from '../lib/api';
+import { spacesApi, itemsApi, communitiesApi, ApiError } from '../lib/api';
+import { SpaceUnavailable } from '../components/SpaceUnavailable';
 import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
 import { useReferentiels } from '../hooks/useReferentiels';
@@ -165,10 +168,12 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   }, [spaceId]);
 
   // --- Queries ---
-  const { data: space } = useQuery({
+  const { data: space, isError: spaceUnavailable } = useQuery({
     queryKey: ['space', spaceId],
     queryFn: () => spacesApi.get(spaceId!),
     enabled: !!spaceId,
+    // Refus (401/403/404) : pas de nouvelle tentative, l'écran « espace inaccessible » s'affiche tout de suite
+    retry: (count, err) => !(err instanceof ApiError && [401, 403, 404].includes(err.statusCode)) && count < 3,
   });
 
   const canEdit = !!user && !!space?.role && space.role !== 'VIEWER';
@@ -626,6 +631,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   }, [editingItemId, spaceId, space, allItems]);
 
   // --- Render ---
+  // Espace non chargeable (privé pour un visiteur, accès retiré, supprimé) : jamais d'« Espace » vide
+  if (spaceUnavailable && !space) return <SpaceUnavailable anonymous={!user} />;
+
   // Overview mode — full page, no toolbar
   if (viewMode === 'overview') {
     return (
