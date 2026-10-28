@@ -14,6 +14,8 @@
  * - copyItemSheet : écriture presse-papier (ClipboardItem, repli writeText en Markdown)
  * Sécurité : média seulement si son URL est sûre (isSafeUrl), HTML copié passé par sanitizeHtml (user-html-sanitized).
  * La même fiche (ItemSheet) est affichée par la vue lecture (ItemReadView) : ce qu'on lit = ce qu'on copie.
+ * Doublon média : une <img> de la description pointant sur l'URL du média (items IMAGE importés de Confluence,
+ * scripts fix-confluence-split-images / fix-drawio-attachments) est retirée — l'image n'apparaît qu'une fois.
  * Impression et PDF restent dans itemExport.ts. */
 import type { Item, ItemRelation, ContributionWithAuthor } from '@spok/shared';
 import { sanitizeHtml, isSafeUrl } from './sanitizeHtml';
@@ -75,6 +77,18 @@ function buildMedia(item: Item): ItemSheet['media'] {
   return { kind, label, url: item.url, name: kind === 'file' ? fileNameFromUrl(item.url) : item.title };
 }
 
+/** Description sans les <img> qui répètent le média de l'item ; null si plus rien de lisible ne reste. */
+function descriptionWithoutMedia(description: string | null | undefined, media: ItemSheet['media']): string | null {
+  if (!description) return null;
+  let html = description;
+  if (media?.kind === 'image') {
+    html = html
+      .replace(/<img\s[^>]*>/gi, tag => (/\ssrc\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] === media.url ? '' : tag))
+      .replace(/<p>\s*<\/p>/gi, '');
+  }
+  return htmlToMarkdown(html).trim() ? html : null;
+}
+
 export function buildItemSheet({ item, children = [], spaceName, parentTitle, labels, relationLabel }: BuildItemSheetInput): ItemSheet {
   const fields: { label: string; value: string }[] = [];
   const add = (label: string, value: string | null | undefined) => { if (value && value.trim()) fields.push({ label, value }); };
@@ -94,12 +108,13 @@ export function buildItemSheet({ item, children = [], spaceName, parentTitle, la
     ...(item.relationsTo ?? []).map(r => ({ label: relationLabel(r.type, 'to'), title: r.fromItem?.title ?? '?', comment: r.label || null })),
   ];
 
+  const media = buildMedia(item);
   return {
     title: item.title,
     fields,
     tags: (item.tags ?? []).map(t => t.name),
-    descriptionHtml: item.description && htmlToMarkdown(item.description).trim() ? item.description : null,
-    media: buildMedia(item),
+    descriptionHtml: descriptionWithoutMedia(item.description, media),
+    media,
     children: children.map(c => ({ id: c.id, title: c.title, status: c.status && c.status !== 'undefined' ? (labels.statusLabel(c.status) ?? c.status) : null })),
     relations,
     contributions: (item.contributions ?? []).map(c => ({

@@ -104,6 +104,14 @@ describe('fiche', () => {
     const sheet = buildItemSheet({ item: makeItem({ description: '<p></p>' }), labels, relationLabel });
     expect(sheet.descriptionHtml).toBeNull();
   });
+
+  it('retire de la description l\'image qui répète le média (import Confluence), garde les autres', () => {
+    const url = 'https://r2.x/items/p1/1.webp';
+    const only = buildItemSheet({ item: makeItem({ type: 'IMAGE', url, description: `<p><img src="${url}" alt="x" style="max-width:100%;" /></p>` }), labels, relationLabel });
+    expect(only.descriptionHtml).toBeNull();
+    const mixed = buildItemSheet({ item: makeItem({ type: 'IMAGE', url, description: `<p><img src="${url}" /></p><p>Légende</p><p><img src="https://r2.x/autre.webp"></p>` }), labels, relationLabel });
+    expect(mixed.descriptionHtml).toBe('<p>Légende</p><p><img src="https://r2.x/autre.webp"></p>');
+  });
 });
 
 describe('image de la copie (Word / mail)', () => {
