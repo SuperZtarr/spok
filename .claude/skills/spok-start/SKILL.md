@@ -28,6 +28,9 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    Si absent : `pnpm db:up`
 
    **Docker ne répond pas** (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`) :
+   - **Préventif, à chaque lancement** (accord Thomas 2026-10-28) : si aucun processus `Docker Desktop` /
+     `com.docker.backend` ne tourne et que `%LOCALAPPDATA%\Docker\run` n'est pas vide, le renommer tout de suite (commande
+     ci-dessous) avant de lancer Docker : chaque arrêt y laisse les sockets qui feront planter le démarrage suivant.
    - Lancer `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` puis attendre jusqu'à 3 min que
      `docker info` réponde (boucle de 5 s, pas de `sleep` aveugle).
    - Toujours rien → lire la fin de `%LOCALAPPDATA%\Docker\log\host\com.docker.backend.exe.log` (chercher
