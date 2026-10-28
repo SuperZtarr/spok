@@ -36,6 +36,7 @@
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions).
  * Contributions affichées via sanitizeHtml, liens vers url via safeHref (règle user-html-sanitized).
+ * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
  * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage).
@@ -287,9 +288,14 @@ export function ItemEditModal({
   }, [isOpen, itemId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset the tracker whenever the requested item changes
+  // Zone de contribution remise à zéro aussi : une réponse en cours à une contribution de l'item précédent
+  // (replyToContributionId) masquait la zone principale du suivant — la réaction ne faisait plus que compter (2026-10-28).
   useEffect(() => {
     initializedItemIdRef.current = null;
     loadedItemRef.current = null;
+    setShowContributionField(false);
+    setReplyToContributionId(null);
+    setNewContribution('');
   }, [itemId]);
 
   // Défaut réduit/complet du mode, à chaque fiche ouverte et à chaque changement de mode
