@@ -5,7 +5,8 @@
  * Les événements sont appliqués sur le cache (applyLiveEvent) ; à chaque reconnexion l'état complet est refetch.
  * Un display plus ancien que le courant (entry.createdAt) est ignoré — convergence si deux présentateurs.
  * Invalide ['items', spaceId] à chaque display/reveal : les copies apparaissent dans les vues de l'espace.
- * start()/end() refetch aussitôt ; les mutations de préparation posent la liste renvoyée dans le cache.
+ * start()/end() refetch aussitôt ; les mutations de préparation (dont l'ajout groupé addToAgendaBulk) posent la
+ * liste renvoyée dans le cache.
  * Préparation : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
  * Visiteur anonyme : aucune requête (séances réservées aux membres, route authentifiée) — state reste undefined.
  */
@@ -93,6 +94,9 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
     setPresenters: async (userIds: string[]) => { await liveSessionsApi.setPresenters(sessionId!, userIds); },
     addToAgenda: async (sourceItemId: string, sourceSpaceId?: string) => {
       setAgenda(await liveSessionsApi.addToAgenda(sessionId!, sourceItemId, sourceSpaceId));
+    },
+    addToAgendaBulk: async (items: Array<{ sourceItemId: string; includeChildren?: boolean }>) => {
+      setAgenda(await liveSessionsApi.addToAgendaBulk(sessionId!, items));
     },
     removeFromAgenda: async (agendaId: string) => { setAgenda(await liveSessionsApi.removeFromAgenda(sessionId!, agendaId)); },
     reorderAgenda: async (ids: string[]) => { setAgenda(await liveSessionsApi.reorderAgenda(sessionId!, ids)); },

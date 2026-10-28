@@ -390,6 +390,51 @@ describe('/live-sessions', () => {
     })
   })
 
+  describe('ajout groupé à la préparation (/:id/agenda/bulk)', () => {
+    const bulk = (items: unknown[]) => app.inject({ method: 'POST', url: '/live-sessions/ls-1/agenda/bulk', headers: auth(), payload: { items } })
+    beforeEach(() => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'PREPARED' })
+      prisma.liveSessionRole.findUnique.mockResolvedValue({ role: 'PRESENTER' })
+      prisma.spaceMembership.findUnique.mockResolvedValue({ userId: USER, spaceId: 'parent', role: 'MEMBER' })
+    })
+
+    it("ajoute en fin de préparation, dans l'ordre demandé, sous-éléments juste après leur parent", async () => {
+      prisma.liveSessionAgendaItem.aggregate.mockResolvedValue({ _max: { position: 4 } })
+      prisma.item.findMany.mockImplementation(async (args: any) => {
+        if (args.where.id) return [{ id: 'B', title: 'Bilan' }, { id: 'A', title: 'Accueil' }]
+        return [{ id: 'A1', title: 'A un', parentId: 'A' }]
+      })
+      const res = await bulk([{ sourceItemId: 'A', includeChildren: true }, { sourceItemId: 'B' }])
+      expect(res.statusCode).toBe(200)
+      expect(prisma.item.findMany.mock.calls[0][0].where).toMatchObject({ id: { in: ['A', 'B'] }, spaceId: 'parent' })
+      const rows = prisma.liveSessionAgendaItem.createMany.mock.calls[0][0].data
+      expect(rows.map((r: any) => [r.sourceItemId, r.position])).toEqual([['A', 5], ['A1', 6], ['B', 7]])
+      expect(rows[0]).toMatchObject({ sessionId: 'ls-1', presenterId: USER, sourceSpaceId: 'parent', title: 'Accueil' })
+    })
+
+    it("refuse un élément hors de l'espace parent, sans rien écrire", async () => {
+      prisma.item.findMany.mockResolvedValue([{ id: 'A', title: 'Accueil' }])
+      const res = await bulk([{ sourceItemId: 'A' }, { sourceItemId: 'ailleurs' }])
+      expect(res.statusCode).toBe(400)
+      expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
+
+    it('refusé à un participant et sur une séance terminée', async () => {
+      prisma.liveSessionRole.findUnique.mockResolvedValue(null)
+      expect((await bulk([{ sourceItemId: 'A' }])).statusCode).toBe(403)
+      prisma.liveSessionRole.findUnique.mockResolvedValue({ role: 'HOST' })
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'ENDED' })
+      expect((await bulk([{ sourceItemId: 'A' }])).statusCode).toBe(409)
+      expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
+
+    // Erreur de validation zod (400 dans l'API réelle, index.ts) : ce banc de test n'a pas ce gestionnaire
+    it('liste vide refusée, rien écrit', async () => {
+      expect((await bulk([])).statusCode).toBeGreaterThanOrEqual(400)
+      expect(prisma.liveSessionAgendaItem.createMany).not.toHaveBeenCalled()
+    })
+  })
+
   describe('une seule séance en cours par espace', () => {
     beforeEach(() => {
       prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })

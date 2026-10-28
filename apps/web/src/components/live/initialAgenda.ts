@@ -2,7 +2,9 @@
  * Préparation initiale d'une séance (fenêtre « Préparer la séance ») — logique pure, testée à part.
  * buildAgendaChoices : éléments de PREMIER NIVEAU de l'espace parent (parentId null), dans leur ordre (position),
  *   avec le nombre de sous-éléments directs de chacun.
- * defaultSelection : tout coché, « avec les sous-éléments » activé partout (décision Thomas 2026-10-11).
+ * defaultSelection : tout coché, « avec les sous-éléments » activé partout (décision Thomas 2026-10-11) ;
+ *   pour l'ajout groupé (AddAgendaItemsDialog), les éléments déjà dans la préparation sont décochés (2026-10-28).
+ * Aussi utilisé par l'ajout groupé à une séance existante (même liste, même payload, route /agenda/bulk).
  * toAgendaPayload : ce qui part à l'API (POST /live-sessions, champ agenda), dans l'ordre de la liste ;
  *   includeChildren n'est envoyé que pour un élément qui a des sous-éléments.
  */
@@ -30,8 +32,9 @@ export function buildAgendaChoices(items: Pick<Item, 'id' | 'title' | 'parentId'
     .map((it) => ({ id: it.id, title: it.title || 'Sans titre', childCount: childCount.get(it.id) ?? 0 }));
 }
 
-export function defaultSelection(choices: AgendaChoice[]): Record<string, AgendaSelection> {
-  return Object.fromEntries(choices.map((c) => [c.id, { checked: true, withChildren: true }]));
+/** alreadyIds : éléments déjà dans la préparation (ajout groupé) — proposés décochés, les autres cochés. */
+export function defaultSelection(choices: AgendaChoice[], alreadyIds?: ReadonlySet<string>): Record<string, AgendaSelection> {
+  return Object.fromEntries(choices.map((c) => [c.id, { checked: !alreadyIds?.has(c.id), withChildren: true }]));
 }
 
 export function toAgendaPayload(choices: AgendaChoice[], selection: Record<string, AgendaSelection>) {

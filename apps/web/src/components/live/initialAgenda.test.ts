@@ -45,4 +45,8 @@ describe('defaultSelection + toAgendaPayload', () => {
     for (const k of Object.keys(sel)) sel[k].checked = false;
     expect(toAgendaPayload(choices, sel)).toEqual([]);
   });
+
+  it('ajout groupé : éléments déjà dans la préparation décochés, nouveaux cochés', () => {
+    expect(toAgendaPayload(choices, defaultSelection(choices, new Set(['a', 'c'])))).toEqual([{ sourceItemId: 'b' }]);
+  });
 });

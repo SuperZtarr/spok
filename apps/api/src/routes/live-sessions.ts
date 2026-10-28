@@ -18,6 +18,8 @@
  * - Préparation (/:id/agenda) : liens vers des items sources (pas de copie), ajout par HOST/PRESENTER avec accès
  *   à la source ; includeChildren ajoute aussi les sous-éléments directs juste après (/:id/source-children les compte) ;
  *   ordre : l'animateur permute tout, un présentateur seulement ses lignes (les autres restent en place).
+ *   /:id/agenda/bulk : ajout groupé d'éléments de l'espace parent en fin de préparation (mêmes règles que la
+ *   préparation initiale, resolveParentRows), séance non terminée, HOST/PRESENTER.
  * - Révélation progressive : l'affichage ne copie pas les sous-items ; /:id/pending-children (ANIMATEUR seul) liste
  *   les sous-items restants, /:id/reveal en copie un sous la copie courante.
  * - Accès : membres (OWNER/MEMBER effectif) de l'espace parent ; join = membership MEMBER dans l'espace de séance.
@@ -54,6 +56,9 @@ const displaySchema = z.union([
   z.object({ sourceItemId: z.string(), sourceSpaceId: z.string().optional() }),
 ]);
 const agendaAddSchema = z.object({ sourceItemId: z.string(), sourceSpaceId: z.string().optional(), includeChildren: z.boolean().optional() });
+const agendaBulkSchema = z.object({
+  items: z.array(z.object({ sourceItemId: z.string(), includeChildren: z.boolean().optional() })).min(1).max(500),
+});
 const agendaOrderSchema = z.object({ ids: z.array(z.string()) });
 const revealSchema = z.object({ sourceItemId: z.string() });
 const suiteSchema = z.object({ name: z.string().trim().min(1).max(120).optional() });
@@ -81,6 +86,36 @@ async function resolveSource(prisma: any, userId: string, sourceItemId: string, 
   if (!item || (sourceSpaceId && item.spaceId !== sourceSpaceId)) return null;
   const access = await checkSpaceAccess(prisma, userId, item.spaceId);
   return access ? item : null;
+}
+
+// sourceItemId facultatif dans le type seulement : c'est ce que l'inférence zod de ce paquet produit (z.string()
+// est pourtant requis à l'exécution — createSchema / agendaBulkSchema)
+type AgendaWish = { sourceItemId?: string; includeChildren?: boolean };
+type ParentRows = { rows: Array<{ id: string; title: string | null }> } | { forbidden: string } | { badRequest: string };
+
+/** Lignes de préparation tirées de l'espace parent (création de séance, ajout groupé) : tout est vérifié avant
+ *  écriture. Seuls des éléments de l'espace parent ; sous-éléments directs juste après leur parent, dans leur ordre.
+ *  Un OWNER de communauté peut créer une séance dans un espace privé dont il n'est pas membre : il ne doit pas
+ *  pouvoir en recopier les éléments (titres) — même exigence que l'ajout depuis le menu (resolveSource). */
+async function resolveParentRows(prisma: any, userId: string, parentSpaceId: string, wanted: AgendaWish[]): Promise<ParentRows> {
+  if (!(await isParentMember(prisma, userId, parentSpaceId))) return { forbidden: 'Accès à l\'espace requis pour préparer la séance à partir de ses éléments' };
+  const ids = wanted.map((w) => w.sourceItemId as string);
+  const found = (await prisma.item.findMany({ where: { id: { in: ids }, spaceId: parentSpaceId }, select: { id: true, title: true } })) ?? [];
+  const byId = new Map<string, { id: string; title: string | null }>(found.map((i: any) => [i.id, i]));
+  if (ids.some((id) => !byId.has(id))) return { badRequest: 'Seuls des éléments de cet espace peuvent être ajoutés à la préparation' };
+  const withChildren = wanted.filter((w) => w.includeChildren).map((w) => w.sourceItemId);
+  const children = withChildren.length
+    ? ((await prisma.item.findMany({
+        where: { parentId: { in: withChildren }, spaceId: parentSpaceId }, orderBy: { position: 'asc' },
+        select: { id: true, title: true, parentId: true },
+      })) ?? [])
+    : [];
+  const rows: Array<{ id: string; title: string | null }> = [];
+  for (const w of wanted) {
+    rows.push(byId.get(w.sourceItemId as string)!);
+    if (w.includeChildren) rows.push(...children.filter((c: any) => c.parentId === w.sourceItemId));
+  }
+  return { rows };
 }
 
 /** Qui regarde la préparation : animateur, présentateur (rôle sans être l'animateur) ou participant. */
@@ -236,28 +271,13 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (await ongoingIn(parent.id)) return reply.conflict(ONGOING_MESSAGE);
 
     // Préparation initiale : tout est vérifié AVANT la moindre écriture (un élément refusé ne crée rien).
-    // Seuls des éléments de l'espace parent ; sous-éléments directs ajoutés juste après leur parent, dans leur ordre.
     const wanted = body.agenda ?? [];
     let initialRows: Array<{ id: string; title: string | null }> = [];
     if (wanted.length > 0) {
-      // Un OWNER de communauté peut créer une séance dans un espace privé dont il n'est pas membre : il ne doit pas
-      // pouvoir en recopier les éléments (titres) — même exigence que l'ajout depuis le menu (resolveSource).
-      if (!(await isParentMember(prisma, userId, parent.id))) return reply.forbidden('Accès à l\'espace requis pour préparer la séance à partir de ses éléments');
-      const ids = wanted.map((w) => w.sourceItemId);
-      const found = (await prisma.item.findMany({ where: { id: { in: ids }, spaceId: parent.id }, select: { id: true, title: true } })) ?? [];
-      const byId = new Map<string, { id: string; title: string | null }>(found.map((i: any) => [i.id, i]));
-      if (ids.some((id) => !byId.has(id))) return reply.badRequest('Seuls des éléments de cet espace peuvent être ajoutés à la préparation');
-      const withChildren = wanted.filter((w) => w.includeChildren).map((w) => w.sourceItemId);
-      const children = withChildren.length
-        ? ((await prisma.item.findMany({
-            where: { parentId: { in: withChildren }, spaceId: parent.id }, orderBy: { position: 'asc' },
-            select: { id: true, title: true, parentId: true },
-          })) ?? [])
-        : [];
-      for (const w of wanted) {
-        initialRows.push(byId.get(w.sourceItemId)!);
-        if (w.includeChildren) initialRows.push(...children.filter((c: any) => c.parentId === w.sourceItemId));
-      }
+      const resolved = await resolveParentRows(prisma, userId, parent.id, wanted);
+      if ('forbidden' in resolved) return reply.forbidden(resolved.forbidden);
+      if ('badRequest' in resolved) return reply.badRequest(resolved.badRequest);
+      initialRows = resolved.rows;
     }
 
     const inviteeIds = [...new Set(body.invitees ?? [])].filter((id) => id !== userId);
@@ -519,6 +539,29 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
     }
+    return broadcastAgenda(s, userId);
+  });
+
+  // Préparation : ajout groupé d'éléments de l'espace parent, en fin de liste (panneau Préparation → « Ajouter des
+  // éléments »). Mêmes règles qu'à la création (resolveParentRows) ; rien n'est écrit si un élément est refusé.
+  fastify.post<{ Params: { id: string } }>('/:id/agenda/bulk', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId;
+    const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
+    if (!s) return reply.notFound('Séance introuvable');
+    if (!(await roleOf(s.id, userId))) return reply.forbidden('Seuls l\'animateur et les présentateurs modifient la préparation');
+    if (s.status === 'ENDED') return reply.conflict('Séance terminée');
+    const body = agendaBulkSchema.parse(request.body);
+    const resolved = await resolveParentRows(prisma, userId, s.parentSpaceId, body.items);
+    if ('forbidden' in resolved) return reply.forbidden(resolved.forbidden);
+    if ('badRequest' in resolved) return reply.badRequest(resolved.badRequest);
+    const max = await prisma.liveSessionAgendaItem.aggregate({ where: { sessionId: s.id }, _max: { position: true } });
+    const start = (max?._max?.position ?? -1) + 1;
+    await prisma.liveSessionAgendaItem.createMany({
+      data: resolved.rows.map((row, i) => ({
+        sessionId: s.id, presenterId: userId, sourceItemId: row.id, sourceSpaceId: s.parentSpaceId,
+        title: row.title || 'Sans titre', position: start + i,
+      })),
+    });
     return broadcastAgenda(s, userId);
   });
 

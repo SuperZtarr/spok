@@ -2149,6 +2149,9 @@ export const liveSessionsApi = {
     fetchApi<LiveSessionState>(`/live-sessions/${id}/suite`, { method: 'POST', body: JSON.stringify({ name }) }),
   addToAgenda: (id: string, sourceItemId: string, sourceSpaceId?: string, includeChildren = false) =>
     fetchApi<LiveAgendaItem[]>(`/live-sessions/${id}/agenda`, { method: 'POST', body: JSON.stringify({ sourceItemId, sourceSpaceId, includeChildren }) }),
+  /** Ajout groupé d'éléments de l'espace parent en fin de préparation (panneau Préparation → « Ajouter des éléments »). */
+  addToAgendaBulk: (id: string, items: Array<{ sourceItemId: string; includeChildren?: boolean }>) =>
+    fetchApi<LiveAgendaItem[]>(`/live-sessions/${id}/agenda/bulk`, { method: 'POST', body: JSON.stringify({ items }) }),
   sourceChildren: (id: string, sourceItemId: string) =>
     fetchApi<{ count: number }>(`/live-sessions/${id}/source-children?sourceItemId=${encodeURIComponent(sourceItemId)}`),
   removeFromAgenda: (id: string, agendaId: string) =>

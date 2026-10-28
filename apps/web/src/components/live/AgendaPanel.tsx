@@ -4,15 +4,20 @@
  * celles de ses lignes, un participant aucune (filtré par l'API) — afficher la vignette seulement si présente.
  * Animateur/présentateurs : ↑/↓ (règles agendaOrder, miroir de l'API), Retirer (sa ligne ou animateur),
  * Afficher (séance LIVE). Participants : lecture seule. compact = version resserrée pour la fenêtre en direct.
+ * « Ajouter des éléments » (animateur/présentateurs, séance non terminée, aussi quand la préparation est vide) :
+ * ajout groupé d'éléments de l'espace parent (AddAgendaItemsDialog) ; infobulle dans live-window.help.ts (hints).
  * Les lignes sont des liens vers les sources : rien n'est copié avant « Afficher ».
  * Libellés affichés : « préparation » (anciennement « programme », renommé 2026-10-11).
  */
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, Play, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ListPlus, Play, X } from 'lucide-react';
 import type { LiveSessionState } from '@spok/shared';
 import { useAuthStore } from '../../stores/auth';
 import type { LiveSessionHandle } from '../../hooks/useLiveSession';
+import { HelpHint } from '../../help/HelpHint';
+import { PAGE_HELP } from '../../help/pageHelp';
 import { moveTarget, swapIds } from './agendaOrder';
+import { AddAgendaItemsDialog } from './AddAgendaItemsDialog';
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -21,6 +26,7 @@ interface Props { state: LiveSessionState; live: LiveSessionHandle; compact?: bo
 export function AgendaPanel({ state, live, compact }: Props) {
   const userId = useAuthStore((s) => s.user?.id) ?? '';
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const isHost = state.myRole === 'HOST';
   const canEdit = state.myRole !== 'PARTICIPANT' && state.session.status !== 'ENDED';
   const canDisplay = state.myRole !== 'PARTICIPANT' && state.session.status === 'LIVE';
@@ -33,16 +39,32 @@ export function AgendaPanel({ state, live, compact }: Props) {
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Action impossible'); }
   };
 
+  // Ajout groupé d'éléments de l'espace parent (animateur / présentateurs, séance non terminée)
+  const addButton = canEdit && (
+    <>
+      <HelpHint text={PAGE_HELP['live-window'].hints?.addAgendaItems} className="inline-flex">
+        <button type="button" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline" onClick={() => setAdding(true)}>
+          <ListPlus className="w-3.5 h-3.5" /> Ajouter des éléments
+        </button>
+      </HelpHint>
+      {adding && <AddAgendaItemsDialog state={state} live={live} onClose={() => setAdding(false)} />}
+    </>
+  );
+
   if (agenda.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground p-3">
-        Préparation vide.{canEdit && ' Ajoutez des éléments depuis le menu d\'un item (« Ajouter à la préparation ») ou la recherche.'}
-      </p>
+      <div className={`space-y-2 ${compact ? 'p-2' : 'p-3'}`}>
+        <p className="text-sm text-muted-foreground">
+          Préparation vide.{canEdit && ' Ajoutez des éléments de l\'espace ci-dessous, depuis le menu d\'un item (« Ajouter à la préparation ») ou la recherche.'}
+        </p>
+        {addButton}
+      </div>
     );
   }
 
   return (
     <div className={compact ? 'p-2' : 'p-3'}>
+      {addButton && <div className="mb-1">{addButton}</div>}
       {error && <p className="text-xs text-red-600 mb-1">{error}</p>}
       <ol className={`divide-y divide-border text-sm overflow-auto ${compact ? 'max-h-full' : 'max-h-96'}`}>
         {agenda.map((a, i) => {

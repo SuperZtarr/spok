@@ -3,6 +3,7 @@
  * Liste les éléments de premier niveau de l'espace parent (initialAgenda), tous cochés, chacun avec
  * « avec ses N sous-éléments » activé s'il en a ; « Tout cocher » / « Tout décocher » ; « Créer la séance »
  * envoie la sélection à onCreate (champ agenda de POST /live-sessions). Tout décoché = séance à préparation vide.
+ * La liste à cocher est AgendaChoiceList (partagée avec l'ajout groupé AddAgendaItemsDialog).
  * Section « Invités » (InviteePicker) : membres de la communauté sans accès à l'espace (liste fournie par l'API) ;
  *   ils verront la séance, jamais l'espace. Liste vide → NoInviteCandidates (pourquoi + lien vers les membres).
  * Props : spaceId (espace parent), onCreate(agenda, invitees) — l'appelant crée la séance et gère erreur/navigation ;
@@ -16,6 +17,7 @@ import { Button } from '../ui/Button';
 import { itemsApi, liveSessionsApi } from '../../lib/api';
 import { InviteePicker } from './InviteePicker';
 import { NoInviteCandidates } from './NoInviteCandidates';
+import { AgendaChoiceList } from './AgendaChoiceList';
 import { buildAgendaChoices, defaultSelection, toAgendaPayload, type AgendaSelection } from './initialAgenda';
 
 type AgendaPayload = ReturnType<typeof toAgendaPayload>;
@@ -40,12 +42,6 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
   const [selection, setSelection] = useState<Record<string, AgendaSelection>>({});
   useEffect(() => { setSelection(defaultSelection(choices)); }, [choices]);
 
-  const update = (id: string, patch: Partial<AgendaSelection>) =>
-    setSelection((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
-  const setAll = (checked: boolean) =>
-    setSelection((prev) => Object.fromEntries(Object.entries(prev).map(([id, s]) => [id, { ...s, checked }])));
-  const checkedCount = choices.filter((c) => selection[c.id]?.checked).length;
-
   return (
     <Modal isOpen onClose={onClose} title="Préparer la séance" devName="NewSessionDialog">
       <p className="text-sm text-muted-foreground mb-3">
@@ -56,37 +52,7 @@ export function NewSessionDialog({ spaceId, onCreate, onClose, busy, error }: {
       ) : choices.length === 0 ? (
         <p className="text-sm text-muted-foreground p-2">Cet espace ne contient aucun élément : la préparation sera vide.</p>
       ) : (
-        <>
-          <div className="flex items-center gap-3 mb-2 text-xs">
-            <button type="button" className="hover:underline" onClick={() => setAll(true)}>Tout cocher</button>
-            <button type="button" className="hover:underline" onClick={() => setAll(false)}>Tout décocher</button>
-            <span className="ml-auto text-muted-foreground">{checkedCount}/{choices.length} sélectionné{checkedCount > 1 ? 's' : ''}</span>
-          </div>
-          <ul className="max-h-[50vh] overflow-auto divide-y divide-border border border-border rounded-md">
-            {choices.map((c) => {
-              const sel = selection[c.id];
-              return (
-                <li key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                  <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-                    <input type="checkbox" checked={!!sel?.checked} onChange={(e) => update(c.id, { checked: e.target.checked })} />
-                    <span className="truncate">{c.title}</span>
-                  </label>
-                  {c.childCount > 0 && (
-                    <label className={`flex items-center gap-1.5 text-xs flex-shrink-0 ${sel?.checked ? 'cursor-pointer' : 'opacity-40'}`}>
-                      <input
-                        type="checkbox"
-                        disabled={!sel?.checked}
-                        checked={!!sel?.withChildren}
-                        onChange={(e) => update(c.id, { withChildren: e.target.checked })}
-                      />
-                      avec {c.childCount > 1 ? `ses ${c.childCount} sous-éléments` : 'son sous-élément'}
-                    </label>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </>
+        <AgendaChoiceList choices={choices} selection={selection} onChange={setSelection} />
       )}
       <h3 className="text-sm font-medium mt-4 mb-1">Invités</h3>
       <p className="text-xs text-muted-foreground mb-2">Membres de la communauté sans accès à cet espace : ils verront la séance, pas l'espace.</p>

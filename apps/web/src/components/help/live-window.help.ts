@@ -1,5 +1,6 @@
 /* Aide utilisateur de la fenêtre « en direct » d'une séance (LiveWindow).
-   Lue par son point d'interrogation (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+   Lue par son point d'interrogation (PageHelpButton) et son tour — registre help/pageHelp.ts.
+   hints : infobulles du panneau Préparation (AgendaPanel) et texte de la fenêtre d'ajout groupé (AddAgendaItemsDialog). */
 import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
@@ -10,7 +11,13 @@ export const help: HelpEntry = {
     'Réduisez-la ou passez en plein écran',
     '« Aller à la séance » ouvre l\'espace de la séance',
     'Animateur et présentateurs : onglets Préparation et Rechercher pour afficher un élément',
+    'Préparation → « Ajouter des éléments » : ajoute d\'un coup les éléments de l\'espace parent choisis (les nouveaux sont cochés)',
   ],
+  // Panneau Préparation (AgendaPanel, bandeau et fenêtre en direct) et fenêtre d'ajout groupé (AddAgendaItemsDialog)
+  hints: {
+    addAgendaItems: 'Ajouter des éléments : choisissez des éléments de l\'espace parent, ajoutés à la fin de la préparation, dans l\'ordre de la liste, avec vous comme présentateur. Rien n\'est copié avant l\'affichage ; chaque ligne se retire ensuite avec ×.',
+    addAgendaIntro: 'Éléments de premier niveau de l\'espace parent. Ceux qui ne sont pas encore dans la préparation sont cochés ; ceux qui y sont déjà sont décochés (les recocher les ajoute une seconde fois). Les éléments cochés sont ajoutés à la fin de la préparation, vous en êtes le présentateur.',
+  },
   tour: [
     {
       popover: {
