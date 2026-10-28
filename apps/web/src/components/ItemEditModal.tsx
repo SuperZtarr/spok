@@ -40,6 +40,9 @@
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
  * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage).
+ * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
+ * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
+ * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -97,6 +100,7 @@ import { SaveAsTemplateModal } from './SaveAsTemplateModal';
 import { InsertTemplateModal } from './InsertTemplateModal';
 import { hasHeadings, markItemUnread } from '../lib/itemMenuGroups';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
+import { isFreshDraft, isItemEmpty } from '../lib/emptyNewItem';
 
 type ParentSortMode = 'tree' | 'alpha';
 
@@ -275,6 +279,8 @@ export function ItemEditModal({
   const initializedItemIdRef = useRef<string | null>(null);
   // Version de l'item qui a rempli le formulaire (base de la fusion champ par champ)
   const loadedItemRef = useRef<Item | null>(null);
+  // Élément vide tout juste créé (« Nouveau »…) : supprimé s'il est refermé sans contenu (lib/emptyNewItem.ts)
+  const draftItemIdRef = useRef<string | null>(null);
 
   // Capture viewedAt from the list snapshot BEFORE marking as viewed
   const viewedAtRef = useRef<string | null | undefined>(undefined);
@@ -312,6 +318,11 @@ export function ItemEditModal({
     if (!item) return;
     const initKey = `${item.id}::${item.updatedAt ?? ''}`;
     if (initializedItemIdRef.current === initKey) return; // déjà synchronisé sur cette version
+    // Premier chargement de CET item : brouillon vide tout juste créé par moi → supprimable à la fermeture
+    if (loadedItemRef.current?.id !== item.id) {
+      draftItemIdRef.current = isFreshDraft(item, user?.id, Date.now()) && isItemEmpty(item as any, allItems.filter(i => i.parentId === item.id).length)
+        ? item.id : null;
+    }
     initializedItemIdRef.current = initKey;
 
     const toForm = (it: NonNullable<typeof item>) => ({
@@ -654,6 +665,23 @@ export function ItemEditModal({
   }, [item, type, title, description, diagramXml, url, parentId, status, priority, assignedToId, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
 
   const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges);
+
+  // Fermeture SANS enregistrement (croix, Échap, clic à côté, Fermer / Quitter sans enregistrer) : un brouillon resté
+  // vide côté serveur est supprimé — la création l'avait écrit en base avant d'ouvrir la fiche. Les fermetures après
+  // enregistrement appellent onClose directement et ne passent pas ici.
+  const closeWithoutSaving = useCallback(() => {
+    if (item && draftItemIdRef.current === item.id && isItemEmpty(item as any, allItems.filter(i => i.parentId === item.id).length)) {
+      const draftSpaceId = item.spaceId ?? spaceId;
+      draftItemIdRef.current = null;
+      itemsApi.delete(draftSpaceId, item.id)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['items', draftSpaceId] });
+          queryClient.invalidateQueries({ queryKey: ['space', draftSpaceId] });
+        })
+        .catch(() => { /* suppression impossible : l'élément vide reste, rien d'autre à faire */ });
+    }
+    onClose();
+  }, [item, allItems, spaceId, queryClient, onClose]);
 
   const doSubmit = () => {
     if (!item) return;
@@ -1004,7 +1032,7 @@ export function ItemEditModal({
   return (<>
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={closeWithoutSaving}
       title=""
       size="fullscreen"
       devName="ItemEditModal"
@@ -1820,7 +1848,7 @@ export function ItemEditModal({
                 {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             )}
-            <Button type="button" variant="bordered" onClick={() => guardClose(onClose)}>
+            <Button type="button" variant="bordered" onClick={() => guardClose(closeWithoutSaving)}>
               {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {itemId && liveActions(itemId).map((a) => (

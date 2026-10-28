@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'empty-new-item-discarded',
+    page: "Fiche d'un élément (ItemEditModal)",
+    trigger: "Fermeture sans enregistrement (croix, Échap, clic à côté, Fermer / Quitter sans enregistrer) d'un élément créé par l'utilisateur moins de 5 minutes avant l'ouverture de sa fiche, vide à l'ouverture et toujours vide",
+    effect: "L'élément est supprimé (suppression normale, tracée dans l'historique). Vide = ni titre, description, adresse, fichier/schéma, dates, priorité, assignation, étiquettes, sous-éléments, relations ni contributions (type, statut et parent ne comptent pas). Un ancien élément vide rouvert, ou celui d'un autre, n'est jamais supprimé ; une fermeture après enregistrement non plus",
+    location: 'apps/web/src/lib/emptyNewItem.ts (règle) ; apps/web/src/components/ItemEditModal.tsx (closeWithoutSaving)',
+  },
+  {
     id: 'process-canvas',
     page: 'Espace → vue Process',
     trigger: 'Poser, déplacer ou retirer un item du canevas ; double-clic sur le vide',

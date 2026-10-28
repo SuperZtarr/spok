@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-28 (2)
+- 3 lots poussés : spok-start renommage préventif Docker run (docs), zone de contribution après changement d'item (fix, ItemEditModal en version intermédiaire), élément vide refermé supprimé (feat). Typecheck 6 paquets OK, TNR 1785/1785, en-têtes OK. Non vérifiés à l'écran
+
+### Élément vide refermé / zone de contribution — 2026-10-28
+- Deux lots inscrits PRÊT POUR MEP. Contribution : replyToContributionId restait d'un item à l'autre → zone principale masquée (bug intermittent signalé par Thomas). NON COMMITÉ
+
 ### MEP — 2026-10-28
 - 8 lots poussés : éditeur riche focus, mode Afficher image double, bandeau séance mobile, séance ajout groupé, page communauté cartes, séance nom d'après la date, indicateur de process, carte mentale espaces enfants. Fichiers partagés des 3 lots séance (LiveSessionBar, NewSessionDialog, live-window.help) commités en versions intermédiaires. build:packages, typecheck 6 paquets OK, TNR 1781/1781, en-têtes OK
 
@@ -36,6 +42,7 @@ _(aucun lot en attente)_
 - Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
 
 ### Start — 2026-10-28
+- 19 h 03 : sockets du matin encore dans `run` → renommé d'office avant lancement (`run_broken_20261028-1903`), Docker OK en 5 s, dev OK en 24 s (API /health 200, web 200, navigateur intégré)
 - Même panne Docker (`run\dockerInference` du 24 à 22 h 49) : procédure spok-start appliquée, `run` → `run_broken_20261028-0837`, Docker OK en 5 s, dev OK (API /health 200, web 200, accueil affiché dans le navigateur intégré, console sans erreur)
 
 ### Start — 2026-10-24
