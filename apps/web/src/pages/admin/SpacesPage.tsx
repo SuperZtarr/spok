@@ -1,4 +1,5 @@
 /* Admin espaces (/admin/spaces) : liste globale avec compteurs, détail (SpaceDetailModal), suppression.
+   Filtres : nom, type, communauté (2026-10-29 ; « Hors communauté » = communityId null), anomalie (?anomaly=).
    Aide utilisateur : fiche pages/help/admin-spaces.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -76,6 +77,13 @@ export function SpacesPage() {
   const [page, setPage] = useState(1);
   const [spaceToDelete, setSpaceToDelete] = useState<AdminSpace | null>(null);
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'GROUP' | 'PERSONAL'>('ALL');
+  // Filtre par communauté ('' = toutes, 'none' = hors communauté) — liste des communautés pour le sélecteur
+  const [communityFilter, setCommunityFilter] = useState('');
+  const { data: communitiesData } = useQuery({
+    queryKey: ['admin', 'communities', 'filter-options'],
+    queryFn: () => adminApi.communities.list({ pageSize: 500 }),
+  });
+  const communityOptions = [...(communitiesData?.data ?? [])].sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -88,7 +96,7 @@ export function SpacesPage() {
   const { sortKey, sortOrder, toggle, sortData } = useSort<AdminSpace>('name', 'asc');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'spaces', { page, search: debouncedSearch, anomaly, type: typeFilter === 'ALL' ? undefined : typeFilter }],
+    queryKey: ['admin', 'spaces', { page, search: debouncedSearch, anomaly, type: typeFilter === 'ALL' ? undefined : typeFilter, community: communityFilter || undefined }],
     queryFn: () =>
       adminApi.spaces.list({
         page,
@@ -96,6 +104,7 @@ export function SpacesPage() {
         search: debouncedSearch || undefined,
         anomaly,
         type: typeFilter === 'ALL' ? undefined : typeFilter,
+        communityId: communityFilter || undefined,
       }),
   });
 
@@ -216,6 +225,19 @@ export function SpacesPage() {
               </button>
             )}
           </div>
+          {/* Community filter */}
+          <HelpHint text={pageHint('admin-spaces', 'communityFilter')}>
+            <select
+              aria-label="Filtrer par communauté"
+              value={communityFilter}
+              onChange={(e) => { setCommunityFilter(e.target.value); setPage(1); }}
+              className="h-10 max-w-[14rem] rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Toutes les communautés</option>
+              <option value="none">Hors communauté</option>
+              {communityOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </HelpHint>
           {/* Type filter */}
           <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
             {(['ALL', 'GROUP', 'PERSONAL'] as const).map((t) => (

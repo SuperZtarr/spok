@@ -1,5 +1,6 @@
 /* Administration des espaces : liste globale avec compteurs, détail, suppression (utils/spaceDeletion.ts,
-   en transaction), transfert. */
+   en transaction), transfert. Liste filtrable par nom, type, anomalie et communauté (communityId, 'none' = hors
+   communauté — 2026-10-29). */
 import { FastifyPluginAsync } from 'fastify';
 import type { SpaceDeletePreview } from '@spok/shared';
 import { runDeletion, deleteSpaceTree } from '../../utils/spaceDeletion.js';
@@ -10,6 +11,8 @@ interface ListSpacesQuery {
   search?: string;
   type?: 'PERSONAL' | 'GROUP';
   anomaly?: string;
+  /** Filtre par communauté (id) ; 'none' = espaces hors communauté. */
+  communityId?: string;
 }
 
 interface SpaceParams {
@@ -38,7 +41,7 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /admin/spaces - List all spaces with pagination and search
   fastify.get<{ Querystring: ListSpacesQuery }>('/', async (request) => {
-    const { search, type, anomaly } = request.query;
+    const { search, type, anomaly, communityId } = request.query;
     const page = Number(request.query.page) || 1;
     const pageSize = Number(request.query.pageSize) || 20;
     const skip = (page - 1) * pageSize;
@@ -51,6 +54,10 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (type) {
       where.type = type;
+    }
+
+    if (communityId) {
+      where.communityId = communityId === 'none' ? null : communityId;
     }
 
     // Anomaly filters for coherence tests

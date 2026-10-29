@@ -38,6 +38,7 @@ export const help: HelpEntry = {
   ],
   hints: {
     csv: 'Télécharge la liste au format CSV.',
+    communityFilter: 'Ne lister que les espaces d\'une communauté, ou ceux qui ne sont rattachés à aucune (« Hors communauté »). Se combine avec la recherche et le type.',
     anomalyFilter: 'Filtre posé depuis Diagnostics : seuls les espaces concernés par cette anomalie sont listés.',
     delete: 'Supprimer : une confirmation montre l\'impact (sous-espaces, éléments, contributions) et laisse choisir — supprimer aussi les sous-espaces, ou les faire remonter d\'un niveau. Tout ou rien ; les suppressions restent restaurables depuis la page Audit.',
   },

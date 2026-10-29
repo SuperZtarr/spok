@@ -1410,6 +1410,8 @@ interface AdminSpacesListParams {
   search?: string;
   type?: 'PERSONAL' | 'GROUP';
   anomaly?: string;
+  /** id de communauté, ou 'none' pour les espaces hors communauté */
+  communityId?: string;
 }
 
 interface AdminSpace {
@@ -1555,6 +1557,7 @@ export const adminApi = {
       if (params?.search) searchParams.set('search', params.search);
       if (params?.type) searchParams.set('type', params.type);
       if (params?.anomaly) searchParams.set('anomaly', params.anomaly);
+      if (params?.communityId) searchParams.set('communityId', params.communityId);
       const query = searchParams.toString();
       return fetchApi<AdminSpacesListResponse>(`/admin/spaces${query ? `?${query}` : ''}`);
     },
