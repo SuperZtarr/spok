@@ -35,7 +35,7 @@ import { useDeleteSpace, useReorderSpaces } from '../hooks/useSpaces';
 import { siblingOrder, shiftInOrder } from '../lib/spaceReorder';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityContexts } from '../hooks/useCommunityContexts';
-import { spaceHref } from '../lib/spaceDefaultView';
+import { spaceHref, contextDefaultView } from '../lib/spaceDefaultView';
 import { useThemeStore } from '../stores/theme';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
@@ -80,9 +80,14 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 };
 const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
-function SpaceIcon({ avatarUrl, defaultView }: { avatarUrl?: string | null; defaultView?: string | null }) {
+/** Icône d'un espace : son image, sinon l'icône de sa vue d'ouverture — vue propre, sinon celle du contexte de sa
+ *  communauté (resolveSpaceDefaultView, même règle que SpaceCard, 2026-10-29) ; dossier si rien n'en décide. */
+function SpaceIcon({ avatarUrl, defaultView, communityId }: { avatarUrl?: string | null; defaultView?: string | null; communityId?: string | null }) {
+  const communityContexts = useCommunityContexts();
   if (avatarUrl) return <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />;
-  const mode = defaultView ? VIEW_MODES.find(v => v.value === defaultView) : null;
+  const context = communityId ? communityContexts.get(communityId) : null;
+  const view = defaultView || (context ? contextDefaultView(context) : null);
+  const mode = view ? VIEW_MODES.find(v => v.value === view) : null;
   const Icon = mode ? getViewIcon(mode.icon) : FolderKanban;
   return <Icon className="w-4 h-4 flex-shrink-0" />;
 }
@@ -353,7 +358,7 @@ function SpaceTreeItem({
           to={spaceHref(node, communityContexts)}
           className="flex items-center gap-2 flex-1 min-w-0"
         >
-          <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} />
+          <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} communityId={node.communityId} />
           <span className="truncate">{node.name}</span>
           {/* Indicateur : l'espace a un process (items placés dans sa vue Process) */}
           {!!node.processNodeCount && (
@@ -1143,7 +1148,7 @@ export function Layout() {
                           : 'hover:bg-accent/50'
                       }`}
                     >
-                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
+                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
                       <span className="truncate">{space.name}</span>
                     </Link>
                     <button
@@ -1175,7 +1180,7 @@ export function Layout() {
                           : 'hover:bg-accent/50'
                       }`}
                     >
-                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
+                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
                       <span className="truncate">{space.name}</span>
                     </Link>
                     <button
@@ -1207,7 +1212,7 @@ export function Layout() {
                         : 'hover:bg-accent/50'
                     }`}
                   >
-                    <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} />
+                    <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
                     <span className="truncate">{space.name}</span>
                   </Link>
                 ))}
