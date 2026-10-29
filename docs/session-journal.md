@@ -14,6 +14,19 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-29 (2)
+- 8 lots poussés : libellés en toutes lettres, vue par défaut limitée, bouton Process violet, cartes Process teintées, filtre admin par communauté, fiche réduite types avec contenu, icône d'espace d'après sa vue, service worker hors API. ui.ts commité en version intermédiaire, api.ts par morceaux. Restés HORS MEP (travail en cours, rôles admin) : admin/users.ts, UserDetailModal.tsx, AccessColumnManager.tsx, hunks setCommunityRole / setSpaceRole d'api.ts. Vérifié sur la copie exacte du commit. Service worker : à confirmer en prod (éléments manquants de la vue Process)
+
+### Demandes du 2026-10-29
+- Faits (PRÊT POUR MEP) : 1 bouton Process, 7 filtre communauté admin, 9 couleur statut process, 11 libellés en entier, 12 vue par défaut
+- 2 Fiche en mode JDR : précisé par Thomas → types avec contenu dans la fiche réduite (lot inscrit). Reste mineur : dans la fiche complète, les boutons de type passés à la ligne reviennent sous la colonne des titres
+- 3 Carte mentale : le ré-éventail de l'ancien et du nouveau parent existe déjà (diff structurel, MindMapView ~l.835) ; exception : déposé sur le nœud espace (racine) → pas de ré-éventail. Glisser simulé non concluant → symptôme exact à demander
+- 4 Icône d'espace : fait (lot inscrit)
+- 5 Vue Process : cause probable = service worker (lot inscrit), à confirmer en prod
+- 6 Accès au détail des paramètres — à préciser (peut-être = 8)
+- 8 Fiche utilisateur : accès communautés / espaces façon membres inversés — plan à faire
+- 10 Word / Excel : réponse donnée (éditeur tiers WOPI, OnlyOffice/Collabora, chantier lourd)
+
 ### MEP — 2026-10-29
 - 2 lots poussés : séance couleurs orange et aide du bandeau (feat), fiche « Enregistrer » / « Enregistrer et quitter » (feat). Typecheck OK, TNR 1788/1788, en-têtes OK
 
@@ -58,6 +71,9 @@ _(aucun lot en attente)_
 
 ### MEP — 2026-10-24 (6)
 - Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
+
+### Start — 2026-10-29
+- 13 h 15 : `run` renommé préventivement (`run_broken_20261029-1315`), Docker lancé (processus 13 h 15 48), moteur prêt en 10 s ; Thomas l'a aussi lancé vers 13 h 17. Dev OK en 20 s (API /health 200, web 200, navigateur intégré)
 
 ### Start — 2026-10-28
 - 19 h 26 : ports 2022-3201 réservés par Hyper-V (bank/liste/voyages/Lost Horizon bloqués) car plage dynamique TCP à 1024. Thomas a remis 49152+16384 et relancé winnat. Vérifié : plus que 3000-3001 (administré) et 50000-50059 ; Docker et dev SPOK restés debout
