@@ -1,10 +1,14 @@
 /* Gestion des membres en 3 colonnes (Non-membres → Membres → Propriétaires), partagée espaces/communautés.
    Flèches toujours visibles (atténuées, nettes au survol). onLeave fourni (espaces) = actions sur SA propre ligne :
    « Me rétrograder en membre » (seulement s'il reste un autre propriétaire) et « Quitter » (depuis Membres).
-   Sans onLeave (communautés), aucune action sur sa propre ligne. */
+   Sans onLeave (communautés), aucune action sur sa propre ligne.
+   Mode admin (2026-10-29) : le nom d'une personne ouvre sa fiche « Profil utilisateur » d'administration (UserProfileModal
+   avec targetUserId) — on va aux paramètres de la personne, pas à une vue. Hors mode admin : nom non cliquable. */
 import { useState, useMemo } from 'react';
 import { Users, Crown, User, ChevronRight, ChevronLeft, Loader2, Search } from 'lucide-react';
 import { RoleGuard } from '../RoleGuard';
+import { useAdminMode } from '../DevDbStatus';
+import { UserProfileModal } from '../UserProfileModal';
 
 interface MemberInfo {
   id: string; // membership id (for existing members) or user id (for available)
@@ -37,7 +41,7 @@ interface MembersColumnManagerProps {
 // Flèche d'action : toujours visible (atténuée), nette au survol de la ligne
 const ARROW = 'p-1 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all disabled:opacity-25 disabled:cursor-not-allowed';
 
-function UserCard({ name, email, isSelf }: { name: string; email: string; isSelf?: boolean }) {
+function UserCard({ name, email, isSelf, onOpen }: { name: string; email: string; isSelf?: boolean; onOpen?: () => void }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium flex-shrink-0">
@@ -45,7 +49,11 @@ function UserCard({ name, email, isSelf }: { name: string; email: string; isSelf
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">
-          {name || email}
+          {onOpen ? (
+            <button type="button" onClick={onOpen} className="hover:underline text-left" aria-label={`Ouvrir la fiche de ${name || email}`}>
+              {name || email}
+            </button>
+          ) : (name || email)}
           {isSelf && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
         </p>
         {name && <p className="text-[11px] text-muted-foreground truncate">{email}</p>}
@@ -66,6 +74,10 @@ export function MembersColumnManager({
   onLeave,
   isUpdating,
 }: MembersColumnManagerProps) {
+  // Mode admin : le nom d'une personne ouvre sa fiche « Profil utilisateur » d'administration (accès en colonnes)
+  const adminMode = useAdminMode();
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const openUser = (userId: string) => (adminMode ? () => setOpenUserId(userId) : undefined);
   const [searchAvailable, setSearchAvailable] = useState('');
   const [searchMembers, setSearchMembers] = useState('');
   const [searchOwners, setSearchOwners] = useState('');
@@ -138,7 +150,7 @@ export function MembersColumnManager({
                 className="flex items-center gap-1 p-2 rounded hover:bg-accent/50 group"
               >
                 <div className="flex-1 min-w-0">
-                  <UserCard name={user.name} email={user.email} />
+                  <UserCard name={user.name} email={user.email} onOpen={openUser(user.id)} />
                 </div>
                 {isOwner && (
                   <RoleGuard role="OWNER">
@@ -214,7 +226,7 @@ export function MembersColumnManager({
                     </button>
                   )}
                   <div className="flex-1 min-w-0">
-                    <UserCard name={member.name} email={member.email} isSelf={isSelf} />
+                    <UserCard name={member.name} email={member.email} isSelf={isSelf} onOpen={openUser(member.userId)} />
                   </div>
                   {isOwner && !isSelf && (
                     <RoleGuard role="OWNER">
@@ -292,7 +304,7 @@ export function MembersColumnManager({
                     </button>
                   )}
                   <div className="flex-1 min-w-0">
-                    <UserCard name={member.name} email={member.email} isSelf={isSelf} />
+                    <UserCard name={member.name} email={member.email} isSelf={isSelf} onOpen={openUser(member.userId)} />
                   </div>
                 </div>
               );
@@ -300,6 +312,9 @@ export function MembersColumnManager({
           )}
         </div>
       </div>
+      {openUserId && (
+        <UserProfileModal isOpen onClose={() => setOpenUserId(null)} user={null} targetUserId={openUserId} />
+      )}
     </div>
   );
 }

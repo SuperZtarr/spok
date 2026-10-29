@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-29 (3)
+- 2 lots poussés : accès d'un utilisateur en colonnes (feat), navigation de paramètres en paramètres (feat). AccessColumnManager / UserAccessManager commités entiers avec le 1er lot (prop hrefOf du 2e incluse). Typecheck OK, TNR 1797/1797, en-têtes OK
+
 ### MEP — 2026-10-29 (2)
 - 8 lots poussés : libellés en toutes lettres, vue par défaut limitée, bouton Process violet, cartes Process teintées, filtre admin par communauté, fiche réduite types avec contenu, icône d'espace d'après sa vue, service worker hors API. ui.ts commité en version intermédiaire, api.ts par morceaux. Restés HORS MEP (travail en cours, rôles admin) : admin/users.ts, UserDetailModal.tsx, AccessColumnManager.tsx, hunks setCommunityRole / setSpaceRole d'api.ts. Vérifié sur la copie exacte du commit. Service worker : à confirmer en prod (éléments manquants de la vue Process)
 
@@ -23,8 +26,8 @@ _(aucun lot en attente)_
 - 3 Carte mentale : le ré-éventail de l'ancien et du nouveau parent existe déjà (diff structurel, MindMapView ~l.835) ; exception : déposé sur le nœud espace (racine) → pas de ré-éventail. Glisser simulé non concluant → symptôme exact à demander
 - 4 Icône d'espace : fait (lot inscrit)
 - 5 Vue Process : cause probable = service worker (lot inscrit), à confirmer en prod
-- 6 Accès au détail des paramètres — à préciser (peut-être = 8)
-- 8 Fiche utilisateur : accès communautés / espaces façon membres inversés — plan à faire
+- 6 Accès au détail des paramètres : fait (lot inscrit) — clic dans les paramètres → paramètres du composant, pas sa vue
+- 8 Fiche utilisateur : fait (lot inscrit) — les deux fiches admin (Profil utilisateur, détail) partagent UserAccessManager
 - 10 Word / Excel : réponse donnée (éditeur tiers WOPI, OnlyOffice/Collabora, chantier lourd)
 
 ### MEP — 2026-10-29

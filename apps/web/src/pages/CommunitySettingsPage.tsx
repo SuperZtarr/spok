@@ -7,7 +7,8 @@
    Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout).
    Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
    Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
-   PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine. */
+   PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine.
+   Clic sur une ligne d'espace = SES PARAMÈTRES (/spaces/:id/settings), pas sa vue (demande Thomas 2026-10-29). */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -131,7 +132,7 @@ function SpaceTableRow({ node, level, onDropOn, onDelete, canEdit }: {
           if (draggedId && draggedId !== node.id) onDropOn(draggedId, node, zone);
         }}
         className={`cursor-pointer transition-colors ${dropZone ? DROP_ZONE_CLASS[dropZone] : 'hover:bg-muted/50'}`}
-        onClick={() => navigate(`/spaces/${node.id}`)}
+        onClick={() => navigate(`/spaces/${node.id}/settings`)}
       >
         <td className="px-4 py-3">
           <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 20}px` }}>
@@ -921,12 +922,11 @@ export function CommunitySettingsPage() {
               </div>
             )}
 
-            {canEdit && (
-              <div className="px-4 pt-3">
-                <FieldHelp page="community-settings" field="spacesOrder" className="text-xs text-muted-foreground" />
-                {orderError && <p className="text-xs text-destructive mt-1">{orderError}</p>}
-              </div>
-            )}
+            <div className="px-4 pt-3">
+              <FieldHelp page="community-settings" field="spacesOpenSettings" className="text-xs text-muted-foreground" />
+              {canEdit && <FieldHelp page="community-settings" field="spacesOrder" className="text-xs text-muted-foreground" />}
+              {orderError && <p className="text-xs text-destructive mt-1">{orderError}</p>}
+            </div>
 
             {/* Search bar */}
             <div className="px-4 py-3 border-b">

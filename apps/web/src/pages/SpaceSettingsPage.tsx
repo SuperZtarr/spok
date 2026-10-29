@@ -2,7 +2,8 @@
    Vue par défaut non réglée (defaultView null) : option « Selon la communauté (X) », X = vue du contexte de la
    communauté choisie (lib/spaceDefaultView.ts, Liste si neutre) — ce que SpacePage ouvre réellement ; la choisir
    renvoie null à l'API. Liste des vues = vues disponibles de l'espace (useMenuItems().spaceViews, comme la barre
-   d'espace — 2026-10-29), pas tout le catalogue.
+   d'espace — 2026-10-29), pas tout le catalogue. Liens « Paramètres de la communauté / de l'espace parent » (valeurs
+   enregistrées) : on navigue de paramètres en paramètres, pas vers les vues (demande Thomas 2026-10-29).
    Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
    Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
    Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
@@ -398,7 +399,14 @@ export function SpaceSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Communauté</label>
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <label className="block text-sm font-medium">Communauté</label>
+                  {space.communityId && (
+                    <Link to={`/communities/${space.communityId}/settings`} className="text-xs text-primary hover:underline">
+                      Paramètres de la communauté →
+                    </Link>
+                  )}
+                </div>
                 <Select
                   value={editCommunityId}
                   onChange={(e) => {
@@ -416,7 +424,14 @@ export function SpaceSettingsPage() {
                 <FieldHelp page="space-settings" field="community" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Espace parent</label>
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <label className="block text-sm font-medium">Espace parent</label>
+                  {space.parentId && (
+                    <Link to={`/spaces/${space.parentId}/settings`} className="text-xs text-primary hover:underline">
+                      Paramètres de l'espace parent →
+                    </Link>
+                  )}
+                </div>
                 <Select
                   value={editParentId}
                   onChange={(e) => setEditParentId(e.target.value)}
