@@ -1,6 +1,7 @@
 /*
  * ProcessNode — nœud xyflow de la vue Process : carte d'un item placé (icône du type, titre sur 2 lignes,
- * pastille couleur du statut, menu contextuel habituel + « Retirer du process »).
+ * carte entière teintée de la couleur du statut — demande Thomas 2026-10-29, avant : liseré gauche seul —,
+ * texte sombre pour rester lisible sur le fond pastel, menu contextuel habituel + « Retirer du process »).
  * Poignées : entrée à gauche, sortie à droite — tirer de l'une vers un autre nœud ouvre la modale de relation
  * (gérée par ProcessView). Masquées si !canEdit. Double-clic = ouvrir l'item (onEdit).
  * Toutes les données/actions arrivent par `data` (ProcessNodeData), construites par ProcessView.
@@ -29,15 +30,15 @@ function ProcessNodeComponent({ data }: NodeProps<ProcessFlowNode>) {
 
   return (
     <div
-      className={`group relative w-48 rounded-lg border bg-card text-card-foreground shadow-sm px-2.5 py-2 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
-      style={{ borderLeft: `4px solid ${statusHex}` }}
+      className={`group relative w-48 rounded-lg border border-black/10 text-slate-900 shadow-sm px-2.5 py-2 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
+      style={{ backgroundColor: statusHex }}
       onDoubleClick={(e) => { e.stopPropagation(); onEdit?.(item.id); }}
       data-tour="process-node"
       data-help-zone="process:noeud"
     >
       <Handle type="target" position={Position.Left} className={handleClass} isConnectable={canEdit} />
       <div className="flex items-start gap-1.5">
-        <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-muted-foreground" />
+        <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-slate-600" />
         <span className="flex-1 min-w-0 text-xs font-medium leading-snug line-clamp-2 break-words">
           {item.title || 'Sans titre'}
         </span>
