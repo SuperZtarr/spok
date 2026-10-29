@@ -1545,6 +1545,19 @@ export const adminApi = {
         method: 'DELETE',
       }),
 
+    /** Rôle Membre ↔ Propriétaire (fiche utilisateur en colonnes) — 409 si dernier propriétaire rétrogradé. */
+    setCommunityRole: (userId: string, communityId: string, role: 'OWNER' | 'MEMBER') =>
+      fetchApi<{ id: string; role: string }>(`/admin/users/${userId}/communities/${communityId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      }),
+
+    setSpaceRole: (userId: string, spaceId: string, role: 'OWNER' | 'MEMBER') =>
+      fetchApi<{ id: string; role: string }>(`/admin/users/${userId}/spaces/${spaceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      }),
+
     accessTree: (userId: string) =>
       fetchApi<{ tree: AccessTreeNode[] }>(`/admin/users/${userId}/access-tree`),
   },

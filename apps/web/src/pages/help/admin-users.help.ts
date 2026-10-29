@@ -38,7 +38,13 @@ export const help: HelpEntry = {
     },
   ],
   hints: {
-    new: 'Crée un compte à la main ; la personne pourra se connecter avec l\'e-mail et le mot de passe saisis.',
+    // Fiche utilisateur — colonnes d'accès (AccessColumnManager)
+    accessAddCommunity: 'Donner l\'accès : la personne devient membre de cette communauté (elle la voit dans sa barre latérale, avec les espaces qui lui sont ouverts).',
+    accessAddSpace: 'Donner l\'accès : la personne devient membre de cet espace et peut y travailler.',
+    accessPromote: 'Rendre propriétaire : la personne pourra gérer les réglages et les membres. Les autres propriétaires le restent.',
+    accessDemote: 'Rétrograder en membre : elle perd la gestion des réglages et des membres. Refusé s\'il s\'agit du dernier propriétaire.',
+    accessRemove: 'Retirer l\'accès supprime son adhésion directe. Ses adhésions aux espaces (ou à la communauté) restent à part, et un accès hérité d\'une visibilité ouverte reste possible — voir la page Accès.',
+    new:'Crée un compte à la main ; la personne pourra se connecter avec l\'e-mail et le mot de passe saisis.',
     csv: 'Télécharge la liste au format CSV.',
     anomalyFilter: 'Filtre posé depuis Diagnostics : seuls les comptes concernés par cette anomalie sont listés.',
     mcpAdmin: 'Les administrateurs ont toujours l\'accès Claude (MCP).',

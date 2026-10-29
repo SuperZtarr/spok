@@ -393,10 +393,9 @@ describe('Admin Users routes', () => {
   })
 
   // ─── ADD TO SPACE ──────────────────────────────────────
-  // NOTE: Route defined as ':id/spaces' (no leading /) in users.ts
-  // This creates URL pattern /admin/users:id/spaces (no separator)
+  // Routes d'espace avec '/' de tête depuis le 2026-10-29 (avant : ':id/spaces' → /admin/usersXX/spaces, inappelable)
 
-  describe('POST /admin/users:id/spaces', () => {
+  describe('POST /admin/users/:id/spaces', () => {
     it('should add user to space', async () => {
       allowAdmin()
       prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1' })
@@ -408,7 +407,7 @@ describe('Admin Users routes', () => {
       })
 
       const res = await app.inject({
-        method: 'POST', url: '/admin/usersu1/spaces',
+        method: 'POST', url: '/admin/users/u1/spaces',
         headers: { authorization: `Bearer ${token}` },
         payload: { spaceId: 's1', role: 'MEMBER' },
       })
@@ -422,7 +421,7 @@ describe('Admin Users routes', () => {
       prisma.space.findUnique.mockResolvedValue({ id: 's1', type: 'PERSONAL' })
 
       const res = await app.inject({
-        method: 'POST', url: '/admin/usersu1/spaces',
+        method: 'POST', url: '/admin/users/u1/spaces',
         headers: { authorization: `Bearer ${token}` },
         payload: { spaceId: 's1', role: 'MEMBER' },
       })
@@ -433,7 +432,56 @@ describe('Admin Users routes', () => {
 
   // ─── REMOVE FROM SPACE ────────────────────────────────
 
-  describe('DELETE /admin/users:id/spaces/:spaceId', () => {
+  // ─── CHANGER LE RÔLE (communauté / espace) ─────────────
+  describe('PATCH /admin/users/:id/communities/:communityId et /spaces/:spaceId', () => {
+    it('promeut un membre en propriétaire sans rétrograder les autres', async () => {
+      allowAdmin()
+      prisma.communityMembership.findUnique.mockResolvedValue({ id: 'cm1', role: 'MEMBER' })
+      prisma.communityMembership.update.mockResolvedValue({ id: 'cm1', role: 'OWNER' })
+      const res = await app.inject({
+        method: 'PATCH', url: '/admin/users/u1/communities/c1',
+        headers: { authorization: `Bearer ${token}` }, payload: { role: 'OWNER' },
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().role).toBe('OWNER')
+      expect(prisma.communityMembership.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('refuse de rétrograder le dernier propriétaire (409)', async () => {
+      allowAdmin()
+      prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'sm1', role: 'OWNER', space: { type: 'GROUP' } })
+      prisma.spaceMembership.count.mockResolvedValue(1)
+      const res = await app.inject({
+        method: 'PATCH', url: '/admin/users/u1/spaces/s1',
+        headers: { authorization: `Bearer ${token}` }, payload: { role: 'MEMBER' },
+      })
+      expect(res.statusCode).toBe(409)
+      expect(prisma.spaceMembership.update).not.toHaveBeenCalled()
+    })
+
+    it('rétrograde quand un autre propriétaire reste', async () => {
+      allowAdmin()
+      prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'sm1', role: 'OWNER', space: { type: 'GROUP' } })
+      prisma.spaceMembership.count.mockResolvedValue(2)
+      prisma.spaceMembership.update.mockResolvedValue({ id: 'sm1', role: 'MEMBER' })
+      const res = await app.inject({
+        method: 'PATCH', url: '/admin/users/u1/spaces/s1',
+        headers: { authorization: `Bearer ${token}` }, payload: { role: 'MEMBER' },
+      })
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('rôle invalide refusé (400)', async () => {
+      allowAdmin()
+      const res = await app.inject({
+        method: 'PATCH', url: '/admin/users/u1/communities/c1',
+        headers: { authorization: `Bearer ${token}` }, payload: { role: 'ADMIN' },
+      })
+      expect(res.statusCode).toBe(400)
+    })
+  })
+
+  describe('DELETE /admin/users/:id/spaces/:spaceId', () => {
     it('should remove user from space', async () => {
       allowAdmin()
       prisma.spaceMembership.findUnique.mockResolvedValue({
@@ -442,7 +490,7 @@ describe('Admin Users routes', () => {
       prisma.spaceMembership.delete.mockResolvedValue({})
 
       const res = await app.inject({
-        method: 'DELETE', url: '/admin/usersu1/spaces/s1',
+        method: 'DELETE', url: '/admin/users/u1/spaces/s1',
         headers: { authorization: `Bearer ${token}` },
       })
 
@@ -457,7 +505,7 @@ describe('Admin Users routes', () => {
       })
 
       const res = await app.inject({
-        method: 'DELETE', url: '/admin/usersu1/spaces/s1',
+        method: 'DELETE', url: '/admin/users/u1/spaces/s1',
         headers: { authorization: `Bearer ${token}` },
       })
 

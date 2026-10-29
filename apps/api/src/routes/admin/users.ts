@@ -5,6 +5,8 @@
  * avec l'accès effectif de l'utilisateur — direct, hérité de la visibilité, ou aucun ; communauté
  * publique = visibility !== 'PRIVATE' uniquement, isPublic déprécié jamais lu).
  * /:id/mcp-access : accorde ou retire l'accès MCP distant (efface la demande en attente, trace AuditLog).
+ * Adhésions : POST/DELETE /:id/communities et /:id/spaces ; PATCH …/:communityId et …/:spaceId (2026-10-29) change le
+ * rôle Membre ↔ Propriétaire sans rétrograder les autres, et refuse de rétrograder le dernier propriétaire (409).
  */
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
@@ -498,6 +500,28 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // PATCH /admin/users/:id/communities/:communityId - Changer le rôle d'un membre (fiche utilisateur, colonnes
+  // Membre ↔ Propriétaire). Ne rétrograde personne d'autre (plusieurs propriétaires possibles) ; refuse de
+  // rétrograder le DERNIER propriétaire (la communauté resterait sans propriétaire).
+  fastify.patch<{ Params: { id: string; communityId: string }; Body: { role: 'OWNER' | 'MEMBER' } }>(
+    '/:id/communities/:communityId',
+    async (request, reply) => {
+      const { id, communityId } = request.params;
+      const { role } = request.body;
+      if (role !== 'OWNER' && role !== 'MEMBER') return reply.badRequest('Rôle invalide');
+      const membership = await fastify.prisma.communityMembership.findUnique({
+        where: { userId_communityId: { userId: id, communityId } },
+      });
+      if (!membership) return reply.notFound('User is not a member of this community');
+      if (membership.role === 'OWNER' && role === 'MEMBER') {
+        const owners = await fastify.prisma.communityMembership.count({ where: { communityId, role: 'OWNER' } });
+        if (owners <= 1) return reply.conflict('Dernier propriétaire de la communauté : désignez-en un autre avant de le rétrograder');
+      }
+      const updated = await fastify.prisma.communityMembership.update({ where: { id: membership.id }, data: { role } });
+      return { id: updated.id, role: updated.role };
+    }
+  );
+
   // DELETE /admin/users/:id/communities/:communityId - Remove user from a community
   fastify.delete<{ Params: { id: string; communityId: string } }>(
     '/:id/communities/:communityId',
@@ -522,7 +546,8 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /admin/users/:id/spaces - Add user to a space
   fastify.post<{ Params: UserParams; Body: { spaceId: string; role: 'OWNER' | 'MEMBER' } }>(
-    ':id/spaces',
+    // '/' de tête indispensable : sans lui la route répondait à /admin/usersXX/spaces, jamais appelée (corrigé 2026-10-29)
+    '/:id/spaces',
     async (request, reply) => {
       const { id } = request.params;
       const { spaceId, role } = request.body;
@@ -579,9 +604,31 @@ export const adminUsersRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // PATCH /admin/users/:id/spaces/:spaceId - Changer le rôle d'un membre d'espace (mêmes règles que la communauté)
+  fastify.patch<{ Params: { id: string; spaceId: string }; Body: { role: 'OWNER' | 'MEMBER' } }>(
+    '/:id/spaces/:spaceId',
+    async (request, reply) => {
+      const { id, spaceId } = request.params;
+      const { role } = request.body;
+      if (role !== 'OWNER' && role !== 'MEMBER') return reply.badRequest('Rôle invalide');
+      const membership = await fastify.prisma.spaceMembership.findUnique({
+        where: { userId_spaceId: { userId: id, spaceId } },
+        include: { space: true },
+      });
+      if (!membership) return reply.notFound('User is not a member of this space');
+      if (membership.space.type === 'PERSONAL') return reply.badRequest('Cannot change roles in a personal space');
+      if (membership.role === 'OWNER' && role === 'MEMBER') {
+        const owners = await fastify.prisma.spaceMembership.count({ where: { spaceId, role: 'OWNER' } });
+        if (owners <= 1) return reply.conflict('Dernier propriétaire de l\'espace : désignez-en un autre avant de le rétrograder');
+      }
+      const updated = await fastify.prisma.spaceMembership.update({ where: { id: membership.id }, data: { role } });
+      return { id: updated.id, role: updated.role };
+    }
+  );
+
   // DELETE /admin/users/:id/spaces/:spaceId - Remove user from a space
   fastify.delete<{ Params: { id: string; spaceId: string } }>(
-    ':id/spaces/:spaceId',
+    '/:id/spaces/:spaceId',
     async (request, reply) => {
       const { id, spaceId } = request.params;
 

@@ -1,14 +1,16 @@
-/* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe, jetons d'accès Claude (PersonalTokensSection, profil propre uniquement). */
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+/* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe, jetons d'accès Claude (PersonalTokensSection, profil propre uniquement).
+   Mode admin (AdminUserProfileModal, ouvert depuis la liste des utilisateurs) : accès aux communautés et espaces par
+   UserAccessManager — colonnes Sans accès → Membre → Propriétaire (2026-10-29), partagé avec UserDetailModal. */
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from './ui/Modal';
-import { User, Mail, Shield, Hash, Building2, FolderKanban, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw, LogOut, Plus, Save } from 'lucide-react';
+import { User, Mail, Shield, Hash, Building2, Sun, Moon, Camera, Trash2, Loader2, Check, Lock, CheckCircle, Bell, RotateCcw, LogOut, Save } from 'lucide-react';
 import { authApi, communitiesApi, userApi, adminApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { usePasteUpload } from '../hooks/usePasteUpload';
-import { groupSpacesByCommunity } from '../lib/spaceGrouping';
-import type { AuthUser, NotificationType, NotificationChannel, GlobalRole, CommunityRole, Role } from '@spok/shared';
+import { UserAccessManager } from './admin/UserAccessManager';
+import type { AuthUser, NotificationType, NotificationChannel, GlobalRole } from '@spok/shared';
 import { useThemeStore } from '../stores/theme';
 import { AdminModeToggle, DevModeToggle, DevDbStatus } from './DevDbStatus';
 import { Button } from './ui/Button';
@@ -46,14 +48,6 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
   const [editPassword, setEditPassword] = useState('');
   const [editGlobalRole, setEditGlobalRole] = useState<GlobalRole>('USER');
 
-  const [showAddCommunity, setShowAddCommunity] = useState(false);
-  const [selectedCommunityId, setSelectedCommunityId] = useState('');
-  const [selectedCommunityRole, setSelectedCommunityRole] = useState<CommunityRole>('MEMBER');
-
-  const [showAddSpace, setShowAddSpace] = useState(false);
-  const [selectedSpaceId, setSelectedSpaceId] = useState('');
-  const [selectedSpaceRole, setSelectedSpaceRole] = useState<Role>('MEMBER');
-
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin', 'user', userId],
     queryFn: () => adminApi.users.get(userId),
@@ -69,18 +63,6 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
     }
   }, [user]);
 
-  const { data: communitiesData } = useQuery({
-    queryKey: ['admin', 'communities'],
-    queryFn: () => adminApi.communities.list({ pageSize: 100 }),
-    enabled: isOpen,
-  });
-
-  const { data: spacesData } = useQuery({
-    queryKey: ['admin', 'spaces'],
-    queryFn: () => adminApi.spaces.list({ pageSize: 100 }),
-    enabled: isOpen,
-  });
-
   const updateMutation = useMutation({
     mutationFn: (data: { name?: string; email?: string; password?: string; globalRole?: GlobalRole }) =>
       adminApi.users.update(userId, data),
@@ -88,36 +70,6 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
-  });
-
-  const addToCommunityMutation = useMutation({
-    mutationFn: (data: { communityId: string; role: CommunityRole }) =>
-      adminApi.users.addToCommunity(userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
-      setShowAddCommunity(false);
-      setSelectedCommunityId('');
-    },
-  });
-
-  const removeFromCommunityMutation = useMutation({
-    mutationFn: (communityId: string) => adminApi.users.removeFromCommunity(userId, communityId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] }),
-  });
-
-  const addToSpaceMutation = useMutation({
-    mutationFn: (data: { spaceId: string; role: Role }) =>
-      adminApi.users.addToSpace(userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
-      setShowAddSpace(false);
-      setSelectedSpaceId('');
-    },
-  });
-
-  const removeFromSpaceMutation = useMutation({
-    mutationFn: (spaceId: string) => adminApi.users.removeFromSpace(userId, spaceId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] }),
   });
 
   const hasInfoChanges = user && (
@@ -135,27 +87,6 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
     if (editPassword) updates.password = editPassword;
     if (Object.keys(updates).length > 0) updateMutation.mutate(updates);
   };
-
-  const existingCommunityIds = user?.communityMemberships?.map((m) => m.community.id) || [];
-  const availableCommunities = communitiesData?.data.filter((c) => !existingCommunityIds.includes(c.id)) || [];
-
-  const existingSpaceIds = user?.memberships?.map((m) => m.space.id) || [];
-  const availableSpaces = spacesData?.data.filter(
-    (s) => !existingSpaceIds.includes(s.id) && s.type !== 'PERSONAL'
-  ) || [];
-
-  const communityOptions = [
-    { value: '', label: 'Sélectionner une communauté' },
-    ...availableCommunities.map((c) => ({ value: c.id, label: c.name })),
-  ];
-
-  const spaceBaseOptions = [{ value: '', label: 'Sélectionner un espace' }];
-  const spaceGroups = useMemo(() => {
-    return groupSpacesByCommunity(availableSpaces).map(g => ({
-      label: g.label,
-      options: g.spaces.map(s => ({ value: s.id, label: s.name })),
-    }));
-  }, [availableSpaces]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" size="xl" devName="UserProfileModal">
@@ -231,108 +162,9 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
             </div>
           </div>
 
-          {/* Communautés */}
-          <div className="space-y-3 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Communautés ({user.communityMemberships?.length || 0})
-              </h3>
-              {availableCommunities.length > 0 && (
-                <Button size="sm" variant="bordered" onClick={() => setShowAddCommunity(!showAddCommunity)}>
-                  <Plus className="w-4 h-4 mr-1" />Ajouter
-                </Button>
-              )}
-            </div>
-
-            {showAddCommunity && (
-              <div className="p-3 bg-muted rounded-lg space-y-3">
-                <div className="flex gap-2">
-                  <Select value={selectedCommunityId} onChange={(e) => setSelectedCommunityId(e.target.value)} options={communityOptions} className="flex-1" />
-                  <Select
-                    value={selectedCommunityRole}
-                    onChange={(e) => setSelectedCommunityRole(e.target.value as CommunityRole)}
-                    options={[{ value: 'OWNER', label: 'Propriétaire' }, { value: 'MEMBER', label: 'Membre' }]}
-                    className="w-36"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => selectedCommunityId && addToCommunityMutation.mutate({ communityId: selectedCommunityId, role: selectedCommunityRole })} disabled={!selectedCommunityId || addToCommunityMutation.isPending}>Ajouter</Button>
-                  <Button size="sm" variant="bordered" onClick={() => { setShowAddCommunity(false); setSelectedCommunityId(''); }}>Annuler</Button>
-                </div>
-              </div>
-            )}
-
-            {user.communityMemberships && user.communityMemberships.length > 0 ? (
-              <div className="border border-border rounded-lg divide-y divide-border max-h-40 overflow-auto">
-                {user.communityMemberships.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{m.community.name}</span>
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{COMMUNITY_ROLE_LABELS[m.role] || m.role}</span>
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => removeFromCommunityMutation.mutate(m.community.id)} disabled={removeFromCommunityMutation.isPending}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3 bg-muted rounded-lg">Aucune communauté</p>
-            )}
-          </div>
-
-          {/* Espaces */}
-          <div className="space-y-3 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium flex items-center gap-2">
-                <FolderKanban className="w-4 h-4" />
-                Espaces ({user.memberships?.filter(m => m.space.type !== 'PERSONAL').length || 0})
-              </h3>
-              {availableSpaces.length > 0 && (
-                <Button size="sm" variant="bordered" onClick={() => setShowAddSpace(!showAddSpace)}>
-                  <Plus className="w-4 h-4 mr-1" />Ajouter
-                </Button>
-              )}
-            </div>
-
-            {showAddSpace && (
-              <div className="p-3 bg-muted rounded-lg space-y-3">
-                <div className="flex gap-2">
-                  <Select value={selectedSpaceId} onChange={(e) => setSelectedSpaceId(e.target.value)} options={spaceBaseOptions} groups={spaceGroups} className="flex-1" />
-                  <Select
-                    value={selectedSpaceRole}
-                    onChange={(e) => setSelectedSpaceRole(e.target.value as Role)}
-                    options={[{ value: 'OWNER', label: 'Propriétaire' }, { value: 'MEMBER', label: 'Membre' }]}
-                    className="w-36"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => selectedSpaceId && addToSpaceMutation.mutate({ spaceId: selectedSpaceId, role: selectedSpaceRole })} disabled={!selectedSpaceId || addToSpaceMutation.isPending}>Ajouter</Button>
-                  <Button size="sm" variant="bordered" onClick={() => { setShowAddSpace(false); setSelectedSpaceId(''); }}>Annuler</Button>
-                </div>
-              </div>
-            )}
-
-            {user.memberships && user.memberships.filter(m => m.space.type !== 'PERSONAL').length > 0 ? (
-              <div className="border border-border rounded-lg divide-y divide-border max-h-40 overflow-auto">
-                {user.memberships.filter(m => m.space.type !== 'PERSONAL').map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-2">
-                      <FolderKanban className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{m.space.name}</span>
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{COMMUNITY_ROLE_LABELS[m.role] || m.role}</span>
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => removeFromSpaceMutation.mutate(m.space.id)} disabled={removeFromSpaceMutation.isPending}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3 bg-muted rounded-lg">Aucun espace de groupe</p>
-            )}
+          {/* Accès : colonnes Sans accès → Membre → Propriétaire (gestion des membres inversée, 2026-10-29) */}
+          <div className="pt-4 border-t border-border">
+            <UserAccessManager userId={userId} userName={user.name} user={user} />
           </div>
 
         </div>
