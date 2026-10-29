@@ -166,6 +166,11 @@ export function curatedPrimaryViews<T extends { viewMode?: string | null }>(view
   return ids.map((id) => views.find((v) => v.viewMode === id)).filter((v): v is T => !!v);
 }
 
+// Bouton de la vue Process en couleur (demande Thomas 2026-10-29) : violet, distinct du bleu des créations et de
+// l'orange des séances. Repos = fond clair, vue active = violet plein.
+const PROCESS_VIEW_IDLE = 'bg-violet-100 text-violet-800 hover:bg-violet-200';
+const PROCESS_VIEW_ACTIVE = 'bg-violet-600 text-white shadow-sm';
+
 const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
   'timeline', 'planning', 'graph', 'sunburst', 'relations',
@@ -358,7 +363,9 @@ export function SpaceToolbar({
                         onClick={() => onSetMode(v.viewMode as ViewMode)}
                         aria-label={v.label}
                         className={`relative inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-                          isActive
+                          v.viewMode === 'process'
+                            ? (isActive ? PROCESS_VIEW_ACTIVE : PROCESS_VIEW_IDLE)
+                            : isActive
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                         } ${v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode) ? 'hidden sm:inline-flex' : ''}`}
@@ -449,7 +456,7 @@ export function SpaceToolbar({
                       onClick={() => { onSetMode(v.viewMode as ViewMode); setOtherGroupOpen(null); setOtherGroupPos(null); }}
                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}
                     >
-                      {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                      {Icon && <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${v.viewMode === 'process' ? 'text-violet-600' : ''}`} />}
                       <span className="flex-1 text-left">{v.label}</span>
                       {isActive && <span className="text-primary text-xs">✓</span>}
                     </button>
