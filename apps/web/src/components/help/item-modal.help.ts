@@ -59,6 +59,14 @@ export const help: HelpEntry = {
       },
     },
     {
+      element: '[data-tour="item-content-types"]',
+      popover: {
+        title: 'Type de contenu',
+        description: 'Fiche réduite : choisissez Note, Lien, Document, Image, Schéma ou Article ; la zone correspondante apparaît sous la description.',
+        side: 'bottom',
+      },
+    },
+    {
       element: '[data-tour="item-description"]',
       popover: {
         title: 'Description',
@@ -132,6 +140,7 @@ export const help: HelpEntry = {
     },
   ],
   hints: {
+    contentTypes: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
     openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',

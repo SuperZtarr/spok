@@ -10,6 +10,9 @@
  * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
+ * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
+ * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
+ * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
  * « Ouvrir l'article » : actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré →
  * grisé, hint openArticleUnsaved) ; départ via guardClose (modifications non enregistrées), espace = item.spaceId.
  * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
@@ -77,7 +80,7 @@ import { FieldHelp } from '../help/FieldHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { RuleHint } from './ui/RuleHint';
-import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES, TYPE_GROUPS } from '../constants/ui';
+import { TYPE_LABELS, TYPE_ICONS, STORAGE_KEYS, PRIORITIES, TYPE_GROUPS, CONTENT_TYPES } from '../constants/ui';
 import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
 import { useCtrlS } from '../hooks/useCtrlS';
@@ -1223,6 +1226,36 @@ export function ItemEditModal({
 
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
+
+              {/* Fiche réduite (Forum, JDR) : types « avec contenu » (CONTENT_TYPES) — choisir Image / Document / Lien…
+                  fait apparaître son bloc (mediaSection) sous la Description. Types de pilotage : fiche complète. */}
+              {!showAll && canEdit && (() => {
+                const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
+                const offered = CONTENT_TYPES.filter((t) => typeLabels[t]?.visible !== false);
+                const isContentType = (CONTENT_TYPES as string[]).includes(type);
+                return (
+                  <HelpHint text={itemHints?.contentTypes}>
+                    <div className="flex flex-wrap items-center gap-1.5" data-tour="item-content-types">
+                      {isContentType ? offered.map((key) => {
+                        const config = typeLabels[key];
+                        const Icon = TYPE_ICONS[key];
+                        const isSelected = type === key;
+                        return (
+                          <button key={key} type="button" onClick={() => setType(key)}
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border-2 transition-all ${config?.color ?? 'border-border'} ${isSelected ? `${config?.bgHover ?? ''} font-semibold ring-1 ring-current text-gray-900` : 'opacity-60 hover:opacity-100'}`}>
+                            {Icon && <Icon className="w-3 h-3 flex-shrink-0" />}
+                            {config?.labelShort ?? TYPE_LABELS[key]}
+                          </button>
+                        );
+                      }) : (
+                        <span className="text-xs text-muted-foreground">
+                          Type : <span className="font-medium text-foreground">{typeConfig?.labelShort || TYPE_LABELS[type] || type}</span> — modifiable par « Plus de champs »
+                        </span>
+                      )}
+                    </div>
+                  </HelpHint>
+                );
+              })()}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
               <div className="space-y-2" data-tour="item-description">
