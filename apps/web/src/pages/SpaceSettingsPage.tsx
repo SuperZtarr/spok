@@ -1,7 +1,8 @@
 /* Paramètres d'espace (/spaces/:id/settings) : infos, visibilité, membres, vue par défaut — OWNER.
    Vue par défaut non réglée (defaultView null) : option « Selon la communauté (X) », X = vue du contexte de la
    communauté choisie (lib/spaceDefaultView.ts, Liste si neutre) — ce que SpacePage ouvre réellement ; la choisir
-   renvoie null à l'API.
+   renvoie null à l'API. Liste des vues = vues disponibles de l'espace (useMenuItems().spaceViews, comme la barre
+   d'espace — 2026-10-29), pas tout le catalogue.
    Mode admin = mêmes droits que le OWNER (canEdit) : SpaceMembersManager reçoit alors 'OWNER'.
    Visibilité : 4 choix, dont « Héritée — X » (envoyé null ; X = inheritedVisibility renvoyé par GET /spaces/:id).
    Quitter : membre direct sans droits de gestion → bouton sur l'écran « pas les permissions » ; propriétaire →
@@ -36,6 +37,7 @@ import { SpaceCard } from '../components/ui/SpaceCard';
 import { OrgChartView } from '../components/views/OrgChartView';
 import type { Role } from '@spok/shared';
 import { VIEW_MODES } from '../stores/viewMode';
+import { useMenuItems } from '../hooks/useMenuItems';
 import { contextDefaultView } from '../lib/spaceDefaultView';
 import { useGoBack } from '../hooks/useGoBack';
 
@@ -55,6 +57,7 @@ export function SpaceSettingsPage() {
   const adminMode = useAdminMode();
 
   const { data: space, isLoading: spaceLoading } = useSpace(spaceId!);
+  const { spaceViews } = useMenuItems();
   const updateSpaceMutation = useUpdateSpace(spaceId!);
   const deleteSpaceMutation = useDeleteSpace();
   const queryClient = useQueryClient();
@@ -205,6 +208,16 @@ export function SpaceSettingsPage() {
   // Vue qu'ouvrirait « Selon la communauté », d'après la communauté choisie dans le formulaire
   const communityViewValue = contextDefaultView(communities?.find(c => c.id === editCommunityId)?.context);
   const communityViewLabel = VIEW_MODES.find(v => v.value === communityViewValue)?.label ?? communityViewValue;
+  // Vues proposées : celles réellement disponibles dans l'espace (même liste que la barre d'espace, useMenuItems —
+  // masquages et accès de l'administration « Vues » appliqués), plus la vue déjà réglée si elle n'y est plus.
+  const defaultViewOptions = (() => {
+    const opts = spaceViews.map((v) => ({ value: v.viewMode as string, label: v.label }));
+    const current = space?.defaultView;
+    if (current && !opts.some((o) => o.value === current)) {
+      opts.push({ value: current, label: `${VIEW_MODES.find((v) => v.value === current)?.label ?? current} (indisponible)` });
+    }
+    return opts;
+  })();
 
   useCtrlS(!!hasSpaceInfoChanges && !updateSpaceMutation.isPending, handleSaveSpaceInfo);
 
@@ -463,7 +476,7 @@ export function SpaceSettingsPage() {
                   onChange={(e) => setEditDefaultView(e.target.value)}
                   options={[
                     { value: BY_COMMUNITY, label: `Selon la communauté (${communityViewLabel})` },
-                    ...VIEW_MODES.map((v) => ({ value: v.value, label: v.label })),
+                    ...defaultViewOptions,
                   ]}
                 />
                 <FieldHelp page="space-settings" field="defaultView" />
