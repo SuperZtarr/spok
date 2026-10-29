@@ -108,14 +108,14 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   MEETING: 'Réunion',
   PERIOD: 'Période',
   LINK: 'Lien',
-  CONFIG: 'Config',
+  CONFIG: 'Configuration',
   DOCUMENT: 'Document',
   IMAGE: 'Image',
-  BUG: 'Bug',
+  BUG: 'Anomalie',
   DIAGRAM: 'Diagramme',
   ARTICLE: 'Article',
   // Legacy fallback
-  APPOINTMENT: 'RDV',
+  APPOINTMENT: 'Rendez-vous',
 };
 
 // =============================================================================

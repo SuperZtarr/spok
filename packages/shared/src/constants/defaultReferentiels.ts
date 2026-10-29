@@ -1,4 +1,6 @@
-/* Référentiels par défaut : statuts (couleurs, ordre) et labels de types — base des personnalisations. */
+/* Référentiels par défaut : statuts (couleurs, ordre) et labels de types — base des personnalisations.
+   labelShort en toutes lettres (« Document », « Diagramme »… — décision Thomas 2026-10-29, plus d'abréviations) ;
+   une communauté aux référentiels personnalisés garde ses propres libellés. */
 import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
 
 // =============================================================================
@@ -136,7 +138,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
   },
   CONFIG: {
     label: 'Configuration',
-    labelShort: 'Config',
+    labelShort: 'Configuration',
     color: 'border-gray-400',
     bgHover: 'bg-gray-50',
     visible: true,
@@ -144,7 +146,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
   },
   DOCUMENT: {
     label: 'Documents',
-    labelShort: 'Doc',
+    labelShort: 'Document',
     color: 'border-amber-400',
     bgHover: 'bg-amber-50',
     visible: true,
@@ -160,7 +162,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
   },
   BUG: {
     label: 'Anomalies',
-    labelShort: 'Bug',
+    labelShort: 'Anomalie',
     color: 'border-red-400',
     bgHover: 'bg-red-50',
     visible: true,
@@ -168,7 +170,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
   },
   DIAGRAM: {
     label: 'Diagrammes',
-    labelShort: 'Diag',
+    labelShort: 'Diagramme',
     color: 'border-indigo-400',
     bgHover: 'bg-indigo-50',
     visible: true,
@@ -177,7 +179,7 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
   // Article : page qui assemble des éléments existants (blocs = table article_blocks)
   ARTICLE: {
     label: 'Articles',
-    labelShort: 'Art',
+    labelShort: 'Article',
     color: 'border-fuchsia-400',
     bgHover: 'bg-fuchsia-50',
     visible: true,
