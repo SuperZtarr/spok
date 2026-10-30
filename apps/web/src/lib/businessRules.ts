@@ -181,6 +181,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/constants/ui.ts (PRIORITIES)',
   },
   {
+    id: 'article-columns-beside',
+    page: 'Article (lecture, fiche « Afficher », impression ; réglage en mode Composer)',
+    trigger: 'Bloc réglé « À côté » (sauf le premier)',
+    effect: "Le bloc se place à droite du bloc précédent ; des blocs « à côté » consécutifs forment une rangée de colonnes de même largeur, 3 au plus (un 4e ouvre une nouvelle rangée). Dans une rangée, la largeur et la position gauche/droite du bloc ne s'appliquent pas ; la rangée prend le décalage de hiérarchie de son premier bloc. Sous 640 px, les colonnes s'empilent",
+    location: 'apps/web/src/components/article/articleLayout.ts (groupRows), ArticleFlow.tsx, ArticleEditor.tsx ; champ article_blocks.beside',
+  },
+  {
     id: 'article-blocks-references',
     page: 'Article (/spaces/:spaceId/articles/:itemId)',
     trigger: 'Composition d\'un article (mode Composer)',

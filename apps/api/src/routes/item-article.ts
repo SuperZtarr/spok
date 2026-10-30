@@ -7,11 +7,12 @@
  * - le lecteur voit le contenu des blocs sans accès à l'élément source : canOpen / spaceId seulement s'il lit
  *   lui-même l'espace source ; canEdit = OWNER de l'espace source, ou MEMBER auteur/assigné (canMemberManageItem).
  * GET /spaces/:spaceId/items/:id/article (itemArticleReadRoutes, authentification facultative) → ArticleView.
+ * Chaque bloc porte depth (0-3) : ancêtres de son élément présents dans l'article (utils/articleHierarchy.ts).
  * Les écritures (itemArticleWriteRoutes) sont enregistrées dans la portée authentifiée d'itemsRoutes ; toutes
  * exigent de pouvoir modifier l'article (même règle que canEditArticle, article non verrouillé) :
  * POST …/article/blocks (référence ; 400 si ARTICLE, 403 si élément illisible hors mode admin, 409
  * DUPLICATE_REFERENCE, 409 LESS_VISIBLE sans confirmLessVisible), POST …/article/texts (nouvelle NOTE + bloc),
- * PATCH …/article/blocks/:blockId (width/align), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
+ * PATCH …/article/blocks/:blockId (width/align/beside — beside : à droite du bloc précédent), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
  * (retire la référence, ne supprime jamais l'élément).
  * Sélecteur à parcourir (même droit, espaces lisibles hors mode admin, portée pickerSpaces community | all | space) :
  * GET …/article/browse/spaces?scope= → ArticleBrowseSpace[] (nombre d'éléments, processus éventuel) ;
@@ -39,6 +40,7 @@ import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities, all
 import { rankArticleCandidates, type CandidateRow } from '../utils/articleCandidates.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { isLessVisible, type VisibilityInfo } from '../utils/articleVisibility.js';
+import { blockDepths, loadParentChain } from '../utils/articleHierarchy.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 
 type RefItem = {
@@ -64,7 +66,7 @@ async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<Map<str
     return [s.id, Array.isArray(statuses) && statuses.length ? statuses : DEFAULT_STATUSES];
   }));
 }
-type BlockRow = { id: string; position: number; width: string; align: string; addedById: string | null; item: RefItem };
+type BlockRow = { id: string; position: number; width: string; align: string; beside?: boolean; addedById: string | null; item: RefItem };
 
 export const REF_ITEM_SELECT = {
   id: true, type: true, title: true, description: true, url: true, spaceId: true,
@@ -97,7 +99,8 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
   }
 
   return rows.map((r) => {
-    const base = { id: r.id, position: r.position, width: r.width as ArticleBlockWidth, align: r.align as ArticleBlockAlign };
+    // depth : calculée sur l'article entier par loadArticleView (0 pour un bloc résolu seul)
+    const base = { id: r.id, position: r.position, width: r.width as ArticleBlockWidth, align: r.align as ArticleBlockAlign, depth: 0, beside: !!r.beside };
     const available = !!r.addedById && !!adderReadable.get(r.addedById)?.has(r.item.spaceId);
     if (!available) return { ...base, available: false, item: null };
     const canOpen = readerReadable.has(r.item.spaceId);
@@ -140,9 +143,14 @@ export async function loadArticleView(prisma: any, spaceId: string, articleId: s
     orderBy: { position: 'asc' },
     include: { item: { select: REF_ITEM_SELECT } },
   });
+  const blocks = await resolveBlocks(prisma, rows, readerId, isAdminMode);
+  // Hiérarchie parent/enfant des éléments présents dans l'article (utils/articleHierarchy.ts)
+  const itemIds = rows.map((r: { itemId: string }) => r.itemId);
+  const depths = blockDepths(itemIds, await loadParentChain(prisma, itemIds));
+  rows.forEach((r: { itemId: string }, i: number) => { blocks[i].depth = depths.get(r.itemId) ?? 0; });
   return {
     articleId,
-    blocks: await resolveBlocks(prisma, rows, readerId, isAdminMode),
+    blocks,
     canEditArticle: canEditWithRole(membership.role, article, readerId),
   };
 }
@@ -163,7 +171,7 @@ const addBlockSchema = z.object({
   confirmLessVisible: z.boolean().optional(),
 });
 const addTextSchema = z.object({ position: z.number().int().min(0).optional() });
-const updateBlockSchema = z.object({ width: z.enum(WIDTHS).optional(), align: z.enum(ALIGNS).optional() });
+const updateBlockSchema = z.object({ width: z.enum(WIDTHS).optional(), align: z.enum(ALIGNS).optional(), beside: z.boolean().optional() });
 const orderSchema = z.object({ blockIds: z.array(z.string().min(1)) });
 
 type Params = { spaceId: string; id: string };

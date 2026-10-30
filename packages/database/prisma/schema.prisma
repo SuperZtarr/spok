@@ -384,6 +384,8 @@ model ArticleBlock {
   position  Int
   width     String   @default("full")
   align     String   @default("center")
+  // Colonnes (2026-10-30) : true = placé à droite du bloc précédent ; des blocs consécutifs à true forment une rangée (3 max)
+  beside    Boolean  @default(false)
   addedById String?
   addedBy   User?    @relation("ArticleBlockAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())

@@ -45,7 +45,8 @@
  * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
- * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage).
+ * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage) ;
+ * en mode « Afficher », les blocs de l'article sont lus directement dans la fiche (ArticleReadBlocks).
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
@@ -69,6 +70,7 @@ import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
+import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
 import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link, useNavigate } from 'react-router-dom';
@@ -1177,6 +1179,13 @@ export function ItemEditModal({
                 <ItemReadView
                   sheet={buildSheet()}
                   onOpenChild={onNavigate}
+                  articleContent={item?.type === 'ARTICLE' && itemId ? (
+                    <ArticleReadBlocks
+                      spaceId={item.spaceId ?? spaceId}
+                      articleId={itemId}
+                      onOpenArticle={() => { onClose(); navigate(`/spaces/${item.spaceId ?? spaceId}/articles/${itemId}`); }}
+                    />
+                  ) : undefined}
                   toolbar={(
                     <>
                       <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>

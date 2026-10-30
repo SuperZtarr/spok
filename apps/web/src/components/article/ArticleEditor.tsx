@@ -1,7 +1,8 @@
 /*
  * Mode « Composer » d'un article (ArticlePage, seulement si article.canEditArticle) :
  * - blocs réordonnables par glisser-déposer (@dnd-kit/sortable, poignée) → reorder optimiste (useArticle) ;
- * - barre de chaque bloc : largeur (pleine / large / moyenne), position (centrée / gauche / droite, IMAGE et DIAGRAM
+ * - barre de chaque bloc : « À côté » (sauf le 1er : à droite du bloc précédent, rangée de 3 colonnes max — largeur et
+ *   position alors masquées), largeur (pleine / large / moyenne), position (centrée / gauche / droite, IMAGE et DIAGRAM
  *   seulement), « Ouvrir la fiche » si le lecteur a accès à l'élément, « Retirer » (l'élément n'est pas supprimé) ;
  * - note modifiable sur place (RichTextEditor) si item.canEdit, enregistrée par itemsApi.update après une pause de
  *   frappe ; sinon lecture seule ;
@@ -74,7 +75,7 @@ function NoteEditor({ spaceId, articleId, block }: { spaceId: string; articleId:
   );
 }
 
-function SortableBlock({ spaceId, articleId, block, state }: { spaceId: string; articleId: string; block: ArticleBlockView; state: ArticleState }) {
+function SortableBlock({ spaceId, articleId, block, state, isFirst }: { spaceId: string; articleId: string; block: ArticleBlockView; state: ArticleState; isFirst: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const item = block.item;
   const floatable = item?.type === 'IMAGE' || item?.type === 'DIAGRAM';
@@ -89,7 +90,15 @@ function SortableBlock({ spaceId, articleId, block, state }: { spaceId: string; 
         </button>
         <span className="text-xs truncate max-w-[40%]">{item ? item.title : '—'}</span>
         <span className="flex-1" />
-        {item && (
+        {!isFirst && (
+          <HelpHint text={pageHint('article', 'beside')}>
+            <button type="button" className={seg(block.beside)} aria-pressed={block.beside}
+              onClick={() => state.updateBlock.mutate({ blockId: block.id, beside: !block.beside })}>
+              À côté
+            </button>
+          </HelpHint>
+        )}
+        {item && !block.beside && (
           <HelpHint text={pageHint('article', 'width')}>
             <span className="inline-flex gap-0.5">
               {WIDTHS.map((w) => (
@@ -98,7 +107,7 @@ function SortableBlock({ spaceId, articleId, block, state }: { spaceId: string; 
             </span>
           </HelpHint>
         )}
-        {floatable && (
+        {floatable && !block.beside && (
           <HelpHint text={pageHint('article', 'align')}>
             <span className="inline-flex gap-0.5">
               {ALIGNS.map((a) => (
@@ -209,7 +218,7 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           {article.blocks.map((b, i) => (
             <div key={b.id}>
-              <SortableBlock spaceId={spaceId} articleId={articleId} block={b} state={state} />
+              <SortableBlock spaceId={spaceId} articleId={articleId} block={b} state={state} isFirst={i === 0} />
               {bar(i + 1)}
             </div>
           ))}

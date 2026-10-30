@@ -956,7 +956,7 @@ export const articlesApi = {
       body: JSON.stringify(position === undefined ? {} : { position }),
     }),
 
-  updateBlock: (spaceId: string, articleId: string, blockId: string, body: { width?: ArticleBlockWidth; align?: ArticleBlockAlign }) =>
+  updateBlock: (spaceId: string, articleId: string, blockId: string, body: { width?: ArticleBlockWidth; align?: ArticleBlockAlign; beside?: boolean }) =>
     fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/blocks/${blockId}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
   reorder: (spaceId: string, articleId: string, blockIds: string[]) =>

@@ -6,8 +6,11 @@
  * adresse, description dessous ; MEETING / TASK / BUG / PROJECT / PERIOD → intertitre + ligne d'infos
  * (blockMetaLine) + texte ; autres → intertitre + texte. Jamais : tags, assigné, contributions, relations, enfants.
  * Bloc indisponible → encart « contenu indisponible ».
+ * Hiérarchie (block.depth, 0-3, décision Thomas 2026-10-30) : sous-niveau = décalage vers la droite avec filet à gauche
+ * et intertitre plus petit (depthIndentClasses / depthTitleClasses de articleLayout.ts).
  * HTML toujours nettoyé (sanitizeHtml, règle user-html-sanitized) : un lecteur anonyme peut lire ici le contenu
  * d'un espace privé. Lien vers la fiche d'origine (intertitre) seulement si item.canOpen.
+ * inRow : bloc dans une rangée de colonnes (ArticleFlow) — ni largeur, ni position, ni décalage : la colonne décide.
  * Props : block ; children (optionnel) = contenu de remplacement du texte, fourni par l'éditeur (note modifiable sur
  * place) — l'intertitre reste affiché au-dessus. L'impression (printArticle) copie ce rendu tel quel.
  */
@@ -18,7 +21,7 @@ import type { ArticleBlockView } from '@spok/shared';
 import { sanitizeHtml, safeHref } from '../../lib/sanitizeHtml';
 import { fileNameFromUrl } from '../../lib/itemClipboard';
 import { pageHint } from '../../help/pageHint';
-import { blockClasses } from './articleLayout';
+import { blockClasses, depthIndentClasses, depthTitleClasses } from './articleLayout';
 import { blockMetaLine, siteIconUrl } from './articleBlockContent';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
@@ -34,20 +37,26 @@ function SiteIcon({ url }: { url: string | null }) {
   return <img src={src} alt="" className="w-4 h-4 flex-shrink-0" onError={() => setFailed(true)} />;
 }
 
-export function ArticleBlock({ block, children }: { block: ArticleBlockView; children?: ReactNode }) {
+export function ArticleBlock({ block, children, inRow = false }: { block: ArticleBlockView; children?: ReactNode; inRow?: boolean }) {
   const item = block.item;
   if (!block.available || !item) {
     return (
-      <div className="w-full my-4 flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground" data-tour="article-block">
-        <Lock className="w-4 h-4 flex-shrink-0" />
-        {pageHint('article', 'unavailable')}
+      <div className={inRow ? 'min-w-0' : `w-full my-4 ${depthIndentClasses(block.depth)}`} data-tour="article-block">
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+          <Lock className="w-4 h-4 flex-shrink-0" />
+          {pageHint('article', 'unavailable')}
+        </div>
       </div>
     );
   }
-  return <div className={`${blockClasses(block, item.type)} my-4`} data-tour="article-block">{renderBody(item, children)}</div>;
+  return (
+    <div className={inRow ? 'min-w-0' : `${blockClasses(block, item.type)} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block">
+      {renderBody(item, block.depth, children)}
+    </div>
+  );
 }
 
-function renderBody(item: BlockItem, children?: ReactNode): ReactNode {
+function renderBody(item: BlockItem, depth: number, children?: ReactNode): ReactNode {
   const fiche = item.canOpen && item.spaceId ? `/spaces/${item.spaceId}?item=${item.id}` : null;
   const title = fiche ? <Link to={fiche} className="hover:underline">{item.title}</Link> : item.title;
   const text = children ?? (hasContent(item.description) ? <div className={PROSE} dangerouslySetInnerHTML={html(item.description)} /> : null);
@@ -82,7 +91,7 @@ function renderBody(item: BlockItem, children?: ReactNode): ReactNode {
   const meta = blockMetaLine(item);
   return (
     <section>
-      <h3 className="font-semibold text-base mb-1">{title}</h3>
+      <h3 className={`font-semibold mb-1 ${depthTitleClasses(depth)}`}>{title}</h3>
       {meta && <p className="text-xs text-muted-foreground mb-2">{meta}</p>}
       {text}
       {item.type === 'DOCUMENT' && item.url && (

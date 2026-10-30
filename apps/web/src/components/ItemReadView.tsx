@@ -7,6 +7,7 @@
  * - toolbar : boutons d'action fournis par la modale (Copier la fiche, Imprimer) — affichés en haut à droite
  * - reactions : barre de réactions (lecture seule chez un visiteur) fournie par la modale
  * - onOpenChild : clic sur un enfant (navigation dans la modale)
+ * - articleContent : blocs d'un article (ArticleReadBlocks) sous la description, pour le type ARTICLE
  * Règles : aucun champ modifiable ici — l'édition reste dans la fiche (ItemEditModal, sélecteur Afficher / Modifier).
  * Les textes d'aide (zones du mode Aide) sont dans components/help/item-modal.help.ts (zones read-media / read-content).
  * HTML de description et contributions : toujours nettoyé par sanitizeHtml (l'API ne filtre pas le HTML). */
@@ -20,6 +21,8 @@ interface ItemReadViewProps {
   toolbar?: ReactNode;
   reactions?: ReactNode;
   onOpenChild?: (id: string) => void;
+  /** Contenu d'un article (blocs), affiché sous la description — fourni par la modale pour le type ARTICLE */
+  articleContent?: ReactNode;
 }
 
 const PROSE = 'prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground';
@@ -28,7 +31,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border pb-1 mb-3">{children}</h2>;
 }
 
-export function ItemReadView({ sheet, toolbar, reactions, onOpenChild }: ItemReadViewProps) {
+export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent }: ItemReadViewProps) {
   const [zoomed, setZoomed] = useState(false);
   // item.url n'est pas filtré par l'API : un schéma hors liste blanche (javascript:…) n'est ni affiché ni cliquable
   const media = sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
@@ -93,6 +96,8 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild }: ItemRea
         {sheet.descriptionHtml && (
           <section className={PROSE} dangerouslySetInnerHTML={{ __html: sanitizeHtml(sheet.descriptionHtml) }} />
         )}
+
+        {articleContent}
 
         {sheet.children.length > 0 && (
           <section>

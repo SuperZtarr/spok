@@ -1,6 +1,6 @@
 /* TNR articleLayout : classes de mise en page des blocs d'un article (largeur, habillage gauche/droite, repli mobile). */
 import { describe, it, expect } from 'vitest'
-import { blockClasses, moveBlock } from './articleLayout'
+import { blockClasses, moveBlock, depthIndentClasses, depthTitleClasses, groupRows } from './articleLayout'
 
 describe('blockClasses', () => {
   it('pleine largeur centrée : pas de flottant', () => {
@@ -41,5 +41,40 @@ describe('moveBlock', () => {
   it('indices hors bornes : liste inchangée', () => {
     expect(moveBlock(['a', 'b'], 5, 0)).toEqual(['a', 'b'])
     expect(moveBlock(['a', 'b'], 0, -1)).toEqual(['a', 'b'])
+  })
+})
+
+describe('hiérarchie (depth)', () => {
+  it('niveau 0 : pas de décalage, titre le plus grand', () => {
+    expect(depthIndentClasses(0)).toBe('')
+    expect(depthTitleClasses(0)).toContain('text-xl')
+  })
+  it('niveaux 1 à 3 : décalage croissant (réduit sous sm) et titres de plus en plus petits', () => {
+    expect(depthIndentClasses(1)).toContain('sm:pl-6')
+    expect(depthIndentClasses(2)).toContain('sm:pl-12')
+    expect(depthIndentClasses(3)).toContain('sm:pl-16')
+    expect(depthTitleClasses(1)).toContain('text-lg')
+    expect(depthTitleClasses(3)).toContain('text-sm')
+  })
+  it('profondeur hors bornes ramenée entre 0 et 3', () => {
+    expect(depthIndentClasses(9)).toBe(depthIndentClasses(3))
+    expect(depthTitleClasses(-1)).toBe(depthTitleClasses(0))
+  })
+})
+
+describe('groupRows (colonnes)', () => {
+  const b = (id: string, beside = false) => ({ id, beside })
+  it('blocs sans « à côté » : une rangée par bloc', () => {
+    expect(groupRows([b('a'), b('b')]).map((r) => r.map((x) => x.id))).toEqual([['a'], ['b']])
+  })
+  it('blocs « à côté » rejoignent la rangée du précédent', () => {
+    expect(groupRows([b('a'), b('b', true), b('c'), b('d', true), b('e', true)]).map((r) => r.map((x) => x.id)))
+      .toEqual([['a', 'b'], ['c', 'd', 'e']])
+  })
+  it('3 colonnes au plus : le 4e « à côté » ouvre une nouvelle rangée', () => {
+    expect(groupRows([b('a'), b('b', true), b('c', true), b('d', true)]).map((r) => r.length)).toEqual([3, 1])
+  })
+  it('premier bloc « à côté » : rangée normale', () => {
+    expect(groupRows([b('a', true), b('b')]).map((r) => r.map((x) => x.id))).toEqual([['a'], ['b']])
   })
 })

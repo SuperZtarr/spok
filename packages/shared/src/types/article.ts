@@ -16,6 +16,10 @@ export type ArticleBlockView = {
   width: ArticleBlockWidth;
   align: ArticleBlockAlign;
   available: boolean;
+  /** Niveau dans la hiérarchie de l'article (0 à 3) : ancêtres de l'élément présents dans l'article (2026-10-30) */
+  depth: number;
+  /** Placé à droite du bloc précédent : des blocs consécutifs « à côté » forment une rangée de colonnes (3 max) */
+  beside: boolean;
   item: null | {
     id: string;
     type: ItemType;

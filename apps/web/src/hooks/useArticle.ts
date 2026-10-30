@@ -3,7 +3,7 @@
  * Écritures : addBlock(itemId, { position, confirmLessVisible }) — rejette l'ApiError 409 LESS_VISIBLE à l'appelant, qui
  * demande confirmation puis rappelle avec confirmLessVisible ; addBatch({ source, position, confirmLessVisible }) insère
  * une grappe ou un processus (aperçu préalable par articlesApi.previewBatch) ; addText(position) crée une note dans l'espace de l'article ;
- * updateBlock(blockId, { width, align }) et reorder(blockIds) optimistes (cache restauré en cas d'échec) ;
+ * updateBlock(blockId, { width, align, beside }) et reorder(blockIds) optimistes (cache restauré en cas d'échec) ;
  * removeBlock(blockId) retire la référence (l'élément n'est jamais supprimé). Réservé à ArticlePage / ArticleEditor.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,12 +42,14 @@ export function useArticle(spaceId: string | undefined, articleId: string | unde
   });
 
   const updateBlock = useMutation({
-    mutationFn: (v: { blockId: string; width?: ArticleBlockWidth; align?: ArticleBlockAlign }) =>
-      articlesApi.updateBlock(spaceId!, articleId!, v.blockId, { width: v.width, align: v.align }),
+    mutationFn: (v: { blockId: string; width?: ArticleBlockWidth; align?: ArticleBlockAlign; beside?: boolean }) =>
+      articlesApi.updateBlock(spaceId!, articleId!, v.blockId, { width: v.width, align: v.align, beside: v.beside }),
     onMutate: (v) => ({
       prev: patchCache((a) => ({
         ...a,
-        blocks: a.blocks.map((b) => (b.id === v.blockId ? { ...b, ...(v.width && { width: v.width }), ...(v.align && { align: v.align }) } : b)),
+        blocks: a.blocks.map((b) => (b.id === v.blockId
+          ? { ...b, ...(v.width && { width: v.width }), ...(v.align && { align: v.align }), ...(v.beside !== undefined && { beside: v.beside }) }
+          : b)),
       })),
     }),
     onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev); },

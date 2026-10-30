@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-30 (3)
+- 3 lots Article poussés en UN commit (colonnes « À côté », hiérarchie parent/enfant, blocs lus dans la fiche « Afficher ») : imbriqués ligne à ligne dans 6 fichiers. Schéma : ArticleBlock.beside (booléen, défaut false) appliqué en prod par db push au démarrage de l'API. build:packages + db:generate, typecheck OK, TNR 1814/1814, en-têtes OK. API locale à redémarrer (session Start) pour le nouveau client Prisma
+
 ### MEP — 2026-10-30 (2)
 - 2 lots poussés : aide « Ouvrir l'article » non enregistré (fix), retrait de onNewItem dans les vues (refactor). Section PRÊT POUR MEP remise en ordre (un lot était inscrit au-dessus de la note). Typecheck OK, TNR 1801/1801, en-têtes OK
 

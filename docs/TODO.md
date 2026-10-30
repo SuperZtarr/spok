@@ -144,6 +144,7 @@
 - [x] Carte mentale : un élément déplacé ne reste plus à l'endroit du lâcher (replacé sous sa nouvelle cible, ou sur une place libre) — 2026-10-29
 - [x] Fiche d'élément : phrase d'aide sous « Ouvrir l'article » tant que l'élément n'est pas enregistré en Article — 2026-10-30
 - [x] Vues : propriété onNewItem devenue inutile retirée (le bouton « Nouveau » est dans la barre d'espace) — 2026-10-30
+- [x] Article : colonnes « À côté du précédent » (champ ArticleBlock.beside, rangées de 3 au plus), hiérarchie parent / enfant des éléments (décalage et taille des titres), blocs de l'article lus directement dans la fiche en mode « Afficher » — 2026-10-30
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)

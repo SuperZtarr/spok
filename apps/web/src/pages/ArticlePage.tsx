@@ -1,6 +1,7 @@
 /*
  * Page Article (/spaces/:spaceId/articles/:itemId) : lecture continue d'un élément de type ARTICLE — titre, chapeau
- * (description de l'article), puis ses blocs (références vers des éléments existants, cf. useArticle / ArticleBlock).
+ * (description de l'article), puis ses blocs (références vers des éléments existants, cf. useArticle / ArticleFlow :
+ * rangées de colonnes et hiérarchie).
  * Lisible à l'écran, sur mobile (blocs en pleine largeur sous 640 px) et à l'impression (printArticle).
  * Mode « Composer » (ArticleEditor) seulement si article.canEditArticle. Aide : fiche pages/help/article.help.ts.
  * Accès : celui de l'article (anonyme compris pour un espace public) ; 404 API → message « introuvable ».
@@ -12,7 +13,7 @@ import { ArrowLeft, Printer, PenLine, Eye } from 'lucide-react';
 import { itemsApi } from '../lib/api';
 import { useArticle } from '../hooks/useArticle';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { ArticleBlock } from '../components/article/ArticleBlock';
+import { ArticleFlow } from '../components/article/ArticleFlow';
 import { ArticleEditor } from '../components/article/ArticleEditor';
 import { printArticle } from '../components/article/printArticle';
 import { PageHelpButton } from '../help/PageHelpButton';
@@ -77,7 +78,7 @@ export function ArticlePage() {
             <div className="flow-root">
               {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
               {article && article.blocks.length === 0 && <p className="text-sm text-muted-foreground">{pageHint('article', 'empty')}</p>}
-              {article?.blocks.map((b) => <ArticleBlock key={b.id} block={b} />)}
+              {article && <ArticleFlow blocks={article.blocks} />}
             </div>
           )}
         </div>
