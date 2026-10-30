@@ -144,7 +144,7 @@ export const help: HelpEntry = {
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
     openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',
-    openArticleUnsaved: 'Enregistrez d\'abord : cet élément ne devient un article qu\'une fois le type « Article » enregistré.',
+    openArticleUnsaved: 'Enregistrez d\'abord l\'élément : la construction de l\'article (choix et mise en page des blocs) s\'ouvre une fois qu\'il est enregistré avec le type « Article ».',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',

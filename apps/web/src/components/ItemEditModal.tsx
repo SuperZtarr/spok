@@ -14,7 +14,8 @@
  * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
  * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
  * « Ouvrir l'article » : actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré →
- * grisé, hint openArticleUnsaved) ; départ via guardClose (modifications non enregistrées), espace = item.spaceId.
+ * grisé, hint openArticleUnsaved, aussi affiché en phrase visible dessous, et seul pour un élément en création) ;
+ * départ via guardClose (modifications non enregistrées), espace = item.spaceId.
  * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
  * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
@@ -961,6 +962,11 @@ export function ItemEditModal({
             Ouvrir l'article
           </button>
         </HelpHint>
+      )}
+      {/* Pas encore enregistré en Article (création, ou type changé sans enregistrer) : phrase visible, le bouton grisé
+          ne montre pas son infobulle */}
+      {type === 'ARTICLE' && (!itemId || item?.type !== 'ARTICLE') && (
+        <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
       )}
       {/* URL — seulement pour le type LINK */}
       {type === 'LINK' && <div className="space-y-2">
