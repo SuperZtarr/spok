@@ -33,7 +33,8 @@ export function diffItems(prev: DiffInput[], next: DiffInput[], currentSpaceId?:
   for (const it of next) {
     const before = prevMap.get(it.id);
     if (!before) { addedIds.push(it.id); continue; }
-    if ((before.parentId || null) !== (it.parentId || null)) {
+    // Changer d'espace (dépôt sur un sous-espace) change aussi la branche effective, même si parentId reste vide
+    if ((before.parentId || null) !== (it.parentId || null) || (before.spaceId || null) !== (it.spaceId || null)) {
       reparented.push({ id: it.id, oldParentId: before.parentId || null, newParentId: it.parentId || null });
     }
   }
@@ -114,6 +115,33 @@ export function diffRelations(prev: RelDiffInput[], next: RelDiffInput[]): Relat
     if (!nextRels.has(id)) removedIds.push(id);
   }
   return { added, removedIds };
+}
+
+/**
+ * Place libre autour d'un centre (dépôt d'un élément sur la racine ou sur une branche qui n'a pas pu être
+ * ré-éventaillée — 2026-10-29) : au milieu du plus grand écart angulaire entre les voisins, à leur distance médiane
+ * (fallbackRadius s'il n'y en a pas). Aucun voisin : en haut du centre. Les voisins ne bougent jamais.
+ */
+export function freeSpotAround(
+  center: { x: number; y: number },
+  neighbours: { x: number; y: number }[],
+  fallbackRadius: number,
+): { x: number; y: number } {
+  if (neighbours.length === 0) return { x: center.x, y: center.y - fallbackRadius };
+  const polar = neighbours
+    .map((p) => ({ a: Math.atan2(p.y - center.y, p.x - center.x), r: Math.hypot(p.x - center.x, p.y - center.y) }))
+    .sort((p, q) => p.a - q.a);
+  let bestGap = -1;
+  let bestAngle = polar[0].a + Math.PI;
+  for (let i = 0; i < polar.length; i++) {
+    const a = polar[i].a;
+    const next = i + 1 < polar.length ? polar[i + 1].a : polar[0].a + 2 * Math.PI;
+    const gap = next - a;
+    if (gap > bestGap) { bestGap = gap; bestAngle = a + gap / 2; }
+  }
+  const radii = polar.map((p) => p.r).sort((x, y) => x - y);
+  const radius = radii[Math.floor(radii.length / 2)] || fallbackRadius;
+  return { x: center.x + radius * Math.cos(bestAngle), y: center.y + radius * Math.sin(bestAngle) };
 }
 
 /**

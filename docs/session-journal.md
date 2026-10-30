@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-30
+- 2 lots poussés : dev:start lance Docker seul (chore), carte mentale élément déplacé replacé (fix). Typecheck OK, TNR 1801/1801, en-têtes OK
+
 ### MEP — 2026-10-29 (3)
 - 2 lots poussés : accès d'un utilisateur en colonnes (feat), navigation de paramètres en paramètres (feat). AccessColumnManager / UserAccessManager commités entiers avec le 1er lot (prop hrefOf du 2e incluse). Typecheck OK, TNR 1797/1797, en-têtes OK
 
@@ -76,6 +79,7 @@ _(aucun lot en attente)_
 - Lot poussé : Session Start + dépannage Docker (docs seules, sans CI)
 
 ### Start — 2026-10-29
+- 21 h 56 : `run` renommé (`run_broken_20261029-2156`), Docker prêt en 10 s, dev OK en 32 s (API /health 200, web 200, navigateur intégré)
 - 13 h 15 : `run` renommé préventivement (`run_broken_20261029-1315`), Docker lancé (processus 13 h 15 48), moteur prêt en 10 s ; Thomas l'a aussi lancé vers 13 h 17. Dev OK en 20 s (API /health 200, web 200, navigateur intégré)
 
 ### Start — 2026-10-28

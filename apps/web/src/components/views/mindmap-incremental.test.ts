@@ -1,12 +1,39 @@
 /* Tests du diff incrémental MindMap : détection ajouts/suppressions/reparentages/relations
  * et calcul des parents à ré-éventailler (spec 2026-07-15-mindmap-incremental-layout). */
 import { describe, it, expect } from 'vitest';
-import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
+import { diffItems, diffRelations, initialPositionForNew, freeSpotAround } from './mindmap-incremental';
+
+describe('freeSpotAround', () => {
+  const c = { x: 0, y: 0 };
+  it('sans voisin : au-dessus du centre, au rayon par défaut', () => {
+    expect(freeSpotAround(c, [], 100)).toEqual({ x: 0, y: -100 });
+  });
+  it('dans le plus grand écart angulaire, à la distance médiane des voisins', () => {
+    // voisins à droite (0°) et en bas (90°) → plus grand écart de 90° à 360° → milieu 225° (en haut à gauche)
+    const p = freeSpotAround(c, [{ x: 200, y: 0 }, { x: 0, y: 200 }], 100);
+    expect(Math.round(Math.hypot(p.x, p.y))).toBe(200);
+    expect(p.x).toBeLessThan(0);
+    expect(p.y).toBeLessThan(0);
+  });
+  it('un seul voisin : à l\'opposé', () => {
+    const p = freeSpotAround(c, [{ x: 150, y: 0 }], 100);
+    expect(Math.round(p.x)).toBe(-150);
+    expect(Math.round(p.y)).toBe(0);
+  });
+});
 
 const item = (id: string, parentId: string | null = null, spaceId = 'S1') =>
   ({ id, parentId, spaceId }) as any;
 
 describe('diffItems', () => {
+  it('changer d\'espace (dépôt sur un sous-espace) = changement de branche, nœud du sous-espace affecté', () => {
+    const prev = [item('a'), item('x')];
+    const next = [item('a'), item('x', null, 'S2')];
+    const d = diffItems(prev, next, 'S1');
+    expect(d.reparented).toEqual([{ id: 'x', oldParentId: null, newParentId: null }]);
+    expect(d.affectedParentIds).toEqual(['child-space-S2']);
+  });
+
   it('détecte un ajout et marque son parent comme affecté', () => {
     const prev = [item('a'), item('b', 'a')];
     const next = [item('a'), item('b', 'a'), item('c', 'a')];

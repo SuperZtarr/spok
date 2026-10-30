@@ -6,7 +6,9 @@
  * rendu, sur changement de deps (repli/portails/focus/espaces enfants — ces derniers arrivent souvent après le
  * premier rendu) et au bouton « Réorganiser » ;
  * tout changement structurel (ajout/suppression/reparentage) est traité par diff
- * (mindmap-incremental.ts) + ré-éventail local des seuls parents affectés.
+ * (mindmap-incremental.ts) + ré-éventail local des seuls parents affectés. Déplacement (2026-10-29) : changer d'espace
+ * compte comme un changement de branche ; un élément dont la nouvelle branche n'est pas ré-éventaillée (racine, échec)
+ * est posé sur une place libre (placeMovedRef, freeSpotAround) — il ne reste jamais à l'endroit du lâcher.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -74,7 +76,7 @@ import {
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
 import { SPACE_NODE_ID, calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
-import { diffItems, diffRelations, initialPositionForNew } from './mindmap-incremental';
+import { diffItems, diffRelations, initialPositionForNew, freeSpotAround } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 import { HelpHint } from '../../help/HelpHint';
 import { help as mindmapHelp } from './help/mindmap.help';
@@ -394,7 +396,7 @@ function MindMapViewInner({
 
   const setNodesRef = useRef<React.Dispatch<React.SetStateAction<Node[]>>>(() => {});
   const setEdgesRef = useRef<React.Dispatch<React.SetStateAction<Edge[]>>>(() => {});
-  const reorganizeRef = useRef<(id: string) => void>(() => {});
+  const reorganizeRef = useRef<(id: string) => boolean>(() => false);
   const dragDescendants = useRef<{ ids: string[]; offsets: Map<string, { dx: number; dy: number }>; startPos: { x: number; y: number } } | null>(null);
   const handleReorganizeChildren = useCallback((id: string) => reorganizeRef.current(id), []);
 
@@ -482,12 +484,12 @@ function MindMapViewInner({
     if (parentId.startsWith('child-space-')) {
       const portalSpaceId = parentId.replace('child-space-', '');
       const portalItems = portalItemsBySpace.get(portalSpaceId);
-      if (!portalItems || portalItems.length === 0) return;
+      if (!portalItems || portalItems.length === 0) return false;
       const portalTree = buildTree(portalItems);
-      if (portalTree.length === 0) return;
+      if (portalTree.length === 0) return false;
       visibleChildren = portalTree;
       const parentPosRaw = absPositions.get(parentId);
-      if (!parentPosRaw) return;
+      if (!parentPosRaw) return false;
       parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
       savedPositions.current[parentId] = parentPos;
       const spacePos = absPositions.get('__space__') || { x: 0, y: 0 };
@@ -502,11 +504,11 @@ function MindMapViewInner({
           if (treeNode) break;
         }
       }
-      if (!treeNode || treeNode.children.length === 0) return;
+      if (!treeNode || treeNode.children.length === 0) return false;
       visibleChildren = collapsedIds.has(parentId) ? [] : treeNode.children;
-      if (visibleChildren.length === 0) return;
+      if (visibleChildren.length === 0) return false;
       const parentPosRaw = absPositions.get(parentId);
-      if (!parentPosRaw) return;
+      if (!parentPosRaw) return false;
       parentPos = { x: parentPosRaw.x, y: parentPosRaw.y };
       savedPositions.current[parentId] = parentPos;
       const parentItem = items.find(i => i.id === parentId);
@@ -597,6 +599,45 @@ function MindMapViewInner({
       setEdges(currentEdges => recalculateEdgeHandles(currentEdges, newAbsPositions));
       return updated;
     });
+    return true;
+  };
+
+  // Élément déplacé (reparentage) que le ré-éventail de sa nouvelle branche n'a pas repositionné — racine de l'espace,
+  // branche introuvable ou position inconnue : posé sur une place libre autour de son nouveau parent (freeSpotAround,
+  // côté du grand-parent évité), puis ses propres enfants ré-éventaillés autour de lui. Il ne reste jamais à l'endroit
+  // du lâcher (demande Thomas 2026-10-29). Pattern closure courant (lit getNodes()), comme reorganizeRef.
+  const placeMovedRef = useRef<(movedId: string, parentNodeId: string) => void>(() => {});
+  placeMovedRef.current = (movedId: string, parentNodeId: string) => {
+    const absPositions = getAbsolutePositions(getNodes());
+    if (!absPositions.has(movedId)) return; // masqué (branche repliée) : rien à placer
+    const center = absPositions.get(parentNodeId);
+    if (!center) return;
+    const siblingIds = parentNodeId === '__space__'
+      ? fullTree.map(t => t.id)
+      : (findTreeNode(fullTree, parentNodeId)?.children.map(c => c.id) ?? []);
+    const neighbours = siblingIds
+      .filter(id => id !== movedId)
+      .map(id => absPositions.get(id))
+      .filter((p): p is { x: number; y: number } => !!p);
+    if (parentNodeId !== '__space__') {
+      const grandParentId = items.find(i => i.id === parentNodeId)?.parentId || '__space__';
+      const gp = absPositions.get(grandParentId);
+      if (gp) neighbours.push(gp);
+    }
+    const pos = freeSpotAround(center, neighbours, parentNodeId === '__space__' ? RADIAL_STEP : RADIAL_STEP * 0.8);
+    savedPositions.current[movedId] = pos;
+    savePositions();
+    setNodes(currentNodes => {
+      const updated = currentNodes.map(n => {
+        if (n.id !== movedId) return n;
+        const parentAbs = n.parentId ? absPositions.get(n.parentId) : undefined;
+        return { ...n, position: parentAbs ? { x: pos.x - parentAbs.x, y: pos.y - parentAbs.y } : pos };
+      });
+      const newAbsPositions = getAbsolutePositions(updated);
+      setEdges(currentEdges => recalculateEdgeHandles(currentEdges, newAbsPositions));
+      return updated;
+    });
+    setTimeout(() => reorganizeRef.current(movedId), 0);
   };
 
   // Wrap onNodesChange to recalculate edge handles when nodes are dragged
@@ -612,10 +653,11 @@ function MindMapViewInner({
     }
   }, [onNodesChangeBase, setNodes, setEdges]);
 
-  // Signature structurelle : id + parentId suffisent (les relations ont leur propre signature,
-  // le nombre d'enfants est couvert par les ids des enfants eux-mêmes).
+  // Signature structurelle : id + parentId + spaceId (les relations ont leur propre signature, le nombre d'enfants
+  // est couvert par les ids des enfants eux-mêmes). spaceId depuis 2026-10-29 : déposer un élément sur un sous-espace
+  // ne change que son espace — sans lui, aucun changement n'était vu et rien ne bougeait avant rechargement.
   const structureSignature = useMemo(
-    () => items.map(i => `${i.id}:${i.parentId || ''}`).sort().join('|'),
+    () => items.map(i => `${i.id}:${i.parentId || ''}:${i.spaceId || ''}`).sort().join('|'),
     [items]
   );
 
@@ -797,7 +839,10 @@ function MindMapViewInner({
             const treeNode = findAnyTreeNode(r.id);
             const childPos = newAbsPositions.get(r.id);
             if (!treeNode || !childPos) continue;
-            const parentNodeId = r.newParentId && newAbsPositions.has(r.newParentId) ? r.newParentId : '__space__';
+            const movedItem = itemMap.get(r.id);
+            const parentNodeId = r.newParentId && newAbsPositions.has(r.newParentId) ? r.newParentId
+              : movedItem?.spaceId && movedItem.spaceId !== spaceId && newAbsPositions.has(`child-space-${movedItem.spaceId}`)
+                ? `child-space-${movedItem.spaceId}` : '__space__';
             const parentPos = newAbsPositions.get(parentNodeId);
             if (parentPos) nextEdges.push(buildTreeEdge(parentNodeId, treeNode, parentPos, childPos));
           }
@@ -831,10 +876,18 @@ function MindMapViewInner({
       });
 
       // 5. Ré-éventail local différé des parents affectés (après commit du state,
-      //    reorganizeRef lit getNodes() — pattern closure courant obligatoire)
-      if (diff.affectedParentIds.length > 0) {
+      //    reorganizeRef lit getNodes() — pattern closure courant obligatoire).
+      //    Puis tout élément déplacé dont la nouvelle branche n'a pas été ré-éventaillée (racine de l'espace, échec)
+      //    est posé sur une place libre (placeMovedRef) au lieu de rester à l'endroit du lâcher.
+      if (diff.affectedParentIds.length > 0 || diff.reparented.length > 0) {
         setTimeout(() => {
-          for (const pid of diff.affectedParentIds) reorganizeRef.current(pid);
+          const refanned = new Set(diff.affectedParentIds.filter(pid => reorganizeRef.current(pid)));
+          for (const r of diff.reparented) {
+            const moved = itemMap.get(r.id);
+            const parentNodeId = r.newParentId
+              || (moved?.spaceId && moved.spaceId !== spaceId ? `child-space-${moved.spaceId}` : '__space__');
+            if (!refanned.has(parentNodeId)) placeMovedRef.current(r.id, parentNodeId);
+          }
         }, 0);
       }
       return;
