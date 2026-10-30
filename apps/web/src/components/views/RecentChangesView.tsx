@@ -33,7 +33,6 @@ interface RecentChangesViewProps {
   onOpenInNewTab?: (id: string) => void;
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
@@ -77,7 +76,7 @@ export function RecentChangesView({
   spaceId,
   portalGroups,
   referentiels,
-  canEdit = true, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp,
+  canEdit = true, spaceName, viewContainerRef, onStartTour, pulseHelp,
   ...rest
 }: RecentChangesViewProps) {
   const savedAtMount = useRef<Date | null>(null);

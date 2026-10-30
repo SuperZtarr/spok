@@ -59,7 +59,6 @@ interface TypesViewProps {
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  onNewItem?: () => void;
   spaceId?: string;
 }
 

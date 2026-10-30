@@ -38,7 +38,6 @@ interface CalendarViewProps {
   canEdit?: boolean;
   spaceId?: string;
   spaceRole?: string;
-  onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
   spaceName?: string;

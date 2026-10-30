@@ -70,7 +70,6 @@ export interface ProcessViewProps extends ItemMenuCallbacks {
   highlightStatus?: string;
   searchMatchIds?: Set<string>;
   onCreateNote?: () => Promise<{ id: string }>;
-  onNewItem?: () => void;
   onCreateRelation?: (fromId: string, toId: string, type: string, label?: string) => void;
   onUpdateRelation?: (itemId: string, relationId: string, data: { type?: string; label?: string | null }) => void;
   onDeleteRelation?: (itemId: string, relationId: string) => void;
@@ -89,7 +88,7 @@ export function ProcessView(props: ProcessViewProps) {
 function ProcessCanvas({
   items, relations, spaceId, referentiels, canEdit = false, canEditItem,
   highlightType, highlightStatus, searchMatchIds,
-  onCreateNote, onNewItem, onCreateRelation, onUpdateRelation, onDeleteRelation, onStartTour, pulseHelp,
+  onCreateNote, onCreateRelation, onUpdateRelation, onDeleteRelation, onStartTour, pulseHelp,
   ...menuCallbacks
 }: ProcessViewProps) {
   const { positions, lanes: laneRows, place, remove, placeMany, addLane, reorderLanes, removeLane, moveLanes } = useProcessNodes(spaceId);

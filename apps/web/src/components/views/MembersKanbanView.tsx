@@ -67,7 +67,6 @@ interface MembersKanbanViewProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   spaceRole?: string;
-  onNewItem?: () => void;
   exportSpaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;

@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-10-30 (2)
+- 2 lots poussés : aide « Ouvrir l'article » non enregistré (fix), retrait de onNewItem dans les vues (refactor). Section PRÊT POUR MEP remise en ordre (un lot était inscrit au-dessus de la note). Typecheck OK, TNR 1801/1801, en-têtes OK
+
 ### MEP — 2026-10-30
 - 2 lots poussés : dev:start lance Docker seul (chore), carte mentale élément déplacé replacé (fix). Typecheck OK, TNR 1801/1801, en-têtes OK
 
@@ -26,12 +29,12 @@ _(aucun lot en attente)_
 ### Demandes du 2026-10-29
 - Faits (PRÊT POUR MEP) : 1 bouton Process, 7 filtre communauté admin, 9 couleur statut process, 11 libellés en entier, 12 vue par défaut
 - 2 Fiche en mode JDR : précisé par Thomas → types avec contenu dans la fiche réduite (lot inscrit). Reste mineur : dans la fiche complète, les boutons de type passés à la ligne reviennent sous la colonne des titres
-- 3 Carte mentale : le ré-éventail de l'ancien et du nouveau parent existe déjà (diff structurel, MindMapView ~l.835) ; exception : déposé sur le nœud espace (racine) → pas de ré-éventail. Glisser simulé non concluant → symptôme exact à demander
+- 3 Carte mentale : dépôt sur un sous-espace confirmé en prod par Thomas le 2026-10-30. Historique : le ré-éventail de l'ancien et du nouveau parent existe déjà (diff structurel, MindMapView ~l.835) ; exception : déposé sur le nœud espace (racine) → pas de ré-éventail. Glisser simulé non concluant → symptôme exact à demander
 - 4 Icône d'espace : fait (lot inscrit)
-- 5 Vue Process : cause probable = service worker (lot inscrit), à confirmer en prod
+- 5 Vue Process : corrigé par le service worker (API exclue) — confirmé en prod par Thomas le 2026-10-30
 - 6 Accès au détail des paramètres : fait (lot inscrit) — clic dans les paramètres → paramètres du composant, pas sa vue
 - 8 Fiche utilisateur : fait (lot inscrit) — les deux fiches admin (Profil utilisateur, détail) partagent UserAccessManager
-- 10 Word / Excel : réponse donnée (éditeur tiers WOPI, OnlyOffice/Collabora, chantier lourd)
+- 10 Word / Excel : abandonné par Thomas le 2026-10-30
 
 ### MEP — 2026-10-29
 - 2 lots poussés : séance couleurs orange et aide du bandeau (feat), fiche « Enregistrer » / « Enregistrer et quitter » (feat). Typecheck OK, TNR 1788/1788, en-têtes OK

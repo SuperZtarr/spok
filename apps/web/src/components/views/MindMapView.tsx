@@ -129,7 +129,6 @@ interface MindMapViewProps {
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
   // Toolbar props
-  onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
@@ -1686,7 +1685,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
   spaceViews, allowedViews, onSetMode, defaultView,
-  onNewItem, onStartTour, pulseHelp,
+  onStartTour, pulseHelp,
 }, ref) {
   return (
     <div className="h-full w-full flex flex-col">
@@ -1709,7 +1708,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
  onOpenInNewTab={onOpenInNewTab} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}
           referentiels={referentiels} canEdit={canEdit} canEditItem={canEditItem}
-          onNewItem={onNewItem} onStartTour={onStartTour} pulseHelp={pulseHelp}
+          onStartTour={onStartTour} pulseHelp={pulseHelp}
           innerRef={ref}
         />
       </ReactFlowProvider>

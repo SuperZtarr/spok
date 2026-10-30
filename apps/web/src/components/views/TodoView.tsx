@@ -32,14 +32,13 @@ interface TodoViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   portalGroups?: PortalGroup[];
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
 
-export function TodoView({ items, portalGroups, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: TodoViewProps) {
+export function TodoView({ items, portalGroups, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: TodoViewProps) {
   const todos = useMemo(() => {
     if (!items) return [];
     return items.filter(item =>

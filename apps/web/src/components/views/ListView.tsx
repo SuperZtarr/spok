@@ -53,7 +53,6 @@ interface ListViewProps {
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
-  onNewItem?: () => void;
   spaceId?: string;
   spaceRole?: string;
   hideToolbar?: boolean;

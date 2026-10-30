@@ -305,7 +305,6 @@ interface PriorityViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;

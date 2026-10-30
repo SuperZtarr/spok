@@ -32,14 +32,13 @@ interface BugsViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   portalGroups?: PortalGroup[];
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
 
-export function BugsView({ items, portalGroups, onNewItem, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: BugsViewProps) {
+export function BugsView({ items, portalGroups, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: BugsViewProps) {
   const bugs = useMemo(() => {
     if (!items) return [];
     return items.filter(item => item.type === 'BUG');

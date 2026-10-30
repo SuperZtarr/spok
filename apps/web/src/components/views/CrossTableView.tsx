@@ -31,7 +31,6 @@ interface CrossTableViewProps {
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   canEdit?: boolean;
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;

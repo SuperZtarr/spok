@@ -101,7 +101,6 @@ interface TimelineViewProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   spaceName?: string;
-  onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
   treeSort?: TreeSort;

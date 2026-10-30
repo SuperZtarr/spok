@@ -109,7 +109,6 @@ interface PertToolbarProps {
   items: Item[];
   spaceName: string;
   svgRef: React.RefObject<SVGSVGElement>;
-  onNewItem?: () => void;
   canEdit?: boolean;
   activeRelFilters?: Set<string>;
   onToggleRelFilter?: (type: string) => void;

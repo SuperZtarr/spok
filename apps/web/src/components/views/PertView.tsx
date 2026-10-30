@@ -92,7 +92,6 @@ interface PertViewProps {
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
   spaceRole?: string;
-  onNewItem?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
   treeSort?: TreeSort;
@@ -130,7 +129,7 @@ export function PertView({
   searchMatchIds,
   spaceName = '',
   spaceViews: _spaceViews, allowedViews: _allowedViews, onSetMode: _onSetMode, defaultView: _defaultView,
-  spaceRole: _spaceRole, onNewItem, onStartTour, pulseHelp,
+  spaceRole: _spaceRole, onStartTour, pulseHelp,
   treeSort: treeSortProp,
 }: PertViewProps) {
   const { collapsedIds, setCollapsedIds, toggleCollapse } = useCollapsedIds(spaceId ?? '');
@@ -725,7 +724,6 @@ export function PertView({
         onTogglePertRankSort={() => setPertRankSort(v => !v)}
         totalItemCount={items.length}
         filteredItemCount={filteredRelItemIds ? sortedItems.length : undefined}
-        onNewItem={onNewItem}
         canEdit={canEdit}
         onStartTour={onStartTour}
         pulseHelp={pulseHelp}

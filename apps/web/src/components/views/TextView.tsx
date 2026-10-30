@@ -59,7 +59,6 @@ interface TextViewProps {
   searchMatchIds?: Set<string>;
   spaceId?: string;
   spaceRole?: string;
-  onNewItem?: () => void;
   spaceName?: string;
   viewContainerRef?: React.RefObject<HTMLDivElement>;
   onStartTour?: () => void;

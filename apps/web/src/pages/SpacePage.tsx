@@ -715,7 +715,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceId={spaceId}
               spaceRole={space?.role}
               treeSort={treeSort}
@@ -749,7 +748,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               spaceId={spaceId}
               spaceRole={space?.role}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -777,7 +775,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -805,7 +802,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               spaceId={spaceId}
               spaceRole={space?.role}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -835,7 +831,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -869,7 +864,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
-              onNewItem={canEdit ? handleNewItem : undefined}
             />
           ) : viewMode === 'planning' ? (
               <PlanningView
@@ -896,7 +890,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -922,7 +915,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               spaceId={spaceId}
-              onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
               spaceName={space?.name}
@@ -963,7 +955,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
               treeSort={treeSort}
@@ -996,7 +987,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onCreateRelation={actions.handleCreateRelation}
               onUpdateRelation={actions.handleUpdateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
-              onNewItem={canEdit ? handleNewItem : undefined}
               onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'NOTE', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
@@ -1033,7 +1023,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
               treeSort={treeSort}
@@ -1071,7 +1060,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
             />
@@ -1283,7 +1271,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
               canEdit={canEdit}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1358,7 +1345,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               canEdit={canEdit}
               canEditItem={canEditItem}
               spaceRole={space?.role}
-              onNewItem={canEdit ? handleNewItem : undefined}
               exportSpaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1385,7 +1371,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1411,7 +1396,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1437,7 +1421,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1465,7 +1448,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1493,7 +1475,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
@@ -1521,7 +1502,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               referentiels={referentiels}
               canEdit={canEdit}
               canEditItem={canEditItem}
-              onNewItem={canEdit ? handleNewItem : undefined}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}
