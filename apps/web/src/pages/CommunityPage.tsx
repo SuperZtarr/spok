@@ -5,7 +5,7 @@
    Vignettes d'espace : pastille de visibilité effective (visibilityBySpace, résolue côté client avec
    la règle de getEffectiveVisibility), en pointillé quand elle est héritée. En-tête : même pastille
    pour la communauté, lue sur visibility (jamais isPublic, déprécié).
-   Largeur des cartes : SPACE_CARD_WIDTH (une carte par ligne, max-w-sm), indépendante de la largeur de la fenêtre. */
+   Largeur des cartes : SPACE_CARD_WIDTH (une carte par ligne, max-w-2xl), indépendante de la largeur de la fenêtre. */
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -31,7 +31,7 @@ type SpaceVisibilityInfo = { value: string; inheritedFrom: 'parent' | 'community
 
 // Une carte par ligne (arborescence) : largeur fixe confortable, toute la largeur sur écran étroit. Ne pas remettre
 // une grille de colonnes calée sur la fenêtre : la carte n'en occupait qu'une cellule (trop étroite, 2026-10-28).
-const SPACE_CARD_WIDTH = 'w-full max-w-sm';
+const SPACE_CARD_WIDTH = 'w-full max-w-2xl';
 
 function SpaceTreeNode({ node, depth = 0, activityBySpace, visibilityBySpace }: { node: any; depth?: number; activityBySpace: Map<string, number>; visibilityBySpace: Map<string, SpaceVisibilityInfo> }) {
   const hasChildren = node.children?.length > 0;
