@@ -102,7 +102,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-dates"]',
       popover: {
         title: 'Dates',
-        description: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning.',
+        description: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning. Dans le sélecteur, les flèches changent le mois et la liste à côté du mois choisit l\'année.',
         side: 'left',
       },
     },

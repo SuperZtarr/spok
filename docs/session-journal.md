@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-04
+- 5 lots poussés : tri alphabétique des communautés (fix, Layout par morceaux), vue À faire tous types (feat), vignettes élargies (style), titre de l'onglet (feat), choix de l'année du calendrier (feat). Typecheck OK, TNR 1814/1814, en-têtes OK
+
 ### MEP — 2026-10-30 (3)
 - 3 lots Article poussés en UN commit (colonnes « À côté », hiérarchie parent/enfant, blocs lus dans la fiche « Afficher ») : imbriqués ligne à ligne dans 6 fichiers. Schéma : ArticleBlock.beside (booléen, défaut false) appliqué en prod par db push au démarrage de l'API. build:packages + db:generate, typecheck OK, TNR 1814/1814, en-têtes OK. API locale à redémarrer (session Start) pour le nouveau client Prisma
 

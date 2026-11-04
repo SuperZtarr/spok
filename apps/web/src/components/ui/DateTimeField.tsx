@@ -4,6 +4,8 @@
  * showTime=true : affiche toujours les selects H:MM (grisés si pas de date). Ne jamais conditionner sur currentDate.
  * Le calendrier s'ouvre via createPortal pour échapper aux overflow/z-index de la modale parente.
  * Utilise toDatetimeLocal/fromDatetimeLocal (heure locale) — ne pas utiliser toISOString() ici.
+ * En-tête du calendrier : flèches pour le mois, liste pour l'année (±10 ans autour de l'année affichée, recentrée à
+ * chaque choix). Changer de mois ou d'année ne déplace que la vue : la date change au clic sur un jour.
  */
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -263,9 +265,19 @@ export function DateTimeField({
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium capitalize">
-              {MONTH_NAMES_FR[viewMonth]} {viewYear}
-            </span>
+            <div className="flex items-center gap-1 text-sm font-medium">
+              <span className="capitalize">{MONTH_NAMES_FR[viewMonth]}</span>
+              <select
+                value={viewYear}
+                onChange={(e) => setViewYear(Number(e.target.value))}
+                aria-label="Année"
+                className="px-1 py-0.5 rounded bg-transparent cursor-pointer hover:bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {Array.from({ length: 21 }, (_, i) => viewYear - 10 + i).map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={goToNextMonth}
