@@ -15,7 +15,7 @@ _(aucun lot en attente)_
 ## EN COURS
 
 ### MEP — 2026-11-05
-- 8 lots poussés en 5 commits. Séparés : audit, Gantt, recherche et préparation, assigné libre (schéma : assignedToName, additif, db push au démarrage). Ensemble (imbriqués dans ItemEditModal, SpaceToolbar, shellZones, ItemReadView) : Loisirs, barre Filtre/Aperçu, zones de la fiche, fiche Afficher pleine largeur ; businessRules et item-modal.help entiers dans ce dernier commit. build:packages + db:generate, typecheck OK, TNR 1855/1855, en-têtes OK
+- 8 lots poussés en 5 commits. Séparés : audit, Gantt, recherche et préparation, assigné libre (schéma : assignedToName, additif, db push au démarrage). Ensemble (imbriqués dans ItemEditModal, SpaceToolbar, shellZones, ItemReadView) : Loisirs, barre Filtre/Aperçu, zones de la fiche, fiche Afficher pleine largeur ; businessRules et item-modal.help entiers dans ce dernier commit. Le correctif du lien d'audit (auditLogs.ts) est parti dans le commit de l'assigné (b0a988a), 28e6cec n'a que la redirection d'App.tsx. 3 lignes du TODO ajoutées dans un commit de doc à part (écriture en échec pendant la MEP). build:packages + db:generate, typecheck OK, TNR 1855/1855, en-têtes OK
 
 ### Demandes du 2026-11-04 — reste
 - Lot 4 carte mentale (cadrage à l'ouverture, positions figées, étalement) reporté par Thomas au lendemain : rien de modifié

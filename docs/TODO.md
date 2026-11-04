@@ -152,6 +152,9 @@
 - [x] Calendrier : choix de l'année — 2026-11-04
 - [x] Notification d'audit : bon lien (/admin/audit-logs), redirection de l'ancienne adresse — 2026-11-04
 - [x] Gantt : parent sans dates jusqu'à aujourd'hui si un enfant est commencé sans date de fin — 2026-11-04
+- [x] Recherche d'éléments avec portée (espace, communauté, tous mes espaces) et préparation de séance ouverte aux invités — 2026-11-04
+- [x] Assigné en saisie libre : personne sans compte (assignedToName), sans droit ni notification, exclusif avec le membre assigné — 2026-11-04
+- [x] Mode JDR renommé Loisirs (valeur JDR conservée en base), barre d'espace à un seul bloc Filtre ou Aperçu, zones de la fiche pour le mode Aide et les zones de dev, fiche Afficher sur toute la largeur — 2026-11-04
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
