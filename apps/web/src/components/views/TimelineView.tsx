@@ -10,6 +10,7 @@
  * à dates dérivées des enfants et sans droit d'édition.
  * Barre pointillée (parent sans dates, période dérivée des enfants) : glisser = décaler le groupe via
  * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
+ * Sa fin : la plus tardive des enfants ; un enfant commencé sans fin compte jusqu'à aujourd'hui (rollupEnd).
  * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
  * Déplacement de barre au jour près dans tous les zooms ; seul le resize (poignées) s'aimante au calendrier.
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
@@ -44,7 +45,7 @@ import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER } from './timeline-constants';
 import { RELATION_TYPE_LIST, getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
-import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd } from './timeline-utils';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd, rollupEnd } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
@@ -341,7 +342,7 @@ treeSort: treeSortProp,
 
     function computeDates(item: TreeItem): { start: Date | null; end: Date | null } {
       const ownStart = item.startDate || item.dueDate ? new Date(item.startDate || item.dueDate!) : null;
-      const ownEnd   = item.endDate   || item.dueDate ? new Date(item.endDate   || item.dueDate!) : null;
+      const ownEnd   = rollupEnd(item); // enfant commencé sans fin : le parent va jusqu'à aujourd'hui
 
       if (item.children.length === 0) return { start: ownStart, end: ownEnd };
 

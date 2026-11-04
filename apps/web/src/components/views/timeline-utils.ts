@@ -25,6 +25,25 @@ export function moveInitialEnd(
 }
 
 /**
+ * Fin qu'un item transmet à son parent sans dates, pour le calcul de la barre pointillée (TimelineView,
+ * effectiveDates ; demande Thomas 2026-11-04).
+ * - endDate enregistrée → elle-même
+ * - commencé sans fin (encore ouvert) → au moins aujourd'hui, comme sa propre barre ; une échéance ou un
+ *   début plus lointain repousse la fin
+ * - échéance seule (pas commencé) → l'échéance ; aucune date → null
+ */
+export function rollupEnd(
+  item: { startDate?: string | Date | null; endDate?: string | Date | null; dueDate?: string | Date | null },
+  now: Date = new Date(),
+): Date | null {
+  if (item.endDate) return new Date(item.endDate);
+  if (!item.startDate) return item.dueDate ? new Date(item.dueDate) : null;
+  const times = [new Date(item.startDate).getTime(), now.getTime()];
+  if (item.dueDate) times.push(new Date(item.dueDate).getTime());
+  return new Date(Math.max(...times));
+}
+
+/**
  * CPM — retourne l'ensemble des IDs d'items sur le chemin critique.
  * Retourne un Set vide si le graphe contient un cycle.
  *

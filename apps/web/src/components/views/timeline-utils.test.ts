@@ -1,10 +1,32 @@
 /* Tests des utilitaires purs du Gantt : fin de référence d'un déplacement de barre (moveInitialEnd),
  * types de relation qui ordonnent le chemin critique (computeCriticalPath). */
 import { describe, it, expect } from 'vitest';
-import { moveInitialEnd, computeCriticalPath } from './timeline-utils';
+import { moveInitialEnd, computeCriticalPath, rollupEnd } from './timeline-utils';
 import type { Item, ItemRelation } from '@spok/shared';
 
 const now = new Date(2026, 8, 28, 10, 0); // 28 sept 2026 10:00 local
+
+describe('rollupEnd (fin transmise au parent sans dates)', () => {
+  const iso = (m: number, d: number) => new Date(2026, m, d).toISOString();
+
+  it('fin enregistrée : la reprend, même passée', () => {
+    expect(rollupEnd({ startDate: iso(5, 1), endDate: iso(6, 1) }, now)?.toISOString()).toBe(iso(6, 1));
+  });
+  it('commencé sans fin : aujourd\'hui', () => {
+    expect(rollupEnd({ startDate: iso(5, 1) }, now)?.getTime()).toBe(now.getTime());
+  });
+  it('commencé sans fin, échéance dépassée : aujourd\'hui ; échéance future : l\'échéance', () => {
+    expect(rollupEnd({ startDate: iso(5, 1), dueDate: iso(6, 1) }, now)?.getTime()).toBe(now.getTime());
+    expect(rollupEnd({ startDate: iso(5, 1), dueDate: iso(11, 1) }, now)?.toISOString()).toBe(iso(11, 1));
+  });
+  it('début futur sans fin : le début, jamais avant', () => {
+    expect(rollupEnd({ startDate: iso(10, 3) }, now)?.toISOString()).toBe(iso(10, 3));
+  });
+  it('échéance seule : l\'échéance ; aucune date : null', () => {
+    expect(rollupEnd({ dueDate: iso(5, 1) }, now)?.toISOString()).toBe(iso(5, 1));
+    expect(rollupEnd({}, now)).toBeNull();
+  });
+});
 
 describe('moveInitialEnd', () => {
   it('fin enregistrée : la reprend telle quelle', () => {
