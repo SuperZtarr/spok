@@ -224,6 +224,8 @@ export default function App() {
         <Route path="admin/referentiels" element={<AdminRoute><ReferentielsPage /></AdminRoute>} />
         <Route path="admin/stats" element={<AdminRoute><StatsPage /></AdminRoute>} />
         <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />
+        {/* Ancien lien des notifications « Accumulation de logs d'audit » déjà envoyées */}
+        <Route path="admin/audit" element={<Navigate to="/admin/audit-logs" replace />} />
         <Route path="admin/views" element={<AdminRoute><ViewsConfigPage /></AdminRoute>} />
         <Route path="admin/api-doc" element={<AdminRoute><ApiDocPage /></AdminRoute>} />
         <Route path="admin/perf" element={<AdminRoute><PerfPage /></AdminRoute>} />
