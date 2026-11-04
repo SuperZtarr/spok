@@ -14,6 +14,8 @@
  * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
  * Indicateur process (2026-10-28) : icône Workflow après le nom d'un espace dont processNodeCount > 0 (GET /spaces) ;
  * la liste n'est rafraîchie que quand un process apparaît ou disparaît (useProcessNodes), jamais par polling.
+ * Titre de l'onglet (2026-11-04) : élément ouvert (useOpenItemStore, jamais l'adresse : ?item= n'y reste pas) = icône de
+ * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -28,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
+import { TYPE_EMOJI } from '../constants/ui';
 import { CreateSpaceModal } from './CreateSpaceModal';
 import { MoveSpaceModal, type MovableSpace } from './MoveSpaceModal';
 import { SpaceDeleteConfirmModal } from './SpaceDeleteConfirmModal';
@@ -55,6 +58,7 @@ import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
 import { CommunityBadge, isNonMemberRole } from './CommunityBadge';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
+import { useOpenItemStore } from '../stores/openItem';
 import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
@@ -702,12 +706,12 @@ export function Layout() {
     enabled: !!currentSpaceId,
   });
 
-  // Item ouvert dans la modale (?item=id dans l'URL)
-  const openItemId = new URLSearchParams(location.search).get('item');
+  // Item ouvert dans la fiche : même clé de cache que la fiche, l'onglet suit donc un changement de titre enregistré
+  const openItemRef = useOpenItemStore((s) => s.openItem);
   const { data: openItem } = useQuery({
-    queryKey: ['item-header', currentSpaceId, openItemId],
-    queryFn: () => itemsApi.get(currentSpaceId!, openItemId!),
-    enabled: !!openItemId && !!currentSpaceId,
+    queryKey: ['item', openItemRef?.spaceId, openItemRef?.itemId],
+    queryFn: () => itemsApi.get(openItemRef!.spaceId, openItemRef!.itemId),
+    enabled: !!openItemRef,
     staleTime: 60_000,
   });
 
@@ -836,11 +840,13 @@ export function Layout() {
     const path = location.pathname;
     const fnLabel = getCurrentFunctionLabel();
     let title = 'SPOK';
+    let icon = '';
 
     if (currentSpace) {
       const communitySuffix = currentSpace.community?.name ? ` › ${currentSpace.community.name}` : '';
-      if (openItemId && openItem) {
-        title = `${openItem.title} › ${currentSpace.name}${communitySuffix}`;
+      if (openItemRef && openItem) {
+        icon = `${TYPE_EMOJI[openItem.type]} `;
+        title = `${openItem.title || 'Nouvel élément'} › ${currentSpace.name}${communitySuffix}`;
       } else if (fnLabel) {
         title = `${currentSpace.name}${communitySuffix} — ${fnLabel}`;
       } else {
@@ -856,8 +862,8 @@ export function Layout() {
       title = 'SPOK — Paramètres communauté';
     }
 
-    document.title = import.meta.env.DEV ? `[DEV] ${title}` : title;
-  }, [currentSpace, openItemId, openItem, location.pathname, mode, tab]);
+    document.title = `${icon}${import.meta.env.DEV ? '[DEV] ' : ''}${title}`;
+  }, [currentSpace, openItemRef, openItem, location.pathname, mode, tab]);
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const handleToggleFavorite = useCallback(async (spaceId: string) => {

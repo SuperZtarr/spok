@@ -118,6 +118,23 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   APPOINTMENT: 'Rendez-vous',
 };
 
+// Icône du type en texte, pour l'onglet du navigateur : document.title n'accepte pas de composant (Layout, 2026-11-04)
+export const TYPE_EMOJI: Record<ItemType, string> = {
+  UNDEFINED: '❔',
+  NOTE: '📝',
+  PROJECT: '📁',
+  TASK: '✅',
+  MEETING: '📅',
+  PERIOD: '🗓️',
+  LINK: '🔗',
+  CONFIG: '⚙️',
+  DOCUMENT: '📄',
+  IMAGE: '🖼️',
+  BUG: '🐞',
+  DIAGRAM: '🔀',
+  ARTICLE: '📰',
+};
+
 // =============================================================================
 // TYPE GROUPS - Regroupement visuel des types (sélecteur de type de la modale)
 // =============================================================================

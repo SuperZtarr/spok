@@ -9,6 +9,7 @@
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
  * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Afficher / Ouvrir, liens partagés) — itemOpenMode.ts.
+ * Le paramètre quitte aussitôt l'adresse : l'élément ouvert est publié dans useOpenItemStore (titre de l'onglet, Layout).
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
  * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
  * (liveSessionBarSlot → 3e ligne de la toolbar) ;
@@ -52,6 +53,7 @@ import { useAdminMode } from '../components/DevDbStatus';
 import { ItemEditModal } from '../components/ItemEditModal';
 import { useViewModeStore, VIEWER_ALLOWED_VIEWS, type ViewMode } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
+import { useOpenItemStore } from '../stores/openItem';
 import { ListView } from '../components/views/ListView';
 import { KanbanView } from '../components/views/KanbanView';
 import { TypesView } from '../components/views/TypesView';
@@ -617,6 +619,14 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       sessionStorage.removeItem('spok_current_item');
     }
   }, [editingItemId, spaceId]);
+
+  // Élément ouvert publié pour le titre de l'onglet (Layout)
+  const setOpenItem = useOpenItemStore((s) => s.setOpenItem);
+  const editingItemSpaceId = allItems.find((i: Item) => i.id === editingItemId)?.spaceId || spaceId;
+  useEffect(() => {
+    setOpenItem(editingItemId && editingItemSpaceId ? { spaceId: editingItemSpaceId, itemId: editingItemId } : null);
+    return () => setOpenItem(null);
+  }, [editingItemId, editingItemSpaceId, setOpenItem]);
 
   // Continuous save of current location for session-expiry resume
   useEffect(() => {
