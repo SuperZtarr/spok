@@ -1,10 +1,13 @@
 /*
- * Barre d'outils d'espace : sélecteur de vues, filtres, highlight, tri, création.
+ * Barre d'outils d'espace : sélecteur de vues, filtre ou aperçu, tri, création.
+ * Filtre / Aperçu (décision Thomas 2026-11-04) : un seul bloc, selon la vue (prop highlightMode, calculée par SpacePage) —
+ * « Aperçu » sur les vues qui estompent sans masquer, « Filtre » sur celles qui réduisent la liste. Mêmes états
+ * (filter, statusFilter, searchQuery) : un critère posé reste actif en changeant de vue, et change juste d'effet.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
  * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées.
- * Mode JDR : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
+ * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
  * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier ; Projet : sans Liste/Types/Images/
  * Liens/Documents, avec Carte mentale). Répartition calculée par splitViewsForMode, seule source des deux affichages.
  * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
@@ -125,12 +128,12 @@ const MODE_PRIMARY_GROUP: Record<string, ViewGroupKey | null> = {
 
 /**
  * Modes à liste de vues choisie (au lieu d'une famille) : ces vues, dans cet ordre, en boutons directs ;
- * toutes les autres restent dans « Autres vues » (par catégorie). JDR : décision Thomas 2026-10-13.
+ * toutes les autres restent dans « Autres vues » (par catégorie). Loisirs : décision Thomas 2026-10-13.
  */
 export const MODE_PRIMARY_VIEWS: Record<string, string[]> = {
-  jdr: ['thread', 'mindmap', 'images', 'documents', 'recent'],
+  loisirs: ['thread', 'mindmap', 'images', 'documents', 'recent'],
 };
-export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { jdr: 'Vues JDR' };
+export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { loisirs: 'Vues Loisirs' };
 
 /**
  * Ajustements de la famille principale d'un mode : vues retirées des boutons directs (elles restent dans
@@ -186,20 +189,15 @@ const VIEW_ICON_MAP: Record<string, LucideIcon> = {
 };
 
 export interface SpaceToolbarProps {
-  // Filtre block
+  // Bloc Filtre ou Aperçu
   filter: ItemType | 'ALL';
   onFilterChange: (filter: ItemType | 'ALL') => void;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
-  // Highlight block
-  highlightFilter: ItemType | 'ALL';
-  onHighlightFilterChange: (filter: ItemType | 'ALL') => void;
-  highlightStatus: string;
-  onHighlightStatusChange: (status: string) => void;
-  highlightSearch: string;
-  onHighlightSearchChange: (q: string) => void;
+  /** true : la vue affichée met en évidence sans masquer — le bloc s'appelle « Aperçu » */
+  highlightMode: boolean;
   // Counts
   totalItemCount: number;
   filteredItemCount: number;
@@ -235,12 +233,7 @@ export function SpaceToolbar({
   onStatusFilterChange,
   searchQuery,
   onSearchQueryChange,
-  highlightFilter,
-  onHighlightFilterChange,
-  highlightStatus,
-  onHighlightStatusChange,
-  highlightSearch,
-  onHighlightSearchChange,
+  highlightMode,
   totalItemCount,
   filteredItemCount,
   searchMatchCount,
@@ -263,17 +256,12 @@ export function SpaceToolbar({
   const { mode: interfaceMode } = useInterfaceModeStore();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  const [hlTypeDropdownOpen, setHlTypeDropdownOpen] = useState(false);
-  const [hlStatusDropdownOpen, setHlStatusDropdownOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filtreOpen, setFiltreOpen] = useState(false);
-  const [aperçuOpen, setAperçuOpen] = useState(false);
   const [otherGroupOpen, setOtherGroupOpen] = useState<OtherMenuKey | null>(null);
   const [otherGroupPos, setOtherGroupPos] = useState<{ top: number; left: number } | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
-  const hlTypeDropdownRef = useRef<HTMLDivElement>(null);
-  const hlStatusDropdownRef = useRef<HTMLDivElement>(null);
   const otherGroupsRef = useRef<HTMLDivElement>(null);
   const otherGroupPanelRef = useRef<HTMLDivElement>(null);
   const otherGroupBtnRefs = useRef<Partial<Record<OtherMenuKey, HTMLButtonElement | null>>>({});
@@ -290,19 +278,15 @@ export function SpaceToolbar({
 
   const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
   const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
-  const activeHlTypeFilter = highlightFilter !== 'ALL' ? highlightFilter : undefined;
-  const activeHlStatusFilter = highlightStatus !== 'ALL' ? highlightStatus : undefined;
 
   const showFiltersForView = true;
 
   // Close all dropdowns on click outside or Escape
   useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen && !hlTypeDropdownOpen && !hlStatusDropdownOpen && !otherGroupOpen) return;
+    if (!typeDropdownOpen && !statusDropdownOpen && !otherGroupOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) setTypeDropdownOpen(false);
       if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) setStatusDropdownOpen(false);
-      if (hlTypeDropdownOpen && hlTypeDropdownRef.current && !hlTypeDropdownRef.current.contains(e.target as Node)) setHlTypeDropdownOpen(false);
-      if (hlStatusDropdownOpen && hlStatusDropdownRef.current && !hlStatusDropdownRef.current.contains(e.target as Node)) setHlStatusDropdownOpen(false);
       if (
         otherGroupOpen
         && otherGroupsRef.current && !otherGroupsRef.current.contains(e.target as Node)
@@ -310,12 +294,12 @@ export function SpaceToolbar({
       ) { setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setHlTypeDropdownOpen(false); setHlStatusDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen, hlTypeDropdownOpen, hlStatusDropdownOpen, otherGroupOpen]);
+  }, [typeDropdownOpen, statusDropdownOpen, otherGroupOpen]);
 
 
   return (
@@ -326,7 +310,7 @@ export function SpaceToolbar({
         const baseViews = spaceViews.filter(
           (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
         );
-        // Mode à liste choisie (JDR) : une seule section ordonnée ; sinon famille principale ajustée (forum/projet) ou tout
+        // Mode à liste choisie (Loisirs) : une seule section ordonnée ; sinon famille principale ajustée (forum/projet) ou tout
         const { curated, primary: primaryViews, secondary: secondaryGroups } = splitViewsForMode(baseViews, interfaceMode);
 
         const sectionMap = new Map<string, { sectionOrder: number; label?: string; views: typeof primaryViews }>();
@@ -497,21 +481,21 @@ export function SpaceToolbar({
           )}
 
           {showFiltersForView && <>
-            {/* === FILTRE toggle === */}
+            {/* === FILTRE ou APERÇU, selon la vue === */}
             {(() => {
               const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
-              return (
-                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-filter" data-devzone="toolbar-filtre">
-                  <HelpHint text={H.filter}>
+              const controls = (
+                <>
+                  <HelpHint text={highlightMode ? H.highlight : H.filter}>
                   <button
-                    onClick={() => { setFiltreOpen(v => !v); setAperçuOpen(false); }}
-                    aria-label="Filtre"
+                    onClick={() => setFiltreOpen(v => !v)}
+                    aria-label={highlightMode ? 'Aperçu' : 'Filtre'}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
                       hasActive ? 'bg-accent text-foreground font-semibold' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="hidden sm:inline">Filtre</span>
+                    <span className="hidden sm:inline">{highlightMode ? 'Aperçu' : 'Filtre'}</span>
                     <ChevronDown className={`w-3 h-3 transition-transform ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   </HelpHint>
@@ -519,7 +503,7 @@ export function SpaceToolbar({
                     <div className="flex items-center gap-1">
                       {/* Types */}
                       <div ref={typeDropdownRef} className="relative flex-shrink-0">
-                        <HelpHint text={H.filterType}>
+                        <HelpHint text={highlightMode ? H.highlightType : H.filterType}>
                         <button
                           onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
                           className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${
@@ -555,7 +539,7 @@ export function SpaceToolbar({
                           const visibleStatuses = statuses.filter((s: any) => s.visible);
                           return (
                             <>
-                              <HelpHint text={H.filterStatus}>
+                              <HelpHint text={highlightMode ? H.highlightStatus : H.filterStatus}>
                               <button onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
                                 className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeStatus ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
                                 {activeStatus ? activeStatus.label : 'Statuts'}
@@ -601,114 +585,13 @@ export function SpaceToolbar({
                       </div>
                     </div>
                   )}
-                </div>
+                </>
               );
+              // Deux zones nommées (DevZoneInspector, mode Aide, tours) pour une seule commande
+              return highlightMode
+                ? <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-highlight" data-devzone="toolbar-apercu">{controls}</div>
+                : <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-filter" data-devzone="toolbar-filtre">{controls}</div>;
             })()}
-
-            <div className="h-4 w-px bg-border mx-1 flex-shrink-0" />
-
-            {/* === APERÇU toggle === */}
-            {(() => {
-              const hasActive = !!(activeHlTypeFilter || activeHlStatusFilter || highlightSearch);
-              return (
-                <div className="flex items-center gap-1 flex-shrink-0" data-tour="toolbar-highlight" data-devzone="toolbar-apercu">
-                  <HelpHint text={H.highlight}>
-                  <button
-                    onClick={() => { setAperçuOpen(v => !v); setFiltreOpen(false); }}
-                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
-                      hasActive ? 'bg-accent text-foreground font-semibold' : aperçuOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                    }`}
-                  >
-                    Aperçu
-                    <ChevronDown className={`w-3 h-3 transition-transform ${aperçuOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  </HelpHint>
-                  {aperçuOpen && (
-                    <div className="flex items-center gap-1">
-                      {/* HL Types */}
-                      <div ref={hlTypeDropdownRef} className="relative flex-shrink-0">
-                        <HelpHint text={H.highlightType}>
-                        <button onClick={() => { setHlTypeDropdownOpen(!hlTypeDropdownOpen); setHlStatusDropdownOpen(false); }}
-                          className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeHlTypeFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
-                          {activeHlTypeFilter ? TYPE_LABELS[activeHlTypeFilter] : 'Types'}
-                          <ChevronDown className={`w-3 h-3 transition-transform ${hlTypeDropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        </HelpHint>
-                        {hlTypeDropdownOpen && (
-                          <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-                            {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const).map((t) => {
-                              const isActive = highlightFilter === t;
-                              const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
-                              return (
-                                <button key={t} onClick={() => { onHighlightFilterChange(t); setHlTypeDropdownOpen(false); }}
-                                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
-                                  {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
-                                  <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
-                                  {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      {/* HL Statuts */}
-                      <div ref={hlStatusDropdownRef} className="relative flex-shrink-0">
-                        {(() => {
-                          const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-                          const activeHlStatus = activeHlStatusFilter ? statuses.find((s: any) => s.id === activeHlStatusFilter) : null;
-                          const visibleStatuses = statuses.filter((s: any) => s.visible);
-                          return (
-                            <>
-                              <HelpHint text={H.highlightStatus}>
-                              <button onClick={() => { setHlStatusDropdownOpen(!hlStatusDropdownOpen); setHlTypeDropdownOpen(false); }}
-                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeHlStatus ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
-                                {activeHlStatus ? activeHlStatus.label : 'Statuts'}
-                                <ChevronDown className={`w-3 h-3 transition-transform ${hlStatusDropdownOpen ? 'rotate-180' : ''}`} />
-                              </button>
-                              </HelpHint>
-                              {hlStatusDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
-                                  <button onClick={() => { onHighlightStatusChange('ALL'); setHlStatusDropdownOpen(false); }}
-                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${highlightStatus === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
-                                    <span className="flex-1 text-left">Tous les statuts</span>
-                                  </button>
-                                  {visibleStatuses.map((s: any) => {
-                                    const isActive = highlightStatus === s.id;
-                                    const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
-                                    return (
-                                      <button key={s.id} onClick={() => { onHighlightStatusChange(s.id); setHlStatusDropdownOpen(false); }}
-                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
-                                        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                                        <span className="flex-1 text-left">{s.label}</span>
-                                        {isActive && <span className="text-primary text-xs">✓</span>}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                      {/* HL Recherche */}
-                      <div className="relative flex-shrink-0">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-                        <input type="text" placeholder="Rechercher..." value={highlightSearch} onChange={(e) => onHighlightSearchChange(e.target.value)}
-                          className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-                        {highlightSearch && (
-                          <HelpHint text={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex">
-                            <button type="button" onClick={() => onHighlightSearchChange('')} aria-label={H.clearSearch} className="text-muted-foreground hover:text-foreground">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </HelpHint>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
           </>}
         </div>{/* end mobile filters wrapper */}
 

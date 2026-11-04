@@ -1,7 +1,7 @@
 /*
  * NoInviteCandidates — état vide de la liste d'invitation d'une séance (InviteePicker emptyState).
  * Un invité = membre de la communauté SANS accès à l'espace parent : si la liste est vide, soit la communauté
- * n'a pas d'autre membre (cas le plus fréquent : ajouter d'abord les joueurs à la communauté), soit tous y ont
+ * n'a pas d'autre membre (cas le plus fréquent : ajouter d'abord les participants à la communauté), soit tous y ont
  * déjà accès (ils rejoignent sans invitation). Lien vers les paramètres de la communauté (gestion des membres).
  * Props : spaceId (espace parent de la séance) — lit ['space', spaceId] pour la communauté (nom + lien).
  */

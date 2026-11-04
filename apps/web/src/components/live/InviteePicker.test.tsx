@@ -29,7 +29,7 @@ describe('InviteePicker', () => {
   it('personne à inviter : message par défaut, ou état vide fourni par l\'appelant', () => {
     const { getByText, rerender } = render(<InviteePicker candidates={[]} selected={[]} onChange={() => {}} />)
     getByText(/Aucun membre de la communauté à inviter/)
-    rerender(<InviteePicker candidates={[]} selected={[]} onChange={() => {}} emptyState={<p>Ajoutez vos joueurs</p>} />)
-    getByText('Ajoutez vos joueurs')
+    rerender(<InviteePicker candidates={[]} selected={[]} onChange={() => {}} emptyState={<p>Ajoutez vos participants</p>} />)
+    getByText('Ajoutez vos participants')
   })
 })

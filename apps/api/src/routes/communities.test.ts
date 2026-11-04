@@ -349,7 +349,7 @@ describe('Communities routes', () => {
       expect(data.pendingVisibility).toBe('OPEN')
     })
 
-    // Mode JDR (2026-10-13) : nouveau contexte de communauté
+    // Mode Loisirs (2026-10-13, valeur JDR conservée dans l'API) : contexte de communauté
     it('should accept the JDR context', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
       prisma.community.update.mockResolvedValue(mockCommunity({ context: 'JDR' }))

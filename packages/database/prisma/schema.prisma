@@ -143,7 +143,8 @@ enum SpaceVisibility {
 }
 
 // Contexte d'usage d'une communauté : dicte le mode d'interface dérivé
-// (FORUM → vues discussion, PROJECT → outillage projet, JDR → jeu de rôle, null → neutre « tous »).
+// (FORUM → vues discussion, PROJECT → outillage projet, JDR → mode Loisirs, null → neutre « tous »).
+// JDR : nom historique conservé, le renommer ferait perdre des données (db push --accept-data-loss au démarrage de la prod).
 enum CommunityContext {
   FORUM
   PROJECT

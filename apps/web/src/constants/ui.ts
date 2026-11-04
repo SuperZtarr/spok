@@ -138,7 +138,7 @@ export const TYPE_EMOJI: Record<ItemType, string> = {
 // =============================================================================
 // TYPE GROUPS - Regroupement visuel des types (sélecteur de type de la modale)
 // =============================================================================
-/** Types proposés dans la fiche RÉDUITE (Forum, JDR) : ceux qui portent un contenu (texte, image, fichier, lien,
+/** Types proposés dans la fiche RÉDUITE (Forum, Loisirs) : ceux qui portent un contenu (texte, image, fichier, lien,
  *  schéma, article). Les types de pilotage (Projet, Tâche, Réunion, Période, Anomalie, Configuration), comme les
  *  dates, la priorité et le statut, restent dans la fiche complète (décision Thomas 2026-10-29). */
 export const CONTENT_TYPES: ItemType[] = ['UNDEFINED', 'NOTE', 'LINK', 'DOCUMENT', 'IMAGE', 'DIAGRAM', 'ARTICLE'];

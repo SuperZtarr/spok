@@ -52,7 +52,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     element: '[data-tour="toolbar-highlight"]',
     popover: {
       title: 'Aperçu',
-      description: 'Comme le filtre, mais sans rien masquer : les éléments qui ne correspondent pas sont simplement estompés.',
+      description: 'Remplace le filtre dans cette vue : les éléments qui ne correspondent pas sont estompés, rien n\'est masqué. Vos critères restent actifs quand vous changez de vue.',
       side: 'bottom',
     },
   },

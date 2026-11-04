@@ -9,7 +9,7 @@
 
 import type { CommunityContext } from '@spok/shared';
 
-/** Vue d'ouverture par contexte de communauté — Forum : Discussions, Projet : Gantt, JDR : Carte mentale */
+/** Vue d'ouverture par contexte de communauté — Forum : Discussions, Projet : Gantt, Loisirs (valeur JDR en base) : Carte mentale */
 export const CONTEXT_DEFAULT_VIEW: Record<CommunityContext, string> = {
   FORUM: 'thread',
   PROJECT: 'timeline',

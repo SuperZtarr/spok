@@ -1,4 +1,4 @@
-/* Contexte (FORUM / PROJECT / JDR / null) de chaque communauté, par id — pour la vue d'ouverture des espaces
+/* Contexte (FORUM / PROJECT / JDR = Loisirs / null) de chaque communauté, par id — pour la vue d'ouverture des espaces
  * (lib/spaceDefaultView.ts) hors de Layout. Même requête que la barre latérale (queryKey ['communities', userId |
  * 'public'], même queryFn) : aucun appel en plus, le cache est partagé. Ne pas changer la clé sans changer Layout.tsx. */
 import { useMemo } from 'react';

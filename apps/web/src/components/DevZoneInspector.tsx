@@ -51,6 +51,21 @@ const ZONE_COLORS: Record<string, string> = {
   'sidebar-communaute': '#ec4899',
   'sidebar-autres-espaces': '#f97316',
   'sidebar-arbre': '#22c55e',
+  // modale de l'élément (ItemEditModal, ItemReadView)
+  'item-chemin': '#64748b',
+  'item-entete': '#7c3aed',
+  'item-description': '#2563eb',
+  'item-contributions': '#0891b2',
+  'item-champs': '#059669',
+  'item-type': '#65a30d',
+  'item-statut': '#ca8a04',
+  'item-dates': '#ea580c',
+  'item-details': '#db2777',
+  'item-relations': '#9333ea',
+  'item-tags': '#e11d48',
+  'item-enfants': '#0d9488',
+  'item-pied': '#475569',
+  'item-lecture': '#4f46e5',
 };
 
 interface Hit { zone: string; top: number; left: number; right: number; width: number; height: number; }

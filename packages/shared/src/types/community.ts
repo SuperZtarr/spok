@@ -4,7 +4,8 @@ export type CommunityRole = 'OWNER' | 'MEMBER';
 
 export type CommunityVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 
-/** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »). */
+/** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »).
+ *  JDR : affiché « Loisirs » dans l'interface, nom historique conservé en base et dans l'API. */
 export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR';
 
 export interface Community {

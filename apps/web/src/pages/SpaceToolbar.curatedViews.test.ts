@@ -1,4 +1,4 @@
-/* Tests de la répartition des vues par mode (SpaceToolbar) : mode JDR = liste de vues choisie, dans l'ordre imposé ;
+/* Tests de la répartition des vues par mode (SpaceToolbar) : mode Loisirs = liste de vues choisie, dans l'ordre imposé ;
    modes à famille (forum/projet) = famille ajustée en boutons directs, le reste dans « Autres vues », un menu par
    catégorie, sans doublon. */
 import { describe, it, expect } from 'vitest'
@@ -8,20 +8,20 @@ const all = ['recent', 'kanban', 'links', 'list', 'mindmap', 'documents', 'graph
   .map((viewMode) => ({ viewMode }))
 
 describe('curatedPrimaryViews', () => {
-  it('JDR : Discussions, Carte mentale, Images, Documents, Récents, dans cet ordre (sans Liste ni Liens)', () => {
-    expect(curatedPrimaryViews(all, 'jdr')!.map((v) => v.viewMode))
+  it('Loisirs : Discussions, Carte mentale, Images, Documents, Récents, dans cet ordre (sans Liste ni Liens)', () => {
+    expect(curatedPrimaryViews(all, 'loisirs')!.map((v) => v.viewMode))
       .toEqual(['thread', 'mindmap', 'images', 'documents', 'recent'])
   })
 
   it('ignore les vues inaccessibles (ex. anonyme sans « Récents »)', () => {
     const visitor = all.filter((v) => v.viewMode !== 'recent')
-    expect(curatedPrimaryViews(visitor, 'jdr')!.map((v) => v.viewMode)).not.toContain('recent')
+    expect(curatedPrimaryViews(visitor, 'loisirs')!.map((v) => v.viewMode)).not.toContain('recent')
   })
 
   it('modes sans liste choisie : null (famille ou tout)', () => {
     expect(curatedPrimaryViews(all, 'forum')).toBeNull()
     expect(curatedPrimaryViews(all, 'tous')).toBeNull()
-    expect(Object.keys(MODE_PRIMARY_VIEWS)).toEqual(['jdr'])
+    expect(Object.keys(MODE_PRIMARY_VIEWS)).toEqual(['loisirs'])
   })
 })
 
@@ -45,7 +45,7 @@ describe('splitViewsForMode', () => {
   })
 
   it('aucune vue perdue ni doublée, quel que soit le mode', () => {
-    for (const mode of ['forum', 'projet', 'jdr', 'tous']) {
+    for (const mode of ['forum', 'projet', 'loisirs', 'tous']) {
       const { primary, secondary } = splitViewsForMode(views, mode)
       const shown = [...ids(primary), ...secondary.flatMap((g) => ids(g.views))]
       expect(shown.sort(), mode).toEqual(ids(views).sort())

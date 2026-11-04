@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-05
+- 8 lots poussés en 5 commits. Séparés : audit, Gantt, recherche et préparation, assigné libre (schéma : assignedToName, additif, db push au démarrage). Ensemble (imbriqués dans ItemEditModal, SpaceToolbar, shellZones, ItemReadView) : Loisirs, barre Filtre/Aperçu, zones de la fiche, fiche Afficher pleine largeur ; businessRules et item-modal.help entiers dans ce dernier commit. build:packages + db:generate, typecheck OK, TNR 1855/1855, en-têtes OK
+
+### Demandes du 2026-11-04 — reste
+- Lot 4 carte mentale (cadrage à l'ouverture, positions figées, étalement) reporté par Thomas au lendemain : rien de modifié
+
 ### MEP — 2026-11-04
 - 5 lots poussés : tri alphabétique des communautés (fix, Layout par morceaux), vue À faire tous types (feat), vignettes élargies (style), titre de l'onglet (feat), choix de l'année du calendrier (feat). Typecheck OK, TNR 1814/1814, en-têtes OK
 

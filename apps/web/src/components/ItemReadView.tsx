@@ -1,6 +1,6 @@
 /* ItemReadView — mode « Afficher » de la modale item : la fiche présentée comme un document, en lecture seule.
  * Rend la même fiche que « Copier la fiche » (ItemSheet de lib/itemClipboard.ts) : ce qu'on lit est ce qu'on copie.
- * Une colonne centrée : titre, champs renseignés, tags, média en grand (image / schéma plein largeur, cliquable
+ * Une colonne sur toute la largeur de la modale (demande Thomas 2026-11-04) : titre, champs renseignés, tags, média en grand (image / schéma plein largeur, cliquable
  * pour le plein écran ; document = nom + Ouvrir ; lien), description, enfants (cliquables), relations, contributions.
  * Props clés :
  * - sheet : fiche construite par l'appelant (buildItemSheet, libellés de l'espace)
@@ -37,7 +37,7 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
   const media = sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
 
   return (
-    <article className="max-w-3xl mx-auto w-full space-y-8 pb-8" data-tour="item-read-view">
+    <article className="w-full space-y-8 pb-8" data-tour="item-read-view" data-devzone="item-lecture">
       <header className="space-y-3">
         <div className="flex items-start gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold leading-tight flex-1 min-w-0 break-words">{sheet.title}</h1>

@@ -6,7 +6,7 @@ export const help: HelpEntry = {
   title: 'Paramètres de la communauté',
   summary: 'Gérez votre communauté : informations et contexte, images, référentiels, tags, espaces, membres et emails.',
   tips: [
-    'Général : nom, description, visibilité et contexte (Forum, Projet, JDR)',
+    'Général : nom, description, visibilité et contexte (Forum, Projet, Loisirs)',
     'Espaces : glissez une ligne sur le haut ou le bas d\'une autre pour changer l\'ordre, sur son milieu pour la ranger dedans',
     'Membres : 3 colonnes (non-membres, membres, propriétaires)',
     'Emails : historique des envois, renvoi aux nouveaux membres',
@@ -89,7 +89,7 @@ export const help: HelpEntry = {
     spacesOpenSettings: 'Cliquer un espace ouvre ses paramètres (pas l\'espace lui-même) — pour y entrer, passez par la barre latérale ou la page de la communauté.',
     spacesOrder:'Glissez un espace sur le haut ou le bas d\'une ligne pour le placer avant ou après (ordre vu par tous les membres), sur son milieu pour en faire un sous-espace, ou sur le bandeau du haut pour le remettre au premier niveau.',
     visibilityRequest: 'Rendre la communauté visible par tous nécessite la validation d\'un administrateur : une demande sera envoyée à l\'enregistrement.',
-    context: 'Le contexte adapte automatiquement l\'interface (vues proposées, champs) pour tous les visiteurs de la communauté. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, JDR → Carte mentale.',
+    context: 'Le contexte adapte automatiquement l\'interface (vues proposées, champs) pour tous les visiteurs de la communauté. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',
   },
 };

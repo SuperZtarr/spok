@@ -4,7 +4,7 @@
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
    message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
-   Contexte : Neutre / Forum / Projet / JDR — donne le mode d'interface par défaut de la communauté (Layout).
+   Contexte : Neutre / Forum / Projet / Loisirs (valeur JDR en base et dans l'API) — donne le mode d'interface par défaut de la communauté (Layout).
    Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
    Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
    PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine.
@@ -634,7 +634,7 @@ export function CommunitySettingsPage() {
                           { value: 'NONE', label: 'Neutre', description: 'Toutes les vues et tous les champs disponibles' },
                           { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
                           { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
-                          { value: 'JDR', label: 'JDR', description: 'Campagnes et séances — fiches, PNJ, cartes, images' },
+                          { value: 'JDR', label: 'Loisirs', description: 'Jeux, passions et activités ludiques — fiches, cartes, images' },
                         ] as const).map((opt) => (
                           <button
                             key={opt.value}
@@ -688,7 +688,7 @@ export function CommunitySettingsPage() {
                     {(community as any).visibility === 'OPEN' ? 'Ouverte' : (community as any).visibility === 'READONLY' ? 'Lecture seule' : 'Privée'}
                   </span></div>
                   <div><span className="text-muted-foreground">Contexte:</span> <span className="font-medium">
-                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : community.context === 'JDR' ? 'JDR' : 'Neutre'}
+                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : community.context === 'JDR' ? 'Loisirs' : 'Neutre'}
                   </span></div>
                 </div>
               )}

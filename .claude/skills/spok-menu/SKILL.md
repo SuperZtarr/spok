@@ -189,7 +189,7 @@ SpacePage
 #### `#global-toolbar` — ordre gauche→droite
 
 ```
-[Filtre: Types|Statuts|Recherche]  [Highlight: Types|Statuts|Recherche]  [Position | A→Z à plat | A→Z par groupe]  → flex-1 ←  [+ Nouveau] [Modèle] [Séances] [Count] [Historique] [Paramètres]
+[Filtre OU Aperçu: Types|Statuts|Recherche]  [Position | A→Z à plat | A→Z par groupe]  → flex-1 ←  [+ Nouveau] [Modèle] [Séances] [Count] [Historique] [Paramètres]
 ```
 
 ⚠️ **Décision Thomas 2026-10-28** : « Nouveau » et « Modèle » (insérer un modèle) sont dans `toolbar-actions` (SpaceToolbar),
@@ -206,7 +206,7 @@ décision 2026-06-13). Toutes les vues créaient de toute façon avec la même a
 
 - Filtre et Highlight : **discrets** si vide, **foncés** si critère actif
 - Ordre : bouton actif = foncé
-- **Pas de bouton "Lumière"** — Filtre et Highlight sont deux blocs permanents et distincts
+- **Décision Thomas 2026-11-04 : un seul bloc par vue** — `isHighlightMode` (SpacePage) choisit « Aperçu » ou « Filtre », sur les mêmes états (`filter`, `statusFilter`, `searchQuery`). Nouvelle vue : l'ajouter à `isHighlightMode` si elle estompe au lieu de masquer. Remplace les « deux blocs permanents » de 2026-06-13.
 - Les états (filter, highlight, ordre) sont dans `SpacePage`, pas dans les vues
 
 #### `#view-header` — header de chaque vue

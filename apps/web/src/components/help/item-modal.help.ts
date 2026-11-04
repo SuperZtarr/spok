@@ -14,7 +14,7 @@ export const help: HelpEntry = {
     'Les contributions permettent de discuter sur l\'élément',
     'Créez des relations pour lier les éléments entre eux',
     'Les enfants sont listés en bas de la fiche',
-    '« Plus de champs » affiche type, statut, dates, relations et tags ; « Moins de champs » les masque (fiche ouverte réduite en Forum et JDR, complète ailleurs)',
+    '« Plus de champs » affiche type, statut, dates, relations et tags ; « Moins de champs » les masque (fiche ouverte réduite en Forum et Loisirs, complète ailleurs)',
   ],
   tour: [
     {
@@ -46,7 +46,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-more-fields"]',
       popover: {
         title: 'Plus de champs / Moins de champs',
-        description: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et JDR, complète dans les autres modes.',
+        description: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
         side: 'bottom',
       },
     },
@@ -110,7 +110,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-relations"]',
       popover: {
         title: 'Relations',
-        description: 'Liez cet élément à d\'autres : bloque, permet, entraîne (décaler l\'un décale l\'autre) ou lié à. Ajoutez un commentaire sur chaque relation.',
+        description: 'Liez cet élément à d\'autres, de cet espace, de la communauté ou de tous vos espaces : bloque, permet, entraîne (décaler l\'un décale l\'autre) ou lié à. Ajoutez un commentaire sur chaque relation.',
         side: 'left',
       },
     },
@@ -162,6 +162,6 @@ export const help: HelpEntry = {
     dueDate: 'La date limite à respecter : elle classe l\'élément dans le Planning et le signale en retard une fois dépassée.',
     priority: 'De P1 (urgente) à P4 (basse) : sert au tri et à la vue Priorité.',
     parent: 'L\'élément sous lequel celui-ci se range, dans le même espace : il en devient un sous-élément.',
-    assignee: 'La personne chargée de l\'élément : il apparaît dans ses tâches (« Mes tâches », « Ma journée »).',
+    assignee: 'La personne chargée de l\'élément. Un membre de l\'espace le voit dans ses tâches (« Mes tâches », « Ma journée ») et peut le modifier. Vous pouvez aussi saisir le nom d\'une personne sans compte SPOK : elle n\'est que nommée, sans droit ni notification.',
   },
 };

@@ -10,7 +10,7 @@ export const help: HelpEntry = {
   tips: [
     'Chaque ligne part du réglage du code ; une ligne modifiée porte la mention « modifié » et le réglage d\'origine',
     'Accès : Tous (visiteurs compris), Connectés, ou Admins (seulement en mode admin)',
-    'Les modes Forum, Projet et JDR rangent ensuite les vues accessibles (boutons directs ou « Autres vues ») ; ils ne rendent jamais une vue accessible',
+    'Les modes Forum, Projet et Loisirs rangent ensuite les vues accessibles (boutons directs ou « Autres vues ») ; ils ne rendent jamais une vue accessible',
     'Les lecteurs d\'un espace restent limités à leurs vues (Présentation, Liste, Kanban, Gantt, Carte mentale)',
     'Rien ne change avant « Enregistrer » ; « Tout réinitialiser » revient au réglage du code',
   ],
@@ -47,7 +47,7 @@ export const help: HelpEntry = {
     },
   ],
   hints: {
-    intro: 'Ces réglages s\'appliquent à tout SPOK, pour tous les utilisateurs, dès l\'enregistrement. Le mode d\'interface (Forum, Projet, JDR) range ensuite les vues accessibles ; il ne donne jamais accès à une vue masquée ou réservée.',
+    intro: 'Ces réglages s\'appliquent à tout SPOK, pour tous les utilisateurs, dès l\'enregistrement. Le mode d\'interface (Forum, Projet, Loisirs) range ensuite les vues accessibles ; il ne donne jamais accès à une vue masquée ou réservée.',
     visible: 'Visible / masquée : une entrée masquée n\'apparaît plus dans les menus ni dans le sélecteur de vues, pour personne.',
     access: 'Qui voit cette entrée : Tous (y compris les visiteurs non connectés des espaces publics), Connectés (tout utilisateur connecté), Admins (seulement les administrateurs, en mode admin).',
     modified: 'Réglage modifié par rapport au code',

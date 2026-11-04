@@ -118,6 +118,34 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'item-free-assignee',
+    page: "Fiche d'un élément (ItemEditModal)",
+    trigger: "Saisie dans « Assigné à » d'un nom qui n'est pas celui d'un membre de l'espace",
+    effect: "Le nom est enregistré tel quel (assignedToName) et remplace tout membre assigné. Il s'affiche dans la fiche et les exports, sans droit de modification, sans notification, sans entrée dans « Mes tâches ». Un nom identique à celui d'un membre assigne ce membre, et choisir un membre efface le nom libre",
+    location: 'apps/web/src/components/ItemEditModal.tsx ; apps/api/src/utils/assignment.ts (exclusiveAssignee)',
+  },
+  {
+    id: 'agenda-open-to-participants',
+    page: 'Séance (AgendaPanel, AddAgendaItemsDialog)',
+    trigger: "Un membre de la séance sans rôle (invité, participant) ajoute à la préparation",
+    effect: "Il ajoute tout élément qu'il peut lire, avant et pendant la séance, et retire ses propres lignes. Il voit ses lignes et celles déjà présentées ; il ne réordonne pas et ne présente pas. L'animateur et les présentateurs voient ces lignes ; à l'affichage, l'accès de l'auteur de la ligne suffit, même si celui qui affiche n'a pas accès à l'espace source",
+    location: 'apps/api/src/routes/live-sessions.ts (canAddToAgenda, visibleAgenda, POST /:id/display)',
+  },
+  {
+    id: 'toolbar-filter-or-highlight',
+    page: "Barre d'un espace (SpaceToolbar)",
+    trigger: 'Affichage du bloc de critères (type, statut, texte) selon la vue',
+    effect: "Un seul bloc par vue. « Aperçu » (estompe sans masquer) sur Carte mentale, Arbre, Gantt, Texte, PERT, Process, Planning, Calendrier, Graphe, Sunburst, Relations, Bulles, Arbre radial, Treemap, Tableau croisé, Heatmap et Réseau ; « Filtre » (réduit la liste) sur les autres. Les critères sont communs : ils restent posés en changeant de vue et changent seulement d'effet",
+    location: 'apps/web/src/pages/SpacePage.tsx (isHighlightMode) ; apps/web/src/pages/SpaceToolbar.tsx (highlightMode)',
+  },
+  {
+    id: 'gantt-parent-open-child',
+    page: 'Vue Gantt (TimelineView)',
+    trigger: 'Parent sans dates dont un enfant est commencé sans date de fin',
+    effect: "La barre pointillée du parent va au moins jusqu'à aujourd'hui, comme la barre de cet enfant ; une échéance ou un début plus lointain repousse sa fin. Un enfant avec une échéance seule compte pour cette échéance",
+    location: 'apps/web/src/components/views/timeline-utils.ts (rollupEnd)',
+  },
+  {
     id: 'empty-new-item-discarded',
     page: "Fiche d'un élément (ItemEditModal)",
     trigger: "Fermeture sans enregistrement (croix, Échap, clic à côté, Fermer / Quitter sans enregistrer) d'un élément créé par l'utilisateur moins de 5 minutes avant l'ouverture de sa fiche, vide à l'ouverture et toujours vide",
@@ -135,7 +163,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'space-default-view-by-context',
     page: 'Espace (ouverture) ; paramètres de l\'espace ; barre latérale ; cartes d\'espace',
     trigger: "Ouverture d'un espace dont la vue par défaut n'est pas réglée (« Selon la communauté »)",
-    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, JDR → Carte mentale), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
+    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
     location: 'apps/web/src/lib/spaceDefaultView.ts, apps/web/src/pages/SpacePage.tsx, apps/web/src/pages/SpaceSettingsPage.tsx, apps/web/src/components/Layout.tsx, apps/web/src/components/ui/SpaceCard.tsx',
   },
   {
@@ -170,7 +198,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'forum-modal-reduced-with-summary',
     page: 'Modale item (tous modes)',
     trigger: "Ouverture d'un item / clic sur « Plus de champs » – « Moins de champs »",
-    effect: "Fiche réduite (titre, description, média, réactions/contributions) ou complète, bouton « Plus de champs / Moins de champs » présent dans tous les modes. Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet et Tous ; non mémorisé (chaque fiche ouverte et chaque changement de mode repartent du défaut). Fiche réduite : ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic = fiche complète",
+    effect: "Fiche réduite (titre, description, média, réactions/contributions) ou complète, bouton « Plus de champs / Moins de champs » présent dans tous les modes. Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet et Tous ; non mémorisé (chaque fiche ouverte et chaque changement de mode repartent du défaut). Fiche réduite : ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic = fiche complète",
     location: 'apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/item-edit-helpers.ts (buildForumSummary)',
   },
   {
@@ -288,8 +316,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
-    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-JDR-Tous du header",
-    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→JDR, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Boutons directs de la barre de vues : Forum = Discussions, Texte, Récents, Images, Calendrier ; Projet = famille Pilotage sans Liste/Types/Images/Liens/Documents, plus Carte mentale ; JDR = Discussions, Carte mentale, Images, Documents, Récents (dans cet ordre) ; Tous = toutes. Les autres vues restent dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées",
+    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Loisirs-Tous du header",
+    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→Loisirs, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Boutons directs de la barre de vues : Forum = Discussions, Texte, Récents, Images, Calendrier ; Projet = famille Pilotage sans Liste/Types/Images/Liens/Documents, plus Carte mentale ; Loisirs = Discussions, Carte mentale, Images, Documents, Récents (dans cet ordre) ; Tous = toutes. Les autres vues restent dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées",
     location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode)',
   },
   {

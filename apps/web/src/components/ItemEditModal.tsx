@@ -9,7 +9,7 @@
  * Réactions/Contributions ; le bouton « Plus de champs / Moins de champs » (expanded → showAll), toujours affiché,
  * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
- * Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
+ * Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
  * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
  * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
@@ -37,6 +37,10 @@
  * Sous-modales keyées par itemId (remontage = reset de leur state d'un item à l'autre) : chaque clé
  * doit rester préfixée et unique parmi les enfants de <Modal> (deux `key={itemId}` frères = warning
  * React « two children with the same key » à chaque rendu, bug corrigé le 2026-09-27).
+ * Assigné : menu des membres + saisie libre (assignedToName, personne sans compte, sans droit ni notification ; exclusif avec
+ * assignedToId, garanti par l'API).
+ * Relations : cible choisie par ItemSearchPicker (cet espace, communauté, tous mes espaces — droits appliqués par l'API).
+ * Zones data-devzone item-* : vocabulaire de DevZoneInspector et du mode Aide (textes : help/shellZones.ts).
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions) ;
@@ -59,6 +63,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemsApi, spacesApi, bookmarksApi, activityApi, isConflictError } from '../lib/api';
 import type { Item, ItemType, ContributionWithAuthor, ItemRelation, SpaceReferentiels, Tag, TypeLabelConfig } from '@spok/shared';
 import { ConflictDialog } from './ConflictDialog';
+import { ItemSearchPicker } from './ItemSearchPicker';
 import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
@@ -158,9 +163,9 @@ export function ItemEditModal({
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const { mode: interfaceMode } = useInterfaceModeStore();
   // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
-  // « Plus de champs / Moins de champs ». Défaut à l'ouverture : réduite en Forum et JDR, complète en Projet / Tous.
+  // « Plus de champs / Moins de champs ». Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet / Tous.
   // Non mémorisé : chaque fiche ouverte (ou changement de mode) repart du défaut.
-  const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'jdr';
+  const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'loisirs';
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
   // Mode Afficher (ItemReadView) ou Modifier / Fiche : fixé à chaque ouverture, conservé en naviguant d'item en item
@@ -176,6 +181,7 @@ export function ItemEditModal({
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
+  const [assignedToName, setAssignedToName] = useState(''); // saisie libre : personne sans compte SPOK
   const [type, setType] = useState<ItemType>('NOTE');
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -217,6 +223,7 @@ export function ItemEditModal({
   const [showAddRelation, setShowAddRelation] = useState(false);
   const [newRelationType, setNewRelationType] = useState<OfficialRelationType>('implements');
   const [newRelationTargetId, setNewRelationTargetId] = useState('');
+  const [newRelationTargetTitle, setNewRelationTargetTitle] = useState('');
   const [newRelationLabel, setNewRelationLabel] = useState('');
   const [editingRelationId, setEditingRelationId] = useState<string | null>(null);
   // Relation ouverte dans RelationEditDialog (modale partagée) : extrémités (titre + statut), type et commentaire initiaux
@@ -347,6 +354,7 @@ export function ItemEditModal({
       status: it.status || '',
       priority: it.priority ?? null,
       assignedToId: it.assignedToId || '',
+      assignedToName: it.assignedToName || '',
       type: it.type as string,
       diagramXml: (it.content as Record<string, unknown>)?.xml as string || '',
       // datetime-local (YYYY-MM-DDTHH:mm) en heure locale
@@ -359,7 +367,7 @@ export function ItemEditModal({
     loadedItemRef.current = item;
     const next = toForm(item);
     const merged = mergeFormWithServer(
-      { title, description, url, parentId, status, priority, assignedToId, type: type as string, diagramXml, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
+      { title, description, url, parentId, status, priority, assignedToId, assignedToName, type: type as string, diagramXml, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
       base,
       next,
     );
@@ -371,6 +379,7 @@ export function ItemEditModal({
     setStatus(merged.status);
     setPriority(merged.priority);
     setAssignedToId(merged.assignedToId);
+    setAssignedToName(merged.assignedToName);
     if (!base || merged.type !== type) {
       setType(merged.type as ItemType);
       setAllDay(merged.type !== 'MEETING');
@@ -385,7 +394,7 @@ export function ItemEditModal({
   }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateMutation = useMutation({
-    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
+    mutationFn: (data: { type?: ItemType; title?: string; description?: string | null; url?: string | null; parentId?: string | null; status?: string | null; assignedToId?: string | null; assignedToName?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; updatedAt?: string }) =>
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: async () => {
       await Promise.all([
@@ -661,6 +670,7 @@ export function ItemEditModal({
     if (status !== (item.status || '')) return true;
     if (priority !== (item.priority ?? null)) return true;
     if ((assignedToId || null) !== (item.assignedToId || null)) return true;
+    if ((assignedToName.trim() || null) !== (item.assignedToName || null)) return true;
     // Dates : le state (startDate/endDate/dueDate) est en heure locale via toDatetimeLocal()
     // ET tronqué à la minute ; item.xxxDate est en ISO UTC et peut porter des secondes/ms.
     // → normaliser LES DEUX côtés au même instant tronqué à la minute (sinon faux positif
@@ -677,7 +687,7 @@ export function ItemEditModal({
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
     return false;
-  }, [item, type, title, description, diagramXml, url, parentId, status, priority, assignedToId, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
+  }, [item, type, title, description, diagramXml, url, parentId, status, priority, assignedToId, assignedToName, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
 
   const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges);
 
@@ -703,7 +713,7 @@ export function ItemEditModal({
     closeAfterSaveRef.current = closeAfter;
     const closeIfAsked = () => { if (closeAfter) onClose(); };
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; assignedToName?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -762,6 +772,10 @@ export function ItemEditModal({
     const newAssignedToId = assignedToId || null;
     if (newAssignedToId !== (item.assignedToId || null)) {
       updates.assignedToId = newAssignedToId;
+    }
+    const newAssignedToName = assignedToName.trim() || null;
+    if (newAssignedToName !== (item.assignedToName || null)) {
+      updates.assignedToName = newAssignedToName;
     }
 
     // Handle dueDate changes
@@ -1072,7 +1086,7 @@ export function ItemEditModal({
           )}
           {/* Breadcrumb */}
           {(communityName || spaceName || breadcrumb.length > 0) && (
-            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 px-1 flex-wrap" data-tour="item-breadcrumb">
+            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 px-1 flex-wrap" data-tour="item-breadcrumb" data-devzone="item-chemin">
               {communityName && (
                 <>
                   <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
@@ -1102,7 +1116,7 @@ export function ItemEditModal({
           )}
 
           {/* Header with type icon + title */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4" data-devzone="item-entete">
             <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
               {TypeIcon && <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
@@ -1242,7 +1256,7 @@ export function ItemEditModal({
           {/* === LEFT COLUMN: description + contributions === */}
           <div className="space-y-6 min-w-0">
 
-              {/* Fiche réduite (Forum, JDR) : types « avec contenu » (CONTENT_TYPES) — choisir Image / Document / Lien…
+              {/* Fiche réduite (Forum, Loisirs) : types « avec contenu » (CONTENT_TYPES) — choisir Image / Document / Lien…
                   fait apparaître son bloc (mediaSection) sous la Description. Types de pilotage : fiche complète. */}
               {!showAll && canEdit && (() => {
                 const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
@@ -1273,7 +1287,7 @@ export function ItemEditModal({
               })()}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
-              <div className="space-y-2" data-tour="item-description">
+              <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
                 <label className="text-sm font-medium">Description</label>
                 <RichTextEditor
                   key={itemId}
@@ -1291,7 +1305,7 @@ export function ItemEditModal({
               {!showAll && mediaSection}
 
               {/* Reactions + Contributions */}
-              <div className="space-y-3" data-tour="item-reactions">
+              <div className="space-y-3" data-tour="item-reactions" data-devzone="item-contributions">
                 {/* Reaction bar on item */}
                 {item && (
                   <ReactionBar
@@ -1423,10 +1437,10 @@ export function ItemEditModal({
           </div>{/* end left column */}
 
           {/* === CENTER COLUMN === — fiche réduite : supprimée (mediaSection sous la Description) */}
-          {showAll && <div className="space-y-6 min-w-0">
+          {showAll && <div className="space-y-6 min-w-0" data-devzone="item-champs">
 
               {/* Type */}
-              {showAll && <div className="space-y-2" data-tour="item-type-selector">
+              {showAll && <div className="space-y-2" data-tour="item-type-selector" data-devzone="item-type">
                 <label className="text-sm font-medium">Type</label>
                 {canEdit ? (
                   <>
@@ -1491,7 +1505,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Statut */}
-              {showAll && <div className="space-y-2" data-tour="item-status">
+              {showAll && <div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1589,7 +1603,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Dates */}
-              {showAll && <div data-tour="item-dates" className="space-y-3">
+              {showAll && <div data-tour="item-dates" data-devzone="item-dates" className="space-y-3">
                 {/* Toggle Jours pleins / Heures — pleine largeur */}
                 {canEdit && (
                   <div className="flex items-center gap-3">
@@ -1687,7 +1701,7 @@ export function ItemEditModal({
           </div>}{/* end center column */}
 
           {/* === RIGHT COLUMN === */}
-          <div className="space-y-6" data-tour="item-details">
+          <div className="space-y-6" data-tour="item-details" data-devzone="item-details">
 
               {/* ID de l'item */}
               <div className="flex items-center gap-2">
@@ -1718,10 +1732,23 @@ export function ItemEditModal({
                   {canEdit && <FieldHelp page="item-modal" field="assignee" className="text-xs text-muted-foreground" />}
                   {canEdit ? (
                     <div className="flex items-center gap-2">
-                      <Select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}
-                        options={[{ value: '', label: 'Non assigné' }, ...spaceMembers.map((m) => ({ value: m.userId, label: m.name || m.email }))]} />
+                      {/* Menu + saisie libre : un nom identique à celui d'un membre l'assigne, tout autre nom reste un simple nom */}
+                      <Input
+                        list="item-assignee-members"
+                        value={assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || item?.assignedTo?.name || '') : assignedToName}
+                        onChange={(e) => {
+                          const text = e.target.value;
+                          const member = spaceMembers.find((m) => (m.name || m.email).toLowerCase() === text.trim().toLowerCase());
+                          setAssignedToId(member?.userId ?? '');
+                          setAssignedToName(member ? '' : text);
+                        }}
+                        placeholder="Non assigné — choisir ou saisir un nom"
+                      />
+                      <datalist id="item-assignee-members">
+                        {spaceMembers.map((m) => <option key={m.userId} value={m.name || m.email} />)}
+                      </datalist>
                       {user && assignedToId !== user.id && (
-                        <button type="button" onClick={() => setAssignedToId(user.id)}
+                        <button type="button" onClick={() => { setAssignedToId(user.id); setAssignedToName(''); }}
                           className="shrink-0 px-2 py-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
                           title="M'assigner">
                           <User className="w-3.5 h-3.5" />
@@ -1730,7 +1757,7 @@ export function ItemEditModal({
                     </div>
                   ) : (
                     <p className="text-sm">
-                      {assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu') : <span className="text-muted-foreground">Non assigné</span>}
+                      {assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || 'Membre inconnu') : assignedToName || <span className="text-muted-foreground">Non assigné</span>}
                     </p>
                   )}
                   {/* Accusé de lecture : seulement pour l'assigné enregistré (pas pendant un changement en cours) */}
@@ -1750,7 +1777,7 @@ export function ItemEditModal({
               )}
 
               {/* Dépendances */}
-              {showAll && <div className="space-y-3" data-tour="item-relations">
+              {showAll && <div className="space-y-3" data-tour="item-relations" data-devzone="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -1773,8 +1800,20 @@ export function ItemEditModal({
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Élément</label>
-                        <Select value={newRelationTargetId} onChange={(e) => setNewRelationTargetId(e.target.value)}
-                          options={[{ value: '', label: 'Sélectionner...' }, ...allItems.filter((i) => i.id !== itemId).map((i) => ({ value: i.id, label: i.title }))]} />
+                        {newRelationTargetId ? (
+                          <div className="flex items-center gap-2 px-2 py-1 rounded border border-border bg-background text-sm">
+                            <span className="flex-1 min-w-0 truncate">{newRelationTargetTitle}</span>
+                            <button type="button" className="text-xs text-primary hover:underline flex-shrink-0" onClick={() => setNewRelationTargetId('')}>Changer</button>
+                          </div>
+                        ) : (
+                          <ItemSearchPicker
+                            spaceId={spaceId}
+                            excludeIds={new Set(itemId ? [itemId] : [])}
+                            browseItems={allItems.map((i) => ({ id: i.id, title: i.title, spaceId }))}
+                            actionLabel="Choisir"
+                            onPick={(hit) => { setNewRelationTargetId(hit.id); setNewRelationTargetTitle(hit.title || 'Sans titre'); }}
+                          />
+                        )}
                       </div>
                     </div>
                     <textarea
@@ -1835,7 +1874,7 @@ export function ItemEditModal({
 
               {/* Tags — sous le toggle « Plus de champs » */}
               {showAll && (
-              <div className="space-y-3" data-tour="item-tags">
+              <div className="space-y-3" data-tour="item-tags" data-devzone="item-tags">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <TagIcon className="w-4 h-4" />
                   Tags
@@ -1859,7 +1898,7 @@ export function ItemEditModal({
                 const children = allItems.filter(i => i.parentId === item.id);
                 if (children.length === 0) return null;
                 return (
-                  <div className="space-y-2" data-tour="item-children">
+                  <div className="space-y-2" data-tour="item-children" data-devzone="item-enfants">
                     <h2 className="text-sm font-semibold flex items-center gap-2">
                       <GitBranch className="w-4 h-4" />
                       Éléments enfants ({children.length})
@@ -1902,7 +1941,7 @@ export function ItemEditModal({
           </div>
 
           {/* Footer — always visible */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
             {canEditTags && (<>
               <HelpHint text={itemHints?.saveAndClose}>
                 <Button type="submit" disabled={!hasChanges || updateMutation.isPending}

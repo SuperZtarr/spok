@@ -148,9 +148,6 @@ export function SpacePage() {
   useEffect(() => {
     if (spaceId) sessionStorage.setItem(`space-treeSort-${spaceId}`, treeSort);
   }, [spaceId, treeSort]);
-  const [highlightFilter, setHighlightFilter] = useState<ItemType | 'ALL'>('ALL');
-  const [highlightStatus, setHighlightStatus] = useState<string>('ALL');
-  const [highlightSearch, setHighlightSearch] = useState('');
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -663,12 +660,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           onStatusFilterChange={setStatusFilter}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
-          highlightFilter={highlightFilter}
-          onHighlightFilterChange={setHighlightFilter}
-          highlightStatus={highlightStatus}
-          onHighlightStatusChange={setHighlightStatus}
-          highlightSearch={highlightSearch}
-          onHighlightSearchChange={setHighlightSearch}
+          highlightMode={isHighlightMode}
           totalItemCount={allItemsData?.data?.length ?? itemsData?.data?.length ?? space?.itemCount ?? 0}
           filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
           searchMatchCount={searchMatchIds?.size}

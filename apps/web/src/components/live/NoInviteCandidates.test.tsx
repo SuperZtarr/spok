@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { NoInviteCandidates } from './NoInviteCandidates'
 
 vi.mock('../../lib/api', () => ({
-  spacesApi: { get: vi.fn().mockResolvedValue({ id: 's1', community: { id: 'c1', name: 'Thomas JDR' } }) },
+  spacesApi: { get: vi.fn().mockResolvedValue({ id: 's1', community: { id: 'c1', name: 'Club de jeux' } }) },
 }))
 
 describe('NoInviteCandidates', () => {
@@ -16,7 +16,7 @@ describe('NoInviteCandidates', () => {
         <MemoryRouter><NoInviteCandidates spaceId="s1" /></MemoryRouter>
       </QueryClientProvider>,
     )
-    await findByText(container, /« Thomas JDR »/)
+    await findByText(container, /« Club de jeux »/)
     const link = await findByText(container, 'Gérer les membres de la communauté')
     expect(link.getAttribute('href')).toBe('/communities/c1/settings')
   })
