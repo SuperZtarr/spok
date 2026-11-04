@@ -330,6 +330,9 @@ model Item {
   updatedBy    User?  @relation("ItemUpdatedBy", fields: [updatedById], references: [id])
   assignedToId String?
   assignedTo   User?  @relation("ItemAssignedTo", fields: [assignedToId], references: [id])
+  // Assigné en saisie libre (2026-11-04) : personne sans compte SPOK. Exclusif avec assignedToId (utils/assignment.ts) ;
+  // aucun droit, aucune notification, n'alimente pas « Mes tâches »
+  assignedToName String?
   // Accusé de lecture à l'assignation (2026-09-29) : date et auteur de l'assignation courante, posés par
   // l'API (utils/assignment.ts) à chaque changement d'assigné. null = non assigné ou assignation antérieure
   // à la fonctionnalité (pas d'indicateur). Pas de relation User : l'auteur n'est pas affiché.

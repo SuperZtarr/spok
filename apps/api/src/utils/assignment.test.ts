@@ -1,8 +1,26 @@
 /* Tests de l'accusé de lecture à l'assignation : tampon d'assignation et calcul vu / pas vu. */
 import { describe, it, expect, vi } from 'vitest';
-import { assignmentStamp, computeAssignmentReceipts } from './assignment.js';
+import { assignmentStamp, computeAssignmentReceipts, exclusiveAssignee } from './assignment.js';
 
 const NOW = new Date('2026-09-29T10:00:00Z');
+
+describe('exclusiveAssignee', () => {
+  it('un membre efface le nom libre', () => {
+    expect(exclusiveAssignee({ assignedToId: 'u1' })).toEqual({ assignedToId: 'u1', assignedToName: null });
+  });
+  it('un nom libre efface le membre, espaces retirés', () => {
+    expect(exclusiveAssignee({ assignedToName: '  Léa ' })).toEqual({ assignedToId: null, assignedToName: 'Léa' });
+  });
+  it('rien de fourni : rien ne bouge', () => {
+    expect(exclusiveAssignee({})).toEqual({ assignedToId: undefined, assignedToName: undefined });
+  });
+  it('tout vider : les deux à null', () => {
+    expect(exclusiveAssignee({ assignedToId: null, assignedToName: '' })).toEqual({ assignedToId: null, assignedToName: null });
+  });
+  it('retirer le membre sans toucher au nom', () => {
+    expect(exclusiveAssignee({ assignedToId: null })).toEqual({ assignedToId: null, assignedToName: undefined });
+  });
+});
 
 describe('assignmentStamp', () => {
   it('assigné non fourni dans la requête : rien ne bouge', () => {

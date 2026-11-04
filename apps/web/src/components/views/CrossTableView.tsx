@@ -41,7 +41,7 @@ function getDimensionValue(item: Item, dim: Dimension): string {
   switch (dim) {
     case 'status': return item.status || '_none';
     case 'type': return item.type;
-    case 'assignee': return (item as any).assignedTo?.name || (item as any).assignedToId || '_unassigned';
+    case 'assignee': return (item as any).assignedTo?.name || item.assignedToName || (item as any).assignedToId || '_unassigned';
     case 'space': return item.spaceId;
     default: return '_unknown';
   }

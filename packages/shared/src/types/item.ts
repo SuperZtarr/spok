@@ -26,6 +26,8 @@ export interface Item {
   spaceId: string;
   createdById: string;
   assignedToId?: string | null;
+  /** Assigné en saisie libre, sans compte SPOK — exclusif avec assignedToId, sans droit ni notification */
+  assignedToName?: string | null;
   /** Date / auteur de l'assignation courante (null = non assigné ou assignation antérieure au 2026-09-29) */
   assignedAt?: string | null;
   assignedById?: string | null;
@@ -84,6 +86,7 @@ export interface CreateItemInput {
   endDate?: string;
   parentId?: string;
   assignedToId?: string | null;
+  assignedToName?: string | null;
   tagIds?: string[];
 }
 
@@ -101,6 +104,7 @@ export interface UpdateItemInput {
   manualHorizon?: HorizonBucket | null;
   parentId?: string | null;
   assignedToId?: string | null;
+  assignedToName?: string | null;
   tagIds?: string[];
   updatedAt?: string;
   propagateToChildren?: boolean;

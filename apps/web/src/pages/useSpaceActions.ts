@@ -260,7 +260,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       startDate: item?.startDate,
       endDate: item?.endDate,
       url: item?.url,
-      assignedToName: item?.assignedTo?.name || null,
+      assignedToName: item?.assignedTo?.name || item?.assignedToName || null,
       tags: item?.tags?.map(t => ({ name: t.name, color: t.color })),
     });
   }, [allItems]);

@@ -172,7 +172,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             type: 'AUDIT_ALERT' as const,
             title: 'Accumulation de logs d\'audit',
             message: `${totalCount.toLocaleString('fr-FR')} logs enregistrés. Une purge est recommandée.`,
-            link: '/admin/audit',
+            link: '/admin/audit-logs',
           })),
           skipDuplicates: true,
         });
@@ -220,7 +220,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
       const restoreData: Record<string, unknown> = {};
 
       // Allowed fields for each entity type
-      const ITEM_FIELDS = ['type', 'title', 'description', 'content', 'url', 'status', 'priority', 'position', 'dueDate', 'startDate', 'endDate', 'parentId', 'spaceId', 'assignedToId'];
+      const ITEM_FIELDS = ['type', 'title', 'description', 'content', 'url', 'status', 'priority', 'position', 'dueDate', 'startDate', 'endDate', 'parentId', 'spaceId', 'assignedToId', 'assignedToName'];
       const SPACE_FIELDS = ['name', 'description', 'type', 'parentId', 'communityId', 'visibility', 'defaultRole', 'defaultView', 'position', 'avatarUrl', 'coverUrl'];
       const COMMUNITY_FIELDS = ['name', 'description', 'visibility', 'context', 'avatarUrl', 'coverUrl'];
 

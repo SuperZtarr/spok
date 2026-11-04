@@ -12,7 +12,7 @@ import type { Item } from '@spok/shared';
 
 export const FRESH_DRAFT_MAX_AGE_MS = 5 * 60 * 1000;
 
-type ItemLike = Pick<Item, 'title' | 'description' | 'url' | 'content' | 'dueDate' | 'startDate' | 'endDate' | 'priority' | 'assignedToId' | 'tags'> & {
+type ItemLike = Pick<Item, 'title' | 'description' | 'url' | 'content' | 'dueDate' | 'startDate' | 'endDate' | 'priority' | 'assignedToId' | 'assignedToName' | 'tags'> & {
   contributions?: unknown[] | null;
   relationsFrom?: unknown[] | null;
   relationsTo?: unknown[] | null;
@@ -29,7 +29,7 @@ export function isItemEmpty(item: ItemLike, childCount: number): boolean {
     && !(item.content && Object.keys(item.content).length > 0)
     && !item.dueDate && !item.startDate && !item.endDate
     && item.priority == null
-    && !item.assignedToId
+    && !item.assignedToId && !item.assignedToName
     && !(item.tags?.length)
     && childCount === 0
     && !(item.contributions?.length)

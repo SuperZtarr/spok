@@ -1,5 +1,5 @@
 /*
- * Accusé de lecture à l'assignation (décision Thomas 2026-09-29).
+ * Assignation : exclusiveAssignee (membre ou nom libre, 2026-11-04) et accusé de lecture (décision Thomas 2026-09-29).
  * - assignmentStamp : champs à écrire sur l'item quand l'assigné change (date + auteur), à appeler sur
  *   TOUS les chemins qui modifient assignedToId (création, PATCH, fusion, restauration d'audit).
  * - computeAssignmentReceipts : pour une liste d'items, l'accusé de chacun — une seule requête ItemView.
@@ -13,6 +13,17 @@ import type { PrismaClient } from '@spok/database';
 export type AssignmentReceipt = { seenAt: string | null } | null;
 
 type AssignmentFields = { assignedAt?: Date | null; assignedById?: string | null };
+
+/**
+ * Assigné : un membre (assignedToId) OU un nom libre (assignedToName, personne sans compte) — jamais les deux.
+ * Renvoie la paire à écrire ; undefined = champ non modifié. Un membre fourni efface le nom, un nom fourni efface le membre.
+ */
+export function exclusiveAssignee(data: { assignedToId?: string | null; assignedToName?: string | null }) {
+  const name = data.assignedToName === undefined ? undefined : (data.assignedToName?.trim() || null);
+  if (data.assignedToId) return { assignedToId: data.assignedToId, assignedToName: null };
+  if (name) return { assignedToId: null, assignedToName: name };
+  return { assignedToId: data.assignedToId, assignedToName: name };
+}
 
 /**
  * @param previous assigné actuel en base

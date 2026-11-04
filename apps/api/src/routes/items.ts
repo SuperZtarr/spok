@@ -1,27 +1,27 @@
 /*
- * Routes /spaces/:spaceId/items : CRUD des items (titre optionnel, défaut ''; statut '' normalisé en null), split par titres,
- * détail avec relations/contributions/reactionSummary. Exporte checkSpaceAccess et
- * getEffectiveVisibility (visibilité espace → parent → communauté ; OPEN→MEMBER, READONLY→VIEWER)
- * utilisés par de nombreuses routes — toute modification impacte l'accès global.
- * checkSpaceAccess(…, isAdminMode) : en mode admin (admin global + X-Admin-Mode) → rôle OWNER partout,
+ * Routes /spaces/:spaceId/items : CRUD des items (titre optionnel, dÃ©faut ''; statut '' normalisÃ© en null), split par titres,
+ * dÃ©tail avec relations/contributions/reactionSummary. Exporte checkSpaceAccess et
+ * getEffectiveVisibility (visibilitÃ© espace â†’ parent â†’ communautÃ© ; OPENâ†’MEMBER, READONLYâ†’VIEWER)
+ * utilisÃ©s par de nombreuses routes â€” toute modification impacte l'accÃ¨s global.
+ * checkSpaceAccess(â€¦, isAdminMode) : en mode admin (admin global + X-Admin-Mode) â†’ rÃ´le OWNER partout,
  * membre ou non ; hors mode admin, un admin global est un utilisateur normal (aucun passe-droit). Toute route
- * doit passer request.isAdminMode en 4e argument. Le propriétaire de la communauté a le rôle OWNER
- * dans tous les espaces de sa communauté, privés compris (isCommunityOwnerOfSpace).
- * Accusé de lecture à l'assignation : création/PATCH posent assignedAt/assignedById (assignmentStamp) ;
- * liste et détail renvoient assignmentReceipt (computeAssignmentReceipts) — cf. utils/assignment.ts.
- * Verrou de séance (copies lockedAt) : cf. utils/itemLock.ts — PATCH (organisation seule), DELETE (OWNER),
- * split refusé, propagation de statut ignore les enfants verrouillés.
- * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
- * MEMBER : modifie/supprime les items qu'il a créés OU qui lui sont assignés (canMemberManageItem, utils/itemOwnership.ts).
- * Dates liées au statut (PATCH et propagation aux descendants) : utils/statusDates.ts — source unique,
- * tous chemins confondus (modale, menu ⋯, Kanban, Today, MCP) ; ne complète que les dates vides.
- * url : http(s) seulement (itemUrlField) — jamais javascript:/data: (règle user-html-sanitized). Le HTML des
- * descriptions n'est PAS nettoyé ici : il l'est à l'affichage (web, lib/sanitizeHtml.ts).
+ * doit passer request.isAdminMode en 4e argument. Le propriÃ©taire de la communautÃ© a le rÃ´le OWNER
+ * dans tous les espaces de sa communautÃ©, privÃ©s compris (isCommunityOwnerOfSpace).
+ * AccusÃ© de lecture Ã  l'assignation : crÃ©ation/PATCH posent assignedAt/assignedById (assignmentStamp) ;
+ * liste et dÃ©tail renvoient assignmentReceipt (computeAssignmentReceipts) â€” cf. utils/assignment.ts.
+ * Verrou de sÃ©ance (copies lockedAt) : cf. utils/itemLock.ts â€” PATCH (organisation seule), DELETE (OWNER),
+ * split refusÃ©, propagation de statut ignore les enfants verrouillÃ©s.
+ * CommunautÃ© publique = visibility !== 'PRIVATE' uniquement (isPublic dÃ©prÃ©ciÃ©, jamais lu).
+ * MEMBER : modifie/supprime les items qu'il a crÃ©Ã©s OU qui lui sont assignÃ©s (canMemberManageItem, utils/itemOwnership.ts).
+ * Dates liÃ©es au statut (PATCH et propagation aux descendants) : utils/statusDates.ts â€” source unique,
+ * tous chemins confondus (modale, menu â‹¯, Kanban, Today, MCP) ; ne complÃ¨te que les dates vides.
+ * url : http(s) seulement (itemUrlField) â€” jamais javascript:/data: (rÃ¨gle user-html-sanitized). Le HTML des
+ * descriptions n'est PAS nettoyÃ© ici : il l'est Ã  l'affichage (web, lib/sanitizeHtml.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
 import { z } from 'zod';
-import { assignmentStamp, computeAssignmentReceipts } from '../utils/assignment.js';
+import { assignmentStamp, computeAssignmentReceipts, exclusiveAssignee } from '../utils/assignment.js';
 import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
@@ -39,11 +39,11 @@ import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
 
-// URL d'item : http(s) seulement. z.string().url() accepte javascript:… (lien piégé exécuté au clic côté web).
+// URL d'item : http(s) seulement. z.string().url() accepte javascript:â€¦ (lien piÃ©gÃ© exÃ©cutÃ© au clic cÃ´tÃ© web).
 const HTTP_URL = /^https?:\/\//i;
 const itemUrlField = z.string().url().refine((u) => HTTP_URL.test(u), { message: "L'URL doit commencer par http:// ou https://" });
 
-// « Pas de statut » = null, jamais chaîne vide (le filtre status=none cherche null) — le web envoie '' à la création.
+// Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
 
 const createItemSchema = z.object({
@@ -59,6 +59,7 @@ const createItemSchema = z.object({
   endDate: z.string().datetime().optional(),
   parentId: z.string().optional(),
   assignedToId: z.string().nullable().optional(),
+  assignedToName: z.string().max(120).nullable().optional(),
   tagIds: z.array(z.string()).optional(),
 });
 
@@ -76,6 +77,7 @@ const updateItemSchema = z.object({
   manualHorizon: z.enum(['NOW', 'TODAY', 'WEEK', 'MONTH', 'LATER']).nullable().optional(),
   parentId: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
+  assignedToName: z.string().max(120).nullable().optional(),
   tagIds: z.array(z.string()).optional(),
   updatedAt: z.string().datetime().optional(),
   propagateToChildren: z.boolean().optional(),
@@ -92,7 +94,7 @@ const querySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(5000).default(20),
 });
 
-// Resolve effective visibility by walking up: space → parent space → community
+// Resolve effective visibility by walking up: space â†’ parent space â†’ community
 export async function getEffectiveVisibility(prisma: any, spaceId: string): Promise<string> {
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
@@ -100,7 +102,7 @@ export async function getEffectiveVisibility(prisma: any, spaceId: string): Prom
   });
   if (!space) return 'PRIVATE';
 
-  // Space has explicit visibility → use it
+  // Space has explicit visibility â†’ use it
   if (space.visibility) return space.visibility;
 
   // Inherit from parent space
@@ -118,8 +120,8 @@ export async function getEffectiveVisibility(prisma: any, spaceId: string): Prom
   return 'PRIVATE';
 }
 
-// Propriétaire de la communauté de l'espace : droits OWNER sur tous ses espaces, privés compris,
-// membre direct ou non (règle 2026-10-12). Faux pour un espace personnel (sans communauté).
+// PropriÃ©taire de la communautÃ© de l'espace : droits OWNER sur tous ses espaces, privÃ©s compris,
+// membre direct ou non (rÃ¨gle 2026-10-12). Faux pour un espace personnel (sans communautÃ©).
 export async function isCommunityOwnerOfSpace(prisma: any, userId: string, spaceId: string): Promise<boolean> {
   const space = await prisma.space.findUnique({ where: { id: spaceId }, select: { communityId: true } });
   if (!space?.communityId) return false;
@@ -131,13 +133,13 @@ export async function isCommunityOwnerOfSpace(prisma: any, userId: string, space
 }
 
 // Version en masse de checkSpaceAccess (lecture) : parmi spaceIds, ceux que l'utilisateur peut lire.
-// Pour les vues qui agrègent beaucoup d'espaces (graphes, sunburst) sans N requêtes récursives.
-// Même règle : admin global en mode admin ou membre direct → oui ; propriétaire de la communauté → oui ;
-// visibilité effective (espace → parents → communauté) PRIVATE → non ; sinon membre de la communauté
-// ou communauté non privée → oui. Ne jamais filtrer sur la visibilité propre de l'espace seule.
-// Version en masse de getEffectiveVisibility : visibilité effective (espace → parents → communauté) de
-// chaque espace demandé, en quelques requêtes. Inclut communityId et la visibilité de la communauté.
-// Espace inconnu → absent de la Map.
+// Pour les vues qui agrÃ¨gent beaucoup d'espaces (graphes, sunburst) sans N requÃªtes rÃ©cursives.
+// MÃªme rÃ¨gle : admin global en mode admin ou membre direct â†’ oui ; propriÃ©taire de la communautÃ© â†’ oui ;
+// visibilitÃ© effective (espace â†’ parents â†’ communautÃ©) PRIVATE â†’ non ; sinon membre de la communautÃ©
+// ou communautÃ© non privÃ©e â†’ oui. Ne jamais filtrer sur la visibilitÃ© propre de l'espace seule.
+// Version en masse de getEffectiveVisibility : visibilitÃ© effective (espace â†’ parents â†’ communautÃ©) de
+// chaque espace demandÃ©, en quelques requÃªtes. Inclut communityId et la visibilitÃ© de la communautÃ©.
+// Espace inconnu â†’ absent de la Map.
 export async function getEffectiveVisibilities(prisma: any, spaceIds: string[]): Promise<Map<string, {
   visibility: string; communityId: string | null; communityVisibility: string | null;
 }>> {
@@ -145,7 +147,7 @@ export async function getEffectiveVisibilities(prisma: any, spaceIds: string[]):
   const result = new Map<string, { visibility: string; communityId: string | null; communityVisibility: string | null }>();
   if (ids.length === 0) return result;
 
-  // Espaces demandés + leurs ancêtres (nécessaires à la visibilité héritée)
+  // Espaces demandÃ©s + leurs ancÃªtres (nÃ©cessaires Ã  la visibilitÃ© hÃ©ritÃ©e)
   const byId = new Map<string, { id: string; parentId: string | null; visibility: string | null; communityId: string | null }>();
   let toLoad = ids;
   while (toLoad.length > 0) {
@@ -217,9 +219,9 @@ export async function filterReadableSpaceIds(prisma: any, userId: string | undef
 }
 
 /**
- * Espaces lisibles d'un utilisateur pour les écrans transverses (tâches, agenda, révision, activité) :
- * ses espaces directs + ceux de ses communautés, filtrés par filterReadableSpaceIds. Ne jamais prendre
- * « tous les espaces de mes communautés » sans ce filtre (fuite des espaces privés, corrigée 2026-10-14).
+ * Espaces lisibles d'un utilisateur pour les Ã©crans transverses (tÃ¢ches, agenda, rÃ©vision, activitÃ©) :
+ * ses espaces directs + ceux de ses communautÃ©s, filtrÃ©s par filterReadableSpaceIds. Ne jamais prendre
+ * Â« tous les espaces de mes communautÃ©s Â» sans ce filtre (fuite des espaces privÃ©s, corrigÃ©e 2026-10-14).
  */
 export async function readableSpaceIdsForUser(prisma: any, userId: string, isAdminMode = false): Promise<string[]> {
   const [direct, communities] = await Promise.all([
@@ -234,8 +236,8 @@ export async function readableSpaceIdsForUser(prisma: any, userId: string, isAdm
 
 /**
  * Tous les espaces qu'une personne peut lire, anonyme compris, HORS mode admin : readableSpaceIdsForUser + espaces
- * des communautés non privées filtrés par la visibilité effective. Utilisé par /search/advanced et par le
- * sélecteur d'éléments d'un article (item-article.ts, candidats).
+ * des communautÃ©s non privÃ©es filtrÃ©s par la visibilitÃ© effective. UtilisÃ© par /search/advanced et par le
+ * sÃ©lecteur d'Ã©lÃ©ments d'un article (item-article.ts, candidats).
  */
 export async function allReadableSpaceIds(prisma: any, userId: string | undefined): Promise<string[]> {
   const [ownSpaceIds, publicSpaces] = await Promise.all([
@@ -252,7 +254,7 @@ export async function allReadableSpaceIds(prisma: any, userId: string | undefine
 // Exported helper: check space access (direct membership, community membership, or public community)
 // Returns membership with role: OWNER, MEMBER, or VIEWER depending on visibility settings
 export async function checkSpaceAccess(prisma: any, userId: string | undefined, spaceId: string, isAdminMode = false) {
-  // 1. If authenticated, check direct space membership (always has priority — sauf mode admin)
+  // 1. If authenticated, check direct space membership (always has priority â€” sauf mode admin)
   if (userId) {
     const membership = await prisma.spaceMembership.findUnique({
       where: {
@@ -260,7 +262,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       },
     });
 
-    // Mode admin (admin global + header X-Admin-Mode) : droits OWNER partout, membre ou non —
+    // Mode admin (admin global + header X-Admin-Mode) : droits OWNER partout, membre ou non â€”
     // le mode admin voit et fait tout. Les routes passent request.isAdminMode en 4e argument.
     if (isAdminMode) {
       const adminUser = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
@@ -271,16 +273,16 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
 
     if (membership?.role === 'OWNER') return membership;
 
-    // Propriétaire de la communauté : OWNER dans tous ses espaces, privés compris
+    // PropriÃ©taire de la communautÃ© : OWNER dans tous ses espaces, privÃ©s compris
     if (await isCommunityOwnerOfSpace(prisma, userId, spaceId)) {
       return { ...(membership ?? { id: '', joinedAt: new Date() }), userId, spaceId, role: 'OWNER' as const };
     }
 
     if (membership) return membership;
-    // Admin global HORS mode admin : aucun passe-droit, il suit les règles d'un utilisateur normal
+    // Admin global HORS mode admin : aucun passe-droit, il suit les rÃ¨gles d'un utilisateur normal
   }
 
-  // 2. Community membership or public community → access depends on effective visibility
+  // 2. Community membership or public community â†’ access depends on effective visibility
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
     select: { communityId: true, community: { select: { visibility: true } } },
@@ -291,7 +293,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
     // PRIVATE: only direct members (checked above) have access
     if (visibility === 'PRIVATE') return null;
 
-    // OPEN → MEMBER role, READONLY → VIEWER role
+    // OPEN â†’ MEMBER role, READONLY â†’ VIEWER role
     const implicitRole = visibility === 'OPEN' ? 'MEMBER' as const : 'VIEWER' as const;
 
     if (userId) {
@@ -305,7 +307,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
       }
     }
 
-    // Public community (visibility != PRIVATE — isPublic déprécié, jamais lu): allow access
+    // Public community (visibility != PRIVATE â€” isPublic dÃ©prÃ©ciÃ©, jamais lu): allow access
     const communityIsPublic = space.community?.visibility !== 'PRIVATE';
     if (communityIsPublic) {
       return { userId: userId || '', spaceId, role: implicitRole, id: '', joinedAt: new Date() };
@@ -316,7 +318,7 @@ export async function checkSpaceAccess(prisma: any, userId: string | undefined, 
 }
 
 export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
-  // Register write sub-plugins — require authentication
+  // Register write sub-plugins â€” require authentication
   await fastify.register(async function (authInstance) {
     authInstance.addHook('preHandler', authInstance.authenticate);
     await authInstance.register(itemRelationsRoutes);
@@ -423,7 +425,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           const recentUpdate = new Date(item.updatedAt) >= since60days;
           // Expose viewedAt only when item was updated by someone else recently
           // undefined = not exposed (seen/irrelevant), null = unseen (no view record), string = compare with updatedAt
-          // Marqué non lu par l'utilisateur → toujours exposé comme non vu (null), quels que soient auteur/âge
+          // MarquÃ© non lu par l'utilisateur â†’ toujours exposÃ© comme non vu (null), quels que soient auteur/Ã¢ge
           const markedUnread = !!item.views?.[0]?.markedUnread;
           const exposedViewedAt = userId && markedUnread
             ? null
@@ -469,6 +471,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const item = await fastify.prisma.item.create({
         data: {
           ...itemData,
+          ...exclusiveAssignee(itemData),
           ...assignmentStamp(null, itemData.assignedToId, request.user.userId),
           dueDate: itemData.dueDate ? new Date(itemData.dueDate) : undefined,
           startDate: itemData.startDate ? new Date(itemData.startDate) : undefined,
@@ -654,7 +657,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.notFound('Item not found');
       }
 
-      // Copie de séance : seule l'organisation (parent, tags) est modifiable, par tout membre
+      // Copie de sÃ©ance : seule l'organisation (parent, tags) est modifiable, par tout membre
       if (isLocked(existingItem)) {
         if (lockedFieldViolations(request.body as Record<string, unknown>).length > 0) {
           return reply.forbidden(LOCKED_MESSAGE);
@@ -679,12 +682,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             description: 'Description',
             url: 'URL',
             status: 'Statut',
-            priority: 'Priorité',
-            dueDate: 'Date d\'échéance',
-            startDate: 'Date de début',
+            priority: 'PrioritÃ©',
+            dueDate: 'Date d\'Ã©chÃ©ance',
+            startDate: 'Date de dÃ©but',
             endDate: 'Date de fin',
             parentId: 'Parent',
-            assignedToId: 'Assigné à',
+            assignedToId: 'AssignÃ© Ã ',
+            assignedToName: 'AssignÃ© Ã ',
             manualHorizon: 'Horizon',
           };
 
@@ -720,7 +724,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.status(409).send({
               statusCode: 409,
               code: 'CONFLICT_DETECTED',
-              message: 'Cet élément a été modifié par un autre utilisateur depuis votre dernière lecture.',
+              message: 'Cet Ã©lÃ©ment a Ã©tÃ© modifiÃ© par un autre utilisateur depuis votre derniÃ¨re lecture.',
               serverUpdatedAt,
               conflicts,
             });
@@ -738,7 +742,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Dates liées au statut (utils/statusDates.ts) : ne complète que les dates absentes du payload
+      // Dates liÃ©es au statut (utils/statusDates.ts) : ne complÃ¨te que les dates absentes du payload
       const autoDates = updateData.status !== undefined
         ? statusDateDefaults(updateData.status, {
             startDate: updateData.startDate !== undefined ? (updateData.startDate ? new Date(updateData.startDate) : null) : existingItem.startDate,
@@ -748,15 +752,16 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const autoStartDate = updateData.startDate === undefined ? autoDates.startDate : undefined;
       const autoEndDate = updateData.endDate === undefined ? autoDates.endDate : undefined;
 
-      // Auto-set horizonSetAt à chaque changement de manualHorizon — jamais fourni par le
-      // client, c'est lui qui mesure le dépassement de grâce (isOverdueForReview), pas updatedAt.
+      // Auto-set horizonSetAt Ã  chaque changement de manualHorizon â€” jamais fourni par le
+      // client, c'est lui qui mesure le dÃ©passement de grÃ¢ce (isOverdueForReview), pas updatedAt.
       const autoHorizonSetAt = updateData.manualHorizon !== undefined ? new Date() : undefined;
 
       const item = await fastify.prisma.item.update({
         where: { id: request.params.id },
         data: {
           ...updateData,
-          ...assignmentStamp(existingItem.assignedToId, updateData.assignedToId, request.user.userId),
+          ...exclusiveAssignee(updateData),
+          ...assignmentStamp(existingItem.assignedToId, exclusiveAssignee(updateData).assignedToId, request.user.userId),
           updatedById: request.user.userId,
           dueDate: updateData.dueDate === null ? null : updateData.dueDate ? new Date(updateData.dueDate) : undefined,
           startDate: updateData.startDate === null ? null : updateData.startDate ? new Date(updateData.startDate) : (autoStartDate || undefined),
@@ -806,7 +811,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             where: { id: { in: descendants.map(d => d.id) } },
             data: { status: updateData.status },
           });
-          // Mêmes règles de dates que l'item propagé, item par item (dates vides seulement)
+          // MÃªmes rÃ¨gles de dates que l'item propagÃ©, item par item (dates vides seulement)
           const now = new Date();
           for (const d of descendants) {
             const dates = statusDateDefaults(updateData.status, d, now);
@@ -829,7 +834,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         await createNotification(fastify.prisma, {
           userId: updateData.assignedToId,
           type: 'ASSIGNMENT',
-          title: `${assignerName} vous a assigné « ${item.title} »`,
+          title: `${assignerName} vous a assignÃ© Â« ${item.title} Â»`,
           link: `/spaces/${request.params.spaceId}`,
           metadata: { actorId: request.user.userId, actorName: assignerName, itemId: item.id, itemTitle: item.title },
         });
@@ -855,7 +860,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
     if (!item.description) return reply.badRequest('Item has no description');
 
-    // Parse HTML: split on H2/H3 (seuls niveaux disponibles dans l'éditeur)
+    // Parse HTML: split on H2/H3 (seuls niveaux disponibles dans l'Ã©diteur)
     const html = item.description;
     const headingRegex = /<h([2-3])[^>]*>([\s\S]*?)<\/h[2-3]>/gi;
     const matches: { index: number; end: number; title: string }[] = [];
@@ -937,7 +942,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Item not found');
     }
 
-    // Copie de séance : seul le propriétaire de l'espace (animateur) peut la retirer
+    // Copie de sÃ©ance : seul le propriÃ©taire de l'espace (animateur) peut la retirer
     if (isLocked(item) && membership.role !== 'OWNER') {
       return reply.forbidden(LOCKED_MESSAGE);
     }
@@ -972,7 +977,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           where: { id: { in: descendantIds } },
         });
 
-        // Copies de séance parmi les descendants : seul le propriétaire de l'espace peut les supprimer
+        // Copies de sÃ©ance parmi les descendants : seul le propriÃ©taire de l'espace peut les supprimer
         if (membership.role !== 'OWNER' && descendants.some(isLocked)) {
           return reply.forbidden(LOCKED_MESSAGE);
         }

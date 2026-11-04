@@ -87,6 +87,7 @@ export function buildForumSummary(
     type?: string | null; status?: string | null; priority?: number | null;
     startDate?: string | null; endDate?: string | null; dueDate?: string | null;
     assignedTo?: { name?: string | null } | null;
+    assignedToName?: string | null;
     relationsFrom?: unknown[] | null; relationsTo?: unknown[] | null;
   },
   labels: {
@@ -107,7 +108,7 @@ export function buildForumSummary(
   }
   else if (item.startDate) parts.push(`dès ${labels.formatDate(item.startDate)}`);
   if (item.dueDate) parts.push(`échéance ${labels.formatDate(item.dueDate)}`);
-  if (item.assignedTo?.name) parts.push(item.assignedTo.name);
+  if (item.assignedTo?.name || item.assignedToName) parts.push((item.assignedTo?.name || item.assignedToName)!);
   const links = (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0);
   if (links > 0) parts.push(`${links} lien${links > 1 ? 's' : ''}`);
   return parts;

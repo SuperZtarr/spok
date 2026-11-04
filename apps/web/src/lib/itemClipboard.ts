@@ -32,6 +32,7 @@ type RelatedRef = { id: string; title: string; type?: string };
 export interface ItemSheetSource extends Item {
   parent?: { title: string } | null;
   assignedTo?: { name?: string | null } | null;
+  assignedToName?: string | null;
   relationsFrom?: (ItemRelation & { toItem?: RelatedRef })[];
   relationsTo?: (ItemRelation & { fromItem?: RelatedRef })[];
   contributions?: ContributionWithAuthor[];
@@ -98,7 +99,7 @@ export function buildItemSheet({ item, children = [], spaceName, parentTitle, la
   if (item.priority != null) add('Priorité', labels.priorityLabel(item.priority) ?? `P${item.priority}`);
   add('Espace', spaceName);
   add('Parent', item.parent?.title ?? parentTitle);
-  add('Assigné à', item.assignedTo?.name);
+  add('Assigné à', item.assignedTo?.name || item.assignedToName);
   if (item.startDate) add('Début', labels.formatDate(item.startDate));
   if (item.endDate) add('Fin', labels.formatDate(item.endDate));
   if (item.dueDate) add('Échéance', labels.formatDate(item.dueDate));

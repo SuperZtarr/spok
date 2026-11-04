@@ -54,7 +54,7 @@ export function buildItemRows(items: Item[]) {
     'Priorité': item.priority ?? '',
     'URL': item.url || '',
     'Parent': item.parentId ? (titleMap.get(item.parentId) || item.parentId) : '',
-    'Assigné à': (item as any).assignedTo?.name || '',
+    'Assigné à': (item as any).assignedTo?.name || item.assignedToName || '',
     'Tags': item.tags?.map(t => t.name).join(', ') || '',
     'Date échéance': formatDate(item.dueDate),
     'Date début': formatDate(item.startDate),

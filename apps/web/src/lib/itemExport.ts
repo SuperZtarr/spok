@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Item, ItemWithRelations, ContributionWithAuthor } from '@spok/shared';
 import { htmlToText, sanitizeHtml, isSafeUrl } from './sanitizeHtml';
+import { assigneeLabel } from './assignee';
 
 // Texte brut sans exécuter le HTML (DOMParser) — innerHTML sur un div exécutait les onerror d'image
 const stripHtml = htmlToText;
@@ -78,7 +79,7 @@ function buildPrintHtml(data: ItemExportData): string {
     <br/>
     <span><strong>Créé le :</strong> ${formatDate(item.createdAt)}</span>
     <span><strong>Modifié le :</strong> ${formatDate(item.updatedAt)}</span>
-    ${item.assignedTo ? `<br/><span><strong>Assigné à :</strong> ${escapeHtml(item.assignedTo.name)}</span>` : ''}
+    ${assigneeLabel(item) ? `<br/><span><strong>Assigné à :</strong> ${escapeHtml(assigneeLabel(item)!)}</span>` : ''}
     ${item.startDate ? `<span><strong>Début :</strong> ${formatDate(item.startDate)}</span>` : ''}
     ${item.endDate ? `<span><strong>Fin :</strong> ${formatDate(item.endDate)}</span>` : ''}
     ${item.dueDate ? `<span><strong>Échéance :</strong> ${formatDate(item.dueDate)}</span>` : ''}
@@ -197,7 +198,7 @@ export function exportItemPDF(data: ItemExportData) {
   const dateParts = [
     `Créé : ${formatDate(item.createdAt)}`,
     `Modifié : ${formatDate(item.updatedAt)}`,
-    item.assignedTo ? `Assigné à : ${item.assignedTo.name}` : '',
+    assigneeLabel(item) ? `Assigné à : ${assigneeLabel(item)}` : '',
   ].filter(Boolean);
   doc.text(dateParts.join('  |  '), 14, y);
   y += 5;

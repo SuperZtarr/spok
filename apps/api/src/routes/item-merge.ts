@@ -108,6 +108,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
         priority: pick('priority').priority,
         // L'assignation retenue garde sa date/auteur d'origine (accusé de lecture, utils/assignment.ts)
         assignedToId: pick('assignedToId').assignedToId,
+        assignedToName: pick('assignedToId').assignedToName,
         assignedAt: pick('assignedToId').assignedAt,
         assignedById: pick('assignedToId').assignedById,
         startDate: pick('startDate').startDate,
