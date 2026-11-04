@@ -1,4 +1,5 @@
-/* Vue Todo : liste simple des tâches cochables (statut done au clic). */
+/* Vue Todo (« À faire ») : liste de tous les éléments ouverts de l'espace, quel que soit leur type, hors statuts
+   Terminé et Annulé (avant le 2026-11-04 : tâches seules). Le filtre Types de la barre d'espace permet de restreindre. */
 import { useMemo } from 'react';
 import { CheckSquare } from 'lucide-react';
 import { ListView } from './ListView';
@@ -38,27 +39,18 @@ interface TodoViewProps {
   pulseHelp?: boolean;
 }
 
+const isOpen = (item: Item) => item.status !== 'done' && item.status !== 'cancelled';
+
 export function TodoView({ items, portalGroups, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: TodoViewProps) {
   const todos = useMemo(() => {
     if (!items) return [];
-    return items.filter(item =>
-      item.type === 'TASK' &&
-      item.status !== 'done' &&
-      item.status !== 'cancelled'
-    );
+    return items.filter(isOpen);
   }, [items]);
 
   const todoPortalGroups = useMemo(() => {
     if (!portalGroups?.length) return undefined;
     return portalGroups
-      .map(g => ({
-        ...g,
-        items: g.items.filter(item =>
-          item.type === 'TASK' &&
-          item.status !== 'done' &&
-          item.status !== 'cancelled'
-        ),
-      }))
+      .map(g => ({ ...g, items: g.items.filter(isOpen) }))
       .filter(g => g.items.length > 0);
   }, [portalGroups]);
 
@@ -76,7 +68,7 @@ export function TodoView({ items, portalGroups, spaceName, viewContainerRef, onS
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {header}
-        <EmptyHelp mode="todo" title="Aucune tâche en cours" icon={CheckSquare} />
+        <EmptyHelp mode="todo" title="Rien à faire" icon={CheckSquare} />
       </div>
     );
   }

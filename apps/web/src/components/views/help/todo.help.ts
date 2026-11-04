@@ -5,22 +5,23 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 
 export const help: HelpEntry = {
   title: 'À faire',
-  summary: 'Les tâches en cours de l\'espace (hors terminées et annulées), en liste.',
-  short: 'Tâches en cours',
-  empty: 'Aucune tâche en cours. Les tâches terminées ou annulées n\'apparaissent pas ici ; créez-en une avec « Nouveau ».',
+  summary: 'Tous les éléments ouverts de l\'espace, quel que soit leur type (hors terminés et annulés), en liste.',
+  short: 'Éléments en cours',
+  empty: 'Rien à faire. Les éléments terminés ou annulés n\'apparaissent pas ici ; créez-en un avec « Nouveau ».',
   tips: [
-    'Affiche uniquement les tâches non terminées',
+    'Affiche tous les types : tâches, notes, réunions, documents…',
+    'Le filtre Types de la barre d\'espace restreint à un type',
     'Mêmes gestes que la vue Liste : tri, clic, menu ⋮, glisser-déposer',
-    'Une tâche terminée ou annulée sort de cette vue',
+    'Un élément terminé ou annulé sort de cette vue',
   ],
   zones: {
-    contenu: { title: 'À faire', text: 'Les tâches de l\'espace qui ne sont pas terminées, présentées en liste.' },
+    contenu: { title: 'À faire', text: 'Les éléments de l\'espace, de tous types, qui ne sont ni terminés ni annulés, présentés en liste.' },
   },
   tour: [
     {
       popover: {
         title: 'Vue À faire',
-        description: 'Ce qui reste à faire dans cet espace : les tâches ni terminées ni annulées.',
+        description: 'Ce qui reste à faire dans cet espace : les éléments de tous types, ni terminés ni annulés.',
       },
     },
     {
@@ -34,8 +35,8 @@ export const help: HelpEntry = {
     {
       element: '[data-tour="list-row"]',
       popover: {
-        title: 'Une tâche',
-        description: 'Cliquez pour ouvrir sa fiche. Changez son statut pour la faire avancer : terminée, elle sort de la vue.',
+        title: 'Un élément',
+        description: 'Cliquez pour ouvrir sa fiche. Changez son statut pour le faire avancer : terminé, il sort de la vue.',
         side: 'bottom',
       },
     },
