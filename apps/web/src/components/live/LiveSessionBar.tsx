@@ -131,7 +131,7 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
             <SessionTimeline entries={state.entries} onOpenItem={(id) => { setPanel(null); onOpenItem(id); }} />
           )}
           {panel === 'present' && (
-            <PresenterPanel sessionSpaceId={state.session.spaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
+            <PresenterPanel sessionSpaceId={state.session.spaceId} parentSpaceId={state.session.parentSpaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
           )}
           {panel === 'invitees' && (
             <InviteesPanel sessionId={state.session.id} parentSpaceId={state.session.parentSpaceId} ended={status === 'ENDED'} />

@@ -3,7 +3,8 @@
  * LiveWindow — fenêtre flottante « en direct » de la séance active, rendue par LiveSessionHost sur TOUTES les
  * pages tant que la séance est LIVE. Onglet Direct : copie présentée (titre, « présenté par », description,
  * sous-items révélés) + pour l'animateur SEUL la section « À révéler » (PendingChildren).
- * Onglets Préparation (anciennement « Programme » : AgendaPanel compact) et Rechercher (PresenterPanel) pour l'animateur/les présentateurs.
+ * Onglets Direct et Préparation (anciennement « Programme » : AgendaPanel compact) pour tous, y compris les participants qui
+ * peuvent y ajouter (2026-11-04) ; Rechercher (PresenterPanel) pour l'animateur/les présentateurs.
  * Déplaçable (barre de titre), redimensionnable (poignée bas-droite), réductible, plein écran ; géométrie
  * mémorisée (liveWindowGeometry). Portail sur document.body (z-40, sous les modales z-50) : ne jamais l'insérer
  * dans Layout.tsx. « Aller à la séance » ouvre l'espace de séance ; « Quitter le direct » oublie la séance active.
@@ -145,22 +146,22 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
           <X className="h-4 w-4" />
         </button>
       </div>
-      {(narrow || geo.mode !== 'minimized') && presenter && (
+      {(narrow || geo.mode !== 'minimized') && (
         <div data-tour="live-tabs" className="flex items-center gap-1 px-2 py-1 border-b border-border">
           <button className={tabBtn('live')} onClick={() => setTab('live')}>Direct</button>
           <button className={tabBtn('agenda')} onClick={() => setTab('agenda')}>Préparation ({state.agenda.length})</button>
-          <button className={tabBtn('search')} onClick={() => setTab('search')}>Rechercher</button>
+          {presenter && <button className={tabBtn('search')} onClick={() => setTab('search')}>Rechercher</button>}
         </div>
       )}
-      {(narrow || geo.mode !== 'minimized') && tab === 'agenda' && presenter && (
+      {(narrow || geo.mode !== 'minimized') && tab === 'agenda' && (
         <div className="flex-1 overflow-auto"><AgendaPanel state={state} live={live} compact /></div>
       )}
       {(narrow || geo.mode !== 'minimized') && tab === 'search' && presenter && (
         <div className="flex-1 overflow-auto">
-          <PresenterPanel sessionSpaceId={state.session.spaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
+          <PresenterPanel sessionSpaceId={state.session.spaceId} parentSpaceId={state.session.parentSpaceId} onDisplay={(spaceId, itemId) => live.displayItem(itemId, spaceId)} />
         </div>
       )}
-      {(narrow || geo.mode !== 'minimized') && (tab === 'live' || !presenter) && (
+      {(narrow || geo.mode !== 'minimized') && (tab === 'live' || (tab === 'search' && !presenter)) && (
         <div data-tour="live-content" className="flex-1 overflow-auto p-4 cursor-pointer" onClick={() => current && onOpenItem(current.item.id)}>
           {current && (
             <>

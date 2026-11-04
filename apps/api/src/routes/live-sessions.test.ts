@@ -367,9 +367,30 @@ describe('/live-sessions', () => {
       expect(prisma.item.count).toHaveBeenCalledWith({ where: { parentId: 'i1', spaceId: 'src' } })
     })
 
-    it('source-children : refusé à un participant', async () => {
+    it('source-children : refusé à qui n\'a pas rejoint la séance', async () => {
       prisma.liveSessionRole.findUnique.mockResolvedValue(null)
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
       const res = await app.inject({ method: 'GET', url: '/live-sessions/ls-1/source-children?sourceItemId=i1', headers: auth() })
+      expect(res.statusCode).toBe(403)
+    })
+
+    it('agenda : un invité membre de l\'espace de séance ajoute un élément qu\'il peut lire', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other' })
+      prisma.liveSessionRole.findUnique.mockResolvedValue(null)
+      prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
+      prisma.liveSessionAgendaItem.aggregate.mockResolvedValue({ _max: { position: 0 } })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue([])
+      prisma.liveSessionRole.findMany.mockResolvedValue([])
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/agenda', headers: auth(), payload: { sourceItemId: 'i1' } })
+      expect(res.statusCode).toBe(200)
+      expect(prisma.liveSessionAgendaItem.create).toHaveBeenCalledWith({ data: expect.objectContaining({ presenterId: USER, sourceItemId: 'i1' }) })
+    })
+
+    it('agenda : refusé à qui n\'a pas rejoint la séance', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other' })
+      prisma.liveSessionRole.findUnique.mockResolvedValue(null)
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/agenda', headers: auth(), payload: { sourceItemId: 'i1' } })
       expect(res.statusCode).toBe(403)
     })
 
@@ -559,16 +580,17 @@ describe('/live-sessions', () => {
   describe('confidentialité et périmètre', () => {
     const rows = [
       { id: 'a1', presenterId: USER, sourceItemId: 'i1', sourceSpaceId: 'src', title: 'Déjà vu', position: 0, presentedAt: new Date(), presenter: { id: USER, name: 'T' } },
-      { id: 'a2', presenterId: USER, sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Secret', position: 1, presentedAt: null, presenter: { id: USER, name: 'T' } },
+      { id: 'a2', presenterId: 'pres', sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Secret', position: 1, presentedAt: null, presenter: { id: 'pres', name: 'P' } },
     ]
 
-    it('participant : la préparation ne contient que les éléments déjà présentés', async () => {
+    it('participant : la préparation ne contient que les éléments déjà présentés et les siens', async () => {
       prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other', roles: [], entries: [] })
       prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
-      prisma.liveSessionAgendaItem.findMany.mockResolvedValue(rows)
+      const mine = { id: 'a3', presenterId: USER, sourceItemId: 'i3', sourceSpaceId: 'src', title: 'À moi', position: 2, presentedAt: null, presenter: { id: USER, name: 'T' } }
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue([...rows, mine])
       const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: auth() })
       expect(res.statusCode).toBe(200)
-      expect(res.json().agenda.map((a: any) => a.title)).toEqual(['Déjà vu'])
+      expect(res.json().agenda.map((a: any) => a.title)).toEqual(['Déjà vu', 'À moi'])
     })
 
     it('animateur : préparation complète', async () => {

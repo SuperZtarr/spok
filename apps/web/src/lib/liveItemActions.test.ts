@@ -13,10 +13,12 @@ const info = (status: 'PREPARED' | 'LIVE' | 'ENDED', myRole: 'HOST' | 'PRESENTER
   ({ sessionId: 's', status, myRole, spaceName: 'X' })
 
 describe('buildLiveItemActions', () => {
-  it('aucune action sans séance active, pour un participant ou une séance terminée', () => {
+  it('aucune action sans séance active ou sur une séance terminée', () => {
     expect(buildLiveItemActions('i', null, 'sp')).toEqual([])
-    expect(buildLiveItemActions('i', info('LIVE', 'PARTICIPANT'), 'sp')).toEqual([])
     expect(buildLiveItemActions('i', info('ENDED'), 'sp')).toEqual([])
+  })
+  it('participant : ajouter à la préparation, jamais présenter', () => {
+    expect(buildLiveItemActions('i', info('LIVE', 'PARTICIPANT'), 'sp').map((a) => a.id)).toEqual(['live-add-agenda'])
   })
   it('séance préparée : seulement « Ajouter à la préparation »', () => {
     expect(buildLiveItemActions('i', info('PREPARED', 'PRESENTER'), 'sp').map((a) => a.id)).toEqual(['live-add-agenda'])

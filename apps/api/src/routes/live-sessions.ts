@@ -121,13 +121,14 @@ async function resolveParentRows(prisma: any, userId: string, parentSpaceId: str
 /** Qui regarde la préparation : animateur, présentateur (rôle sans être l'animateur) ou participant. */
 type AgendaViewer = { userId: string; isHost: boolean; hasRole: boolean };
 
-/** Préparation visible : toutes les lignes pour l'animateur/les présentateurs, lignes déjà présentées pour les
- *  participants. Vignette (URL d'un fichier de l'espace source, que les autres n'ont pas forcément le droit de voir) :
- *  animateur = toutes ; présentateur = celles de SES lignes ; participant = aucune. */
+/** Préparation visible : toutes les lignes pour l'animateur/les présentateurs ; pour les participants, celles déjà
+ *  présentées et celles qu'ils ont ajoutées (demande Thomas 2026-11-04). Vignette (URL d'un fichier de l'espace source,
+ *  que les autres n'ont pas forcément le droit de voir) : animateur = toutes ; présentateur = celles de SES lignes ;
+ *  participant = aucune. */
 const visibleAgenda = (agenda: LiveAgendaItem[], viewer: AgendaViewer) => {
   if (viewer.isHost) return agenda;
   if (viewer.hasRole) return agenda.map((a) => (a.presenter?.id === viewer.userId ? a : { ...a, thumbnailUrl: null }));
-  return agenda.filter((a) => a.presentedAt).map((a) => ({ ...a, thumbnailUrl: null }));
+  return agenda.filter((a) => a.presentedAt || a.presenter?.id === viewer.userId).map((a) => ({ ...a, thumbnailUrl: null }));
 };
 
 const IMAGE_URL = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
@@ -232,6 +233,12 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
   const roleOf = (sessionId: string, userId: string) =>
     prisma.liveSessionRole.findUnique({ where: { sessionId_userId: { sessionId, userId } } });
+
+  /** Peut ajouter à la préparation : animateur, présentateur, ou tout membre de l'espace de séance (invité, participant
+   *  qui a rejoint — demande Thomas 2026-11-04). L'accès à l'élément ajouté reste vérifié par resolveSource. */
+  const canAddToAgenda = async (s: { id: string; spaceId: string }, userId: string) =>
+    !!(await roleOf(s.id, userId))
+    || !!(await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } }));
 
   /** Copie de l'élément actuellement affiché (null si rien d'affiché ou copie supprimée). */
   async function currentCopy(s: any) {
@@ -474,7 +481,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       sourceItemId = direct.sourceItemId;
       sourceSpaceId = direct.sourceSpaceId;
     }
-    const src = await resolveSource(prisma, userId, sourceItemId, sourceSpaceId);
+    // Ligne ajoutée par un participant depuis un espace que l'animateur ne lit pas : l'accès de son auteur suffit
+    const src = await resolveSource(prisma, userId, sourceItemId, sourceSpaceId)
+      ?? (agendaRow ? await resolveSource(prisma, agendaRow.presenterId, sourceItemId, sourceSpaceId) : null);
     if (!src) return reply.notFound('Élément source introuvable');
 
     let displayed;
@@ -512,12 +521,12 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return { liveAt: liveAt.toISOString() };
   });
 
-  // Préparation : ajouter (host/présentateur, avec accès à la source)
+  // Préparation : ajouter (tout membre de la séance, avec accès à la source)
   fastify.post<{ Params: { id: string } }>('/:id/agenda', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await roleOf(s.id, userId))) return reply.forbidden('Seuls l\'animateur et les présentateurs modifient la préparation');
+    if (!(await canAddToAgenda(s, userId))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
     if (s.status === 'ENDED') return reply.conflict('Séance terminée');
     const body = agendaAddSchema.parse(request.body);
     const src = await resolveSource(prisma, userId, body.sourceItemId, body.sourceSpaceId);
@@ -570,7 +579,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await roleOf(s.id, userId))) return reply.forbidden('Réservé à l\'animateur et aux présentateurs');
+    if (!(await canAddToAgenda(s, userId))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
     if (!request.query.sourceItemId) return reply.badRequest('sourceItemId requis');
     const src = await resolveSource(prisma, userId, request.query.sourceItemId);
     if (!src) return reply.notFound('Élément introuvable');

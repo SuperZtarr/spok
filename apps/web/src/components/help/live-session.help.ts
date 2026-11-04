@@ -11,9 +11,9 @@ export const help: HelpEntry = {
   title: 'Séance',
   summary: 'Une séance présente en direct, à un groupe, des éléments venant de plusieurs espaces, et garde la trace de ce qui a été montré. Elle vit dans son propre espace, sous l\'espace qui l\'a lancée.',
   tips: [
-    'Rôles : l\'animateur (qui a créé la séance) dirige tout ; les présentateurs préparent et présentent ; les participants regardent, commentent et réorganisent ce qui a été présenté',
+    'Rôles : l\'animateur (qui a créé la séance) dirige tout ; les présentateurs préparent et présentent ; les participants regardent, commentent, réorganisent ce qui a été présenté et ajoutent des éléments à la préparation',
     'Cycle : préparée → en direct (« Démarrer la séance ») → terminée (« Terminer »)',
-    'Préparation : la liste des éléments à présenter, dans l\'ordre ; les participants n\'en voient que ce qui a déjà été présenté',
+    'Préparation : la liste des éléments à présenter, dans l\'ordre ; les participants n\'en voient que ce qui a déjà été présenté et ce qu\'ils ont ajouté, et l\'animateur peut afficher leurs lignes',
     'Présenter un élément le copie, verrouillé, dans l\'espace de séance : les participants voient la copie, jamais l\'espace d\'origine',
     'Invités : des membres de la communauté sans accès à l\'espace parent, qui voient la séance et rien d\'autre',
   ],

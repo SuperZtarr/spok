@@ -1,7 +1,8 @@
 /*
  * Actions « Séance » sur un item (menu contextuel via itemMenuGroups, pied de ItemEditModal) :
  * « Ajouter à la préparation » (séance active préparée ou en direct) et « Présenter en séance » (en direct),
- * seulement pour l'animateur/les présentateurs de la séance active (useActiveLiveSessionStore).
+ * pour la séance active (useActiveLiveSessionStore). Ajouter : tout membre de la séance (2026-11-04) ; Présenter :
+ * animateur et présentateurs seulement.
  * « Ajouter à la préparation » passe par requestAddToAgenda : si l'élément a des sous-éléments directs, la question
  * « avec les sous-éléments ? » est posée (pendingAdd → AddChildrenDialog), sinon ajout direct.
  * L'espace source est résolu côté API (l'accès de l'utilisateur y est vérifié). Le résultat est posé dans le
@@ -36,7 +37,7 @@ export async function requestAddToAgenda(itemId: string, info: ActiveLiveInfo, l
 
 /** inAgenda : l'élément est déjà dans la préparation (fiche de l'item, lu dans le cache de la séance) → action grisée. */
 export function buildLiveItemActions(itemId: string, info: ActiveLiveInfo | null, liveSpaceId: string | null, inAgenda = false): ItemAction[] {
-  if (!info || info.myRole === 'PARTICIPANT' || info.status === 'ENDED') return [];
+  if (!info || info.status === 'ENDED') return [];
   const actions: ItemAction[] = [{
     id: 'live-add-agenda',
     label: inAgenda ? `Déjà dans la préparation de ${info.spaceName}` : `Ajouter à la préparation de ${info.spaceName}`,
@@ -44,7 +45,7 @@ export function buildLiveItemActions(itemId: string, info: ActiveLiveInfo | null
     disabled: inAgenda,
     onClick: () => { requestAddToAgenda(itemId, info, liveSpaceId).catch(report); },
   }];
-  if (info.status === 'LIVE') {
+  if (info.status === 'LIVE' && info.myRole !== 'PARTICIPANT') {
     actions.push({
       id: 'live-present',
       label: `Présenter dans ${info.spaceName}`,
