@@ -654,9 +654,9 @@ export function Layout() {
       spaces.sort(sortByName);
     }
 
-    // Build groups ordered by user preference (order field), fallback to name
+    // Communautés de la barre latérale : ordre alphabétique (demande Thomas 2026-11-04), le champ order n'y joue plus
     const sortedCommunities = (communities || []).slice().sort((a, b) =>
-      (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+      a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
     );
 
     const groups = sortedCommunities.map(c => ({
