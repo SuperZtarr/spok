@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'mindmap-frozen-positions',
+    page: 'Vue Carte mentale (MindMapView)',
+    trigger: 'Ouverture de la carte, repli ou dépli, ajout, suppression ou déplacement d\'un élément',
+    effect: "Toute position calculée est enregistrée dans ce navigateur et ne change plus. Un ajout place le seul nouvel élément sur une place libre ; une suppression ne déplace rien ; un déplacement vers une autre branche réorganise cette branche seule. Seul « Réorganiser » recalcule toute la carte, et il oublie les positions données à la main, sauf les nœuds épinglés",
+    location: 'apps/web/src/components/views/MindMapView.tsx (freezePositions, chemin incrémental) ; mindmap-layout.ts (anchorToSaved)',
+  },
+  {
     id: 'item-free-assignee',
     page: "Fiche d'un élément (ItemEditModal)",
     trigger: "Saisie dans « Assigné à » d'un nom qui n'est pas celui d'un membre de l'espace",

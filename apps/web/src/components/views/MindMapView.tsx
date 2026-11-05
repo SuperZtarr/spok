@@ -2,13 +2,16 @@
  * Vue Carte mentale (React Flow + d3 radial tree).
  * Invariants critiques : savedPositions.current persiste les positions manuelles entre
  * recalculs ; reorganizeRef.current capture le closure courant (pattern obligatoire).
+ * Positions figées (demande Thomas 2026-11-04) : toute position calculée est enregistrée (freezePositions, localStorage,
+ * donc par navigateur) ; replier, déplier ou rouvrir la carte ne fait plus pivoter les branches. Seul « Réorganiser »
+ * recalcule toute la carte. Un nœud jamais positionné suit son parent figé (anchorToSaved).
  * Layout incrémental (spec 2026-07-15) : le layout complet ne s'exécute qu'au premier
  * rendu, sur changement de deps (repli/portails/focus/espaces enfants — ces derniers arrivent souvent après le
  * premier rendu) et au bouton « Réorganiser » ;
- * tout changement structurel (ajout/suppression/reparentage) est traité par diff
- * (mindmap-incremental.ts) + ré-éventail local des seuls parents affectés. Déplacement (2026-10-29) : changer d'espace
- * compte comme un changement de branche ; un élément dont la nouvelle branche n'est pas ré-éventaillée (racine, échec)
- * est posé sur une place libre (placeMovedRef, freeSpotAround) — il ne reste jamais à l'endroit du lâcher.
+ * tout changement structurel (ajout/suppression/reparentage) est traité par diff (mindmap-incremental.ts) : un ajout pose
+ * le seul nouvel élément sur une place libre, une suppression ne déplace rien (2026-11-04). Déplacement (2026-10-29) :
+ * changer d'espace compte comme un changement de branche ; la branche cible est ré-éventaillée ; à la racine ou en cas
+ * d'échec, l'élément est posé sur une place libre (placeMovedRef, freeSpotAround) — il ne reste jamais à l'endroit du lâcher.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -16,7 +19,9 @@
  * Callbacks des nœuds (onDelete, onMerge…) : rafraîchis dans les data des nœuds existants à chaque
  * changement de layoutCallbacks (withCurrentCallbacks) — sinon handlers périmés (2026-09-28).
  * Cadrage d'ouverture (initialFit, 2026-10-10) : carte entière ; sur mobile, si le zoom tombe
- * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles.
+ * sous 0,6, centrage sur le nœud espace à 0,6 pour garder les étiquettes lisibles. Recadré quand des nœuds arrivent juste
+ * après l'ouverture (OPENING_FIT_MS), tant que l'utilisateur n'a ni déplacé ni zoomé (onMoveEnd avec événement seulement :
+ * sans événement, c'est notre propre cadrage).
  * En-tête : chaque commande sous HelpHint (textes : mindmap.help.ts → hints), pas de `title` natif.
  * Zoom au pincement du pad hors macOS : useTrackpadPinchZoom (React Flow ne compense que sur Mac).
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
@@ -66,7 +71,6 @@ import {
   collectVisibleDescendantIds,
   getAbsolutePositions,
   recalculateEdgeHandles,
-  countVisible,
   countDescendants,
   findTreeNode,
   RADIAL_STEP,
@@ -75,7 +79,9 @@ import {
   getContrastTextColor,
 } from './mindmap-utils';
 import { nodeTypes } from './mindmap-nodes';
-import { SPACE_NODE_ID, calculateLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+import { SPACE_NODE_ID, anchorToSaved, branchArc, calculateLayout, radialLayout, buildPortalNodesAndEdges, buildMindmapNode, buildTreeEdge, buildRelationEdge, withCurrentCallbacks, type MindMapCallbacks, type MindMapLayoutOptions } from './mindmap-layout';
+
+const OPENING_FIT_MS = 5000; // durée après l'ouverture pendant laquelle l'arrivée de nœuds recadre la carte
 import { diffItems, diffRelations, initialPositionForNew, freeSpotAround } from './mindmap-incremental';
 import { RelationEdge } from './RelationEdge';
 import { HelpHint } from '../../help/HelpHint';
@@ -171,7 +177,10 @@ function MindMapViewInner({
 }: MindMapViewProps & { innerRef?: React.Ref<MindMapViewHandle> }) {
   // Track previous items to detect content-only vs structural changes
   const userHasInteracted = useRef(false);
-  useEffect(() => { userHasInteracted.current = false; }, [spaceId]);
+  const openedAt = useRef(Date.now());
+  useEffect(() => { userHasInteracted.current = false; openedAt.current = Date.now(); }, [spaceId]);
+  // Les données de la carte arrivent en plusieurs temps à l'ouverture ; ensuite, une modification ne recadre plus la vue
+  const isOpeningFit = () => !userHasInteracted.current && Date.now() - openedAt.current < OPENING_FIT_MS;
   const prevStructureRef = useRef<string>('');
   const prevRelationsRef = useRef<string>('');
   const prevDepsRef = useRef<string>('');
@@ -260,6 +269,19 @@ function MindMapViewInner({
     if (!positionsStorageKey) return;
     localStorage.setItem(positionsStorageKey, JSON.stringify(savedPositions.current));
   }, [positionsStorageKey]);
+
+  // Fige les positions qui viennent d'être calculées, sauf en vue focalisée (disposition d'une seule branche).
+  // Éléments et nœuds de sous-espace seulement : un portail manuel suit son parent, le nœud espace reste au centre.
+  const freezePositions = useCallback((placed: Node[]) => {
+    if (focusedProjectId) return;
+    let changed = false;
+    for (const n of placed) {
+      if ((n.type !== 'mindmap' && !n.id.startsWith('child-space-')) || savedPositions.current[n.id]) continue;
+      savedPositions.current[n.id] = n.position;
+      changed = true;
+    }
+    if (changed) savePositions();
+  }, [focusedProjectId, savePositions]);
 
   const savePinned = useCallback(() => {
     if (!pinnedStorageKey) return;
@@ -520,64 +542,33 @@ function MindMapViewInner({
       baseAngle = Math.atan2(parentPos.y - grandParentPos.y, parentPos.x - grandParentPos.x);
     }
 
-    const unpinnedChildren = visibleChildren.filter(c => !pinnedIds.current.has(c.id));
-    const unpinnedCount = unpinnedChildren.length;
-    const angleSpread = Math.min(Math.PI * 1.5, unpinnedCount * (Math.PI / 4));
-    const startAngle = -angleSpread / 2;
     const modifiedIds = new Set<string>();
 
-    function repositionSubtree(item: TreeItem, cx: number, cy: number, anchorPos: { x: number; y: number }) {
-      savedPositions.current[item.id] = { x: cx, y: cy };
-      modifiedIds.add(item.id);
-      if (!collapsedIds.has(item.id) && item.children.length > 0) {
-        const kids = item.children;
-        const unpinnedKids = kids.filter(k => !pinnedIds.current.has(k.id));
-        const subSpread = Math.min(Math.PI, unpinnedKids.length * (Math.PI / 5));
-        const subStart = -subSpread / 2;
-        const dirAngle = Math.atan2(cy - anchorPos.y, cx - anchorPos.x);
-        let unpinnedIdx = 0;
-        for (let i = 0; i < kids.length; i++) {
-          if (pinnedIds.current.has(kids[i].id)) {
-            const pinnedPos = absPositions.get(kids[i].id);
-            if (pinnedPos) repositionSubtree(kids[i], pinnedPos.x, pinnedPos.y, { x: cx, y: cy });
+    const isPinned = (k: TreeItem) => pinnedIds.current.has(k.id);
+    const visibleKids = (k: TreeItem) => (collapsedIds.has(k.id) ? [] : k.children);
+
+    // Même étalement que le calcul complet (radialLayout) ; un nœud épinglé garde sa place et sa branche se dispose autour de lui
+    function placeBranch(kids: TreeItem[], center: { x: number; y: number }, dirAngle: number) {
+      const unpinned = kids.filter(k => !isPinned(k));
+      radialLayout(unpinned, k => visibleKids(k).filter(c => !isPinned(c)), center, dirAngle, branchArc(unpinned.length))
+        .forEach((pos, id) => { savedPositions.current[id] = pos; modifiedIds.add(id); });
+      const placePinned = (list: TreeItem[], listCenter: { x: number; y: number }) => {
+        for (const kid of list) {
+          if (isPinned(kid)) {
+            const pinnedPos = absPositions.get(kid.id);
+            if (!pinnedPos) continue;
+            savedPositions.current[kid.id] = pinnedPos;
+            modifiedIds.add(kid.id);
+            placeBranch(visibleKids(kid), pinnedPos, Math.atan2(pinnedPos.y - listCenter.y, pinnedPos.x - listCenter.x));
           } else {
-            const descendants = countVisible(kids[i], collapsedIds);
-            const MIN_SIBLING_SPACING = 130;
-            const spacingRadius = unpinnedKids.length > 1
-              ? (MIN_SIBLING_SPACING * (unpinnedKids.length - 1)) / Math.max(subSpread, 0.2) : 0;
-            const subRadius = Math.max(
-              RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8), spacingRadius);
-            const a = unpinnedKids.length === 1 ? dirAngle : dirAngle + subStart + (unpinnedIdx * subSpread) / Math.max(1, unpinnedKids.length - 1);
-            const nx = cx + subRadius * Math.cos(a);
-            const ny = cy + subRadius * Math.sin(a);
-            repositionSubtree(kids[i], nx, ny, { x: cx, y: cy });
-            unpinnedIdx++;
+            placePinned(visibleKids(kid), savedPositions.current[kid.id]);
           }
         }
-      }
+      };
+      placePinned(kids, center);
     }
 
-    let unpinnedIdx = 0;
-    for (let i = 0; i < visibleChildren.length; i++) {
-      if (pinnedIds.current.has(visibleChildren[i].id)) {
-        const pinnedPos = absPositions.get(visibleChildren[i].id);
-        if (pinnedPos) repositionSubtree(visibleChildren[i], pinnedPos.x, pinnedPos.y, parentPos);
-      } else {
-        const descendants = countVisible(visibleChildren[i], collapsedIds);
-        const MIN_SIBLING_SPACING = 130;
-        const spacingRadius = unpinnedCount > 1
-          ? (MIN_SIBLING_SPACING * (unpinnedCount - 1)) / Math.max(angleSpread, 0.2) : 0;
-        const radius = Math.max(
-          RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8), spacingRadius);
-        const angle = unpinnedCount === 1
-          ? baseAngle
-          : baseAngle + startAngle + (unpinnedIdx * angleSpread) / Math.max(1, unpinnedCount - 1);
-        const cx = parentPos.x + radius * Math.cos(angle);
-        const cy = parentPos.y + radius * Math.sin(angle);
-        repositionSubtree(visibleChildren[i], cx, cy, parentPos);
-        unpinnedIdx++;
-      }
-    }
+    placeBranch(visibleChildren, parentPos, baseAngle);
     savePositions();
 
     setNodes(currentNodes => {
@@ -609,18 +600,20 @@ function MindMapViewInner({
   placeMovedRef.current = (movedId: string, parentNodeId: string) => {
     const absPositions = getAbsolutePositions(getNodes());
     if (!absPositions.has(movedId)) return; // masqué (branche repliée) : rien à placer
-    const center = absPositions.get(parentNodeId);
+    // Position enregistrée d'abord : plusieurs éléments placés d'affilée (ajout groupé) ne prennent pas la même place
+    const posOf = (id: string) => savedPositions.current[id] ?? absPositions.get(id);
+    const center = posOf(parentNodeId);
     if (!center) return;
     const siblingIds = parentNodeId === '__space__'
       ? fullTree.map(t => t.id)
       : (findTreeNode(fullTree, parentNodeId)?.children.map(c => c.id) ?? []);
     const neighbours = siblingIds
       .filter(id => id !== movedId)
-      .map(id => absPositions.get(id))
+      .map(posOf)
       .filter((p): p is { x: number; y: number } => !!p);
     if (parentNodeId !== '__space__') {
       const grandParentId = items.find(i => i.id === parentNodeId)?.parentId || '__space__';
-      const gp = absPositions.get(grandParentId);
+      const gp = posOf(grandParentId);
       if (gp) neighbours.push(gp);
     }
     const pos = freeSpotAround(center, neighbours, parentNodeId === '__space__' ? RADIAL_STEP : RADIAL_STEP * 0.8);
@@ -676,9 +669,9 @@ function MindMapViewInner({
   const depsSignature = `${[...collapsedIds].sort().join(',')}|${displayName}|${portals.map(p => p.id).join(',')}|${childSpacesSignature}`;
 
   // Mise à jour des nœuds. Quatre chemins (spec 2026-07-15-mindmap-incremental-layout) :
-  //  1. premier rendu OU deps (repli, focus, portails) → layout complet + applyPositions
-  //  2. changement structurel (ajout/suppression/reparentage) → INCRÉMENTAL : diff + ré-éventail
-  //     local des seuls parents affectés — la carte ne bouge jamais globalement
+  //  1. premier rendu OU deps (repli, focus, portails) → layout complet, positions enregistrées prioritaires, puis figées
+  //  2. changement structurel (ajout/suppression/reparentage) → INCRÉMENTAL : seul l'élément ajouté se place, seule
+  //     la branche cible d'un déplacement se ré-éventaille — la carte ne bouge jamais globalement
   //  3. changement de relations seules → arêtes seules
   //  4. contenu seul → patch data en place
   useEffect(() => {
@@ -695,22 +688,24 @@ function MindMapViewInner({
     // --- Chemin 1 : layout complet (premier rendu, repli/dépli, portails, focus) ---
     if (isFirstRender || isDepsChange) {
       const { nodes: newNodes, edges: newEdges, relationEdges, rootArcEnd, arcStart } = calculateLayout(tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions);
-      const positionedNodes = applyPositions(newNodes);
+      const positionedNodes = anchorToSaved(newNodes, newEdges, savedPositions.current);
 
-      const { portalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
+      const { portalNodes: computedPortalNodes, portalEdges, portalRelationEdges } = buildPortalNodesAndEdges({
         positionedNodes, portals, portalItemsBySpace, childSpaces, communitySpaces,
         portalSpaceNames, statuses, collapsedIds, items, callbacks: layoutCallbacks,
         options: layoutOptions, removePortal, savedPositions: savedPositions.current, rootArcEnd, arcStart,
       }, relationEdges);
+      const portalNodes = anchorToSaved(computedPortalNodes, portalEdges, savedPositions.current);
 
       const allNodes = [...positionedNodes, ...portalNodes];
+      freezePositions(allNodes);
       const edgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
       const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
       lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, edgePosMap);
       const allEdges = recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], edgePosMap);
       setNodes(allNodes);
       setEdges(allEdges);
-      if (!userHasInteracted.current) setTimeout(initialFit, 50);
+      if (isOpeningFit()) setTimeout(initialFit, 50);
       return;
     }
 
@@ -874,21 +869,30 @@ function MindMapViewInner({
         return nextNodes;
       });
 
-      // 5. Ré-éventail local différé des parents affectés (après commit du state,
-      //    reorganizeRef lit getNodes() — pattern closure courant obligatoire).
-      //    Puis tout élément déplacé dont la nouvelle branche n'a pas été ré-éventaillée (racine de l'espace, échec)
-      //    est posé sur une place libre (placeMovedRef) au lieu de rester à l'endroit du lâcher.
-      if (diff.affectedParentIds.length > 0 || diff.reparented.length > 0) {
+      // 5. Placement différé (après commit du state ; reorganizeRef et placeMovedRef lisent getNodes() — pattern closure
+      //    courant obligatoire). Déplacé : ré-éventail de sa branche cible seule (demande Thomas, tâche « réorganiser la
+      //    branche cible »), sinon place libre (racine, échec). Ajouté : place libre, ses frères ne bougent pas.
+      //    Supprimé : rien ne bouge (décision Thomas 2026-11-04 : plus de resserrement des frères).
+      if (diff.addedIds.length > 0 || diff.reparented.length > 0) {
+        const parentNodeOf = (id: string) => {
+          const it = itemMap.get(id);
+          return it?.parentId || (it?.spaceId && it.spaceId !== spaceId ? `child-space-${it.spaceId}` : '__space__');
+        };
         setTimeout(() => {
-          const refanned = new Set(diff.affectedParentIds.filter(pid => reorganizeRef.current(pid)));
+          const refanned = new Set<string>();
           for (const r of diff.reparented) {
-            const moved = itemMap.get(r.id);
-            const parentNodeId = r.newParentId
-              || (moved?.spaceId && moved.spaceId !== spaceId ? `child-space-${moved.spaceId}` : '__space__');
-            if (!refanned.has(parentNodeId)) placeMovedRef.current(r.id, parentNodeId);
+            const parentNodeId = parentNodeOf(r.id);
+            if (refanned.has(parentNodeId)) continue;
+            if (reorganizeRef.current(parentNodeId)) refanned.add(parentNodeId);
+            else placeMovedRef.current(r.id, parentNodeId);
+          }
+          for (const id of diff.addedIds) {
+            const parentNodeId = parentNodeOf(id);
+            if (!refanned.has(parentNodeId)) placeMovedRef.current(id, parentNodeId);
           }
         }, 0);
       }
+      if (isOpeningFit()) setTimeout(initialFit, 50);
       return;
     }
 
@@ -909,7 +913,7 @@ function MindMapViewInner({
       });
       return currentNodes;
     });
-  }, [tree, items, statuses, collapsedIds, displayName, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, applyPositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, initialFit, structureSignature, relationsSignature, depsSignature, fullTree, showRelations, savePositions]);
+  }, [tree, items, statuses, collapsedIds, displayName, layoutCallbacks, layoutOptions, setNodes, setEdges, portals, communitySpaces, childSpaces, removePortal, freezePositions, portalItemsBySpace, portalSpaceNames, spaceId, fitView, initialFit, structureSignature, relationsSignature, depsSignature, fullTree, showRelations, savePositions]);
 
   // Toggle relation edges without full layout recalculation
   useEffect(() => {
@@ -1326,13 +1330,14 @@ function MindMapViewInner({
     }, relationEdges);
 
     const allNodes = [...repositionedNodes, ...portalNodes];
+    freezePositions(allNodes);
     const resetEdgePosMap = new Map(allNodes.map(n => [n.id, n.position]));
     const currentRelationEdges = [...relationEdges, ...portalRelationEdges];
     lastRelationEdgesRef.current = recalculateEdgeHandles(currentRelationEdges, resetEdgePosMap);
     setNodes(allNodes);
     setEdges(recalculateEdgeHandles([...newEdges, ...(showRelations ? currentRelationEdges : []), ...portalEdges], resetEdgePosMap));
     setTimeout(() => fitView({ padding: 0.1 }), 50);
-  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, savePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, fullTree, showRelations]);
+  }, [tree, items, statuses, collapsedIds, displayName, items.length, layoutCallbacks, layoutOptions, setNodes, setEdges, fitView, portals, communitySpaces, removePortal, savePositions, freezePositions, childSpaces, portalItemsBySpace, portalSpaceNames, spaceId, fullTree, showRelations]);
 
   // Get all node IDs that have children
   const getParentIds = useCallback((items: TreeItem[]): Set<string> => {
@@ -1576,7 +1581,7 @@ function MindMapViewInner({
         minZoom={MINDMAP_MIN_ZOOM}
         maxZoom={MINDMAP_MAX_ZOOM}
         connectOnClick={false}
-        onMoveEnd={() => { userHasInteracted.current = true; }}
+        onMoveEnd={(event) => { if (event) userHasInteracted.current = true; }}
         defaultEdgeOptions={{
           type: 'default',
           style: { stroke: '#94a3b8', strokeWidth: 2 },

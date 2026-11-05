@@ -12,6 +12,7 @@ export const help: HelpEntry = {
     'Zoomez avec la molette, glissez le fond pour déplacer la vue',
     'Cliquez sur un nœud pour ouvrir sa fiche ; double-cliquez sur un projet pour ne voir que lui',
     'Glissez un nœud pour le repositionner, ou déposez-le sur un autre pour le ranger dessous',
+    'La disposition reste en place dans ce navigateur : plier une branche, ajouter ou supprimer un élément ne déplace pas le reste ; seul « Réorganiser » replace toute la carte',
     'Tirez un lien entre deux nœuds pour créer une relation',
   ],
   hints: {

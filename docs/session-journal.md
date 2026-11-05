@@ -14,11 +14,15 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-05 (2)
+- Lot poussé : carte mentale, cadrage à l'ouverture, positions figées, anneaux réguliers (feat). Typecheck OK, TNR 1863/1863, en-têtes OK
+
 ### MEP — 2026-11-05
 - 8 lots poussés en 5 commits. Séparés : audit, Gantt, recherche et préparation, assigné libre (schéma : assignedToName, additif, db push au démarrage). Ensemble (imbriqués dans ItemEditModal, SpaceToolbar, shellZones, ItemReadView) : Loisirs, barre Filtre/Aperçu, zones de la fiche, fiche Afficher pleine largeur ; businessRules et item-modal.help entiers dans ce dernier commit. Le correctif du lien d'audit (auditLogs.ts) est parti dans le commit de l'assigné (b0a988a), 28e6cec n'a que la redirection d'App.tsx. 3 lignes du TODO ajoutées dans un commit de doc à part (écriture en échec pendant la MEP). build:packages + db:generate, typecheck OK, TNR 1855/1855, en-têtes OK
 
 ### Demandes du 2026-11-04 — reste
-- Lot 4 carte mentale (cadrage à l'ouverture, positions figées, étalement) reporté par Thomas au lendemain : rien de modifié
+- Lot 4 carte mentale : codé le 2026-11-05, inscrit dans PRÊT POUR MEP, NON COMMITÉ, en attente du test de Thomas
+- Tâches SPOK à clore après test : bug Gantt `cmvz0iwgc…`, ouverture mindmap `cmvz0pe1q…` (toujours en `todo`)
 
 ### MEP — 2026-11-04
 - 5 lots poussés : tri alphabétique des communautés (fix, Layout par morceaux), vue À faire tous types (feat), vignettes élargies (style), titre de l'onglet (feat), choix de l'année du calendrier (feat). Typecheck OK, TNR 1814/1814, en-têtes OK

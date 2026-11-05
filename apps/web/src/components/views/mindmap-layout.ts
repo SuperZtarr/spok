@@ -1,7 +1,10 @@
 /* Layout de la MindMap : placement radial des nœuds, espacement, recalcul, rafraîchissement des callbacks des nœuds (withCurrentCallbacks) — zone fragile (cf. CLAUDE.md).
    Portails de sous-espaces : arc au-dessus du nœud espace, pas de 40° ramené à 360°/N au-delà de 9 (pas de superposition).
    Hiérarchie (2026-10-14) : un sous-espace dont le parent est aussi affiché est relié au nœud de ce parent
-   (child-space-<parent>) et placé dans son prolongement ; seuls les sous-espaces de premier niveau sont sur l'arc. */
+   (child-space-<parent>) et placé dans son prolongement ; seuls les sous-espaces de premier niveau sont sur l'arc.
+   Étalement (2026-11-04) : radialLayout est le seul calcul (calculateLayout, éléments de portail, ré-éventail de MindMapView) —
+   anneaux réguliers par profondeur, angle selon la taille de la branche, intervalle borné.
+   anchorToSaved : place autour de leur parent, déjà positionné, les nœuds sans position enregistrée. */
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
@@ -18,17 +21,118 @@ import {
   type TreeItem,
   type LayoutDatum,
   type PortalState,
-  RADIAL_STEP,
   getStatusColor,
   tailwindBgToHex,
   getContrastTextColor,
   buildTree,
   countDescendants,
   maxDepth,
-  countVisible as countVisibleUtil,
 } from './mindmap-utils';
 
 export const SPACE_NODE_ID = '__space__';
+
+const RING_STEP = 300; // distance minimale entre deux anneaux
+const RING_MAX_STEP = 1200; // borne : un parent très chargé ne projette pas ses enfants à l'autre bout de la carte
+const RING_MIN_SPACING = 160; // écart minimal entre deux voisins d'un même anneau (largeur d'un nœud : 150)
+
+/** Ouverture d'une branche réorganisée ou d'un sous-espace : un demi-cercle, plus si les enfants sont nombreux, jamais de retour vers le parent. */
+export const branchArc = (count: number) => Math.min(Math.PI * 1.5, Math.max(Math.PI, count * (Math.PI / 4)));
+
+/**
+ * Disposition radiale d'un sous-arbre autour d'un centre : les nœuds d'une même profondeur sont sur le même anneau, à
+ * intervalles réguliers. Chaque branche reste dans son secteur, dont l'angle dépend de son nombre de feuilles (mêlé à une part
+ * égale, pour qu'une grosse branche n'écrase pas ses sœurs) : deux branches voisines ne se croisent pas.
+ * L'intervalle entre anneaux s'élargit jusqu'à ce que les voisins les plus serrés ne se recouvrent plus (borné par RING_MAX_STEP).
+ * - dirAngle / arc : direction et ouverture du secteur ; arc = 2π pour un cercle complet
+ * - childrenOf : enfants VISIBLES d'un nœud (sans les branches repliées)
+ */
+export function radialLayout<T extends { id: string }>(
+  roots: T[],
+  childrenOf: (node: T) => T[],
+  center: { x: number; y: number },
+  dirAngle: number,
+  arc: number,
+  minStep = RING_STEP,
+): Map<string, { x: number; y: number }> {
+  const leavesOf = (node: T): number => {
+    const kids = childrenOf(node);
+    return kids.length === 0 ? 1 : kids.reduce((sum, k) => sum + leavesOf(k), 0);
+  };
+  const placed: Array<{ id: string; angle: number; depth: number }> = [];
+  const anglesByDepth = new Map<number, number[]>();
+
+  const assign = (nodes: T[], start: number, span: number, depth: number) => {
+    const leaves = nodes.map(leavesOf);
+    const total = leaves.reduce((s, v) => s + v, 0);
+    let cursor = start;
+    nodes.forEach((node, i) => {
+      const slot = span * (0.5 / nodes.length + 0.5 * (leaves[i] / total));
+      const angle = cursor + slot / 2;
+      placed.push({ id: node.id, angle, depth });
+      anglesByDepth.set(depth, [...(anglesByDepth.get(depth) ?? []), angle]);
+      assign(childrenOf(node), cursor, slot, depth + 1);
+      cursor += slot;
+    });
+  };
+  assign(roots, dirAngle - arc / 2, arc, 1);
+
+  let step = minStep;
+  for (const [depth, angles] of anglesByDepth) {
+    const sorted = [...angles].sort((a, b) => a - b);
+    for (let i = 1; i < sorted.length; i++) {
+      step = Math.max(step, RING_MIN_SPACING / (Math.max(sorted[i] - sorted[i - 1], 0.001) * depth));
+    }
+  }
+  step = Math.min(step, RING_MAX_STEP);
+
+  return new Map(placed.map(({ id, angle, depth }) => [id, {
+    x: center.x + step * depth * Math.cos(angle),
+    y: center.y + step * depth * Math.sin(angle),
+  }]));
+}
+
+/**
+ * Positions finales d'un calcul de disposition : une position enregistrée fait foi ; un nœud sans position (branche jamais
+ * dépliée, nouveau) suit le déplacement de son parent — même translation et même rotation que celles subies par le parent
+ * entre le calcul et sa position réelle. Sans ça, il apparaîtrait à sa place calculée, loin de son parent figé.
+ * treeEdges : arêtes parent → enfant uniquement (jamais les relations).
+ */
+export function anchorToSaved(nodes: Node[], treeEdges: Edge[], saved: Record<string, { x: number; y: number }>): Node[] {
+  const computed = new Map(nodes.map(n => [n.id, n.position]));
+  const parentOf = new Map(treeEdges.map(e => [e.target, e.source]));
+  const final = new Map<string, { x: number; y: number }>();
+
+  const place = (id: string | undefined): { x: number; y: number } | undefined => {
+    if (!id) return undefined;
+    const known = final.get(id);
+    if (known) return known;
+    const own = computed.get(id);
+    if (!own) return undefined;
+    final.set(id, own); // garde-fou contre une boucle de parenté
+    let pos = saved[id] ?? own;
+    const parentId = parentOf.get(id);
+    const parentFinal = place(parentId);
+    const parentComputed = parentId ? computed.get(parentId) : undefined;
+    if (!saved[id] && parentFinal && parentComputed) {
+      const grandId = parentId ? parentOf.get(parentId) : undefined;
+      const grandFinal = place(grandId);
+      const grandComputed = grandId ? computed.get(grandId) : undefined;
+      const rotation = grandFinal && grandComputed
+        ? Math.atan2(parentFinal.y - grandFinal.y, parentFinal.x - grandFinal.x) - Math.atan2(parentComputed.y - grandComputed.y, parentComputed.x - grandComputed.x)
+        : 0;
+      const dx = own.x - parentComputed.x;
+      const dy = own.y - parentComputed.y;
+      pos = {
+        x: parentFinal.x + dx * Math.cos(rotation) - dy * Math.sin(rotation),
+        y: parentFinal.y + dx * Math.sin(rotation) + dy * Math.cos(rotation),
+      };
+    }
+    final.set(id, pos);
+    return pos;
+  };
+
+  return nodes.map(n => ({ ...n, position: place(n.id) ?? n.position }));
+}
 
 // Helper: get best edge handles from dx/dy between two positions
 function getBestHandles(parentPos: { x: number; y: number }, childPos: { x: number; y: number }) {
@@ -247,61 +351,10 @@ export function calculateLayout(
     children: tree.length > 0 ? tree.map(buildDatum) : undefined,
   };
 
-  // Recursive fan layout
   const nodePositionMap = new Map<string, { x: number; y: number }>();
   const centerPos = { x: 0, y: 0 };
   nodePositionMap.set(SPACE_NODE_ID, centerPos);
 
-  function countVisible(datum: LayoutDatum): number {
-    if (!datum.children) return 1;
-    return datum.children.reduce((sum, c) => sum + countVisible(c), 0);
-  }
-
-  function layoutFan(
-    datum: LayoutDatum,
-    parentPos: { x: number; y: number },
-    dirAngle: number,
-    arcSpan: number,
-  ) {
-    const children = datum.children;
-    if (!children || children.length === 0) return;
-
-    const count = children.length;
-    const childVisibleCounts = children.map(c => countVisible(c));
-    const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
-
-    const MIN_SIBLING_SPACING = 190;
-    const spacingRadius = count > 1
-      ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
-      : 0;
-
-    for (let i = 0; i < count; i++) {
-      const child = children[i];
-      const descendants = childVisibleCounts[i];
-
-      const radius = Math.max(
-        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
-        spacingRadius
-      );
-
-      const angle = count === 1
-        ? dirAngle
-        : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
-
-      const cx = parentPos.x + radius * Math.cos(angle);
-      const cy = parentPos.y + radius * Math.sin(angle);
-      nodePositionMap.set(child.id, { x: cx, y: cy });
-
-      const directChildren = child.children?.length || 0;
-      const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
-      const childArc = descendants > 1
-        ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
-        : 0;
-      layoutFan(child, { x: cx, y: cy }, angle, childArc);
-    }
-  }
-
-  // Layout root children with proportional angular allocation
   const rootChildren = rootDatum.children || [];
   const rootCount = rootChildren.length;
   // Shift arc start by half a slot to avoid placing items exactly at ±90° (straight up/down),
@@ -309,42 +362,10 @@ export function calculateLayout(
   const arcStart = -Math.PI / 2 + (rootCount > 0 ? Math.PI / rootCount : 0);
   let rootArcEnd = arcStart; // default: no branches
   if (rootCount > 0) {
-    const rootVisibleCounts = rootChildren.map(c => countVisible(c));
-    const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
-
-    const MIN_NODE_SPACING = 200;
-    const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
-
-    const equalArc = (2 * Math.PI) / rootCount;
-    const rootArcs = rootChildren.map((_, i) => {
-      const proportionalArc = (2 * Math.PI * rootVisibleCounts[i]) / Math.max(1, totalRootVisible);
-      return equalArc * 0.5 + proportionalArc * 0.5;
-    });
-
-    let cumulativeAngle = arcStart;
-    for (let i = 0; i < rootCount; i++) {
-      const child = rootChildren[i];
-      const childArc = rootArcs[i];
-      const angle = cumulativeAngle + childArc / 2;
-
-      const descendants = rootVisibleCounts[i];
-      const rootRadius = Math.max(
-        minRadiusForSpacing,
-        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
-      );
-
-      const cx = centerPos.x + rootRadius * Math.cos(angle);
-      const cy = centerPos.y + rootRadius * Math.sin(angle);
-      nodePositionMap.set(child.id, { x: cx, y: cy });
-
-      const directChildren = child.children?.length || 0;
-      const fanArc = descendants > 1
-        ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
-        : 0;
-      layoutFan(child, { x: cx, y: cy }, angle, fanArc);
-      cumulativeAngle += childArc;
-    }
-    rootArcEnd = cumulativeAngle;
+    // Cercle complet autour du nœud espace, à partir de arcStart
+    radialLayout(rootChildren, d => d.children ?? [], centerPos, arcStart + Math.PI, 2 * Math.PI)
+      .forEach((pos, id) => nodePositionMap.set(id, pos));
+    rootArcEnd = arcStart + 2 * Math.PI;
   }
 
   // Space node at center
@@ -598,15 +619,17 @@ export function buildPortalNodesAndEdges(
 
     const pSpaceName = portalSpaceNames.get(portalSpaceId);
 
+    // Secteur tourné vers l'extérieur de la carte
+    const visibleKids = (item: TreeItem) => (collapsedIds.has(item.id) ? [] : item.children);
+    const portalItemPositions = radialLayout(subTree, visibleKids, portalPos, baseAngle, branchArc(subTree.length));
+
     function placePortalItem(
       item: TreeItem,
-      cx: number, cy: number,
       parentNodeId: string,
       spaceName: string | undefined,
       depth: number,
-      dirAngle: number,
-      arcSpan: number,
     ) {
+      const { x: cx, y: cy } = portalItemPositions.get(item.id)!;
       const statusColor = getStatusColor(item.status, statuses);
       const hexColor = tailwindBgToHex(statusColor);
 
@@ -661,79 +684,10 @@ export function buildPortalNodesAndEdges(
         style: { stroke: '#818cf8', strokeWidth: 1.5 },
       });
 
-      // Place children in radial fan if not collapsed
-      if (!collapsedIds.has(item.id) && item.children.length > 0) {
-        const children = item.children;
-        const childVisibleCounts = children.map(c => countVisibleUtil(c, collapsedIds));
-        const totalVisible = childVisibleCounts.reduce((s, v) => s + v, 0);
-        const count = children.length;
-
-        const MIN_SIBLING_SPACING = 190;
-        const spacingRadius = count > 1
-          ? (MIN_SIBLING_SPACING * (count - 1)) / Math.max(arcSpan, 0.2)
-          : 0;
-
-        for (let i = 0; i < count; i++) {
-          const child = children[i];
-          const descendants = childVisibleCounts[i];
-          const radius = Math.max(
-            RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8),
-            spacingRadius
-          );
-          const angle = count === 1
-            ? dirAngle
-            : dirAngle - arcSpan / 2 + (i * arcSpan) / (count - 1);
-
-          const childCx = cx + radius * Math.cos(angle);
-          const childCy = cy + radius * Math.sin(angle);
-
-          const allocatedArc = arcSpan * (childVisibleCounts[i] / Math.max(1, totalVisible));
-          const directChildren = child.children?.length || 0;
-          const childArc = descendants > 1
-            ? Math.max(allocatedArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
-            : 0;
-
-          placePortalItem(child, childCx, childCy, item.id, undefined, depth + 1, angle, childArc);
-        }
-      }
+      visibleKids(item).forEach(child => placePortalItem(child, item.id, undefined, depth + 1));
     }
 
-    // Place root portal items in radial fan around the portal node
-    const rootCount = subTree.length;
-    const rootVisibleCounts = subTree.map(r => countVisibleUtil(r, collapsedIds));
-    const totalRootVisible = rootVisibleCounts.reduce((s, v) => s + v, 0);
-
-    const totalArcSpan = Math.min(Math.PI * 1.5, rootCount * (Math.PI / 4));
-    const equalArc = totalArcSpan / Math.max(1, rootCount);
-    const rootArcs = subTree.map((_, i) => {
-      const proportionalArc = totalArcSpan * (rootVisibleCounts[i] / Math.max(1, totalRootVisible));
-      return equalArc * 0.5 + proportionalArc * 0.5;
-    });
-
-    const MIN_NODE_SPACING = 200;
-    const minRadiusForSpacing = (rootCount * MIN_NODE_SPACING) / (2 * Math.PI);
-
-    let cumulativeAngle = baseAngle - totalArcSpan / 2;
-    subTree.forEach((rootItem, i) => {
-      const childArc = rootArcs[i];
-      const angle = cumulativeAngle + childArc / 2;
-      const descendants = rootVisibleCounts[i];
-      const rootRadius = Math.max(
-        minRadiusForSpacing,
-        RADIAL_STEP * (0.8 + Math.sqrt(Math.max(descendants - 1, 0)) * 0.8)
-      );
-
-      const cx = portalPos.x + rootRadius * Math.cos(angle);
-      const cy = portalPos.y + rootRadius * Math.sin(angle);
-
-      const directChildren = rootItem.children?.length || 0;
-      const fanArc = descendants > 1
-        ? Math.max(childArc, Math.PI / 3, Math.min(directChildren * 0.5, Math.PI * 1.3))
-        : 0;
-
-      placePortalItem(rootItem, cx, cy, childPortalId, pSpaceName, 0, angle, fanArc);
-      cumulativeAngle += childArc;
-    });
+    subTree.forEach(rootItem => placePortalItem(rootItem, childPortalId, pSpaceName, 0));
   });
 
   // 5. Cross-space relation edges

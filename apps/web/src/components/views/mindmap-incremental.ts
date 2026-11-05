@@ -1,8 +1,8 @@
 /**
  * Diff incrémental de la MindMap : calcule ce qui a changé entre deux listes d'items
- * (ajouts, suppressions, reparentages, relations) et quels parents doivent être
- * ré-éventaillés localement — SANS recalcul global du layout
+ * (ajouts, suppressions, reparentages, relations) — SANS recalcul global du layout
  * (cf. docs/superpowers/specs/2026-07-15-mindmap-incremental-layout-design.md).
+ * affectedParentIds n'est plus lu par la vue depuis le 2026-11-04 : un ajout ou une suppression ne ré-éventaille plus les frères.
  * Fonctions pures, aucun import React : testables en Vitest.
  * Règles : jamais '__space__' dans affectedParentIds (on ne ré-éventaille pas la racine) ;
  * les items racine d'un autre espace remontent au nœud portail `child-space-<spaceId>`.
