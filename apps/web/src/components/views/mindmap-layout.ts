@@ -5,6 +5,7 @@
    Étalement (2026-11-04) : radialLayout est le seul calcul (calculateLayout, éléments de portail, ré-éventail de MindMapView) —
    anneaux réguliers par profondeur, angle selon la taille de la branche, intervalle borné.
    anchorToSaved : place autour de leur parent, déjà positionné, les nœuds sans position enregistrée. */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import type { Node, Edge } from '@xyflow/react';
 import { MarkerType } from '@xyflow/react';
 import type { ItemWithRelations, StatusConfig, SpaceWithRole } from '@spok/shared';
@@ -198,8 +199,8 @@ export function withCurrentCallbacks<T extends Record<string, unknown>>(data: T,
 export interface MindMapLayoutOptions {
   hasPortalSupport: boolean;
   statusOptions: Array<{ id: string; label: string }>;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
@@ -253,8 +254,8 @@ export function buildMindmapNode(
       isCollapsed: collapsedIds.has(item.id),
       childCount: countDescendants(item),
       hasPortalSupport,
-      isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
-      isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
+      isHighlighted: matchesCriteria(highlightType, highlightStatus, item.type, item.status),
+      isDimmed: (highlightType ? !matchesType(highlightType, item.type) : false) || (highlightStatus ? !matchesStatus(highlightStatus, item.status) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
       isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
       isDropTarget: false,
       canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),
@@ -663,8 +664,8 @@ export function buildPortalNodesAndEdges(
           isCollapsed: collapsedIds.has(item.id),
           childCount: countDescendants(item),
           hasPortalSupport: false,
-          isHighlighted: (highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false),
-          isDimmed: (highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
+          isHighlighted: matchesCriteria(highlightType, highlightStatus, item.type, item.status),
+          isDimmed: (highlightType ? !matchesType(highlightType, item.type) : false) || (highlightStatus ? !matchesStatus(highlightStatus, item.status) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false),
           isSearchMatch: !!(searchMatchIds && searchMatchIds.has(item.id)),
           isDropTarget: false,
           canEdit: canEdit !== false && (canEditItem ? canEditItem(item) : true),

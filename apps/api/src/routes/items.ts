@@ -83,9 +83,12 @@ const updateItemSchema = z.object({
   propagateToChildren: z.boolean().optional(),
 });
 
+const ITEM_TYPE_VALUES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'];
+
 const querySchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']).optional(),
-  status: z.string().optional(),
+  // Une ou plusieurs valeurs séparées par des virgules (filtre à choix multiple de la barre d'espace)
+  type: z.string().refine((v) => v.split(',').every((t) => ITEM_TYPE_VALUES.includes(t)), 'Type inconnu').optional(),
+  status: z.string().optional(), // idem ; 'none' désigne les éléments sans statut
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
   include: z.string().optional(),
@@ -361,11 +364,16 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const where: any = { spaceId: spaceIdFilter };
 
-      if (type) where.type = type;
-      if (status === 'none') {
-        where.status = null;
-      } else if (status) {
-        where.status = status;
+      if (type) {
+        const types = type.split(',');
+        where.type = types.length === 1 ? types[0] : { in: types };
+      }
+      if (status) {
+        const statuses = status.split(',');
+        const named = statuses.filter((s) => s !== 'none');
+        if (named.length === statuses.length) where.status = named.length === 1 ? named[0] : { in: named };
+        else if (named.length === 0) where.status = null;
+        else where.AND = [{ OR: [{ status: null }, { status: { in: named } }] }];
       }
       if (parentId !== undefined) where.parentId = parentId === '' ? null : parentId;
       if (search) {

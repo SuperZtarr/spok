@@ -1,13 +1,14 @@
 /* Vue Heatmap : activité par jour/période en cases colorées. */
+import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 
 interface HeatmapViewProps {
   items: Item[];
   onEdit: (id: string) => void;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;
@@ -223,8 +224,7 @@ export function HeatmapView({ items, onEdit, highlightType, highlightStatus, sea
           {/* Cells */}
           {cells.map((cell, i) => {
             const hasHighlighted = cell.items.some(item =>
-              (highlightType && item.type === highlightType) ||
-              (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus))
+              matchesCriteria(highlightType, highlightStatus, item.type, item.status)
             );
             const hasSearchMatch = cell.items.some(item => searchMatchIds?.has(item.id));
 

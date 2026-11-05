@@ -21,6 +21,7 @@
  *   rattache leurs liens au couloir (endpointOverrides de buildProcessEdges) ; ses liens internes sont masqués.
  * Pas d'autre disposition automatique : hors ce bouton, la place choisie par l'utilisateur fait foi.
  */
+import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, useNodesState, useReactFlow,
@@ -30,7 +31,7 @@ import '@xyflow/react/dist/style.css';
 import { Rows3, Undo2, Wand2 } from 'lucide-react';
 import { HelpHint } from '../../help/HelpHint';
 import { help as processHelp } from './help/process.help';
-import type { Item, ItemRelation, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { useProcessNodes } from '../../hooks/useProcessNodes';
 import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
@@ -66,8 +67,8 @@ export interface ProcessViewProps extends ItemMenuCallbacks {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: Item) => boolean;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   onCreateNote?: () => Promise<{ id: string }>;
   onCreateRelation?: (fromId: string, toId: string, type: string, label?: string) => void;
@@ -219,8 +220,8 @@ function ProcessCanvas({
 
   const itemNodes = useMemo<ProcessFlowNode[]>(() => placed.filter((p) => !isHidden(p)).map(({ item, x, y, laneId }) => {
     const itemCanEdit = canEditItem ? canEditItem(item) : canEdit;
-    const dimmed = (highlightType ? item.type !== highlightType : false)
-      || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false)
+    const dimmed = (highlightType ? !matchesType(highlightType, item.type) : false)
+      || (highlightStatus ? !matchesStatus(highlightStatus, item.status) : false)
       || (searchMatchIds ? !searchMatchIds.has(item.id) : false);
     const cb = menuRef.current;
     const menuGroups = buildItemMenuGroups(item.id, {

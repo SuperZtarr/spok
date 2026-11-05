@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-05 (3)
+- Lot poussé : filtre à choix multiple, filtre visible, Gantt élargi, badge de l'assigné (feat). Typecheck OK, TNR 1876/1876, en-têtes OK
+
+### Filtre multiple, Gantt, Liste — 2026-11-05
+- Lot en cours, inscrit dans PRÊT POUR MEP, NON COMMITÉ. Tâches de Thomas : `cmw3d1k8r…` (Gantt), `cmw3d0s07…` (Liste)
+
 ### MEP — 2026-11-05 (2)
 - Lot poussé : carte mentale, cadrage à l'ouverture, positions figées, anneaux réguliers (feat). Typecheck OK, TNR 1863/1863, en-têtes OK
 
@@ -21,7 +27,7 @@ _(aucun lot en attente)_
 - 8 lots poussés en 5 commits. Séparés : audit, Gantt, recherche et préparation, assigné libre (schéma : assignedToName, additif, db push au démarrage). Ensemble (imbriqués dans ItemEditModal, SpaceToolbar, shellZones, ItemReadView) : Loisirs, barre Filtre/Aperçu, zones de la fiche, fiche Afficher pleine largeur ; businessRules et item-modal.help entiers dans ce dernier commit. Le correctif du lien d'audit (auditLogs.ts) est parti dans le commit de l'assigné (b0a988a), 28e6cec n'a que la redirection d'App.tsx. 3 lignes du TODO ajoutées dans un commit de doc à part (écriture en échec pendant la MEP). build:packages + db:generate, typecheck OK, TNR 1855/1855, en-têtes OK
 
 ### Demandes du 2026-11-04 — reste
-- Lot 4 carte mentale : codé le 2026-11-05, inscrit dans PRÊT POUR MEP, NON COMMITÉ, en attente du test de Thomas
+- Lot 4 carte mentale : poussé le 2026-11-05 (28fa2e3), sans test complet sur une vraie carte ; Thomas reverra l'organisation plus tard
 - Tâches SPOK à clore après test : bug Gantt `cmvz0iwgc…`, ouverture mindmap `cmvz0pe1q…` (toujours en `todo`)
 
 ### MEP — 2026-11-04

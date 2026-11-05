@@ -1,6 +1,7 @@
 /* Vue Planning : agenda par périodes (jour/semaine) des items datés.
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SpaceExportButton } from '../SpaceExportButton';
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
+import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { getTypeIcon, getTypeColor } from '../../constants/ui';
@@ -148,8 +149,8 @@ interface PlanningViewProps {
   onOpenInNewTab?: (id: string) => void;
   onConvertToSpace?: (id: string) => void;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
@@ -314,8 +315,8 @@ interface PeriodSectionProps {
   onConvertToSpace?: (id: string) => void;
   statuses: StatusConfig[];
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
@@ -359,8 +360,8 @@ function PeriodSection({ config, items, portalSpaceNames, onEdit, onDelete, onUp
             onOpenInNewTab={onOpenInNewTab}
             statuses={statuses}
             referentiels={referentiels}
-            isHighlighted={(highlightType ? item.type === highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus) : false)}
-            isDimmed={(highlightType ? item.type !== highlightType : false) || (highlightStatus ? (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false)}
+            isHighlighted={matchesCriteria(highlightType, highlightStatus, item.type, item.status)}
+            isDimmed={(highlightType ? !matchesType(highlightType, item.type) : false) || (highlightStatus ? !matchesStatus(highlightStatus, item.status) : false) || (searchMatchIds ? !searchMatchIds.has(item.id) : false)}
             isSearchMatch={!!(searchMatchIds && searchMatchIds.has(item.id))}
             highlightColor={highlightColor}
             canEdit={canEdit}

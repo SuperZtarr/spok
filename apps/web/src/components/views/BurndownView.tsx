@@ -10,8 +10,8 @@ const DONE_STATUSES = new Set(['done', 'cancelled']);
 interface BurndownViewProps {
   items: Item[];
   onItemClick?: (itemId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;

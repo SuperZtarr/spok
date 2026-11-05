@@ -139,8 +139,9 @@ export function SpacePage() {
     if (!spaceId) return;
     try { sessionStorage.setItem(`spok_expanded_${spaceId}`, JSON.stringify([...expandedItems])); } catch {}
   }, [spaceId, expandedItems]);
-  const [filter, setFilter] = useState<ItemType | 'ALL'>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  // Choix multiple (2026-11-05) : liste vide = tous
+  const [filter, setFilter] = useState<ItemType[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [treeSort, setTreeSort] = useState<TreeSort>(() => {
     const saved = spaceId ? sessionStorage.getItem(`space-treeSort-${spaceId}`) : null;
     return (saved as TreeSort | null) ?? 'manual';
@@ -283,17 +284,19 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert' || viewMode === 'process';
   const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'bugs' || viewMode === 'todo';
   const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
-  const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
-  const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
+  const activeTypeFilter = filter.length > 0 ? filter : undefined;
+  const activeStatusFilter = statusFilter.length > 0 ? statusFilter : undefined;
 
+  // Couleur de mise en évidence : seulement pour un choix unique ; avec plusieurs choix, les autres éléments sont juste estompés
   const highlightColor = useMemo(() => {
     if (activeTypeFilter) {
-      const tc = getTypeColor(activeTypeFilter, referentiels?.typeLabels);
+      if (activeTypeFilter.length > 1) return undefined;
+      const tc = getTypeColor(activeTypeFilter[0], referentiels?.typeLabels);
       return { border: tc.color, bg: tc.bgHover };
     }
-    if (activeStatusFilter) {
+    if (activeStatusFilter?.length === 1) {
       const statuses = referentiels?.statuses || [];
-      const s = statuses.find((st: any) => st.id === activeStatusFilter);
+      const s = statuses.find((st: any) => st.id === activeStatusFilter[0]);
       if (s) {
         const parts = s.borderColor.split(' ');
         return { border: parts[0] || '', bg: parts[1] || '' };
@@ -306,8 +309,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     queryKey: ['items', spaceId, isTreeView ? 'ALL' : filter, statusFilter, viewMode, checkedDescendantIds],
     queryFn: () =>
       itemsApi.list(spaceId!, {
-        type: activeTypeFilter && !isHighlightMode ? activeTypeFilter : undefined,
-        status: activeStatusFilter && !isHighlightMode ? (activeStatusFilter === 'undefined' ? 'none' : activeStatusFilter) : undefined,
+        type: activeTypeFilter && !isHighlightMode ? activeTypeFilter.join(',') : undefined,
+        status: activeStatusFilter && !isHighlightMode ? activeStatusFilter.map((s) => (s === 'undefined' ? 'none' : s)).join(',') : undefined,
         parentId: !activeTypeFilter && !activeStatusFilter && !isFlatView && !isTreeView ? null : undefined,
         additionalSpaceIds: checkedDescendantIds.length > 0 ? checkedDescendantIds : undefined,
         pageSize: 5000,
@@ -554,7 +557,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
 
   const handleNewItem = useCallback(() => {
-    const type = filter === 'ALL' ? 'UNDEFINED' : filter;
+    const type = filter.length === 1 ? filter[0] : 'UNDEFINED'; // le type filtré seulement s'il n'y en a qu'un
     createItemMutation.mutate(
       { type, title: '', status: '' },
       { onSuccess: (created: any) => { setEditingItemId(created.id); } },

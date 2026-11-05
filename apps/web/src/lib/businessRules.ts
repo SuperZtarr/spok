@@ -125,6 +125,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/views/MindMapView.tsx (freezePositions, chemin incrémental) ; mindmap-layout.ts (anchorToSaved)',
   },
   {
+    id: 'filter-multi-choice',
+    page: "Barre de l'espace (SpaceToolbar), toutes les vues",
+    trigger: 'Plusieurs types ou plusieurs statuts cochés dans le bloc Filtre ou Aperçu',
+    effect: "Un élément est retenu s'il a l'un des types cochés ET l'un des statuts cochés ; un critère vide ne filtre pas. La couleur de mise en évidence ne s'applique qu'à un choix unique : avec plusieurs choix, les autres éléments sont seulement estompés. Un nouvel élément prend le type filtré seulement si un seul type est coché",
+    location: 'apps/web/src/lib/itemHighlight.ts ; apps/web/src/pages/SpacePage.tsx ; apps/api/src/routes/items.ts (GET, type et status séparés par des virgules)',
+  },
+  {
     id: 'item-free-assignee',
     page: "Fiche d'un élément (ItemEditModal)",
     trigger: "Saisie dans « Assigné à » d'un nom qui n'est pas celui d'un membre de l'espace",

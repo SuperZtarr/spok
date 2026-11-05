@@ -1,4 +1,5 @@
 /* Vue Treemap (D3) : hiérarchie en rectangles imbriqués proportionnels. */
+import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
@@ -44,8 +45,8 @@ interface TreeNode {
 interface TreemapViewProps {
   items: Item[];
   onItemClick?: (itemId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
@@ -287,8 +288,8 @@ export function TreemapView({
 
             // Highlight/dim logic
             const isDimmed =
-              (highlightType && node.data.type !== highlightType) ||
-              (highlightStatus && node.data.status !== highlightStatus);
+              (highlightType && !matchesType(highlightType, node.data.type)) ||
+              (highlightStatus && !matchesStatus(highlightStatus, node.data.status));
             const isSearchMatch = searchMatchIds?.has(node.data.id);
 
             const opacity = isDimmed ? 0.15 : 1;

@@ -1,4 +1,5 @@
 /* Vue Calendrier : items datés par mois/semaine, navigation, création à la date cliquée. */
+import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import React, { useMemo, useCallback, useRef } from 'react';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -31,8 +32,8 @@ interface CalendarViewProps {
   onUpdateDates?: (id: string, startDate: string | null, endDate: string | null) => void;
   onCreateItem?: (startDate: string, endDate?: string) => void;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   canEdit?: boolean;
@@ -94,11 +95,8 @@ export function CalendarView({
         const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
         const portalName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
         const isDimmed =
-          (highlightType ? item.type !== highlightType : false) ||
-          (highlightStatus
-            ? highlightStatus === 'undefined'
-              ? !!item.status
-              : item.status !== highlightStatus
+          (highlightType ? !matchesType(highlightType, item.type) : false) ||
+          (highlightStatus ? !matchesStatus(highlightStatus, item.status)
             : false) ||
           (searchMatchIds ? !searchMatchIds.has(item.id) : false);
 

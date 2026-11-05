@@ -1,6 +1,7 @@
 /* Vue Tableau croisé : items en lignes/colonnes selon deux axes (type, statut, assigné...). */
+import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useMemo } from 'react';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -26,8 +27,8 @@ interface CrossTableViewProps {
   currentSpaceId?: string;
   onEdit: (id: string) => void;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   canEdit?: boolean;
@@ -261,8 +262,7 @@ export function CrossTableView({ items, onEdit, referentiels, highlightType, hig
 
                     // Highlight logic
                     const hasHighlighted = cellItems.some(item =>
-                      (highlightType && item.type === highlightType) ||
-                      (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus))
+                      matchesCriteria(highlightType, highlightStatus, item.type, item.status)
                     );
                     const hasSearchMatch = cellItems.some(item => searchMatchIds?.has(item.id));
 

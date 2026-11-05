@@ -1,4 +1,5 @@
 /* Vue Bulles (D3 pack) : items en cercles groupés par espace/statut. */
+import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, pack, type HierarchyCircularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
@@ -44,8 +45,8 @@ interface TreeNode {
 interface BubbleViewProps {
   items: Item[];
   onItemClick?: (itemId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
@@ -274,8 +275,8 @@ export function BubbleView({
   }, [packedRoot]);
 
   const isHighlighted = useCallback((node: TreeNode) => {
-    if (highlightType && node.type !== highlightType) return false;
-    if (highlightStatus && node.status !== highlightStatus) return false;
+    if (highlightType && !matchesType(highlightType, node.type)) return false;
+    if (highlightStatus && !matchesStatus(highlightStatus, node.status)) return false;
     return true;
   }, [highlightType, highlightStatus]);
 

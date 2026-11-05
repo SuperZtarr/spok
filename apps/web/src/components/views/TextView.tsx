@@ -1,5 +1,6 @@
 /* Vue Texte : document continu des items (titres + descriptions) en lecture/édition.
  * HTML de description / contributions toujours passé par sanitizeHtml (règle user-html-sanitized). */
+import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, FileText, MessageSquare, User, FolderKanban, ExternalLink } from 'lucide-react';
@@ -53,8 +54,8 @@ interface TextViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   spaceId?: string;
@@ -359,8 +360,8 @@ function TextItem({
   statusLabels: Record<string, string>;
   statusColors: Record<string, string>;
   referentiels?: SpaceReferentiels;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
 }) {
@@ -374,7 +375,7 @@ function TextItem({
   const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
   const hasContent = hasDescription || contributions.length > 0 || hasImage;
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
-  const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+  const isDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
   const isHighlighted = hasHighlight && !isDimmed;
   const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 

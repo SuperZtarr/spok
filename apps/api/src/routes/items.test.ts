@@ -137,6 +137,51 @@ describe('Items routes', () => {
       expect(where.type).toBe('TASK')
     })
 
+    describe('filtre à choix multiple', () => {
+      const whereFor = async (query: string) => {
+        allowSpaceAccess()
+        prisma.item.findMany.mockResolvedValue([])
+        prisma.item.count.mockResolvedValue(0)
+        await app.inject({
+          method: 'GET',
+          url: `/spaces/${SPACE_ID}/items?${query}`,
+          headers: { authorization: `Bearer ${token}` },
+        })
+        return prisma.item.findMany.mock.calls[0][0].where
+      }
+
+      it('accepte plusieurs types', async () => {
+        expect((await whereFor('type=TASK,BUG')).type).toEqual({ in: ['TASK', 'BUG'] })
+      })
+
+      it('refuse un type inconnu dans la liste', async () => {
+        allowSpaceAccess()
+        const res = await app.inject({
+          method: 'GET',
+          url: `/spaces/${SPACE_ID}/items?type=TASK,INCONNU`,
+          headers: { authorization: `Bearer ${token}` },
+        })
+        expect(res.statusCode).toBeGreaterThanOrEqual(400)
+        expect(prisma.item.findMany).not.toHaveBeenCalled()
+      })
+
+      it('accepte plusieurs statuts', async () => {
+        expect((await whereFor('status=todo,done')).status).toEqual({ in: ['todo', 'done'] })
+      })
+
+      it('garde un statut seul et « sans statut » seul tels quels', async () => {
+        expect((await whereFor('status=todo')).status).toBe('todo')
+        prisma.item.findMany.mockClear()
+        expect((await whereFor('status=none')).status).toBeNull()
+      })
+
+      it('combine « sans statut » et un statut', async () => {
+        const where = await whereFor('status=none,todo')
+        expect(where.status).toBeUndefined()
+        expect(where.AND).toEqual([{ OR: [{ status: null }, { status: { in: ['todo'] } }] }])
+      })
+    })
+
     it('should allow community members to list items (VIEWER)', async () => {
       allowCommunityAccess()
       prisma.item.findMany.mockResolvedValue([])

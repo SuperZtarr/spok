@@ -1,5 +1,6 @@
 /* Vue Liste : arborescence d'items (TreeItemRow inline), tri, DnD, RootDropZone — vue par défaut.
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Badge de l'assigné (AssigneeBadge) après le titre et les tags de chaque ligne (2026-11-05).
  */
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
+import { AssigneeBadge } from '../ui/AssigneeBadge';
 import { TagBadge } from '../ui/TagBadge';
 import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
@@ -324,6 +326,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                         )}
                       </div>
                     )}
+                    <AssigneeBadge item={item} />
                     <button
                       className={`sm:hidden flex-shrink-0 p-0.5 rounded transition-colors ${infoOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
                       onClick={(e) => { e.stopPropagation(); setOpenInfoId(infoOpen ? null : item.id); }}

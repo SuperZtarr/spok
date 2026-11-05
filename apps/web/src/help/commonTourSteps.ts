@@ -44,7 +44,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     element: '[data-tour="toolbar-filter"]',
     popover: {
       title: 'Filtre',
-      description: 'Ne garde que certains types, statuts ou un texte recherché. Le bouton reste foncé tant qu\'un filtre est actif.',
+      description: 'Ne garde que les types et statuts cochés (plusieurs choix possibles) ou un texte recherché. Le bouton reste foncé tant qu\'un filtre est actif.',
       side: 'bottom',
     },
   },

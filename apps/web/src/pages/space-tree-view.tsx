@@ -3,6 +3,7 @@
  * avec Gantt/PERT, variant "inline") et garde ici son fetch récursif des enfants (ItemChildren, useQuery).
  * RootDropZone est ré-exportée depuis TreeItemRow.tsx pour ne pas casser les imports existants (SpacePage.tsx).
  */
+import { matchesStatus, matchesType } from '../lib/itemHighlight';
 import { useQuery } from '@tanstack/react-query';
 import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
@@ -38,8 +39,8 @@ export interface TreeItemProps {
   globalDropMode: 'reorder' | 'nest';
   globalDropPosition?: 'before' | 'after' | 'nest';  expandedItems: Set<string>;
   canEdit?: boolean;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   statusColorMap: Record<string, string>;
@@ -83,7 +84,7 @@ export function TreeItem({
   isFirstTreeItem,
 }: TreeItemProps) {
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
-  const isDimmed = !!((highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id)));
+  const isDimmed = !!((highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id)));
   const isHighlighted = hasHighlight && !isDimmed;
   const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
 
@@ -219,8 +220,8 @@ export function ItemChildren({
   globalDropPosition?: 'before' | 'after' | 'nest';  expandedItems: Set<string>;
   onToggleExpand: (id: string) => void;
   canEdit?: boolean;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   statusColorMap: Record<string, string>;

@@ -9,6 +9,7 @@ export const help: HelpEntry = {
   short: 'Tableau avec colonnes triables',
   empty: 'L\'espace ne contient encore aucun élément. Créez le premier avec « Nouveau ».',
   tips: [
+    'Le nom de la personne assignée s\'affiche à côté du titre, avec une icône',
     'Cliquez sur un en-tête de colonne pour trier, un second clic inverse l\'ordre',
     'Cliquez sur une ligne pour ouvrir la fiche de l\'élément',
     'Glissez-déposez une ligne pour la réordonner ou la ranger sous un autre élément',

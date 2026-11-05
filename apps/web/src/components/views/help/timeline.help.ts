@@ -10,6 +10,7 @@ export const help: HelpEntry = {
   short: 'Diagramme de Gantt',
   empty: 'Aucun élément daté. Donnez des dates de début et de fin (ou une échéance) à un élément pour le voir en barre.',
   tips: [
+    'Le nom de la personne assignée s\'affiche sur la ligne de l\'élément, avec une icône',
     'Glissez une barre pour la décaler, tirez ses bords pour changer ses dates',
     'Clic droit sur la ligne d\'un élément pour poser son échéance (losange) ; clic droit sur le losange pour la retirer',
     'Tirez depuis le point central d\'une barre vers une autre pour créer une dépendance',

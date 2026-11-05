@@ -5,10 +5,13 @@
  * différent selon le contexte (ligne pleine largeur vs colonne fixe sticky à gauche d'un planning).
  * RootDropZone est co-localisée ici pour être réutilisée par toutes les arborescences (retour à la racine).
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * stickyWidth (variante sticky) : largeur de la colonne en px, à garder égale à celle de la vue (Gantt 400, PERT 288).
+ * showAssignee : badge de l'assigné après le titre (Gantt uniquement, demande Thomas 2026-11-05).
  */
 import { ChevronDown, ChevronRight, GripVertical, ExternalLink } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { Item } from '@spok/shared';
+import { AssigneeBadge } from '../ui/AssigneeBadge';
 import { Badge } from '../ui/Badge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
@@ -36,8 +39,10 @@ export function RootDropZone({ isOver }: { isOver: boolean }) {
 export interface TreeItemRowProps {
   item: Item & { childCount?: number; tags?: any[] };
   depth: number;
-  // 'inline' = ListView (pleine largeur, arrondi hover) ; 'sticky' = Gantt/PERT (colonne fixe w-72)
+  // 'inline' = ListView (pleine largeur, arrondi hover) ; 'sticky' = Gantt/PERT (colonne fixe, cf. stickyWidth)
   variant?: 'sticky' | 'inline';
+  stickyWidth?: number;
+  showAssignee?: boolean;
   orderNumber?: string;
   hasChildren: boolean;
   isCollapsed: boolean;
@@ -77,6 +82,8 @@ export function TreeItemRow({
   item,
   depth,
   variant = 'sticky',
+  stickyWidth = 288,
+  showAssignee,
   orderNumber,
   hasChildren,
   isCollapsed,
@@ -133,11 +140,11 @@ export function TreeItemRow({
         className={`${
           isInline
             ? 'flex items-center gap-2 px-3 py-2 hover:bg-accent rounded-md group cursor-pointer transition-colors duration-150'
-            : 'w-72 flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50 sticky left-0 z-10 bg-background'
+            : 'flex-shrink-0 px-2 py-2 border-r flex items-center gap-1 cursor-pointer hover:bg-muted/50 sticky left-0 z-10 bg-background'
         } ${nestHighlight ? (isInline ? 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-400' : 'bg-blue-50 dark:bg-blue-950/30 ring-2 ring-inset ring-blue-400') : ''} ${
           isInline && isHighlighted && highlightColor ? `border ${highlightColor.border} ${highlightColor.bg}` : ''
         } ${isInline && isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
-        style={{ paddingLeft: `${indent}px` }}
+        style={{ paddingLeft: `${indent}px`, ...(isInline ? {} : { width: stickyWidth }) }}
         onClick={isInline ? () => onEdit(item.id) : undefined}
       >
         {editable && onMove && (
@@ -184,6 +191,8 @@ export function TreeItemRow({
         >
           {item.title}
         </span>
+
+        {showAssignee && <AssigneeBadge item={item} />}
 
         {isInline && item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
           <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />

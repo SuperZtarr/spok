@@ -1,6 +1,7 @@
 /* Vue Réseau ego : relations centrées sur un item sélectionné. */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
@@ -9,8 +10,8 @@ interface EgoNetworkViewProps {
   relations: ItemRelation[];
   onEdit: (id: string) => void;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;
@@ -382,11 +383,10 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
               const isCenter = node.depth === 0;
               const r = isCenter ? nodeRadius + 6 : nodeRadius;
               const isHighlighted =
-                (highlightType && node.item.type === highlightType) ||
-                (highlightStatus && (highlightStatus === 'undefined' ? !node.item.status : node.item.status === highlightStatus));
+                matchesCriteria(highlightType, highlightStatus, node.item.type, node.item.status);
               const isDimmed =
-                (highlightType && node.item.type !== highlightType) ||
-                (highlightStatus && (highlightStatus === 'undefined' ? !!node.item.status : node.item.status !== highlightStatus)) ||
+                (highlightType && !matchesType(highlightType, node.item.type)) ||
+                (highlightStatus && !matchesStatus(highlightStatus, node.item.status)) ||
                 (searchMatchIds && !searchMatchIds.has(node.id));
               const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(node.id));
 

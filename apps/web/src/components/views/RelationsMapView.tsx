@@ -1,6 +1,7 @@
 /* Vue Relations : carte des relations entre items (sans hiérarchie).
  * Types de relation : source unique constants/relationTypes.ts — les 4 types officiels sont visibles par
  * défaut (Bloque, Permet, Entraîne, Lié à) ; un type hors liste n'est jamais affiché. */
+import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { Maximize2 } from 'lucide-react';
@@ -45,8 +46,8 @@ interface GraphLink {
 interface RelationsMapViewProps {
   items: Item[];
   onNodeClick: (itemId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
@@ -183,12 +184,7 @@ export function RelationsMapView({
       if (searchMatchIds && searchMatchIds.size > 0) {
         return searchMatchIds.has(node.id);
       }
-      if (highlightType) return node.type === highlightType;
-      if (highlightStatus) {
-        const item = items.find((i) => i.id === node.id);
-        return item?.status === highlightStatus;
-      }
-      return false;
+      return matchesCriteria(highlightType, highlightStatus, node.type, items.find((i) => i.id === node.id)?.status);
     },
     [searchMatchIds, highlightType, highlightStatus, items]
   );

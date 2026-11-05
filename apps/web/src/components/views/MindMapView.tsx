@@ -27,6 +27,7 @@
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type) ; onConnect / onEdgeClick ne font qu'ouvrir ces modales.
  */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
@@ -105,8 +106,8 @@ interface MindMapViewProps {
   spaceName?: string;
   spaceId?: string;
   communitySpaces?: SpaceWithRole[];
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   searchMatchIds?: Set<string>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -728,8 +729,8 @@ function MindMapViewInner({
             statusColor,
             hexColor,
             textColor: getContrastTextColor(hexColor),
-            isHighlighted: (layoutOptions.highlightType ? item.type === layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !item.status : item.status === layoutOptions.highlightStatus) : false),
-            isDimmed: (layoutOptions.highlightType ? item.type !== layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !!item.status : item.status !== layoutOptions.highlightStatus) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
+            isHighlighted: matchesCriteria(layoutOptions.highlightType, layoutOptions.highlightStatus, item.type, item.status),
+            isDimmed: (layoutOptions.highlightType ? !matchesType(layoutOptions.highlightType, item.type) : false) || (layoutOptions.highlightStatus ? !matchesStatus(layoutOptions.highlightStatus, item.status) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
             isSearchMatch: !!(layoutOptions.searchMatchIds && layoutOptions.searchMatchIds.has(item.id)),
           },
         };
@@ -813,8 +814,8 @@ function MindMapViewInner({
               hasChildren: treeNode ? treeNode.children.length > 0 : false,
               childCount: treeNode ? countDescendants(treeNode) : 0,
               isCollapsed: collapsedIds.has(item.id),
-              isHighlighted: (layoutOptions.highlightType ? item.type === layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !item.status : item.status === layoutOptions.highlightStatus) : false),
-              isDimmed: (layoutOptions.highlightType ? item.type !== layoutOptions.highlightType : false) || (layoutOptions.highlightStatus ? (layoutOptions.highlightStatus === 'undefined' ? !!item.status : item.status !== layoutOptions.highlightStatus) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
+              isHighlighted: matchesCriteria(layoutOptions.highlightType, layoutOptions.highlightStatus, item.type, item.status),
+              isDimmed: (layoutOptions.highlightType ? !matchesType(layoutOptions.highlightType, item.type) : false) || (layoutOptions.highlightStatus ? !matchesStatus(layoutOptions.highlightStatus, item.status) : false) || (layoutOptions.searchMatchIds ? !layoutOptions.searchMatchIds.has(item.id) : false),
               isSearchMatch: !!(layoutOptions.searchMatchIds && layoutOptions.searchMatchIds.has(item.id)),
             },
           };

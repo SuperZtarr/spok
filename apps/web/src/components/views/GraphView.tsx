@@ -1,4 +1,5 @@
 /* Vue Graphe (D3 force) : nœuds items/espaces/communautés, liens hiérarchie/relations/tags, filtres. */
+import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useQuery } from '@tanstack/react-query';
@@ -50,8 +51,8 @@ interface GraphViewProps {
   communityId?: string;
   communityName?: string;
   onNodeClick: (itemId: string, spaceId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   additionalSpaceIds?: string[];
@@ -251,8 +252,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     // Determine if this node matches the highlight filter
     const isItemNode = !isStructural;
     const matchesTypeStatus = !highlightType && !highlightStatus || isStructural ||
-      (highlightType && node.type === highlightType) ||
-      (highlightStatus && (node.status === highlightStatus || (highlightStatus === 'undefined' && !node.status)));
+      matchesCriteria(highlightType, highlightStatus, node.type, node.status);
     const matchesSearch = !searchMatchIds || isStructural || searchMatchIds.has(node.id);
     const matchesHighlight = matchesTypeStatus && matchesSearch;
     const dimmed = hasHighlight && isItemNode && !matchesHighlight;
@@ -324,11 +324,9 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
         const sourceStructural = source.type === 'SPACE' || source.type === 'COMMUNITY';
         const targetStructural = target.type === 'SPACE' || target.type === 'COMMUNITY';
         const sourceMatch = sourceStructural ||
-          (highlightType && source.type === highlightType) ||
-          (highlightStatus && (source.status === highlightStatus || (highlightStatus === 'undefined' && !source.status)));
+          matchesCriteria(highlightType, highlightStatus, source.type, source.status);
         const targetMatch = targetStructural ||
-          (highlightType && target.type === highlightType) ||
-          (highlightStatus && (target.status === highlightStatus || (highlightStatus === 'undefined' && !target.status)));
+          matchesCriteria(highlightType, highlightStatus, target.type, target.status);
         if (!sourceMatch || !targetMatch) {
           return 'rgba(100,116,139,0.1)';
         }

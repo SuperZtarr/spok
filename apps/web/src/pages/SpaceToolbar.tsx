@@ -3,6 +3,8 @@
  * Filtre / Aperçu (décision Thomas 2026-11-04) : un seul bloc, selon la vue (prop highlightMode, calculée par SpacePage) —
  * « Aperçu » sur les vues qui estompent sans masquer, « Filtre » sur celles qui réduisent la liste. Mêmes états
  * (filter, statusFilter, searchQuery) : un critère posé reste actif en changeant de vue, et change juste d'effet.
+ * Types et Statuts à choix multiple (2026-11-05) : listes de valeurs cochées, liste vide = tous ; le menu reste ouvert
+ * pendant qu'on coche. Bloc toujours déplié à partir de xl (1280 px) ; en dessous, le bouton Filtre/Aperçu le déplie.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
@@ -190,10 +192,12 @@ const VIEW_ICON_MAP: Record<string, LucideIcon> = {
 
 export interface SpaceToolbarProps {
   // Bloc Filtre ou Aperçu
-  filter: ItemType | 'ALL';
-  onFilterChange: (filter: ItemType | 'ALL') => void;
-  statusFilter: string;
-  onStatusFilterChange: (status: string) => void;
+  /** Types cochés ; liste vide = tous */
+  filter: ItemType[];
+  onFilterChange: (filter: ItemType[]) => void;
+  /** Statuts cochés ; liste vide = tous */
+  statusFilter: string[];
+  onStatusFilterChange: (statuses: string[]) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   /** true : la vue affichée met en évidence sans masquer — le bloc s'appelle « Aperçu » */
@@ -276,8 +280,9 @@ export function SpaceToolbar({
     setOtherGroupOpen(key);
   };
 
-  const activeTypeFilter = filter !== 'ALL' ? filter : undefined;
-  const activeStatusFilter = statusFilter !== 'ALL' ? statusFilter : undefined;
+  const activeTypeFilter = filter.length > 0;
+  const activeStatusFilter = statusFilter.length > 0;
+  const toggleValue = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const showFiltersForView = true;
 
@@ -490,17 +495,16 @@ export function SpaceToolbar({
                   <button
                     onClick={() => setFiltreOpen(v => !v)}
                     aria-label={highlightMode ? 'Aperçu' : 'Filtre'}
-                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap xl:pointer-events-none ${
                       hasActive ? 'bg-accent text-foreground font-semibold' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="hidden sm:inline">{highlightMode ? 'Aperçu' : 'Filtre'}</span>
-                    <ChevronDown className={`w-3 h-3 transition-transform ${filtreOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform xl:hidden ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   </HelpHint>
-                  {filtreOpen && (
-                    <div className="flex items-center gap-1">
+                  <div className={`${filtreOpen ? 'flex' : 'hidden'} xl:flex items-center gap-1`}>
                       {/* Types */}
                       <div ref={typeDropdownRef} className="relative flex-shrink-0">
                         <HelpHint text={highlightMode ? H.highlightType : H.filterType}>
@@ -510,21 +514,25 @@ export function SpaceToolbar({
                             activeTypeFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                           }`}
                         >
-                          {activeTypeFilter ? TYPE_LABELS[activeTypeFilter] : 'Types'}
+                          {filter.length === 1 ? TYPE_LABELS[filter[0]] : filter.length > 1 ? `Types (${filter.length})` : 'Types'}
                           <ChevronDown className={`w-3 h-3 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
                         </HelpHint>
                         {typeDropdownOpen && (
                           <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[160px]">
-                            {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const).map((t) => {
-                              const isActive = filter === t;
-                              const typeColor = t !== 'ALL' ? getTypeColor(t, referentiels?.typeLabels) : null;
+                            <button onClick={() => { onFilterChange([]); setTypeDropdownOpen(false); }}
+                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${filter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                              <span className="flex-1 text-left">Tous les types</span>
+                            </button>
+                            {(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const).map((t) => {
+                              const isActive = filter.includes(t);
+                              const typeColor = getTypeColor(t, referentiels?.typeLabels);
                               return (
-                                <button key={t} onClick={() => { onFilterChange(t); setTypeDropdownOpen(false); }}
+                                <button key={t} aria-pressed={isActive} onClick={() => onFilterChange(toggleValue<ItemType>(filter, t))}
                                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
-                                  {typeColor && <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />}
-                                  <span className="flex-1 text-left">{t === 'ALL' ? 'Tous les types' : TYPE_LABELS[t]}</span>
-                                  {isActive && t !== 'ALL' && <span className="text-primary text-xs">✓</span>}
+                                  <span className={`w-2 h-2 rounded-full ${typeColor.bgHover}`} />
+                                  <span className="flex-1 text-left">{TYPE_LABELS[t]}</span>
+                                  {isActive && <span className="text-primary text-xs">✓</span>}
                                 </button>
                               );
                             })}
@@ -535,28 +543,28 @@ export function SpaceToolbar({
                       <div ref={statusDropdownRef} className="relative flex-shrink-0">
                         {(() => {
                           const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-                          const activeStatus = activeStatusFilter ? statuses.find((s: any) => s.id === activeStatusFilter) : null;
+                          const singleStatus = statusFilter.length === 1 ? statuses.find((s: any) => s.id === statusFilter[0]) : null;
                           const visibleStatuses = statuses.filter((s: any) => s.visible);
                           return (
                             <>
                               <HelpHint text={highlightMode ? H.highlightStatus : H.filterStatus}>
                               <button onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
-                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeStatus ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
-                                {activeStatus ? activeStatus.label : 'Statuts'}
+                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeStatusFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                                {singleStatus ? singleStatus.label : statusFilter.length > 1 ? `Statuts (${statusFilter.length})` : 'Statuts'}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
                               </button>
                               </HelpHint>
                               {statusDropdownOpen && (
                                 <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[180px]">
-                                  <button onClick={() => { onStatusFilterChange('ALL'); setStatusDropdownOpen(false); }}
-                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${statusFilter === 'ALL' ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                  <button onClick={() => { onStatusFilterChange([]); setStatusDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${statusFilter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                                     <span className="flex-1 text-left">Tous les statuts</span>
                                   </button>
                                   {visibleStatuses.map((s: any) => {
-                                    const isActive = statusFilter === s.id;
+                                    const isActive = statusFilter.includes(s.id);
                                     const dotColor = s.borderColor.split(' ')[1] || s.borderColor.split(' ')[0];
                                     return (
-                                      <button key={s.id} onClick={() => { onStatusFilterChange(s.id); setStatusDropdownOpen(false); }}
+                                      <button key={s.id} aria-pressed={isActive} onClick={() => onStatusFilterChange(toggleValue(statusFilter, s.id))}
                                         className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                                         <span className={`w-2 h-2 rounded-full ${dotColor}`} />
                                         <span className="flex-1 text-left">{s.label}</span>
@@ -574,7 +582,7 @@ export function SpaceToolbar({
                       <div className="relative flex-shrink-0">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
                         <input type="text" placeholder="Rechercher..." value={searchQuery} onChange={(e) => onSearchQueryChange(e.target.value)}
-                          className="h-7 w-28 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                          className="h-7 w-40 xl:w-48 2xl:w-64 pl-6 pr-6 text-xs border border-input rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
                         {searchQuery && (
                           <HelpHint text={H.clearSearch} className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex">
                             <button type="button" onClick={() => onSearchQueryChange('')} aria-label={H.clearSearch} className="text-muted-foreground hover:text-foreground">
@@ -583,8 +591,7 @@ export function SpaceToolbar({
                           </HelpHint>
                         )}
                       </div>
-                    </div>
-                  )}
+                  </div>
                 </>
               );
               // Deux zones nommées (DevZoneInspector, mode Aide, tours) pour une seule commande
@@ -605,7 +612,7 @@ export function SpaceToolbar({
             <HelpHint text={H.count}>
             <span className="inline-flex items-center justify-center h-7 rounded px-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
               {(() => {
-                const hasFilter = filter !== 'ALL' || statusFilter !== 'ALL';
+                const hasFilter = activeTypeFilter || activeStatusFilter;
                 const hasSearch = searchQuery.trim().length > 0;
                 if (hasSearch) return `${searchMatchCount ?? 0}/${totalItemCount} éléments`;
                 if (hasFilter) return `${filteredItemCount}/${totalItemCount} éléments`;

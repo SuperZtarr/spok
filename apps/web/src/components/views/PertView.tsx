@@ -8,6 +8,7 @@
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type, présentation née ici) — ne pas recréer de modale inline.
  */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { RELATION_TYPE_LIST, RELATION_TYPE_META, getRelationMeta, isOfficialRelationType, isOrderingRelation } from '../../constants/relationTypes';
@@ -83,8 +84,8 @@ interface PertViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   spaceViews?: MenuItemConfig[];
@@ -757,8 +758,8 @@ export function PertView({
             const { item } = row;
             const hasChildren = item.children.length > 0;
             const isCollapsed = collapsedIds.has(item.id);
-            const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-            const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+            const isHighlighted = matchesCriteria(highlightType, highlightStatus, item.type, item.status);
+            const isDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
             const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
             const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
             return (
@@ -855,7 +856,7 @@ export function PertView({
               const isDragTarget = dragTargetId === item.id;
               const Icon = getTypeIcon(item.type as ItemType, item.url);
               const showHandle = canEdit && onCreateRelation && (hoveredNodeId === item.id) && !relationDrag;
-              const nodeIsDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+              const nodeIsDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const nodeIsSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
               const nodeRelationStroke = (() => {
                 const nodeRels = pertRelations.filter(r => r.fromItemId === item.id || r.toItemId === item.id);

@@ -18,7 +18,9 @@
  * En-tête : chaque commande sous HelpHint (textes : timeline.help.ts → hints), pas de `title` natif.
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type) — ne pas recréer de modale inline ici.
+ * Colonne des éléments : GANTT_LABEL_WIDTH (400 px), badge de l'assigné sur chaque ligne (2026-11-05).
  */
+import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
 import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
@@ -34,7 +36,7 @@ import {
   type DragStartEvent, type DragOverEvent, type DragEndEvent,
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
 import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../../lib/cascadeShift';
@@ -53,6 +55,9 @@ import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as timelineHelp } from './help/timeline.help';
+
+// Largeur de la colonne des éléments (élargie à 400 px le 2026-11-05 pour laisser la place au badge de l'assigné)
+const GANTT_LABEL_WIDTH = 400;
 
 /** Infobulles des commandes de l'en-tête — textes dans la fiche d'aide (timeline.help.ts, hints). */
 const TH = timelineHelp.hints!;
@@ -94,8 +99,8 @@ interface TimelineViewProps {
   onOpenInNewTab?: (id: string) => void;
   spaceId?: string;
   referentiels?: SpaceReferentiels;
-  highlightType?: ItemType;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   onMove?: (id: string, parentId: string | null, position: number) => void;
@@ -206,9 +211,8 @@ treeSort: treeSortProp,
   const preDragCollapsedRef = useRef<Set<string>>(new Set());
 
   const zoomConfig = ZOOM_CONFIGS[zoomLevel];
-  const LABEL_WIDTH = 288;
-  const visibleDays = containerWidth > LABEL_WIDTH
-    ? Math.max(7, Math.floor((containerWidth - LABEL_WIDTH) / zoomConfig.dayWidth))
+  const visibleDays = containerWidth > GANTT_LABEL_WIDTH
+    ? Math.max(7, Math.floor((containerWidth - GANTT_LABEL_WIDTH) / zoomConfig.dayWidth))
     : zoomConfig.days;
 
   // visibleStartDate est calculé depuis centerDate — se recale automatiquement au resize
@@ -915,10 +919,10 @@ treeSort: treeSortProp,
     const area = timelineAreaRef.current;
     if (!area) return;
     const rect = area.getBoundingClientRect();
-    // Coordinates relative to the timeline area, offset by 288px for the label column
+    // Coordinates relative to the timeline area, offset by the label column for the label column
     setRelationDrag(prev => prev ? {
       ...prev,
-      currentX: e.clientX - rect.left - 288,
+      currentX: e.clientX - rect.left - GANTT_LABEL_WIDTH,
       currentY: e.clientY - rect.top,
     } : null);
   }, [relationDrag]);
@@ -1010,9 +1014,9 @@ treeSort: treeSortProp,
       const w = entries[0].contentRect.width;
       setContainerWidth(w);
       // Au premier rendu sans valeur sauvegardée : positionne aujourd'hui au 1/4 gauche
-      if (!initialOffsetApplied.current && !hasSavedCenter && w > LABEL_WIDTH) {
+      if (!initialOffsetApplied.current && !hasSavedCenter && w > GANTT_LABEL_WIDTH) {
         initialOffsetApplied.current = true;
-        const days = Math.max(7, Math.floor((w - LABEL_WIDTH) / ZOOM_CONFIGS[zoomLevel].dayWidth));
+        const days = Math.max(7, Math.floor((w - GANTT_LABEL_WIDTH) / ZOOM_CONFIGS[zoomLevel].dayWidth));
         setCenterDate(startOfDay(addDays(new Date(), Math.floor(days / 4))));
       }
     });
@@ -1224,7 +1228,7 @@ treeSort: treeSortProp,
             {/* Year row (multiyear zoom) */}
             {showYearRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                <div style={{ width: GANTT_LABEL_WIDTH }} className="flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Année
                 </div>
                 <div className="flex">
@@ -1244,7 +1248,7 @@ treeSort: treeSortProp,
             {/* Quarter row (multiyear zoom) */}
             {showQuarterRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                <div style={{ width: GANTT_LABEL_WIDTH }} className="flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Trimestre
                 </div>
                 <div className="flex">
@@ -1264,7 +1268,7 @@ treeSort: treeSortProp,
             {/* Month row (for month/quarter/year zoom) */}
             {showMonthRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                <div style={{ width: GANTT_LABEL_WIDTH }} className="flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Mois
                 </div>
                 <div className="flex">
@@ -1284,7 +1288,7 @@ treeSort: treeSortProp,
             {/* Week row (for day/week/month zoom) */}
             {showWeekRow && (
               <div className="flex border-b">
-                <div className="w-72 flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
+                <div style={{ width: GANTT_LABEL_WIDTH }} className="flex-shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground border-r bg-muted/50 sticky left-0 z-20">
                   Semaine
                 </div>
                 <div className="flex">
@@ -1303,7 +1307,7 @@ treeSort: treeSortProp,
 
             {/* Days row */}
             <div className="flex">
-              <div className="w-72 flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50 sticky left-0 z-20">
+              <div style={{ width: GANTT_LABEL_WIDTH }} className="flex-shrink-0 px-3 py-2 text-sm font-medium border-r bg-muted/50 sticky left-0 z-20">
                 Élément
               </div>
               <div className="flex">
@@ -1355,7 +1359,7 @@ treeSort: treeSortProp,
                   >
                     <div
                       className="px-2 flex items-center gap-1 text-xs font-semibold text-muted-foreground truncate"
-                      style={{ width: 288, flexShrink: 0 }}
+                      style={{ width: GANTT_LABEL_WIDTH, flexShrink: 0 }}
                     >
                       {row.isCollapsed
                         ? <ChevronRight className="w-3 h-3 flex-shrink-0" />
@@ -1377,8 +1381,8 @@ treeSort: treeSortProp,
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);
-              const isHighlighted = (highlightType && item.type === highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !item.status : item.status === highlightStatus));
-              const isDimmed = (highlightType && item.type !== highlightType) || (highlightStatus && (highlightStatus === 'undefined' ? !!item.status : item.status !== highlightStatus)) || (searchMatchIds && !searchMatchIds.has(item.id));
+              const isHighlighted = matchesCriteria(highlightType, highlightStatus, item.type, item.status);
+              const isDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const isSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
@@ -1395,6 +1399,8 @@ treeSort: treeSortProp,
                 >
                   {/* Item label — extracted as component to allow useDraggable/useDroppable hooks */}
                   <TreeItemRow
+                    stickyWidth={GANTT_LABEL_WIDTH}
+                    showAssignee
                     item={item}
                     depth={item.depth}
                     hasChildren={hasChildren}
@@ -1623,7 +1629,7 @@ treeSort: treeSortProp,
             {dependencyArrows.length > 0 && (
               <svg
                 className="absolute top-0"
-                style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0), pointerEvents: 'none' }}
+                style={{ left: GANTT_LABEL_WIDTH, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0), pointerEvents: 'none' }}
               >
                 <defs>
                   {/* Un marqueur par type officiel + un gris pour un type hors liste (source unique relationTypes) */}
@@ -1718,7 +1724,7 @@ treeSort: treeSortProp,
             {relationDrag && (
               <svg
                 className="absolute top-0 pointer-events-none z-20"
-                style={{ left: 288, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0) }}
+                style={{ left: GANTT_LABEL_WIDTH, width: visibleDays * dayWidth, height: flatRows.reduce((acc, r) => acc + (r.kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT), 0) }}
               >
                 <line
                   x1={relationDrag.fromX}

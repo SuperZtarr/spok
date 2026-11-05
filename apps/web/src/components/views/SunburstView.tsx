@@ -1,4 +1,5 @@
 /* Vue Sunburst (D3) : hiérarchie en cercles concentriques, zoom par secteur — mode espace ou global. */
+import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useEffect, useRef, useMemo, useCallback, type RefCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -64,8 +65,8 @@ interface SunburstViewProps {
   spaceId?: string;
   spaceName?: string;
   onNodeClick?: (itemId: string) => void;
-  highlightType?: string;
-  highlightStatus?: string;
+  highlightType?: string[];
+  highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   additionalSpaceIds?: string[];
@@ -352,8 +353,7 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
               const hasFilterHighlight = !!(highlightType || highlightStatus || searchMatchIds);
               const isItem = d.data.nodeType === 'item';
               const matchesTypeStatus = !highlightType && !highlightStatus || !isItem ||
-                (highlightType && d.data.itemType === highlightType) ||
-                (highlightStatus && (d.data.status === highlightStatus || (highlightStatus === 'undefined' && !d.data.status)));
+                matchesCriteria(highlightType, highlightStatus, d.data.itemType, d.data.status);
               const matchesSearch = !searchMatchIds || !isItem || searchMatchIds.has(d.data.id);
               const isSearchMatch = !!(searchMatchIds && isItem && searchMatchIds.has(d.data.id));
               const filterDimmed = hasFilterHighlight && isItem && !(matchesTypeStatus && matchesSearch);
