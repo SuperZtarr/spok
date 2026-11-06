@@ -12,6 +12,7 @@
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
  * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées.
  * Le rôle ne retire aucune vue, lecture seule comprise (décision Thomas 2026-11-06).
+ * Listes de vues : toujours dérivées de VIEW_REGISTRY (catégorie, MOBILE_HIDDEN_VIEWS), jamais recopiées ici. Marge basse seulement hors registre (overview).
  * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
  * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier, Loupe ; Projet : sans Liste/Types/Images/
  * Liens/Documents, avec Carte mentale et Loupe). Loisirs liste aussi la Loupe (décision Thomas 2026-11-06). Répartition calculée par splitViewsForMode, seule source des deux affichages.
@@ -25,13 +26,13 @@
  * natif (contrôlé par help/coverage.test.ts) ; repères data-tour toolbar-* pour les étapes communes des tours.
  * Zones data-devzone toolbar-vues/ordre/filtre/apercu/actions : vocabulaire de DevZoneInspector ET zones du mode Aide
  * (textes : help/shellZones.ts).
- */
  * Bouton Historique : en mode admin seulement (règle space-history-admin-only).
+ */
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import {
 import { useAdminMode } from '../components/DevDbStatus';
+import {
   ChevronDown,
   Search,
   X,
@@ -46,7 +47,7 @@ import { useAdminMode } from '../components/DevDbStatus';
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, VIEW_REGISTRY } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
@@ -155,13 +156,6 @@ export function curatedPrimaryViews<T extends { viewMode?: string | null }>(view
 const PROCESS_VIEW_IDLE = 'bg-violet-100 text-violet-800 hover:bg-violet-200';
 const PROCESS_VIEW_ACTIVE = 'bg-violet-600 text-white shadow-sm';
 
-const MOBILE_HIDDEN_VIEWS = new Set([
-  'kanban', 'types', 'members',
-  'timeline', 'planning', 'graph', 'sunburst', 'relations',
-  'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
-  'crossTable', 'heatmap', 'ego', 'loupe', 'process',
-]);
-
 export interface SpaceToolbarProps {
   // Bloc Filtre ou Aperçu
   /** Types cochés ; liste vide = tous */
@@ -222,13 +216,13 @@ export function SpaceToolbar({
   canEdit,
   onNewItem,
   onInsertTemplate,
-  const adminMode = useAdminMode();
   spaceId,
   spaceRole,
   liveSessionsSlot,
   liveSessionBarSlot,
 }: SpaceToolbarProps) {
   const { mode: interfaceMode } = useInterfaceModeStore();
+  const adminMode = useAdminMode();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -279,7 +273,7 @@ export function SpaceToolbar({
 
 
   return (
-    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','articles','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','loupe','priority','mindmap','process'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
+    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${VIEW_CATEGORY_OF.has(viewMode) ? '' : 'mb-3 pb-2'}`}>
 
       {/* View mode buttons row */}
       {(() => {

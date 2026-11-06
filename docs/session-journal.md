@@ -14,6 +14,18 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-07
+- 9 lots poussés : historique en mode admin (fix), plan du site (feat), membres et e-mails (fix), aide visible de la recherche (fix), recherche d'utilisateurs (fix), rappels tactiles (feat), bouton Séances (fix), visiteur mêmes vues (feat), listes de vues dans VIEW_REGISTRY (refactor). SitemapPage entier dans le lot plan du site, ligne Historique comprise. build:packages, typecheck OK, TNR 2101/2101, en-têtes OK. RESTE OUVERT : `GET /:id` expose `parent` et `children` sans filtre ; `/invitations/by-token/:token` renvoie l'e-mail de la personne qui invite ; `list_space_members` et `list_community_members` (mcp-core) lisent `m.user?.email` alors que l'API renvoie un champ à plat
+
+### Mode non connecté — 2026-11-06
+- Revue avec Thomas : bouton Séances masqué, mêmes vues qu'un connecté, listes de vues fusionnées dans VIEW_REGISTRY, recherche d'utilisateurs restreinte. Poussé par la MEP du 2026-11-07
+
+### Rappels sur écran tactile — 2026-11-06
+- Appui long dans HelpHint, mode Aide au toucher, carte de première visite, Gantt protégé de l'appui long. Validé par Thomas sans retour explicite du test sur téléphone. Poussé par la MEP du 2026-11-07
+
+### Recherche, aide visible — 2026-11-06
+- Ligne d'aide toujours visible sous le champ (annonce le choix avant 2 mots, explique les états ensuite), repère du tour toujours présent. Poussé par la MEP du 2026-11-07
+
 ### MEP — 2026-11-06 (6)
 - 2 lots poussés : lecture seule, toutes les vues proposées (fix) ; recherche, présence des mots (feat). build:packages, typecheck OK, TNR 2038/2038, en-têtes OK. Pastilles et surbrillance de la recherche non vérifiées à l'écran
 

@@ -1,14 +1,11 @@
-/* Barre de sélection de vue (boutons par section) utilisée par SpaceToolbar. */
+/*
+ * Barre de sélection de vue (boutons par section) utilisée par la carte mentale en plein écran (MindMapView).
+ * Vues masquées sur mobile : MOBILE_HIDDEN_VIEWS (@spok/shared, champ mobileHidden de VIEW_REGISTRY), jamais de liste locale.
+ */
 import { getViewIcon } from '../../constants/viewIcons';
 import type { ViewMode } from '../../stores/viewMode';
+import { MOBILE_HIDDEN_VIEWS } from '@spok/shared';
 import type { MenuItemConfig } from '@spok/shared';
-
-const MOBILE_HIDDEN_VIEWS = new Set([
-  'kanban', 'types', 'members',
-  'timeline', 'planning', 'graph', 'sunburst', 'relations',
-  'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
-  'crossTable', 'heatmap', 'ego', 'loupe',
-]);
 
 export interface ViewSelectorBarProps {
   viewMode: ViewMode;
