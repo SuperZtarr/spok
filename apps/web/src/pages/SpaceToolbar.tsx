@@ -5,6 +5,8 @@
  * (filter, statusFilter, searchQuery) : un critère posé reste actif en changeant de vue, et change juste d'effet.
  * Types et Statuts à choix multiple (2026-11-05) : listes de valeurs cochées, liste vide = tous ; le menu reste ouvert
  * pendant qu'on coche. Bloc toujours déplié à partir de xl (1280 px) ; en dessous, le bouton Filtre/Aperçu le déplie.
+ * Critère posé (type, statut ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à côté, hors du bloc
+ * dépliable pour rester accessible, qui vide les trois critères.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
@@ -496,7 +498,7 @@ export function SpaceToolbar({
                     onClick={() => setFiltreOpen(v => !v)}
                     aria-label={highlightMode ? 'Aperçu' : 'Filtre'}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap xl:pointer-events-none ${
-                      hasActive ? 'bg-accent text-foreground font-semibold' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      hasActive ? 'bg-amber-200 text-amber-950 font-semibold hover:bg-amber-300 dark:bg-amber-500/30 dark:text-amber-100 dark:hover:bg-amber-500/40' : filtreOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                     }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0" />
@@ -504,6 +506,19 @@ export function SpaceToolbar({
                     <ChevronDown className={`w-3 h-3 transition-transform xl:hidden ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   </HelpHint>
+                  {hasActive && (
+                    <HelpHint text={highlightMode ? H.clearHighlight : H.clearFilters}>
+                      <button
+                        type="button"
+                        onClick={() => { onFilterChange([]); onStatusFilterChange([]); onSearchQueryChange(''); }}
+                        aria-label={highlightMode ? H.clearHighlight : H.clearFilters}
+                        className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors whitespace-nowrap"
+                      >
+                        <X className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="hidden sm:inline">Effacer</span>
+                      </button>
+                    </HelpHint>
+                  )}
                   <div className={`${filtreOpen ? 'flex' : 'hidden'} xl:flex items-center gap-1`}>
                       {/* Types */}
                       <div ref={typeDropdownRef} className="relative flex-shrink-0">

@@ -44,7 +44,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     element: '[data-tour="toolbar-filter"]',
     popover: {
       title: 'Filtre',
-      description: 'Ne garde que les types et statuts cochés (plusieurs choix possibles) ou un texte recherché. Le bouton reste foncé tant qu\'un filtre est actif.',
+      description: 'Ne garde que les types et statuts cochés (plusieurs choix possibles) ou un texte recherché. Le bouton passe en ambre tant qu\'un critère est posé, et « Effacer » les retire tous.',
       side: 'bottom',
     },
   },
@@ -52,7 +52,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     element: '[data-tour="toolbar-highlight"]',
     popover: {
       title: 'Aperçu',
-      description: 'Remplace le filtre dans cette vue : les éléments qui ne correspondent pas sont estompés, rien n\'est masqué. Vos critères restent actifs quand vous changez de vue.',
+      description: 'Remplace le filtre dans cette vue : les éléments qui ne correspondent pas sont estompés, rien n\'est masqué. Le bouton passe en ambre tant qu\'un critère est posé, et « Effacer » les retire tous. Vos critères restent actifs quand vous changez de vue.',
       side: 'bottom',
     },
   },

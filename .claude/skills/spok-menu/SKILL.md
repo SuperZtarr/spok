@@ -204,7 +204,8 @@ décision 2026-06-13). Toutes les vues créaient de toute façon avec la même a
 | Spacer | `<div className="flex-1" />` | |
 | **Droite** | Nouveau · Modèle · Séances · Count · Historique · Paramètres | Dans cet ordre ; Nouveau / Modèle si `canEdit` |
 
-- Filtre et Highlight : **discrets** si vide, **foncés** si critère actif
+- Bouton Filtre ou Aperçu : **discret** si vide, **ambre** dès qu'un critère est posé, avec un bouton « Effacer » à côté qui vide type, statut et recherche (décision Thomas 2026-11-05). Types et Statuts cochés : gris foncé (`bg-accent`)
+- Types et Statuts à choix multiple, liste vide = tous (décision Thomas 2026-11-05) ; critères comparés par `lib/itemHighlight.ts`, jamais dans une vue. Bloc toujours déplié à partir de `xl`
 - Ordre : bouton actif = foncé
 - **Décision Thomas 2026-11-04 : un seul bloc par vue** — `isHighlightMode` (SpacePage) choisit « Aperçu » ou « Filtre », sur les mêmes états (`filter`, `statusFilter`, `searchQuery`). Nouvelle vue : l'ajouter à `isHighlightMode` si elle estompe au lieu de masquer. Remplace les « deux blocs permanents » de 2026-06-13.
 - Les états (filter, highlight, ordre) sont dans `SpacePage`, pas dans les vues

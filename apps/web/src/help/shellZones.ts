@@ -26,8 +26,8 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   toolbar: { title: 'Barre de l\'espace', text: 'Commune à toutes les vues de l\'espace : choix de la vue, ordre, filtre ou aperçu selon la vue, et actions de l\'espace.' },
   'toolbar-vues': { title: 'Vues', text: 'Les vues du mode courant en accès direct ; les autres sont dans les menus « Autres vues », un par catégorie (Basique, Types, Planification, Exploration). Le contenu reste le même, seule la présentation change.' },
   'toolbar-ordre': { title: 'Ordre', text: 'L\'ordre des éléments dans les vues en liste : votre ordre manuel ou alphabétique.' },
-  'toolbar-filtre': { title: 'Filtre', text: 'Ne garde que les éléments des types et statuts cochés (plusieurs choix possibles) ou contenant un texte. Vos critères restent actifs quand vous changez de vue ; dans une vue en Aperçu, ils mettent en évidence au lieu de masquer.' },
-  'toolbar-apercu': { title: 'Aperçu', text: 'Remplace le filtre dans les vues qui montrent des liens ou une structure (carte mentale, Gantt, graphes…) : met en évidence les éléments qui correspondent, sans masquer les autres.' },
+  'toolbar-filtre': { title: 'Filtre', text: 'Ne garde que les éléments des types et statuts cochés (plusieurs choix possibles) ou contenant un texte. Vos critères restent actifs quand vous changez de vue ; dans une vue en Aperçu, ils mettent en évidence au lieu de masquer. « Effacer » les retire tous.' },
+  'toolbar-apercu': { title: 'Aperçu', text: 'Remplace le filtre dans les vues qui montrent des liens ou une structure (carte mentale, Gantt, graphes…) : met en évidence les éléments qui correspondent, sans masquer les autres. « Effacer » retire tous les critères.' },
   'toolbar-actions': { title: 'Actions de l\'espace', text: 'Séances en direct, nombre d\'éléments, modèles, historique et paramètres de l\'espace.' },
   'contenu-barre-vue': { title: 'Barre de la vue', text: 'Les commandes propres à la vue affichée : créer un élément, régler l\'affichage, aide et export.' },
   // Fiche d'un élément (ItemEditModal, ItemReadView)

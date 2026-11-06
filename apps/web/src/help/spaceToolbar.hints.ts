@@ -13,6 +13,8 @@ export const SPACE_TOOLBAR_HINTS = {
   highlightType: 'Mettre en évidence les types cochés. Vous pouvez en cocher plusieurs.',
   highlightStatus: 'Mettre en évidence les statuts cochés. Vous pouvez en cocher plusieurs.',
   clearSearch: 'Effacer la recherche',
+  clearFilters: 'Effacer le filtre : retire les types, les statuts et le texte recherché. Tous les éléments réapparaissent.',
+  clearHighlight: 'Effacer l\'aperçu : retire les types, les statuts et le texte recherché. Plus aucun élément n\'est estompé.',
   count: 'Nombre d\'éléments affichés / nombre total dans l\'espace.',
   mobileFilters: 'Afficher le filtre ou l\'aperçu de la vue',
   insertTemplate: 'Insérer un modèle : ajoute d\'un coup un ensemble d\'éléments enregistré comme modèle.',
