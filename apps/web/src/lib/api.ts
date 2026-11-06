@@ -5,6 +5,7 @@
  * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
+ * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
  */
 import type {
   AuthResponse,
@@ -1006,6 +1007,37 @@ export const processApi = {
 };
 
 // Items
+/** Item lié renvoyé par GET /spaces/:spaceId/items/:id/links, avec son espace (il peut être hors de l'espace courant). */
+export interface LinkedItem {
+  id: string;
+  title: string;
+  type: string;
+  status: string | null;
+  spaceId: string;
+  spaceName: string;
+  url?: string | null;
+  priority?: number | null;
+  dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  assigneeName?: string | null;
+  childCount?: number;
+}
+
+export interface ItemLink {
+  kind: 'parent' | 'child' | 'relation';
+  /** Relation seulement : 'from' = l'item source de la relation, 'to' = l'item cible */
+  direction?: 'from' | 'to';
+  relationType?: string;
+  relationLabel?: string | null;
+  item: LinkedItem;
+}
+
+export interface ItemLinksResponse {
+  item: LinkedItem & { description: string | null };
+  links: ItemLink[];
+}
+
 export const itemsApi = {
   list: (spaceId: string, params?: ItemFilterParams & { include?: string }) => {
     const searchParams = new URLSearchParams();
@@ -1042,6 +1074,9 @@ export const itemsApi = {
       method: 'DELETE',
     }),
 
+  /** Parent, enfants et relations d'un item, avec leur espace (vue Loupe) ; les relations vers un espace illisible sont retirées par l'API. */
+  links: (spaceId: string, id: string) =>
+    fetchApi<ItemLinksResponse>(`/spaces/${spaceId}/items/${id}/links`),
   createRelation: (spaceId: string, id: string, data: CreateRelationInput) =>
     fetchApi<{ id: string }>(`/spaces/${spaceId}/items/${id}/relations`, {
       method: 'POST',

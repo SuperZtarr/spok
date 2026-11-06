@@ -58,6 +58,7 @@ import {
   Table2,
   Grid3x3,
   Focus,
+  ZoomIn,
   ExternalLink,
   Image,
   Bug,
@@ -182,13 +183,13 @@ const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
   'timeline', 'planning', 'graph', 'sunburst', 'relations',
   'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
-  'crossTable', 'heatmap', 'ego', 'process',
+  'crossTable', 'heatmap', 'ego', 'loupe', 'process',
 ]);
 
 const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
   ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock, GitMerge, Workflow,
 };
 
@@ -310,7 +311,7 @@ export function SpaceToolbar({
 
 
   return (
-    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','priority','mindmap','process'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
+    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','loupe','priority','mindmap','process'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
 
       {/* View mode buttons row */}
       {(() => {

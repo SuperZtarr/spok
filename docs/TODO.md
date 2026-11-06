@@ -2,6 +2,9 @@
 
 ## À faire
 
+### Vues d'exploration
+- [x] Vue Loupe : exploration de lien en lien (parent, enfants, relations), y compris vers d'autres espaces lisibles, zoom au survol, clic pour figer, chemin parcouru, menu ⋮ sur la vignette zoomée — 2026-11-06
+
 ### Responsive / mobile (relevé sur téléphone Android, 2026-10-07)
 - [x] Accueil : aperçus Échéances / En retard / TODO / Non lus 1 par ligne sur mobile (`grid-cols-1 sm:2 lg:4`), en-tête de carte tronqué (badge + « Voir tout » toujours visibles) — 2026-10-10 (1a9dc90)
 - [x] Carte mentale : sous-espaces superposés au-delà de 9 (pas fixe 40°) → pas 360°/N + rayon élargi ; anciens placements : bouton « Réorganiser » — 2026-10-10 (188e529)

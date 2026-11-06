@@ -23,6 +23,7 @@ import { help as burndown } from './burndown.help';
 import { help as cfd } from './cfd.help';
 import { help as crossTable } from './crossTable.help';
 import { help as ego } from './ego.help';
+import { help as loupe } from './loupe.help';
 import { help as heatmap } from './heatmap.help';
 import { help as priority } from './priority.help';
 import { help as members } from './members.help';
@@ -58,6 +59,7 @@ export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   cfd: cfd,
   crossTable: crossTable,
   ego: ego,
+  loupe: loupe,
   heatmap: heatmap,
   priority: priority,
   members: members,

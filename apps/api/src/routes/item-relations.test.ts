@@ -128,6 +128,82 @@ describe('POST /spaces/:spaceId/items/:id/relations', () => {
   })
 })
 
+describe('GET /spaces/:spaceId/items/:id/links (vue Loupe)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  let token: string
+
+  const linked = (id: string, spaceId = 'space-1') => ({
+    id, title: `Item ${id}`, type: 'TASK', status: null, spaceId, space: { name: `Espace ${spaceId}` },
+    url: null, priority: 2, dueDate: null, startDate: null, endDate: null, assignedToName: 'Sans compte', assignedTo: null, _count: { children: 3 },
+  })
+  const get = (id = 'A') => app.inject({ method: 'GET', url: `/spaces/space-1/items/${id}/links`, headers: { authorization: `Bearer ${token}` } })
+
+  beforeEach(async () => {
+    const result = await buildApp()
+    app = result.app
+    prisma = result.prisma
+    token = getTestToken(app, { userId: USER_ID, email: 'test@test.com' })
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: USER_ID, spaceId: 'space-1', role: 'MEMBER' })
+    prisma.space.findMany.mockResolvedValue([])
+  })
+
+  it('renvoie parent, enfants et relations avec le nom de leur espace', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }, { spaceId: 'space-2' }])
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: '<p>Texte</p>', parent: linked('P'), children: [linked('C')],
+      relationsFrom: [{ type: 'blocks', label: 'motif', toItem: linked('X', 'space-2') }],
+      relationsTo: [{ type: 'relates', label: null, fromItem: linked('Y') }],
+    })
+
+    const res = await get()
+
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.item).toMatchObject({ id: 'A', description: '<p>Texte</p>', spaceName: 'Espace space-1' })
+    expect(body.links.map((l: any) => [l.kind, l.direction, l.item.id])).toEqual([
+      ['parent', undefined, 'P'], ['child', undefined, 'C'], ['relation', 'from', 'X'], ['relation', 'to', 'Y'],
+    ])
+    expect(body.links[2]).toMatchObject({ relationType: 'blocks', relationLabel: 'motif', item: { spaceId: 'space-2', spaceName: 'Espace space-2' } })
+  })
+
+  it('renvoie les champs des vignettes : assigné avec compte prioritaire, nombre d\'enfants', async () => {
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: null, parent: { ...linked('P'), assignedTo: { name: 'Avec compte' } }, children: [], relationsFrom: [], relationsTo: [],
+    })
+    const body = (await get()).json()
+    expect(body.item).toMatchObject({ priority: 2, assigneeName: 'Sans compte', childCount: 3 })
+    expect(body.links[0].item.assigneeName).toBe('Avec compte')
+  })
+
+  it('retire les relations vers un espace illisible, dans les deux sens', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: null, parent: null, children: [],
+      relationsFrom: [{ type: 'blocks', label: null, toItem: linked('SECRET1', 'space-3') }, { type: 'relates', label: null, toItem: linked('B') }],
+      relationsTo: [{ type: 'drives', label: null, fromItem: linked('SECRET2', 'space-3') }],
+    })
+
+    const res = await get()
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).not.toContain('SECRET')
+    expect(res.json().links.map((l: any) => l.item.id)).toEqual(['B'])
+  })
+
+  it('404 si l\'item n\'est pas dans cet espace', async () => {
+    prisma.item.findFirst.mockResolvedValue(null)
+    expect((await get('Z')).statusCode).toBe(404)
+  })
+
+  it('404 sans accès à l\'espace, sans lire l\'item', async () => {
+    prisma.spaceMembership.findUnique.mockResolvedValue(null)
+    prisma.space.findUnique.mockResolvedValue(null)
+    expect((await get()).statusCode).toBe(404)
+    expect(prisma.item.findFirst).not.toHaveBeenCalled()
+  })
+})
+
 describe('Types de relation acceptés (RELATION_TYPES uniquement, 2026-09-28)', () => {
   let app: FastifyInstance
   let prisma: MockPrisma

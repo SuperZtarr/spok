@@ -3,12 +3,14 @@
  * blocks, relates, implements, drives) — tout autre type (ancien `depends`, `tests`, `parent`…) est refusé
  * en 400 depuis le 2026-09-28. Détection de cycle pour `drives`. La sémantique des types (ordonnancement,
  * libellés) vit côté web : apps/web/src/constants/relationTypes.ts.
+ * GET /:id/links (lecture seule, vue Loupe) : parent, enfants et relations d'un item, avec leur espace. Une relation
+ * vers un espace que le lecteur ne peut pas lire est retirée (filterReadableSpaceIds) : ni titre ni existence divulgués.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { RELATION_TYPES } from '@spok/shared';
 import { createAuditLog, serializeRelationForAudit } from '../utils/audit.js';
-import { checkSpaceAccess } from './items.js';
+import { checkSpaceAccess, filterReadableSpaceIds } from './items.js';
 import { getDrivesReachableIds } from '../utils/drivesGraph.js';
 
 const createRelationSchema = z.object({
@@ -22,7 +24,66 @@ const updateRelationSchema = z.object({
   label: z.string().nullable().optional(),
 });
 
+/** Champs d'un item lié renvoyés à la vue Loupe, pour ses vignettes (sans description : elle arrive quand l'item est à son tour zoomé). */
+const LINKED_ITEM_SELECT = {
+  id: true, title: true, type: true, status: true, spaceId: true, space: { select: { name: true } },
+  url: true, priority: true, dueDate: true, startDate: true, endDate: true,
+  assignedToName: true, assignedTo: { select: { name: true } }, _count: { select: { children: true } },
+} as const;
+
+type LinkedItemRow = {
+  id: string; title: string; type: string; status: string | null; spaceId: string; space: { name: string };
+  url: string | null; priority: number | null; dueDate: Date | null; startDate: Date | null; endDate: Date | null;
+  assignedToName: string | null; assignedTo: { name: string | null } | null; _count: { children: number };
+};
+
+/** Liste explicite des champs : l'item racine porte aussi ses relations brutes, qui ne doivent jamais sortir telles quelles. */
+const toLinkedItem = (row: LinkedItemRow) => ({
+  id: row.id, title: row.title, type: row.type, status: row.status, spaceId: row.spaceId, spaceName: row.space.name,
+  url: row.url, priority: row.priority, dueDate: row.dueDate, startDate: row.startDate, endDate: row.endDate,
+  assigneeName: row.assignedTo?.name ?? row.assignedToName, childCount: row._count.children,
+});
+
 export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
+  // Liens d'un item (vue Loupe)
+  fastify.get<{ Params: { spaceId: string; id: string } }>('/:id/links', async (request, reply) => {
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
+    if (!membership) return reply.notFound('Space not found');
+
+    const item = await fastify.prisma.item.findFirst({
+      where: { id: request.params.id, spaceId: request.params.spaceId },
+      select: {
+        ...LINKED_ITEM_SELECT,
+        description: true,
+        parent: { select: LINKED_ITEM_SELECT },
+        children: { select: LINKED_ITEM_SELECT },
+        relationsFrom: { select: { type: true, label: true, toItem: { select: LINKED_ITEM_SELECT } } },
+        relationsTo: { select: { type: true, label: true, fromItem: { select: LINKED_ITEM_SELECT } } },
+      },
+    });
+    if (!item) return reply.notFound('Item not found');
+
+    const relationSpaceIds = [
+      ...item.relationsFrom.map((r) => r.toItem.spaceId),
+      ...item.relationsTo.map((r) => r.fromItem.spaceId),
+    ];
+    const readable = new Set(await filterReadableSpaceIds(fastify.prisma, request.user.userId, relationSpaceIds, request.isAdminMode));
+
+    return {
+      item: { ...toLinkedItem(item), description: item.description },
+      links: [
+        ...(item.parent ? [{ kind: 'parent' as const, item: toLinkedItem(item.parent) }] : []),
+        ...item.children.map((child) => ({ kind: 'child' as const, item: toLinkedItem(child) })),
+        ...item.relationsFrom
+          .filter((r) => readable.has(r.toItem.spaceId))
+          .map((r) => ({ kind: 'relation' as const, direction: 'from' as const, relationType: r.type, relationLabel: r.label, item: toLinkedItem(r.toItem) })),
+        ...item.relationsTo
+          .filter((r) => readable.has(r.fromItem.spaceId))
+          .map((r) => ({ kind: 'relation' as const, direction: 'to' as const, relationType: r.type, relationLabel: r.label, item: toLinkedItem(r.fromItem) })),
+      ],
+    };
+  });
+
   // Create relation
   fastify.post<{
     Params: { spaceId: string; id: string };

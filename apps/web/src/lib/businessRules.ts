@@ -328,6 +328,20 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/lib/itemThumbnail.ts, apps/web/src/components/ItemThumbnailCard.tsx, apps/web/src/components/ItemEditModal.tsx',
   },
   {
+    id: 'loupe-cross-space-links',
+    page: 'Vue Loupe (LoupeView)',
+    trigger: "Survol ou clic sur un élément lié à un élément d'un autre espace",
+    effect: "L'élément de l'autre espace n'apparaît que si l'utilisateur peut lire son espace (filtre côté API : ni titre ni existence révélés sinon), avec le nom de cet espace. Il reste sur la carte une fois le zoom figé sur l'élément qui y mène, jusqu'au retour au départ. Son menu ⋮ se limite aux actions d'ouverture et sa fiche s'ouvre dans un nouvel onglet, pour garder le chemin. Le menu ⋮ n'existe que sur la vignette zoomée. La vue ne modifie aucune donnée par elle-même",
+    location: 'apps/api/src/routes/item-relations.ts (GET /:id/links), apps/web/src/components/views/LoupeView.tsx',
+  },
+  {
+    id: 'loupe-vignette-grid',
+    page: 'Vue Loupe (LoupeView)',
+    trigger: 'Affichage d\'un élément à taille minimale, intermédiaire ou zoomée',
+    effect: "Minimale : icône et titre (Image et Diagramme : leur image à la place de l'icône, l'icône revient si l'image est illisible). Intermédiaire, puis zoomée en plus : Tâche et Anomalie = statut, échéance, puis priorité, assigné, description ; Projet = statut, dates, puis enfants, assigné, description ; Réunion = date, puis assigné, description ; Période = dates, puis durée, description ; Note = une ligne de texte, puis texte plus long ; Document (pièce jointe) = extension, puis description et bouton Ouvrir ; Lien = nom du site, puis adresse, description et bouton Ouvrir ; Image et Diagramme = miniature, puis grande miniature ; autres types = type et statut, puis description. Le bouton Ouvrir ouvre un nouvel onglet et ne fige pas le zoom. Une adresse jugée dangereuse n'est ni affichée ni ouverte",
+    location: 'apps/web/src/components/views/loupe-vignette.ts, apps/web/src/components/views/LoupeVignette.tsx',
+  },
+  {
     id: 'item-open-mode-default',
     page: "Modale d'un élément (toutes les pages qui l'ouvrent)",
     trigger: "Ouverture d'un élément : menu ⋮ « Afficher » / « Ouvrir », clic dans une vue, adresse ?item=…[&mode=lecture]",

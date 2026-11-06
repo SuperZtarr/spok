@@ -2,7 +2,7 @@
 import {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
   ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
   type LucideIcon,
 } from 'lucide-react';
@@ -13,13 +13,13 @@ const MOBILE_HIDDEN_VIEWS = new Set([
   'kanban', 'types', 'members',
   'timeline', 'planning', 'graph', 'sunburst', 'relations',
   'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
-  'crossTable', 'heatmap', 'ego',
+  'crossTable', 'heatmap', 'ego', 'loupe',
 ]);
 
 const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
+  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
   ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
 };
 
