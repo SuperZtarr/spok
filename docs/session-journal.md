@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06 (5)
+- 3 lots poussés : icônes de vues, source unique (fix) ; Loupe, zoom après 0,1 s et dézoom immédiat (fix) ; Loupe dans les modes Forum, Projet et Loisirs (feat). Typecheck OK, TNR 2022/2022, en-têtes OK. Signalé par le lot : spec SPOK `cmw4qaks5000113he7ao35to8`, zoom immédiat à passer à 0,1 s
+
+### Loupe dans les modes — 2026-11-06
+- Bouton direct dans Forum, Projet et Loisirs, poussé par la MEP du 2026-11-06
+
 ### MEP — 2026-11-06 (4)
 - Lot poussé : règle unique de déplacement et parent dans le même espace (fix sécurité Loupe). Typecheck OK, TNR 1983/1983, en-têtes OK. RESTE OUVERT : `GET /:id` expose `parent` et `children` sans filtre, restauration d'historique sans contrôle du parent, branches déjà coupées en prod ni comptées ni réparées
 

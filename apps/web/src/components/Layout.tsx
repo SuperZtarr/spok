@@ -69,7 +69,7 @@ import type { SpaceWithRole } from '@spok/shared';
 const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = [
   { value: 'forum',  label: 'Forum',  hint: 'Interface axée sujets et discussions' },
   { value: 'projet', label: 'Projet', hint: 'Interface de pilotage complète' },
-  { value: 'loisirs', label: 'Loisirs', hint: 'Activités ludiques et de loisirs : discussions, carte mentale, images, documents, récents' },
+  { value: 'loisirs', label: 'Loisirs', hint: 'Activités ludiques et de loisirs : discussions, carte mentale, images, documents, récents, loupe' },
   { value: 'tous',   label: 'Tous',   hint: 'Aucun filtrage' },
 ];
 const INTERFACE_MODE_LABELS: Record<InterfaceMode, string> = {

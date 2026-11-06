@@ -12,8 +12,8 @@
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
  * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées.
  * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
- * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier ; Projet : sans Liste/Types/Images/
- * Liens/Documents, avec Carte mentale). Répartition calculée par splitViewsForMode, seule source des deux affichages.
+ * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier, Loupe ; Projet : sans Liste/Types/Images/
+ * Liens/Documents, avec Carte mentale et Loupe). Loisirs liste aussi la Loupe (décision Thomas 2026-11-06). Répartition calculée par splitViewsForMode, seule source des deux affichages.
  * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
@@ -109,7 +109,7 @@ const MODE_PRIMARY_GROUP: Record<string, ViewGroupKey | null> = {
  * toutes les autres restent dans « Autres vues » (par catégorie). Loisirs : décision Thomas 2026-10-13.
  */
 export const MODE_PRIMARY_VIEWS: Record<string, string[]> = {
-  loisirs: ['thread', 'mindmap', 'images', 'documents', 'recent'],
+  loisirs: ['thread', 'mindmap', 'images', 'documents', 'recent', 'loupe'],
 };
 export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { loisirs: 'Vues Loisirs' };
 
@@ -118,8 +118,8 @@ export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { loisirs: 'Vues
  * « Autres vues ») et vues d'une autre famille ajoutées en boutons directs. Forum et Projet : décisions Thomas 2026-10-21.
  */
 export const MODE_PRIMARY_ADJUST: Record<string, { remove: string[]; add: string[] }> = {
-  forum:  { remove: [], add: ['images', 'calendar'] },
-  projet: { remove: ['list', 'types', 'images', 'links', 'documents'], add: ['mindmap'] },
+  forum:  { remove: [], add: ['images', 'calendar', 'loupe'] },
+  projet: { remove: ['list', 'types', 'images', 'links', 'documents'], add: ['mindmap', 'loupe'] },
 };
 
 /**

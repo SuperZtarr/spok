@@ -57,6 +57,21 @@ describe('splitViewsForMode', () => {
   })
 })
 
+describe('Loupe en bouton direct', () => {
+  const views = ['thread', 'mindmap', 'kanban', 'graph', 'loupe'].map((viewMode) => ({ viewMode }))
+  it.each(['forum', 'projet', 'loisirs'])('%s : Loupe en bouton direct, absente d\'« Autres vues »', (mode) => {
+    const { primary, secondary } = splitViewsForMode(views, mode)
+    expect(primary.map((v) => v.viewMode)).toContain('loupe')
+    expect(secondary.flatMap((g) => g.views.map((v) => v.viewMode))).not.toContain('loupe')
+  })
+  it('visiteur sans accès à la Loupe : aucun bouton fantôme', () => {
+    const visitor = views.filter((v) => v.viewMode !== 'loupe')
+    for (const mode of ['forum', 'projet', 'loisirs']) {
+      expect(splitViewsForMode(visitor, mode).primary.map((v) => v.viewMode)).not.toContain('loupe')
+    }
+  })
+})
+
 describe('menus « Autres vues » par catégorie', () => {
   const views = ['list', 'tree', 'thread', 'recent', 'text', 'types', 'bugs', 'kanban', 'timeline', 'mindmap', 'graph']
     .map((viewMode) => ({ viewMode }))
