@@ -1,6 +1,6 @@
 /*
  * Contributions (commentaires threadés) d'un item : CRUD + réactions, notifications
- * des participants et des @mentions.
+ * des participants et des @mentions. Auteur : id et nom seulement, jamais l'e-mail (règle members-email-scope).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -43,7 +43,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
         where: { itemId: request.params.id },
         include: {
           author: {
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -89,7 +89,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       },
       include: {
         author: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true },
         },
       },
     });
@@ -171,7 +171,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       data: { content: body.content },
       include: {
         author: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true },
         },
       },
     });

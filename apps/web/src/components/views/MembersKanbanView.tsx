@@ -1,5 +1,7 @@
 /* Vue Assignations : kanban par membre (colonnes = membres de l'espace). Icône œil barré sur une carte
- * quand l'assigné n'a pas encore ouvert l'item depuis son assignation (assignmentReceipt, 2026-09-29). */
+ * quand l'assigné n'a pas encore ouvert l'item depuis son assignation (assignmentReceipt, 2026-09-29).
+ * Visiteur non connecté : l'API ne donne pas la liste des membres (règle members-email-scope), les colonnes sont
+ * alors les personnes assignées aux éléments affichés (assigneesFromItems), plus « Non assigné ». */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -17,11 +19,11 @@ import {
   pointerWithin,
 } from '@dnd-kit/core';
 import { GripVertical, User, Users, FolderKanban, GripHorizontal, EyeOff } from 'lucide-react';
-import type { Item, SpaceReferentiels } from '@spok/shared';
+import type { Item, ItemWithRelations, SpaceReferentiels } from '@spok/shared';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { spacesApi } from '../../lib/api';
-import type { SpaceMember } from '@spok/shared';
+import { useAuthStore } from '../../stores/auth';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { TagBadge } from '../ui/TagBadge';
@@ -37,7 +39,15 @@ interface MemberColumn {
   id: string;       // 'spaceId::member-<userId>' or 'spaceId::member-unassigned'
   userId: string | null;
   name: string;
-  email?: string;
+}
+
+/** Personnes assignées aux éléments, triées par nom : colonnes de la vue pour un visiteur, qui n'a pas la liste des membres. */
+export function assigneesFromItems(items: Pick<ItemWithRelations, 'assignedTo'>[]): { userId: string; name: string }[] {
+  const byId = new Map<string, string>();
+  for (const item of items) {
+    if (item.assignedTo) byId.set(item.assignedTo.id, item.assignedTo.name);
+  }
+  return Array.from(byId, ([userId, name]) => ({ userId, name })).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
 
 interface PortalGroup {
@@ -398,13 +408,14 @@ export function MembersKanbanView({
   // Fetch members for all spaces involved
   const allSpaceIds = useMemo(() => spaceSections.map(s => s.spaceId), [spaceSections]);
 
-  // Fetch members for each space
+  // Fetch members for each space (connecté seulement : un visiteur n'a pas la liste des membres)
+  const isLoggedIn = useAuthStore(s => !!s.user);
   const memberQueries = allSpaceIds.map(sid =>
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useQuery({
       queryKey: ['space-members', sid],
       queryFn: () => spacesApi.getMembers(sid),
-      enabled: !!sid,
+      enabled: !!sid && isLoggedIn,
     })
   );
 
@@ -413,18 +424,17 @@ export function MembersKanbanView({
     const result: Record<string, MemberColumn[]> = {};
     for (let i = 0; i < allSpaceIds.length; i++) {
       const sid = allSpaceIds[i];
-      const members: SpaceMember[] = memberQueries[i].data || [];
+      const members = isLoggedIn ? memberQueries[i].data || [] : assigneesFromItems(spaceSections[i].items as ItemWithRelations[]);
       const cols: MemberColumn[] = members.map(m => ({
         id: `${sid}::member-${m.userId}`,
         userId: m.userId,
         name: m.name,
-        email: m.email,
       }));
       cols.push({ id: `${sid}::member-unassigned`, userId: null, name: 'Non assigné' });
       result[sid] = cols;
     }
     return result;
-  }, [allSpaceIds, ...memberQueries.map(q => q.data)]);
+  }, [allSpaceIds, isLoggedIn, spaceSections, ...memberQueries.map(q => q.data)]);
 
   // Group items by column per space
   const itemsByColumn = useMemo(() => {

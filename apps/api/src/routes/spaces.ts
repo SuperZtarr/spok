@@ -24,6 +24,8 @@
  * tous les espaces de la communauté (GET /, GET /:id, PATCH, gestion, join, contenu via checkSpaceAccess).
  * Ordre manuel (2026-10-16, utils/spaceOrder.ts) : listes triées position puis nom ; création / changement
  * d'emplacement → en dernier parmi les frères ; PUT /reorder réordonne des frères (droits : voir la route).
+ * GET /:id/members (règle members-email-scope) : visiteur → liste vide ; connecté avec accès → noms et rôles sans
+ * e-mail ; rôle OWNER (espace, communauté, admin en mode admin) → e-mails en plus. Ne pas rajouter email sans ce test.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -1032,6 +1034,11 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Space not found');
     }
 
+    // Règle members-email-scope (décision Thomas 2026-11-06) : visiteur → aucune liste, connecté → noms et rôles,
+    // e-mails au rôle OWNER seulement (propriétaire de l'espace ou de la communauté, admin en mode admin).
+    if (!request.user?.userId) return [];
+    const canSeeEmails = access.role === 'OWNER';
+
     const members = await fastify.prisma.spaceMembership.findMany({
       where: { spaceId: request.params.id },
       include: {
@@ -1048,7 +1055,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     return members.map((m) => ({
       id: m.id,
       userId: m.userId,
-      email: m.user.email,
+      ...(canSeeEmails ? { email: m.user.email } : {}),
       name: m.user.name,
       role: m.role,
       joinedAt: m.joinedAt,

@@ -57,15 +57,14 @@ export interface ItemWithRelations extends Item {
   relationsFrom?: ItemRelation[];
   relationsTo?: ItemRelation[];
   contributions?: ContributionWithAuthor[];
+  // Personnes : id et nom seulement, jamais l'e-mail (règle members-email-scope)
   createdBy?: {
     id: string;
     name: string;
-    email: string;
   };
   assignedTo?: {
     id: string;
     name: string;
-    email: string;
   } | null;
   reactionSummary?: ReactionSummary[];
   _count?: {

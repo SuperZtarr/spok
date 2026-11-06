@@ -12,6 +12,7 @@ export const help: HelpEntry = {
     'Chaque colonne représente un membre de l\'espace',
     'Glissez une carte vers une colonne pour l\'assigner à ce membre',
     'La colonne « Non assigné » regroupe les éléments sans responsable',
+    'Sans être connecté, seules les personnes qui ont des éléments assignés ont une colonne',
   ],
   zones: {
     colonne: { title: 'Colonne', text: 'Une personne et les éléments qui lui sont assignés ; glisser une carte la réassigne.' },

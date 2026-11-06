@@ -468,6 +468,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/communities.ts (POST /, PATCH /:id), apps/api/src/routes/admin/communities.ts (approve-public / reject-public), apps/web/src/pages/CommunitySettingsPage.tsx',
   },
   {
+    id: 'members-email-scope',
+    page: "Membres d'un espace ou d'une communauté, éléments et contributions",
+    trigger: "Lecture de la liste des membres (GET /spaces/:id/members, GET /communities/:id/members), d'un élément ou de contributions",
+    effect: "Visiteur non connecté : aucune liste de membres (liste vide pour un espace lisible, connexion exigée pour une communauté) ; les noms d'auteurs et d'assignés restent visibles sur les contenus, et la vue Assignations prend pour colonnes les personnes assignées aux éléments affichés. Connecté qui peut lire l'espace ou la communauté : noms et rôles, sans e-mail. Propriétaire de l'espace ou de la communauté et admin en mode admin : e-mails en plus. Les éléments et contributions ne portent jamais d'e-mail, pour personne. Un espace ou une communauté privés restent introuvables sans accès (décision Thomas 2026-11-06)",
+    location: 'apps/api/src/routes/spaces.ts, communities.ts, items.ts, item-contributions.ts (GET /:id/members et sélections de personnes), packages/shared/src/types, apps/web/src/components/views/MembersKanbanView.tsx, apps/web/src/components/settings/MembersColumnManager.tsx',
+  },
+  {
     id: 'space-history-admin-only',
     page: "Historique d'un espace (/spaces/:id/history)",
     trigger: "Consulter l'historique d'un espace ou y restaurer un état précédent",

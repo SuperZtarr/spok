@@ -3,7 +3,8 @@
    « Me rétrograder en membre » (seulement s'il reste un autre propriétaire) et « Quitter » (depuis Membres).
    Sans onLeave (communautés), aucune action sur sa propre ligne.
    Mode admin (2026-10-29) : le nom d'une personne ouvre sa fiche « Profil utilisateur » d'administration (UserProfileModal
-   avec targetUserId) — on va aux paramètres de la personne, pas à une vue. Hors mode admin : nom non cliquable. */
+   avec targetUserId) — on va aux paramètres de la personne, pas à une vue. Hors mode admin : nom non cliquable.
+   E-mail d'un membre facultatif : l'API ne l'envoie qu'au propriétaire et à l'admin en mode admin (règle members-email-scope). */
 import { useState, useMemo } from 'react';
 import { Users, Crown, User, ChevronRight, ChevronLeft, Loader2, Search } from 'lucide-react';
 import { RoleGuard } from '../RoleGuard';
@@ -13,7 +14,7 @@ import { UserProfileModal } from '../UserProfileModal';
 interface MemberInfo {
   id: string; // membership id (for existing members) or user id (for available)
   userId: string;
-  email: string;
+  email?: string;
   name: string;
   role?: string;
 }
@@ -41,7 +42,7 @@ interface MembersColumnManagerProps {
 // Flèche d'action : toujours visible (atténuée), nette au survol de la ligne
 const ARROW = 'p-1 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all disabled:opacity-25 disabled:cursor-not-allowed';
 
-function UserCard({ name, email, isSelf, onOpen }: { name: string; email: string; isSelf?: boolean; onOpen?: () => void }) {
+function UserCard({ name, email, isSelf, onOpen }: { name: string; email?: string; isSelf?: boolean; onOpen?: () => void }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium flex-shrink-0">
@@ -56,7 +57,7 @@ function UserCard({ name, email, isSelf, onOpen }: { name: string; email: string
           ) : (name || email)}
           {isSelf && <span className="text-xs text-muted-foreground ml-1">(vous)</span>}
         </p>
-        {name && <p className="text-[11px] text-muted-foreground truncate">{email}</p>}
+        {name && email && <p className="text-[11px] text-muted-foreground truncate">{email}</p>}
       </div>
     </div>
   );
@@ -97,7 +98,7 @@ export function MembersColumnManager({
     if (!searchMembers) return regularMembers;
     const q = searchMembers.toLowerCase();
     return regularMembers.filter(m =>
-      m.name?.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+      m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)
     );
   }, [regularMembers, searchMembers]);
 
@@ -105,7 +106,7 @@ export function MembersColumnManager({
     if (!searchOwners) return owners;
     const q = searchOwners.toLowerCase();
     return owners.filter(m =>
-      m.name?.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+      m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)
     );
   }, [owners, searchOwners]);
 

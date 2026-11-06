@@ -714,6 +714,50 @@ describe('Communities routes', () => {
       expect(body[0].role).toBe('OWNER')
     })
 
+    // Règle members-email-scope
+    const memberRow = { id: 'cmem-1', userId: USER_ID, role: 'OWNER', joinedAt: new Date(), user: { id: USER_ID, email: 'test@test.com', name: 'Test' } }
+
+    it('should give emails to the community owner', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.communityMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/communities/${COM_ID}/members`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.json()[0].email).toBe('test@test.com')
+    })
+
+    it('should give names and roles without emails to a simple member', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'MEMBER' }))
+      prisma.community.findUnique.mockResolvedValue(mockCommunity())
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.communityMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/communities/${COM_ID}/members`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.json()[0]).toMatchObject({ name: 'Test', role: 'OWNER' })
+      expect(res.json()[0]).not.toHaveProperty('email')
+    })
+
+    it('should give no emails to a logged-in non-member of a public community', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.community.findUnique.mockResolvedValue(mockCommunity({ visibility: 'OPEN' }))
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.communityMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/communities/${COM_ID}/members`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json()[0]).not.toHaveProperty('email')
+    })
+
+    it('should reject an anonymous visitor', async () => {
+      const res = await app.inject({ method: 'GET', url: `/communities/${COM_ID}/members` })
+
+      expect(res.statusCode).toBe(401)
+    })
+
     it('should return 404 for non-member', async () => {
       prisma.communityMembership.findUnique.mockResolvedValue(null)
 

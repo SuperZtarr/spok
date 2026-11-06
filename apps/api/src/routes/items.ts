@@ -18,6 +18,8 @@
  * url : http(s) seulement (itemUrlField) â€” jamais javascript:/data: (rÃ¨gle user-html-sanitized). Le HTML des
  * descriptions n'est PAS nettoyÃ© ici : il l'est Ã  l'affichage (web, lib/sanitizeHtml.ts).
  * parentId : un parent qui change doit être dans le même espace (utils/itemParent.ts), refus en 400 sinon.
+ * Personnes (auteur, assigné, auteurs de contributions) : id et nom seulement, jamais l'e-mail — ces routes sont
+ * ouvertes aux visiteurs (règle members-email-scope, décision Thomas 2026-11-06).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
@@ -387,7 +389,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const prismaInclude: any = {
         tags: { include: { tag: true } },
         children: { select: { id: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true } },
         _count: { select: { children: true, contributions: true } },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
@@ -408,7 +410,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       if (includeContributions) {
         prismaInclude.contributions = {
           include: {
-            author: { select: { id: true, name: true, email: true } },
+            author: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: 'asc' },
         };
@@ -592,8 +594,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         parent: true,
-        createdBy: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        createdBy: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true } },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
@@ -602,7 +604,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
         contributions: {
           include: {
-            author: { select: { id: true, name: true, email: true } },
+            author: { select: { id: true, name: true } },
             reactions: { select: { reactionType: true, userId: true } },
           },
           orderBy: { createdAt: 'desc' },

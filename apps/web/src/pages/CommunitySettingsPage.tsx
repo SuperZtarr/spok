@@ -1048,7 +1048,7 @@ export function CommunitySettingsPage() {
                       { value: '', label: 'Sélectionner un membre...' },
                       ...(communityMembers?.filter(m => m.userId !== user?.id).map(m => ({
                         value: m.id,
-                        label: `${m.name} (${m.email})`,
+                        label: m.email ? `${m.name} (${m.email})` : m.name,
                       })) || []),
                     ]}
                   />

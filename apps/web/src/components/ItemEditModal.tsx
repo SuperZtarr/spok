@@ -1798,14 +1798,14 @@ export function ItemEditModal({
                         value={assignedToId ? (spaceMembers.find((m) => m.userId === assignedToId)?.name || item?.assignedTo?.name || '') : assignedToName}
                         onChange={(e) => {
                           const text = e.target.value;
-                          const member = spaceMembers.find((m) => (m.name || m.email).toLowerCase() === text.trim().toLowerCase());
+                          const member = spaceMembers.find((m) => m.name.toLowerCase() === text.trim().toLowerCase());
                           setAssignedToId(member?.userId ?? '');
                           setAssignedToName(member ? '' : text);
                         }}
                         placeholder="Non assigné — choisir ou saisir un nom"
                       />
                       <datalist id="item-assignee-members">
-                        {spaceMembers.map((m) => <option key={m.userId} value={m.name || m.email} />)}
+                        {spaceMembers.map((m) => <option key={m.userId} value={m.name} />)}
                       </datalist>
                       {user && assignedToId !== user.id && (
                         <button type="button" onClick={() => { setAssignedToId(user.id); setAssignedToName(''); }}

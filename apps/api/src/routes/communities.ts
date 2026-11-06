@@ -11,6 +11,8 @@
  * clients) et est seulement converti en visibility (true → OPEN, false → PRIVATE).
  * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
  * Suppression : utils/spaceDeletion.ts (deleteCommunityTree), en transaction — tout ou rien.
+ * GET /:id/members (règle members-email-scope) : connecté avec accès → noms et rôles sans e-mail ; OWNER de la
+ * communauté ou admin en mode admin → e-mails en plus.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -598,6 +600,10 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.notFound('Community not found');
     }
 
+    // Règle members-email-scope (décision Thomas 2026-11-06) : noms et rôles pour tout connecté qui peut lire la
+    // communauté, e-mails au propriétaire de la communauté et à l'admin en mode admin seulement.
+    const canSeeEmails = membership?.role === 'OWNER' || isAdminBypass;
+
     const members = await fastify.prisma.communityMembership.findMany({
       where: { communityId: request.params.id },
       include: {
@@ -614,7 +620,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     return members.map((m) => ({
       id: m.id,
       userId: m.userId,
-      email: m.user.email,
+      ...(canSeeEmails ? { email: m.user.email } : {}),
       name: m.user.name,
       role: m.role,
       joinedAt: m.joinedAt,

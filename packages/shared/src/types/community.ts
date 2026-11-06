@@ -44,7 +44,8 @@ export interface CommunityMembership {
 export interface CommunityMember {
   id: string;
   userId: string;
-  email: string;
+  /** Présent seulement pour le propriétaire de la communauté ou l'admin en mode admin (règle members-email-scope) */
+  email?: string;
   name: string;
   role: CommunityRole;
   joinedAt: string;

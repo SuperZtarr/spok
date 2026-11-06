@@ -16,7 +16,7 @@ import { sanitizeHtml } from '../../lib/sanitizeHtml';
 interface ItemWithContributions extends Item {
   contributions?: ContributionWithAuthor[];
   _count?: { contributions?: number };
-  createdBy?: { id: string; name: string; email: string };
+  createdBy?: { id: string; name: string };
 }
 
 interface ThreadViewProps {

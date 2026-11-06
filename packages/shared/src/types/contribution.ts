@@ -13,7 +13,6 @@ export interface ContributionWithAuthor extends Contribution {
   author: {
     id: string;
     name: string;
-    email: string;
   };
   reactionSummary?: import('./reaction.js').ReactionSummary[];
   children?: ContributionWithAuthor[];

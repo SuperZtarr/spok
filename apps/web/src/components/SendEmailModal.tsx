@@ -11,7 +11,7 @@ import { communitiesApi, spacesApi } from '../lib/api';
 interface Member {
   userId: string;
   name: string;
-  email: string;
+  email?: string; // envoyé par l'API au propriétaire et à l'admin en mode admin (règle members-email-scope)
 }
 
 interface SendEmailModalProps {

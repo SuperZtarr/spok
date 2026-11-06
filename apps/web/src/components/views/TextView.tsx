@@ -21,7 +21,7 @@ interface Contribution {
   id: string;
   content: string;
   createdAt: string;
-  author: { id: string; name: string; email: string };
+  author: { id: string; name: string };
 }
 
 interface ItemWithContributions extends Item {

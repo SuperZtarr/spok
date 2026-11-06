@@ -43,7 +43,7 @@ export function ApiDocPage() {
         <Row method="GET" path="/communities/:id/tags" auth="optional" desc="Tags d'une communaute (si publique ou membre)" />
         <Row method="GET" path="/spaces" auth="optional" desc="Visiteur : espaces publics. Connecte : espaces accessibles" />
         <Row method="GET" path="/spaces/:id" auth="optional" desc="Detail d'un espace (si public ou membre)" />
-        <Row method="GET" path="/spaces/:id/members" auth="optional" desc="Membres d'un espace (si public ou membre)" />
+        <Row method="GET" path="/spaces/:id/members" auth="optional" desc="Membres d'un espace (si lisible) : liste vide pour un visiteur, e-mails réservés au propriétaire et au mode admin" />
         <Row method="GET" path="/spaces/:id/items" auth="optional" desc="Items d'un espace (herite du parent, via checkSpaceAccess)" />
         <Row method="GET" path="/spaces/:id/items/:itemId" auth="optional" desc="Detail d'un item (herite du parent, via checkSpaceAccess)" />
         <Row method="GET" path="/spaces/:id/items/:itemId/contributions" auth="optional" desc="Contributions d'un item (herite du parent)" />
@@ -98,7 +98,7 @@ export function ApiDocPage() {
         <Row method="GET" path="/communities/:id/delete-preview" auth="user" desc="Apercu suppression (proprietaire)" />
         <Row method="POST" path="/communities/:id/join" auth="user" desc="Rejoindre une communaute publique" />
         <Row method="POST" path="/communities/:id/leave" auth="user" desc="Quitter une communaute" />
-        <Row method="GET" path="/communities/:id/members" auth="user" desc="Liste des membres" />
+        <Row method="GET" path="/communities/:id/members" auth="user" desc="Liste des membres : e-mails réservés au propriétaire et au mode admin" />
         <Row method="GET" path="/communities/:id/available-users" auth="user" desc="Utilisateurs invitables" />
         <Row method="POST" path="/communities/:id/invite" auth="user" desc="Inviter un membre" />
         <Row method="PATCH" path="/communities/:id/members/:userId" auth="user" desc="Modifier role d'un membre" />

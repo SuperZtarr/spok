@@ -1,4 +1,6 @@
-/* Vue Organigramme : membres d'un espace groupés par rôle, rendu en arbre de boîtes (BoxTreeDiagram). */
+/* Vue Organigramme : membres d'un espace groupés par rôle, rendu en arbre de boîtes (BoxTreeDiagram).
+   Affichée seulement dans les paramètres de l'espace (propriétaires, admin en mode admin) ; l'e-mail sous le nom
+   est facultatif, l'API ne l'envoie qu'à ces profils (règle members-email-scope). */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { spacesApi } from '../../lib/api';
@@ -49,7 +51,7 @@ function buildOrgTree(members: SpaceMember[], spaceName: string): BoxTreeNode {
           const mColors = ROLE_COLORS[mRole] || ROLE_COLORS.MEMBER;
           return {
             id: m.userId,
-            label: m.name || m.email,
+            label: m.name,
             sublabel: m.email,
             fill: mColors.bg,
             stroke: mColors.border,

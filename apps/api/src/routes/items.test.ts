@@ -103,6 +103,19 @@ describe('Items routes', () => {
   // ─── LIST ITEMS ───────────────────────────────────────────────
 
   describe('GET /spaces/:spaceId/items', () => {
+    // Règle members-email-scope : la route est ouverte aux visiteurs, la requête ne doit jamais lire l'e-mail
+    it('should never select the email of the assignee or contributors', async () => {
+      allowSpaceAccess()
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+
+      await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/items?include=contributions`, headers: { authorization: `Bearer ${token}` } })
+
+      const { include } = prisma.item.findMany.mock.calls[0][0]
+      expect(include.assignedTo.select).toEqual({ id: true, name: true })
+      expect(include.contributions.include.author.select).toEqual({ id: true, name: true })
+    })
+
     it('should list items with pagination', async () => {
       allowSpaceAccess()
       const items = [mockItem({ id: 'item-1' }), mockItem({ id: 'item-2', title: 'Second' })]
@@ -355,6 +368,19 @@ describe('Items routes', () => {
   // ─── GET ITEM BY ID ───────────────────────────────────────────
 
   describe('GET /spaces/:spaceId/items/:id', () => {
+    // Règle members-email-scope : la route est ouverte aux visiteurs, la requête ne doit jamais lire l'e-mail
+    it('should never select the email of the author, assignee or contributors', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ tags: [], children: [], parent: null, contributions: [], reactions: [] }))
+
+      await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/items/item-1`, headers: { authorization: `Bearer ${token}` } })
+
+      const { include } = prisma.item.findFirst.mock.calls[0][0]
+      expect(include.createdBy.select).toEqual({ id: true, name: true })
+      expect(include.assignedTo.select).toEqual({ id: true, name: true })
+      expect(include.contributions.include.author.select).toEqual({ id: true, name: true })
+    })
+
     it('should return item with relations and tags', async () => {
       allowSpaceAccess()
       const item = mockItem({
@@ -897,6 +923,8 @@ describe('Items routes', () => {
       const body = res.json()
       expect(body).toHaveLength(1)
       expect(body[0].content).toBe('Hello')
+      // Règle members-email-scope
+      expect(prisma.contribution.findMany.mock.calls[0][0].include.author.select).toEqual({ id: true, name: true })
     })
   })
 

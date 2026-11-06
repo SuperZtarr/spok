@@ -1107,6 +1107,50 @@ describe('Spaces routes', () => {
       expect(body[0].role).toBe('OWNER')
     })
 
+    // Règle members-email-scope
+    const memberRow = { id: 'mem-1', userId: USER_ID, role: 'OWNER', joinedAt: new Date(), user: { id: USER_ID, email: 'test@test.com', name: 'Test' } }
+
+    it('should give emails to a space owner', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership({ role: 'OWNER' }))
+      prisma.spaceMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/members`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.json()[0].email).toBe('test@test.com')
+    })
+
+    it('should give names and roles without emails to a simple member', async () => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership({ role: 'MEMBER' }))
+      prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1', visibility: 'OPEN' })
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.spaceMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/members`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json()[0]).toMatchObject({ name: 'Test', role: 'OWNER' })
+      expect(res.json()[0]).not.toHaveProperty('email')
+    })
+
+    it('should give an empty list to an anonymous visitor on a readable space', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'OPEN', community: { visibility: 'OPEN' } }))
+      prisma.spaceMembership.findMany.mockResolvedValue([memberRow])
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/members` })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json()).toEqual([])
+      expect(prisma.spaceMembership.findMany).not.toHaveBeenCalled()
+    })
+
+    it('should return 404 to an anonymous visitor on a private space', async () => {
+      prisma.space.findUnique.mockResolvedValue(mockSpace({ communityId: 'com-1', visibility: 'PRIVATE', community: { visibility: 'OPEN' } }))
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/members` })
+
+      expect(res.statusCode).toBe(404)
+    })
+
     it('should allow community member to list members', async () => {
       prisma.spaceMembership.findUnique.mockResolvedValue(null)
       prisma.space.findUnique.mockResolvedValue({ id: SPACE_ID, communityId: 'com-1', visibility: 'OPEN' })

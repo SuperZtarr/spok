@@ -72,7 +72,8 @@ export interface InviteMemberInput {
 export interface SpaceMember {
   id: string;
   userId: string;
-  email: string;
+  /** Présent seulement pour un OWNER ou l'admin en mode admin (règle members-email-scope) */
+  email?: string;
   name: string;
   role: Role;
   joinedAt: string;
