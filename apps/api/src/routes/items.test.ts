@@ -1,6 +1,7 @@
 /*
  * TNR des routes /spaces/:spaceId/items : accès (membership direct/communauté), CRUD
- * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary, URL d'item http(s) seulement.
+ * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary, URL d'item http(s) seulement,
+ * parent dans le même espace à l'écriture, enfants restés sur place remontés à la racine par bulk-move.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
@@ -937,6 +938,105 @@ describe('Items routes', () => {
   })
 })
 
+describe('parent dans le même espace (règle item-parent-same-space)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const headers = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+  const ITEMS: Record<string, { id: string; spaceId: string; parentId: null }> = {
+    same: { id: 'same', spaceId: 'space-1', parentId: null },
+    other: { id: 'other', spaceId: 'space-2', parentId: null },
+    secret: { id: 'secret', spaceId: 'space-3', parentId: null },
+  }
+  const OTHER_SPACE = /même espace/
+  const NOT_FOUND = 'Parent introuvable dans cet espace'
+
+  const send: Record<string, (parentId: string | null) => Promise<any>> = {
+    'POST /': (parentId) => app.inject({ method: 'POST', url: '/spaces/space-1/items', headers: headers(), payload: { type: 'NOTE', title: 'T', ...(parentId ? { parentId } : {}) } }),
+    'POST /from-template': (parentId) => app.inject({ method: 'POST', url: '/spaces/space-1/items/from-template', headers: headers(), payload: { templateId: 'tpl-1', ...(parentId ? { parentId } : {}) } }),
+    'PATCH /:id': (parentId) => app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1', headers: headers(), payload: { parentId } }),
+    'PATCH /:id/move': (parentId) => app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1/move', headers: headers(), payload: { parentId, position: 0 } }),
+  }
+  const ROUTES = Object.keys(send)
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership('OWNER'))
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }, { spaceId: 'space-2' }])
+    prisma.item.findUnique.mockImplementation(({ where }: any) => Promise.resolve(ITEMS[where.id] ?? null))
+    prisma.item.findFirst.mockResolvedValue(mockItem())
+    prisma.item.create.mockResolvedValue(mockItem({ id: 'new' }))
+    prisma.item.update.mockResolvedValue(mockItem())
+    prisma.itemTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', structure: { title: 'R', type: 'NOTE', children: [] } })
+    prisma.$transaction.mockResolvedValue([])
+  })
+
+  const expectNoWrite = () => {
+    expect(prisma.item.create).not.toHaveBeenCalled()
+    expect(prisma.item.update).not.toHaveBeenCalled()
+  }
+
+  it.each(ROUTES)('%s : parent d\'un autre espace lisible → 400 qui explique la règle', async (route) => {
+    const res = await send[route]('other')
+    expect(res.statusCode).toBe(400)
+    expect(res.json().message).toMatch(OTHER_SPACE)
+    expectNoWrite()
+  })
+
+  it.each(ROUTES)('%s : parent d\'un espace illisible → 400, même message que s\'il n\'existait pas', async (route) => {
+    const secret = await send[route]('secret')
+    const missing = await send[route]('missing')
+    expect(secret.statusCode).toBe(400)
+    expect(secret.json().message).toBe(NOT_FOUND)
+    expect(missing.statusCode).toBe(400)
+    expect(missing.json().message).toBe(NOT_FOUND)
+    expectNoWrite()
+  })
+
+  it.each(ROUTES)('%s : parent du même espace → accepté', async (route) => {
+    const res = await send[route]('same')
+    expect(res.statusCode).toBeLessThan(300)
+  })
+
+  it.each(['PATCH /:id', 'PATCH /:id/move'])('%s : parentId null → accepté', async (route) => {
+    prisma.item.findFirst.mockResolvedValue(mockItem({ parentId: 'same' }))
+    const res = await send[route](null)
+    expect(res.statusCode).toBe(200)
+  })
+
+  it.each(['PATCH /:id', 'PATCH /:id/move'])('%s : parent inchangé déjà dans un autre espace → accepté (ne bloque pas un lien ancien)', async (route) => {
+    prisma.item.findFirst.mockResolvedValue(mockItem({ parentId: 'other' }))
+    const res = await send[route]('other')
+    expect(res.statusCode).toBe(200)
+  })
+})
+
+describe('POST /bulk-move : aucune branche coupée entre deux espaces', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const move = (includeChildren: boolean) => app.inject({
+    method: 'POST', url: '/spaces/space-1/items/bulk-move',
+    headers: { authorization: `Bearer ${getTestToken(app)}` },
+    payload: { itemIds: ['P'], targetSpaceId: 'space-2', includeChildren },
+  })
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership('OWNER'))
+    prisma.item.findMany.mockImplementation(({ where }: any) => Promise.resolve(where?.parentId ? [] : [mockItem({ id: 'P' })]))
+    prisma.item.findUnique.mockResolvedValue(mockItem({ id: 'P' }))
+  })
+
+  it('sans les enfants : ceux restés sur place remontent à la racine de leur espace', async () => {
+    const res = await move(false)
+
+    expect(res.statusCode).toBe(200)
+    expect(prisma.item.updateMany).toHaveBeenCalledWith({
+      where: { parentId: { in: ['P'] }, id: { notIn: ['P'] }, spaceId: 'space-1' },
+      data: { parentId: null },
+    })
+  })
+})
+
 describe('verrou de séance', () => {
   let app: FastifyInstance
   let prisma: MockPrisma
@@ -961,6 +1061,7 @@ describe('verrou de séance', () => {
   })
 
   it('PATCH parentId sur item verrouillé créé par un autre → autorisé pour un MEMBER', async () => {
+    prisma.item.findUnique.mockResolvedValue({ spaceId: 'sess-space' })
     prisma.item.update.mockResolvedValue({ ...lockedItem, parentId: 'theme-1', tags: [] })
     const res = await app.inject({ method: 'PATCH', url: '/spaces/sess-space/items/copy-1',
       headers: { authorization: `Bearer ${token()}` }, payload: { parentId: 'theme-1' } })

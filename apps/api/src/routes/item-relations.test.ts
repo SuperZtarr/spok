@@ -1,5 +1,6 @@
 /* TNR des relations : création + détection de cycle
- * pour drives ("Entraîne", spec 2026-09-13), refus des types hors RELATION_TYPES (2026-09-28). */
+ * pour drives ("Entraîne", spec 2026-09-13), refus des types hors RELATION_TYPES (2026-09-28).
+ * GET /:id/links : tout lien vers un espace illisible est retiré (parent, enfants, relations), sauf en mode admin. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -189,6 +190,48 @@ describe('GET /spaces/:spaceId/items/:id/links (vue Loupe)', () => {
     expect(res.statusCode).toBe(200)
     expect(res.body).not.toContain('SECRET')
     expect(res.json().links.map((l: any) => l.item.id)).toEqual(['B'])
+  })
+
+  it('retire un parent et un enfant situés dans un espace illisible', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: null, parent: linked('SECRET-P', 'space-3'), children: [linked('SECRET-C', 'space-3'), linked('C')],
+      relationsFrom: [], relationsTo: [],
+    })
+
+    const res = await get()
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body).not.toContain('SECRET')
+    expect(res.json().links.map((l: any) => [l.kind, l.item.id])).toEqual([['child', 'C']])
+  })
+
+  it('garde parent et enfants de l\'espace courant, et ceux d\'un autre espace lisible', async () => {
+    prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-2' }])
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: null, parent: linked('P'), children: [linked('C'), linked('D', 'space-2')],
+      relationsFrom: [], relationsTo: [],
+    })
+
+    const res = await get()
+
+    expect(res.json().links.map((l: any) => l.item.id)).toEqual(['P', 'C', 'D'])
+  })
+
+  it('mode admin : parent et enfants d\'un espace privé restent visibles', async () => {
+    prisma.spaceMembership.findUnique.mockResolvedValue(null)
+    prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+    prisma.item.findFirst.mockResolvedValue({
+      ...linked('A'), description: null, parent: linked('P', 'space-3'), children: [linked('C', 'space-3')],
+      relationsFrom: [], relationsTo: [],
+    })
+
+    const res = await app.inject({
+      method: 'GET', url: '/spaces/space-1/items/A/links',
+      headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
+    })
+
+    expect(res.json().links.map((l: any) => l.item.id)).toEqual(['P', 'C'])
   })
 
   it('404 si l\'item n\'est pas dans cet espace', async () => {

@@ -80,6 +80,7 @@ describe('POST /spaces/:spaceId/items/from-template', () => {
       id: 'tpl-1',
       structure: { title: 'Réunion', type: 'MEETING', children: [] },
     })
+    prisma.item.findUnique.mockResolvedValue({ spaceId: 'space-1' })
     prisma.item.create.mockResolvedValue({ id: 'item-1', title: 'Réunion', type: 'MEETING', parentId: 'parent-1' })
 
     const res = await app.inject({

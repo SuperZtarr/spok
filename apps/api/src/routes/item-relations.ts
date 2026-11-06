@@ -3,8 +3,9 @@
  * blocks, relates, implements, drives) — tout autre type (ancien `depends`, `tests`, `parent`…) est refusé
  * en 400 depuis le 2026-09-28. Détection de cycle pour `drives`. La sémantique des types (ordonnancement,
  * libellés) vit côté web : apps/web/src/constants/relationTypes.ts.
- * GET /:id/links (lecture seule, vue Loupe) : parent, enfants et relations d'un item, avec leur espace. Une relation
- * vers un espace que le lecteur ne peut pas lire est retirée (filterReadableSpaceIds) : ni titre ni existence divulgués.
+ * GET /:id/links (lecture seule, vue Loupe) : parent, enfants et relations d'un item, avec leur espace. Tout lien (parent,
+ * enfant, relation) vers un espace que le lecteur ne peut pas lire est retiré (filterReadableSpaceIds) : ni titre ni
+ * existence divulgués. Parent et enfants sont censés être dans le même espace ; le filtre couvre les liens anciens.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -63,17 +64,23 @@ export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!item) return reply.notFound('Item not found');
 
-    const relationSpaceIds = [
+    // L'espace de la requête vient d'être validé par checkSpaceAccess : seuls les autres espaces sont à filtrer
+    const otherSpaceIds = [
+      ...(item.parent ? [item.parent.spaceId] : []),
+      ...item.children.map((c) => c.spaceId),
       ...item.relationsFrom.map((r) => r.toItem.spaceId),
       ...item.relationsTo.map((r) => r.fromItem.spaceId),
-    ];
-    const readable = new Set(await filterReadableSpaceIds(fastify.prisma, request.user.userId, relationSpaceIds, request.isAdminMode));
+    ].filter((id) => id !== request.params.spaceId);
+    const readable = new Set(await filterReadableSpaceIds(fastify.prisma, request.user.userId, otherSpaceIds, request.isAdminMode));
+    readable.add(request.params.spaceId);
 
     return {
       item: { ...toLinkedItem(item), description: item.description },
       links: [
-        ...(item.parent ? [{ kind: 'parent' as const, item: toLinkedItem(item.parent) }] : []),
-        ...item.children.map((child) => ({ kind: 'child' as const, item: toLinkedItem(child) })),
+        ...(item.parent && readable.has(item.parent.spaceId) ? [{ kind: 'parent' as const, item: toLinkedItem(item.parent) }] : []),
+        ...item.children
+          .filter((child) => readable.has(child.spaceId))
+          .map((child) => ({ kind: 'child' as const, item: toLinkedItem(child) })),
         ...item.relationsFrom
           .filter((r) => readable.has(r.toItem.spaceId))
           .map((r) => ({ kind: 'relation' as const, direction: 'from' as const, relationType: r.type, relationLabel: r.label, item: toLinkedItem(r.toItem) })),

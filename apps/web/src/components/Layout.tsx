@@ -598,7 +598,8 @@ export function Layout() {
 
   const dragMoveMutation = useMutation({
     mutationFn: ({ itemId, sourceSpaceId, targetSpaceId }: { itemId: string; sourceSpaceId: string; targetSpaceId: string }) =>
-      itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren: false }),
+      // Règle de déplacement SPOK (spec MoveToSpaceModal) : l'élément part avec toute sa descendance
+      itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren: true }),
     onSuccess: (_, { sourceSpaceId, targetSpaceId }) => {
       queryClient.invalidateQueries({ queryKey: ['items', sourceSpaceId] });
       queryClient.invalidateQueries({ queryKey: ['items', targetSpaceId] });

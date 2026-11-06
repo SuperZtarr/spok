@@ -6,6 +6,7 @@
  * une mise à jour optimiste du cache React Query — sinon l'UI lit des données stales
  * pendant la fenêtre réseau entre le clic et la réponse du serveur.
  * handleOpen(id, mode) : navigation vers l'item dans son espace, mode Afficher porté par ?mode=lecture.
+ * handleMove : un dépôt refusé par l'API (parent d'un autre espace, cycle) est signalé par window.alert (pas de toast dans l'app).
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -147,6 +148,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       if (variables.itemSpaceId !== spaceId) {
         queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
       }
+    },
+    // Dépôt refusé (parent d'un autre espace, cycle) : l'élément reprend sa place et l'API dit pourquoi
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      window.alert(error instanceof Error ? error.message : 'Déplacement impossible');
     },
   });
 

@@ -5,6 +5,9 @@
  * bulk-move (vers un autre espace) : un MEMBER ne déplace que des items qu'il a créés ou qui lui sont
  * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête. La place des items dans la vue
  * Process (positions, couloirs) part avec eux (moveProcessPlacement, même transaction).
+ * Règle de déplacement vers un autre espace (spec MoveToSpaceModal) : aucune branche coupée entre deux espaces. Un item
+ * dont le parent ne part pas arrive à la racine ; un enfant qui ne part pas remonte à la racine de son espace.
+ * /move : un parent qui change doit être dans le même espace (utils/itemParent.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -13,6 +16,7 @@ import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { moveProcessPlacement } from '../utils/processPlacement.js';
+import { parentViolation } from '../utils/itemParent.js';
 
 const moveItemSchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -74,6 +78,11 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
           ? await fastify.prisma.item.findUnique({ where: { id: parent.parentId } })
           : null;
       }
+    }
+
+    if (newParentId && newParentId !== item.parentId) {
+      const violation = await parentViolation(fastify.prisma, newParentId, request.params.spaceId, request.user.userId, request.isAdminMode);
+      if (violation) return reply.badRequest(violation);
     }
 
     // Get siblings at the new location
@@ -329,6 +338,13 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
           }
         }
       }
+
+      // Enfants qui ne partent pas : ils remontent à la racine de leur espace (jamais de parent dans un autre espace).
+      // Pas d'entrée d'audit MOVE par enfant : sa restauration recréerait le lien entre espaces.
+      await tx.item.updateMany({
+        where: { parentId: { in: allItemIds }, id: { notIn: allItemIds }, spaceId: request.params.spaceId },
+        data: { parentId: null },
+      });
 
       // Handle relations - keep only relations where both items are in target space
       // (either already there or being moved)

@@ -12,6 +12,7 @@ export const help: HelpEntry = {
   tips: [
     'Le nom de la personne assignée s\'affiche sur la ligne de l\'élément, avec une icône',
     'Glissez une barre pour la décaler, tirez ses bords pour changer ses dates',
+    'Un élément ne se range que sous un parent du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮',
     'Clic droit sur la ligne d\'un élément pour poser son échéance (losange) ; clic droit sur le losange pour la retirer',
     'Tirez depuis le point central d\'une barre vers une autre pour créer une dépendance',
     'Le chemin critique montre les tâches qui fixent la date de fin',

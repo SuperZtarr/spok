@@ -188,6 +188,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/utils/processPlacement.ts (moveProcessPlacement), apps/api/src/routes/item-move.ts (bulk-move), apps/api/src/routes/item-convert.ts',
   },
   {
+    id: 'item-parent-same-space',
+    page: "Espace → toutes les vues ; déplacement vers un autre espace (menu ⋮, fiche, glisser vers la barre latérale ou un autre espace)",
+    trigger: "Un élément change de parent ou d'espace",
+    effect: "Une branche reste toujours dans un seul espace. Vers un autre espace, l'élément part avec tous ses enfants, sauf demande explicite (case décochée ou « Déplacer seul ») : les enfants restés remontent à la racine de leur espace, et un élément dont le parent ne part pas arrive à la racine. Le glisser vers la barre latérale emporte toujours les enfants, sans demander. Ranger un élément sous un parent d'un autre espace est refusé (400) ; le message explique la règle si l'utilisateur peut lire cet espace, sinon il dit seulement que le parent est introuvable. Un parent inchangé n'est pas recontrôlé, pour ne pas bloquer un lien ancien entre espaces",
+    location: 'apps/api/src/utils/itemParent.ts, apps/api/src/routes/items.ts, apps/api/src/routes/item-move.ts, apps/web/src/components/Layout.tsx',
+  },
+  {
     id: 'personal-token-shown-once',
     page: 'Profil utilisateur',
     trigger: "Création d'un jeton d'accès Claude (MCP distant)",

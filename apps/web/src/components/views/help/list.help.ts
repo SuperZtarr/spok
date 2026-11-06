@@ -12,6 +12,7 @@ export const help: HelpEntry = {
     'Le nom de la personne assignée s\'affiche à côté du titre, avec une icône',
     'Cliquez sur un en-tête de colonne pour trier, un second clic inverse l\'ordre',
     'Cliquez sur une ligne pour ouvrir la fiche de l\'élément',
+    'Un élément ne se range que sous un parent du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮',
     'Glissez-déposez une ligne pour la réordonner ou la ranger sous un autre élément',
     'Le menu ⋮ d\'une ligne regroupe toutes les actions',
   ],

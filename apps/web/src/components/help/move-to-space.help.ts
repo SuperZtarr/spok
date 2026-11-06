@@ -12,6 +12,7 @@ export const help: HelpEntry = {
     'Aucun espace n\'est coché à l\'ouverture, même juste après un autre déplacement : le choix précédent n\'est pas repris',
     '« Inclure les éléments enfants » emmène toute la descendance ; sinon les enfants restent ici et remontent à la racine',
     'Un élément dont le parent ne part pas arrive à la racine de l\'espace d\'arrivée',
+    'Glisser un élément sur un espace de la barre latérale applique la même règle et emporte toujours ses enfants',
     'Les tags sont repris par nom dans l\'espace d\'arrivée (créés s\'ils n\'y existent pas)',
     'Les relations avec des éléments qui restent ici sont supprimées ; celles entre éléments déplacés sont gardées',
     'La place dans le process (positions, couloirs) suit les éléments ; un élément parti sans son couloir arrive libre',

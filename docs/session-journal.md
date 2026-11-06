@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06 (4)
+- Lot poussé : règle unique de déplacement et parent dans le même espace (fix sécurité Loupe). Typecheck OK, TNR 1983/1983, en-têtes OK. RESTE OUVERT : `GET /:id` expose `parent` et `children` sans filtre, restauration d'historique sans contrôle du parent, branches déjà coupées en prod ni comptées ni réparées
+
+### Règle unique de déplacement — 2026-11-06
+- Parent dans le même espace imposé à l'écriture, enfants restés remontés à la racine par bulk-move, barre latérale emporte les enfants, `/links` filtre parent et enfants illisibles. Poussé par la MEP du 2026-11-06. Laissés de côté : `GET /:id` expose `parent` et `children` sans filtre, restauration d'historique sans contrôle du parent, compteur de liens masqués
+
 ### MEP — 2026-11-06 (3)
 - 2 lots poussés : vue Loupe (feat), article avec Composer dans la fiche, vue Articles, page en lecture seule (feat). SpacePage entier dans le second commit (lignes des deux lots imbriquées), donc la Loupe n'est branchée qu'à ce commit. Micro-correction : viewMode.test.ts passe à 34 vues. Typecheck OK, TNR 1962 verts + viewMode.test.ts vert après correction, en-têtes OK. Non vérifiés à l'écran pour la Loupe : geste réel à la souris, Document avec fichier, plusieurs centaines d'items
 

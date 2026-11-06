@@ -17,6 +17,7 @@
  * tous chemins confondus (modale, menu â‹¯, Kanban, Today, MCP) ; ne complÃ¨te que les dates vides.
  * url : http(s) seulement (itemUrlField) â€” jamais javascript:/data: (rÃ¨gle user-html-sanitized). Le HTML des
  * descriptions n'est PAS nettoyÃ© ici : il l'est Ã  l'affichage (web, lib/sanitizeHtml.ts).
+ * parentId : un parent qui change doit être dans le même espace (utils/itemParent.ts), refus en 400 sinon.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
@@ -26,6 +27,7 @@ import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLo
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { createItemTree } from '../utils/itemTree.js';
+import { parentViolation } from '../utils/itemParent.js';
 import { createNotification } from '../utils/notifications.js';
 import { notifyMentionedUsers } from '../utils/mentions.js';
 import { itemRelationsRoutes } from './item-relations.js';
@@ -476,6 +478,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const body = createItemSchema.parse(request.body);
       const { tagIds, ...itemData } = body;
 
+      if (itemData.parentId) {
+        const violation = await parentViolation(fastify.prisma, itemData.parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
+        if (violation) return reply.badRequest(violation);
+      }
+
       const item = await fastify.prisma.item.create({
         data: {
           ...itemData,
@@ -536,6 +543,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const { templateId, parentId } = request.body;
+      if (parentId) {
+        const violation = await parentViolation(fastify.prisma, parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
+        if (violation) return reply.badRequest(violation);
+      }
       const template = await fastify.prisma.itemTemplate.findUnique({ where: { id: templateId } });
       if (!template) {
         return reply.notFound('Template not found');
@@ -676,6 +687,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = updateItemSchema.parse(request.body);
       const { tagIds, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
+
+      if (updateData.parentId && updateData.parentId !== existingItem.parentId) {
+        const violation = await parentViolation(fastify.prisma, updateData.parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
+        if (violation) return reply.badRequest(violation);
+      }
 
       // Optimistic locking: if client sends updatedAt, compare with server
       if (clientUpdatedAt) {
