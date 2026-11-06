@@ -7,7 +7,8 @@
  * Seul composant à rendre ce type d'encart : ne pas recréer de bouton d'aide maison dans une page.
  * Boutons en type="button" : le « ? » vit souvent dans un <form> (fiche d'item) — sinon un clic enregistre et ferme.
  * Au lancement du tour, le bouton se marque (TOUR_ANCHOR_ATTR) : c'est lui que pointe la dernière étape.
- * L'encart propose aussi le mode Aide (survol des zones, help/HelpModeOverlay ; raccourci Maj+?).
+ * L'encart propose aussi le mode Aide (survol des zones, help/HelpModeOverlay ; raccourci Maj+?). Sur écran tactile
+ * (help/touch.ts) : libellé « toucher » sans raccourci, et rappel de l'appui long sur un bouton.
  */
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle, X, Play, MousePointerClick } from 'lucide-react';
@@ -15,6 +16,7 @@ import { createPortal } from 'react-dom';
 import type { HelpEntry } from './types';
 import { TOUR_ANCHOR_ATTR } from '../hooks/useOnboarding';
 import { useHelpModeStore } from '../stores/helpMode';
+import { isTouchDevice, TOUCH_HELP } from './touch';
 
 interface HelpButtonProps {
   help: HelpEntry | undefined;
@@ -66,6 +68,7 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
 
   if (!help) return null;
   const canTour = !!onStartTour && help.tour.length > 0;
+  const touch = isTouchDevice();
 
   return (
     <>
@@ -119,14 +122,15 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
             </div>
           )}
           <div className="px-4 pb-3">
+            {touch && <p className="text-xs text-muted-foreground leading-relaxed mb-2">{TOUCH_HELP.helpButtonTip}</p>}
             <button
               type="button"
               onClick={() => { setOpen(false); useHelpModeStore.getState().enter(); }}
               className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-medium text-foreground bg-muted hover:bg-accent rounded-md transition-colors"
             >
               <MousePointerClick className="w-3.5 h-3.5" />
-              Mode Aide : survoler l'écran
-              <span className="ml-auto text-muted-foreground">Maj+?</span>
+              {touch ? TOUCH_HELP.helpModeLabel : 'Mode Aide : survoler l\'écran'}
+              {!touch && <span className="ml-auto text-muted-foreground">Maj+?</span>}
             </button>
           </div>
         </div>,

@@ -1,7 +1,9 @@
-/* Tests du mode Aide : raccourci Maj+? (hors champs), lecture seule, Échap sans fermer la modale, carte épinglée. */
+/* Tests du mode Aide : raccourci Maj+? (hors champs), lecture seule, Échap sans fermer la modale, carte épinglée, toucher d'une commande. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { HelpModeOverlay } from './HelpModeOverlay'
+import { HelpHint } from './HelpHint'
+import { TOUCH_HELP } from './touch'
 import { useHelpModeStore } from '../stores/helpMode'
 
 const shiftQ = (target: EventTarget = document.body) =>
@@ -35,6 +37,22 @@ describe('HelpModeOverlay', () => {
     expect(onOver).not.toHaveBeenCalled()
     const card = await findByRole('dialog')
     expect(card.textContent).toContain('Barre latérale')
+  })
+
+  it('toucher une commande affiche son rappel, sans déclencher l\'action', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({ matches: query === '(hover: none)' }) as MediaQueryList)
+    const onClick = vi.fn()
+    const { getByText, findByRole, getByRole } = render(<>
+      <aside data-devzone="sidebar"><HelpHint text="Supprime l'élément"><button onClick={onClick}>Supprimer</button></HelpHint></aside>
+      <HelpModeOverlay />
+    </>)
+    act(() => useHelpModeStore.getState().enter())
+    fireEvent.click(getByText('Supprimer'))
+    expect(onClick).not.toHaveBeenCalled()
+    const card = await findByRole('dialog')
+    expect(card.textContent).toContain('Supprime l\'élément')
+    expect(getByRole('status').textContent).toContain(TOUCH_HELP.helpModeBanner)
+    vi.restoreAllMocks()
   })
 
   it('Échap quitte le mode sans atteindre l\'appli (une modale ouverte ne se ferme pas)', () => {

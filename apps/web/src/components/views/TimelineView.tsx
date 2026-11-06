@@ -7,7 +7,8 @@
  * Échéance (losange rouge) : clic droit sur la zone chronologique d'une ligne = poser/déplacer au jour
  * sous le curseur ; glisser le losange = déplacer ; clic droit sur le losange = supprimer (onUpdateDueDate,
  * helpers lib/timelineDueDate.ts). Jamais de cascade "Entraîne" sur l'échéance. Inactif sur les lignes
- * à dates dérivées des enfants et sans droit d'édition.
+ * à dates dérivées des enfants et sans droit d'édition. Sur écran tactile (isTouchDevice), ces clics droits sont
+ * ignorés : l'appui long les déclenche sous Android et il ne doit jamais modifier une échéance (2026-11-06).
  * Barre pointillée (parent sans dates, période dérivée des enfants) : glisser = décaler le groupe via
  * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
  * Sa fin : la plus tardive des enfants ; un enfant commencé sans fin compte jusqu'à aujourd'hui (rollupEnd).
@@ -41,6 +42,7 @@ import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { itemsApi } from '../../lib/api';
 import { computeCascadeDependents, computeCascadeDescendants, type CascadeDependent } from '../../lib/cascadeShift';
 import { dayAtLaneX, dueDateForDay } from '../../lib/timelineDueDate';
+import { isTouchDevice } from '../../help/touch';
 import { CascadeShiftConfirmModal } from '../CascadeShiftConfirmModal';
 import { RelationCreateDialog } from '../relations/RelationCreateDialog';
 import { RelationEditDialog } from '../relations/RelationEditDialog';
@@ -687,6 +689,7 @@ treeSort: treeSortProp,
   const handleLaneContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>, item: Item) => {
     if (dragging || dueDrag || relationDrag || !canEditDueDate(item)) return; // menu natif conservé
     e.preventDefault();
+    if (isTouchDevice()) return; // cet événement vient d'un appui long : il ne doit pas poser d'échéance
     const rect = e.currentTarget.getBoundingClientRect();
     const day = dayAtLaneX(e.clientX - rect.left, dayWidth, visibleStartDate);
     if (item.dueDate && startOfDay(new Date(item.dueDate)).getTime() === day.getTime()) return;
@@ -1608,7 +1611,12 @@ treeSort: treeSortProp,
                               ? `Échéance : ${formatDateShort(dueDateObj)} — glisser pour déplacer · clic droit pour supprimer`
                               : `Échéance : ${formatDateShort(dueDateObj)}`}
                             onMouseDown={dueEditable ? (e) => handleDueMouseDown(e, item) : undefined}
-                            onContextMenu={dueEditable ? (e) => { e.preventDefault(); e.stopPropagation(); commitDueDate(item.id, null); } : undefined}
+                            onContextMenu={dueEditable ? (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Sur écran tactile, cet événement vient d'un appui long : il ne doit pas effacer l'échéance
+                              if (!isTouchDevice()) commitDueDate(item.id, null);
+                            } : undefined}
                           >
                             <svg width="12" height="32" viewBox="0 0 12 32">
                               {/* Vertical line */}

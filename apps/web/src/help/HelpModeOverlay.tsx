@@ -5,21 +5,28 @@
  *   menu contextuel, glisser, survols (mouseover/out : ni infobulle HelpHint ni menu ⋮ au survol) et touches (sauf
  *   Échap = quitter, Maj+? = basculer). Seul le bandeau (data-help-mode-ui) reste cliquable.
  * - Survol : la zone la plus interne ayant un texte (findHelpZone) est encadrée + carte (titre, texte) ; clic = carte
- *   épinglée ; zone retirée du DOM = carte fermée.
- * Textes : jamais ici — SHELL_ZONES (cadre) et fiches des vues (zones). z-index : au-dessus de l'appli, des modales et
- * des tours (10001-10002), sous DevZoneInspector.
+ *   épinglée ; zone retirée du DOM = carte fermée. Une commande enveloppée par HelpHint affiche son rappel, avant sa zone.
+ * - Écran tactile : pas de survol ni de Maj+?, toucher = carte épinglée (aucune action ne part), bandeau adapté. Entrée
+ *   par le « ? » (HelpButton) et par TouchHelpCard.
+ * Textes : jamais ici — SHELL_ZONES (cadre), fiches des vues (zones), help/touch.ts (tactile). z-index : au-dessus de
+ * l'appli, des modales et des tours (10001-10002), sous DevZoneInspector.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';
 import { useHelpModeStore } from '../stores/helpMode';
 import { findHelpZone } from './helpZones';
+import { isTouchDevice, TOUCH_HELP } from './touch';
 import type { HelpZone } from './types';
 
 interface Hit { el: HTMLElement; zone: HelpZone; rect: DOMRect }
 
 const BLOCKED = ['click', 'dblclick', 'auxclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'contextmenu', 'dragstart', 'mouseover', 'mouseout', 'submit'] as const;
 const CARD_W = 280;
+/** Marge haute de la carte : sous le bandeau, qui passe sur plusieurs lignes sur téléphone */
+const CARD_TOP = 48;
+const CARD_TOP_TOUCH = 88;
+const CARD_MARGIN = 8;
 
 const isTyping = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
@@ -28,13 +35,13 @@ const isTyping = (t: EventTarget | null) => {
 const isShiftQuestion = (e: KeyboardEvent) => e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey;
 const inUi = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('[data-help-mode-ui]');
 
-function cardPosition(r: DOMRect): { top: number; left: number } {
+function cardPosition(r: DOMRect, minTop: number): { top: number; left: number } {
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = r.right + 8;
   if (left + CARD_W > vw - 8) left = r.left - CARD_W - 8;
   let top = r.top;
   if (left < 8) { left = Math.min(Math.max(8, r.left), vw - CARD_W - 8); top = r.bottom + 8; }
-  return { top: Math.min(Math.max(48, top), vh - 140), left };
+  return { top: Math.min(Math.max(minTop, top), vh - 140), left };
 }
 
 export function HelpModeOverlay() {
@@ -65,7 +72,8 @@ export function HelpModeOverlay() {
       e.stopPropagation();
       if (e.type === 'click') { const h = hit(e.target); pinnedRef.current = h?.el ?? null; setPinned(h); }
     };
-    const onMove = (e: PointerEvent) => { if (!inUi(e.target)) setHover(hit(e.target)); };
+    // Un doigt qui fait défiler n'est pas un survol
+    const onMove = (e: PointerEvent) => { if (e.pointerType !== 'touch' && !inUi(e.target)) setHover(hit(e.target)); };
     const onKey = (e: KeyboardEvent) => {
       if (isShiftQuestion(e)) return; // géré par le raccourci
       if (inUi(e.target) && (e.key === 'Enter' || e.key === ' ' || e.key === 'Tab')) return;
@@ -98,19 +106,20 @@ export function HelpModeOverlay() {
 
   if (!active) return null;
   const shown = pinned ?? hover;
-  const pos = shown ? cardPosition(shown.rect) : null;
+  const touch = isTouchDevice();
+  const pos = shown ? cardPosition(shown.rect, touch ? CARD_TOP_TOUCH : CARD_TOP) : null;
 
   return createPortal(
     <>
       <div
         data-help-mode-ui
         role="status"
-        className="fixed top-2 left-1/2 -translate-x-1/2 z-[10002] flex items-center gap-3 rounded-lg border border-primary/40 bg-card shadow-lg px-3 py-1.5 text-xs"
+        className="fixed top-2 left-1/2 -translate-x-1/2 z-[10002] flex items-center gap-3 w-max max-w-[calc(100vw-1rem)] rounded-lg border border-primary/40 bg-card shadow-lg px-3 py-1.5 text-xs"
       >
         <HelpCircle className="w-4 h-4 text-primary flex-shrink-0" />
-        <span><strong>Mode Aide</strong> — survolez une zone pour savoir à quoi elle sert · cliquez pour épingler · Échap pour quitter</span>
+        <span><strong>Mode Aide</strong> — {touch ? TOUCH_HELP.helpModeBanner : 'survolez une zone pour savoir à quoi elle sert · cliquez pour épingler · Échap pour quitter'}</span>
         <button type="button" onClick={() => useHelpModeStore.getState().exit()} aria-label="Quitter le mode Aide"
-          className="inline-flex items-center gap-1 h-6 px-2 rounded border border-input hover:bg-accent">
+          className="inline-flex items-center gap-1 h-6 px-2 rounded border border-input hover:bg-accent flex-shrink-0">
           <X className="w-3 h-3" /> Quitter
         </button>
       </div>
@@ -119,8 +128,8 @@ export function HelpModeOverlay() {
           <div aria-hidden className="fixed z-[10001] pointer-events-none rounded border-2 border-primary bg-primary/5"
             style={{ top: shown.rect.top, left: shown.rect.left, width: shown.rect.width, height: shown.rect.height }} />
           <div role="dialog" aria-label={shown.zone.title} aria-live="polite"
-            className={`fixed z-[10002] rounded-lg border bg-card shadow-xl p-3 text-xs ${pinned ? 'border-primary' : 'border-border pointer-events-none'}`}
-            style={{ top: pos.top, left: pos.left, width: CARD_W }} data-help-mode-ui={pinned ? '' : undefined}>
+            className={`fixed z-[10002] rounded-lg border bg-card shadow-xl p-3 text-xs overflow-y-auto ${pinned ? 'border-primary' : 'border-border pointer-events-none'}`}
+            style={{ top: pos.top, left: pos.left, width: CARD_W, maxHeight: window.innerHeight - pos.top - CARD_MARGIN }} data-help-mode-ui={pinned ? '' : undefined}>
             <p className="text-sm font-semibold text-foreground mb-1">{shown.zone.title}</p>
             <p className="text-muted-foreground leading-relaxed">{shown.zone.text}</p>
           </div>

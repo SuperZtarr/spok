@@ -7,7 +7,8 @@
  * l'inverse, sinon l'avatar sort de l'écran sur mobile (2026-10-10).
  * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge. Liens d'espace par
  * spaceHref (lib/spaceDefaultView.ts) : ?view= = vue de l'espace, sinon celle du contexte de sa communauté (2026-10-24).
- * Monte DevZoneInspector (zones de dev) et HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone).
+ * Monte DevZoneInspector (zones de dev), HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone) et
+ * TouchHelpCard (première visite sur écran tactile, hors fenêtre de bienvenue).
  * Actions d'espace dans la sidebar (2026-10-16) : au survol d'une ligne d'espace, « + » (nouveau sous-espace) et
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
  * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
@@ -51,6 +52,7 @@ import { WelcomeModal } from './WelcomeModal';
 import { UserProfileModal } from './UserProfileModal';
 import { DevZoneInspector } from './DevZoneInspector';
 import { HelpModeOverlay } from '../help/HelpModeOverlay';
+import { TouchHelpCard } from '../help/TouchHelpCard';
 import { HelpHint } from '../help/HelpHint';
 import { SIDEBAR_HINTS } from '../help/shellZones';
 import { NotificationBell } from './NotificationBell';
@@ -1327,6 +1329,7 @@ export function Layout() {
     <div className="h-screen flex overflow-hidden relative">
       <DevZoneInspector />
       <HelpModeOverlay />
+      {user && !isAuthPage && !showWelcome && <TouchHelpCard />}
       {/* Mobile overlay */}
       {sidebarOpen && !isAuthPage && (
         <div

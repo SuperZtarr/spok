@@ -48,6 +48,14 @@ laisser un composant modifié sans « ? » ni rappels fonctionnels.
   - **tout bloc qui demande une décision** (file d'attente, demande en attente, alerte, conflit) porte une phrase
     d'explication sous son titre (texte dans la fiche) : d'où vient la demande, ce que chaque choix entraîne ;
   - pages d'administration comprises : elles ont une fiche et un « ? » comme les autres.
+- **Sur écran tactile** (décision Thomas 2026-11-06) : `HelpHint` suffit pour un rappel, il se lit par appui long ou en
+  mode Aide (toucher), sans déclencher l'action. Ces gestes sont annoncés par `TouchHelpCard` (première visite) et
+  l'encart « ? » ; textes dans `help/touch.ts`. **Un texte à lire avant d'agir** (condition, avertissement, choix qui
+  change le résultat) va **en ligne visible** (`FieldHelp` ou phrase sous le titre), pas seulement dans `hints`.
+- **Guider, jamais laisser découvrir par hasard** (consigne Thomas 2026-11-06) : toute fonction ou tout geste ajouté dit
+  comment l'utilisateur l'apprend. Un geste invisible (appui long, clic droit, survol) n'est jamais le seul accès à une
+  fonction, et un clic droit qui modifie des données est ignoré sur écran tactile (`isTouchDevice`), où l'appui long le
+  déclenche.
 - **Modifier un comportement d'interface = mettre à jour sa fiche** : bouton ajouté/retiré/renommé → conseil, étape de tour et repère `data-tour` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
 - Une étape dont la cible est absente est sautée (`runTour`) : acceptable pour une section conditionnelle (favoris, enfants…), pas pour une commande toujours présente — vérifier les repères à l'écran.
 - La dernière étape « Besoin d'aide ? » est ajoutée automatiquement sur le `?` qui a lancé le tour (`TOUR_ANCHOR_ATTR`) : ne pas l'écrire dans les fiches.
