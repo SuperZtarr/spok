@@ -13,8 +13,9 @@
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
  * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
  * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
- * « Ouvrir l'article » : actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré →
- * grisé, hint openArticleUnsaved, aussi affiché en phrase visible dessous, et seul pour un élément en création) ;
+ * Bouton vers la page d'un article (ArticleOpenButton, « Composer l'article » ou « Page de lecture » selon les droits) :
+ * actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré → grisé, hint
+ * openArticleUnsaved, aussi affiché en phrase visible dessous, et seul pour un élément en création) ;
  * départ via guardClose (modifications non enregistrées), espace = item.spaceId.
  * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
@@ -23,7 +24,8 @@
  * Plus de bouton admin « Voir comme visiteur » (retiré 2026-10-23, décision Thomas) : un visiteur ouvre la fiche en
  * lecture, c'est donc « Afficher » qui montre ce qu'il voit — ne pas réintroduire un formulaire grisé.
  * Pied de page : Imprimer / Export PDF (itemExport.ts) et « Copier la fiche » (itemClipboard.ts, HTML + Markdown,
- * image/schéma intégrés ; infobulle HelpHint lue dans item-modal.help.ts → hints.copySheet).
+ * image/schéma intégrés ; infobulle HelpHint lue dans item-modal.help.ts → hints.copySheet) et « Copier la vignette »
+ * (itemThumbnail.ts, image PNG de la carte ; aussi dans le mode Afficher — hints.copyThumbnail).
  * Save explicite (2026-10-28) : « Enregistrer et quitter » (orange vif, submit — Entrée dans un champ) ferme après succès,
  * « Enregistrer » (orange clair, Ctrl+S) garde la fiche ouverte (closeAfterSaveRef lu par updateMutation.onSuccess), avec verrou
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
@@ -49,8 +51,8 @@
  * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
- * Type ARTICLE : bouton « Ouvrir l'article » (section média) vers sa page de lecture / composition (ArticlePage) ;
- * en mode « Afficher », les blocs de l'article sont lus directement dans la fiche (ArticleReadBlocks).
+ * Type ARTICLE : ArticleOpenButton (section média) vers sa page de lecture / composition (ArticlePage) ;
+ * en mode « Afficher », les blocs de l'article sont lus directement dans la fiche (ArticleReadBlocks), avec le même bouton.
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
@@ -73,12 +75,13 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
+import { ArticleOpenButton } from './article/ArticleOpenButton';
 import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
 import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
 import { HelpButton } from '../help/HelpButton';
@@ -108,6 +111,7 @@ import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
 import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { buildItemSheet, copyItemSheet } from '../lib/itemClipboard';
+import { buildItemThumbnail, copyItemThumbnail } from '../lib/itemThumbnail';
 import { MoveToSpaceModal } from './MoveToSpaceModal';
 import { DuplicateToSpaceModal } from './DuplicateToSpaceModal';
 import { SaveAsTemplateModal } from './SaveAsTemplateModal';
@@ -159,7 +163,6 @@ export function ItemEditModal({
   initialMode,
 }: ItemEditModalProps) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const { mode: interfaceMode } = useInterfaceModeStore();
   // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
@@ -168,6 +171,7 @@ export function ItemEditModal({
   const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'loisirs';
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
+  const [thumbnailState, setThumbnailState] = useState<'idle' | 'busy' | 'copied' | 'downloaded' | 'error'>('idle');
   // Mode Afficher (ItemReadView) ou Modifier / Fiche : fixé à chaque ouverture, conservé en naviguant d'item en item
   const [readMode, setReadMode] = useState(false);
   useEffect(() => {
@@ -953,31 +957,54 @@ export function ItemEditModal({
     setSheetCopied(true);
     setTimeout(() => setSheetCopied(false), 2000);
   };
+  const itemHints = PAGE_HELP['item-modal'].hints;
+  // « Copier la vignette » : image PNG de l'item (lib/itemThumbnail.ts) ; message visible si téléchargée ou en échec
+  const copyThumbnail = async () => {
+    setThumbnailState('busy');
+    let next: 'copied' | 'downloaded' | 'error';
+    try {
+      next = await copyItemThumbnail(buildItemThumbnail(buildSheet(), type));
+    } catch {
+      next = 'error';
+    }
+    setThumbnailState(next);
+    setTimeout(() => setThumbnailState('idle'), next === 'copied' ? 2000 : 6000);
+  };
+  const thumbnailButton = (
+    <>
+      <HelpHint text={itemHints?.[thumbnailState === 'copied' ? 'copyThumbnailDone' : 'copyThumbnail']}>
+        <Button type="button" variant="ghost" size="sm" aria-label="Copier la vignette" disabled={thumbnailState === 'busy'} onClick={copyThumbnail}>
+          {thumbnailState === 'copied' ? <Check className="w-4 h-4 text-green-600" /> : <ImageIcon className="w-4 h-4" />}
+        </Button>
+      </HelpHint>
+      {(thumbnailState === 'downloaded' || thumbnailState === 'error') && (
+        <span role="status" className={`self-center text-xs ${thumbnailState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>
+          {itemHints?.[thumbnailState === 'error' ? 'copyThumbnailError' : 'copyThumbnailDownloaded']}
+        </span>
+      )}
+    </>
+  );
   const printSheet = () => {
     if (!item) return;
     printItem({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName });
   };
-  const itemHints = PAGE_HELP['item-modal'].hints;
 
   // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
   // Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
   // rendus sous la Description dans la colonne principale.
+  // Départ vers la page d'un article : passe par la garde des modifications non enregistrées.
+  const leaveForArticle = (go: () => void) => guardClose(() => { onClose(); go(); });
+
   const mediaSection = (
     <>
       {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx).
-          Actif seulement si la fiche est ENREGISTRÉE en Article (sinon l'API répond « introuvable ») ;
-          le départ passe par la garde des modifications non enregistrées. */}
+          Actif seulement si la fiche est ENREGISTRÉE en Article (sinon l'API répond « introuvable »). */}
       {type === 'ARTICLE' && itemId && (
-        <HelpHint text={item?.type === 'ARTICLE' ? itemHints?.openArticle : itemHints?.openArticleUnsaved}>
-          <button
-            type="button"
-            disabled={item?.type !== 'ARTICLE'}
-            onClick={() => guardClose(() => { onClose(); navigate(`/spaces/${item?.spaceId ?? spaceId}/articles/${itemId}`); })}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
-          >
-            Ouvrir l'article
-          </button>
-        </HelpHint>
+        <ArticleOpenButton
+          spaceId={item?.spaceId ?? spaceId}
+          articleId={item?.type === 'ARTICLE' ? itemId : undefined}
+          leave={leaveForArticle}
+        />
       )}
       {/* Pas encore enregistré en Article (création, ou type changé sans enregistrer) : phrase visible, le bouton grisé
           ne montre pas son infobulle */}
@@ -1197,7 +1224,7 @@ export function ItemEditModal({
                     <ArticleReadBlocks
                       spaceId={item.spaceId ?? spaceId}
                       articleId={itemId}
-                      onOpenArticle={() => { onClose(); navigate(`/spaces/${item.spaceId ?? spaceId}/articles/${itemId}`); }}
+                      leave={leaveForArticle}
                     />
                   ) : undefined}
                   toolbar={(
@@ -1207,6 +1234,7 @@ export function ItemEditModal({
                           {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
                         </Button>
                       </HelpHint>
+                      {thumbnailButton}
                       <HelpHint text={itemHints?.print}>
                         <Button type="button" variant="ghost" size="sm" aria-label="Imprimer" onClick={printSheet}>
                           <Printer className="w-4 h-4" />
@@ -1998,6 +2026,7 @@ export function ItemEditModal({
                   {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
                 </Button>
                 </HelpHint>
+                {thumbnailButton}
                 {user && (
                   <Button
                     type="button"

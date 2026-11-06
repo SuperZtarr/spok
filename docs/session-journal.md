@@ -14,11 +14,18 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06
+- 3 lots poussés : bouton Filtre ou Aperçu en ambre (feat), Copier la vignette (feat), bouton de la fiche d'un article (feat). ItemEditModal et item-modal.help, imbriqués, entiers dans le dernier commit (branchement du bouton vignette compris). Typecheck OK, TNR 1885/1885, en-têtes OK
+
+### Écrans d'un article — 2026-11-06
+- Bouton commun aux modes Afficher et Modifier : « Composer l'article » (page ouverte en Composer) ou « Page de lecture » selon les droits. Inscrit dans PRÊT POUR MEP, NON COMMITÉ
+
 ### MEP — 2026-11-05 (3)
 - Lot poussé : filtre à choix multiple, filtre visible, Gantt élargi, badge de l'assigné (feat). Typecheck OK, TNR 1876/1876, en-têtes OK
 
 ### Filtre multiple, Gantt, Liste — 2026-11-05
-- Lot en cours, inscrit dans PRÊT POUR MEP, NON COMMITÉ. Tâches de Thomas : `cmw3d1k8r…` (Gantt), `cmw3d0s07…` (Liste)
+- Premier lot poussé (6a2f70d). Tâches de Thomas : `cmw3d1k8r…` (Gantt), `cmw3d0s07…` (Liste)
+- Lot suivant, inscrit dans PRÊT POUR MEP, NON COMMITÉ : bouton Filtre ou Aperçu en ambre dès qu'un critère est posé, bouton « Effacer » à côté (SpaceToolbar, aide)
 
 ### MEP — 2026-11-05 (2)
 - Lot poussé : carte mentale, cadrage à l'ouverture, positions figées, anneaux réguliers (feat). Typecheck OK, TNR 1863/1863, en-têtes OK

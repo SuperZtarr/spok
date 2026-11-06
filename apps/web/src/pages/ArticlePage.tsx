@@ -4,10 +4,12 @@
  * rangées de colonnes et hiérarchie).
  * Lisible à l'écran, sur mobile (blocs en pleine largeur sous 640 px) et à l'impression (printArticle).
  * Mode « Composer » (ArticleEditor) seulement si article.canEditArticle. Aide : fiche pages/help/article.help.ts.
+ * Mode de départ : Composer si la page est ouverte par « Composer l'article » de la fiche (location.state.compose,
+ * ArticleOpenButton), sinon Lire (adresse directe, lien partagé).
  * Accès : celui de l'article (anonyme compris pour un espace public) ; 404 API → message « introuvable ».
  */
 import { useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Printer, PenLine, Eye } from 'lucide-react';
 import { itemsApi } from '../lib/api';
@@ -30,7 +32,8 @@ export function ArticlePage() {
   });
   const articleState = useArticle(spaceId, itemId);
   const { article, isLoading, isError } = articleState;
-  const [composing, setComposing] = useState(false);
+  const location = useLocation();
+  const [composing, setComposing] = useState(() => !!(location.state as { compose?: boolean } | null)?.compose);
   const contentRef = useRef<HTMLDivElement>(null);
 
   if (isError) {

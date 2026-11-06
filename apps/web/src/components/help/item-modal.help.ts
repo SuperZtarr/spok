@@ -1,6 +1,7 @@
 /* Aide utilisateur de la fiche d'un élément (ItemEditModal).
    Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts.
    hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
+   hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
    hints.readMode / readModeUnsaved / editMode / sheetMode : sélecteur Afficher / Modifier (data-tour item-mode-switch) ;
    hints.print : Imprimer du mode Afficher. zones read-media / read-content : mode Aide sur ItemReadView. */
 import type { HelpEntry } from '../../help/types';
@@ -134,7 +135,7 @@ export const help: HelpEntry = {
       element: '[data-tour="item-actions"]',
       popover: {
         title: 'Actions',
-        description: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF ou copier la fiche pour la coller ailleurs (Word, mail, Notion).',
+        description: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion) ou copier sa vignette en image.',
         side: 'top',
       },
     },
@@ -143,10 +144,15 @@ export const help: HelpEntry = {
     contentTypes: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
-    openArticle: 'Ouvrir l\'article : sa page de lecture, où l\'on compose aussi ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',
+    composeArticle: 'Composer l\'article : ouvre sa page en mode Composer, pour ajouter, réordonner, régler ou retirer ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',
+    readArticle: 'Page de lecture : ouvre l\'article en pleine page, pour le lire en grand ou l\'imprimer.',
     openArticleUnsaved: 'Enregistrez d\'abord l\'élément : la construction de l\'article (choix et mise en page des blocs) s\'ouvre une fois qu\'il est enregistré avec le type « Article ».',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
+    copyThumbnail: 'Copier la vignette : met dans le presse-papier une image PNG de l\'élément (type, statut, titre, image ou début de la description, espace, dates, assigné), à coller dans Teams, Slack, un mail ou PowerPoint. L\'image reflète la version enregistrée. Rien n\'est modifié dans SPOK.',
+    copyThumbnailDone: 'Vignette copiée',
+    copyThumbnailDownloaded: 'Le navigateur a refusé la copie : image téléchargée.',
+    copyThumbnailError: 'Vignette impossible à créer. Réessayez.',
     print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',
     readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (image ou schéma en grand). C\'est exactement ce que copie « Copier la fiche ». Rien ne peut y être modifié.',
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',

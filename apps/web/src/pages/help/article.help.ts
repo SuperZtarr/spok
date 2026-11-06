@@ -7,7 +7,7 @@ export const help: HelpEntry = {
   title: 'Article',
   summary: 'Une page qui assemble, dans l\'ordre choisi, des éléments existants : notes, images, schémas, liens. Ils restent à leur place et peuvent servir dans plusieurs articles.',
   tips: [
-    '« Composer » (si vous pouvez modifier l\'article) : ajouter, réordonner, régler ou retirer des blocs',
+    '« Composer » (si vous pouvez modifier l\'article) : ajouter, réordonner, régler ou retirer des blocs. Depuis la fiche de l\'article, « Composer l\'article » ouvre directement ce mode ; sans droit de modification, « Page de lecture » ouvre la lecture',
     'Ajout groupé : un élément avec ses enfants ou avec les éléments qui en découlent, ou tout un processus (ou un couloir), en une fois — 100 éléments au plus, tels qu\'ils sont au moment de l\'ajout',
     'Un bloc affiche un élément existant : le corriger le corrige partout où il apparaît',
     'Le texte d\'une note se modifie directement dans l\'article ; les autres blocs s\'ouvrent dans leur fiche',
