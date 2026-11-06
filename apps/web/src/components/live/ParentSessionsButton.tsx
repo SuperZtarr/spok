@@ -5,7 +5,7 @@
  * nommée d'après la date prévue choisie dans « Préparer la séance » (aujourd'hui par défaut) et créée « préparée ». Créer ou rejoindre en fait la séance active
  * (useActiveLiveSessionStore) et rafraîchit la barre latérale (['sidebar-spaces']). Une seule séance en cours par espace : si une séance est préparée ou en direct,
  * « Nouvelle séance » est remplacé par « Ouvrir la séance en cours » (l'API refuse aussi la création, 409).
- * N'apparaît ni dans un espace de séance ni hors communauté (géré par l'appelant).
+ * N'apparaît ni dans un espace de séance, ni hors communauté, ni pour un visiteur non connecté (géré par l'appelant).
  * « Nouvelle séance » ouvre d'abord NewSessionDialog (« Préparer la séance ») : les éléments cochés de cet espace
  * forment la préparation initiale (champ agenda de la création) ; les invités cochés sont transmis (invitees).
  * Bouton orange plein (LIVE_ACTION_CLASS, liveStyles.ts — décision Thomas 2026-10-28).

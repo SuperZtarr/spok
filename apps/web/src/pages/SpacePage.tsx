@@ -16,7 +16,7 @@
  * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
  * (liveSessionBarSlot → 3e ligne de la toolbar) ;
  * les copies verrouillées (lockedAt) ne sont pas éditables (canEditItem : OWNER, auteur ou assigné). Dans un espace de communauté
- * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
+ * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar, pour un connecté seulement.
  * Espace non chargeable (401/403/404, sans nouvelle tentative) : écran SpaceUnavailable à la place de la barre et de la
  * vue — « Se connecter » pour un visiteur, « Accueil » sinon (2026-10-28).
  * Lecture seule (canEdit faux : VIEWER, visiteur) : toutes les vues restent proposées (décision Thomas 2026-11-06) ;
@@ -684,7 +684,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           onInsertTemplate={canEdit ? handleInsertTemplate : undefined}
           spaceId={spaceId}
           spaceRole={space?.role}
-          liveSessionsSlot={space?.communityId && !live.isLiveSpace && spaceId ? (
+          liveSessionsSlot={user && space?.communityId && !live.isLiveSpace && spaceId ? (
             <ParentSessionsButton spaceId={spaceId} canCreate={spaceCommunity?.role === 'OWNER' || adminMode} />
           ) : undefined}
           liveSessionBarSlot={live.isLiveSpace && live.state ? (
