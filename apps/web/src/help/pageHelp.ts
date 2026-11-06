@@ -27,6 +27,7 @@ import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
 import { help as articleHelp } from '../pages/help/article.help';
+import { help as sitemapHelp } from '../pages/help/sitemap.help';
 import { help as globalGraphHelp } from '../pages/help/global-graph.help';
 import { help as globalSunburstHelp } from '../pages/help/global-sunburst.help';
 import { help as globalMindmapHelp } from '../pages/help/global-mindmap.help';
@@ -67,6 +68,7 @@ export const PAGE_HELP = {
   'move-to-space': moveToSpaceHelp,
   'duplicate-to-space': duplicateToSpaceHelp,
   article: articleHelp,
+  sitemap: sitemapHelp,
   'global-graph': globalGraphHelp,
   'global-sunburst': globalSunburstHelp,
   'global-mindmap': globalMindmapHelp,
