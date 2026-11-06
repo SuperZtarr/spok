@@ -6,6 +6,8 @@
  * Plusieurs mots : une pastille par mot (dès 2 mots) règle sa présence, obligatoire / au moins un / exclu (?any= et ?not=
  * répétables). Découpage et règles dans searchWords (@spok/shared), le même que l'API : ne pas redécouper ici.
  * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
+ * Une ligne d'aide (FieldHelp) annonce ce choix dès l'arrivée, avant les 2 mots, et l'explique sur téléphone, où l'infobulle
+ * des pastilles ne s'affiche pas au survol : ne pas la remplacer par une infobulle seule.
  * plusieurs sections → les 10 premiers de chacune + « Voir les N résultats » (bascule sur cette section) ;
  * une seule section → chevrons. Filtres d'items (type, statut, tags) : l'API ne renvoie plus que Items et
  * Contributions (itemFiltersActive). Tags = ceux de l'espace choisi (les tags sont propres à un espace).
@@ -26,6 +28,7 @@ import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
 import { HelpHint } from '../help/HelpHint';
 import { pageHint } from '../help/pageHint';
+import { FieldHelp } from '../help/FieldHelp';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -325,9 +328,11 @@ export function SearchPage() {
         </div>
         </div>
 
-        {/* Présence de chaque mot : un clic passe à l'état suivant (dès 2 mots) */}
+        {/* Présence de chaque mot : l'explication reste visible dès l'arrivée et au toucher (l'infobulle ne suffit pas) ;
+            pastilles dès 2 mots, un clic passe à l'état suivant */}
+        <div className="mb-3 sm:mb-4" data-tour="search-words">
         {words.length >= 2 && (
-          <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4 text-sm" data-tour="search-words">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-muted-foreground">Mots :</span>
             {words.map((word, index) => {
               const mode = WORD_MODES[word.mode];
@@ -347,6 +352,10 @@ export function SearchPage() {
           </div>
         )}
 
+        {words.length >= 2
+          ? <FieldHelp page="search" field="wordsChoice" />
+          : <FieldHelp page="search" field="words" />}
+        </div>
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
             élargissement explicite par l'utilisateur */}
         {user && (spaceIdParam || effectiveCommunityId) && (
