@@ -1,6 +1,7 @@
 /*
  * TNR de l'ajout groupé dans un article (2026-10-24) : aperçu et insertion d'une grappe ou d'un processus, liste des
  * espaces et éléments à parcourir (sélecteur). Mêmes simulacres que item-article.test.ts (droits pilotés par articleAccess).
+ * Bloc « droits et coût du parcours » (2026-11-06) : racine illisible, nœuds illisibles non étendus, doublons, budget.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
@@ -43,6 +44,11 @@ describe('Article — ajout groupé', () => {
   const getItems = (spaceId: string) => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/art/article/browse/items?spaceId=${spaceId}`, headers: auth() })
   const children = (ids: string[], parentId: string, spaceId = SPACE) =>
     ids.forEach((id, i) => { known[id] = { type: 'NOTE', spaceId, parentId, position: i } })
+  const relationsAre = (edges: [string, string][]) =>
+    prisma.itemRelation.findMany.mockImplementation(async ({ where }: any) => edges
+      .filter(([from]) => where.fromItemId.in.includes(from))
+      .map(([fromItemId, toItemId]) => ({ fromItemId, toItemId, type: 'drives', toItem: { spaceId: known[toItemId].spaceId } })))
+  const childQueries = () => prisma.item.findMany.mock.calls.filter(([a]: any[]) => a.where?.parentId?.in)
 
   beforeEach(async () => {
     ({ app, prisma } = await buildItemsTestApp())
@@ -59,7 +65,7 @@ describe('Article — ajout groupé', () => {
     prisma.item.findMany.mockImplementation(async ({ where }: any) => {
       if (where?.parentId?.in) {
         return Object.entries(known).filter(([, v]) => v.parentId && where.parentId.in.includes(v.parentId))
-          .map(([id, v]) => ({ id, parentId: v.parentId, position: v.position ?? 0, createdAt: new Date('2026-01-01') }))
+          .map(([id, v]) => ({ id, parentId: v.parentId, spaceId: v.spaceId, position: v.position ?? 0, createdAt: new Date('2026-01-01') }))
       }
       if (where?.id?.in) return where.id.in.filter((id: string) => known[id]).map((id: string) => ({ id, ...known[id] }))
       return []
@@ -88,9 +94,7 @@ describe('Article — ajout groupé', () => {
     known.root = { type: 'TASK', spaceId: SPACE }
     known.b = { type: 'TASK', spaceId: SPACE }
     known.c = { type: 'TASK', spaceId: 's2' }
-    prisma.itemRelation.findMany.mockImplementation(async ({ where }: any) =>
-      [{ fromItemId: 'root', toItemId: 'b', type: 'drives' }, { fromItemId: 'b', toItemId: 'c', type: 'blocks' }]
-        .filter((r) => where.fromItemId.in.includes(r.fromItemId)))
+    relationsAre([['root', 'b'], ['b', 'c']])
     const res = await post('/batch', { source: { kind: 'items', itemIds: ['root'], children: false, chain: true } })
     expect(res.statusCode).toBe(201)
     expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['root', 'b', 'c'])
@@ -162,6 +166,115 @@ describe('Article — ajout groupé', () => {
   it('plus de 100 éléments cochés → 400 (validation)', async () => {
     const itemIds = Array.from({ length: 101 }, (_, i) => `x${i}`)
     expect((await post('/batch/preview', { source: { kind: 'items', itemIds, children: false, chain: false } })).statusCode).toBe(400)
+  })
+
+  describe('droits et coût du parcours (2026-11-06)', () => {
+    const items = (extra: Record<string, unknown> = {}) => ({ kind: 'items', itemIds: ['root'], children: false, chain: false, ...extra })
+
+    it('racine illisible, seule ou mêlée à une racine lisible → 403 aperçu et insertion, sans parcours', async () => {
+      known.root = { type: 'NOTE', spaceId: 'priv' }
+      known.ok = { type: 'NOTE', spaceId: SPACE }
+      children(['c1'], 'root', 'priv')
+      for (const itemIds of [['root'], ['ok', 'root']]) {
+        const source = items({ itemIds, children: true, chain: true })
+        const preview = await post('/batch/preview', { source })
+        expect(preview.statusCode).toBe(403)
+        expect(preview.json().code).toBe('SOURCE_UNREADABLE')
+        expect((await post('/batch', { source })).statusCode).toBe(403)
+      }
+      expect(childQueries()).toHaveLength(0)
+      expect(prisma.itemRelation.findMany).not.toHaveBeenCalled()
+      expect(prisma.articleBlock.createMany).not.toHaveBeenCalled()
+    })
+
+    it('racine inexistante : ignorée à côté d’une racine valide, 404 si aucune n’existe', async () => {
+      known.ok = { type: 'NOTE', spaceId: SPACE }
+      expect((await post('/batch/preview', { source: items({ itemIds: ['absent', 'ok'] }) })).json().count).toBe(1)
+      expect((await post('/batch/preview', { source: items({ itemIds: ['absent'] }) })).statusCode).toBe(404)
+    })
+
+    it('chaîne passant par un nœud illisible : cible comptée, rien au-delà', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      known.hidden = { type: 'NOTE', spaceId: 'priv' }
+      known.beyond = { type: 'NOTE', spaceId: SPACE }
+      relationsAre([['root', 'hidden'], ['hidden', 'beyond']])
+      const source = items({ chain: true })
+      expect((await post('/batch/preview', { source })).json()).toMatchObject({ count: 1, skipped: { unreadable: 1 } })
+      expect(prisma.itemRelation.findMany.mock.calls.flatMap(([a]: any[]) => a.where.fromItemId.in)).toEqual(['root'])
+      const res = await post('/batch', { source })
+      expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['root'])
+    })
+
+    it('enfant illisible : compté, sa descendance n’est pas parcourue', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      known.hidden = { type: 'NOTE', spaceId: 'priv', parentId: 'root' }
+      known.beyond = { type: 'NOTE', spaceId: SPACE, parentId: 'hidden' }
+      const res = await post('/batch/preview', { source: items({ children: true }) })
+      expect(res.json()).toMatchObject({ count: 1, skipped: { unreadable: 1 } })
+      expect(childQueries().flatMap(([a]: any[]) => a.where.parentId.in)).toEqual(['root'])
+    })
+
+    it('itemIds en double : une seule visite, compte inchangé', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      children(['c1'], 'root')
+      const res = await post('/batch/preview', { source: items({ itemIds: ['root', 'root', 'root'], children: true }) })
+      expect(res.json().count).toBe(2)
+      expect(childQueries().map(([a]: any[]) => a.where.parentId.in)).toEqual([['root'], ['c1']])
+    })
+
+    it('budget dépassé : arrêt du parcours, tooMany, 400 TOO_MANY, requêtes plafonnées', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      // 3 niveaux de 400 : le budget de 1000 saute au 3e, le 4e n'est jamais demandé
+      const level = (n: number) => Array.from({ length: 400 }, (_, i) => `l${n}-${i}`)
+      children(level(1), 'root')
+      level(1).forEach((p, i) => { known[`l2-${i}`] = { type: 'NOTE', spaceId: SPACE, parentId: p } })
+      level(2).forEach((p, i) => { known[`l3-${i}`] = { type: 'NOTE', spaceId: SPACE, parentId: p } })
+      known.deep = { type: 'NOTE', spaceId: SPACE, parentId: 'l3-0' }
+      const source = items({ children: true, chain: true })
+      expect((await post('/batch/preview', { source })).json()).toEqual({ count: 0, skipped: { present: 0, unreadable: 0, articles: 0 }, tooMany: true, lessVisible: false })
+      expect(childQueries().map(([a]: any[]) => a.take)).toEqual([1001, 601, 201])
+      expect(prisma.itemRelation.findMany).not.toHaveBeenCalled()
+      const res = await post('/batch', { source })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().code).toBe('TOO_MANY')
+      expect(prisma.articleBlock.createMany).not.toHaveBeenCalled()
+    })
+
+    it('budget partagé entre enfants et chaîne : la chaîne ne reçoit que le reste', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      children(Array.from({ length: 700 }, (_, i) => `k${i}`), 'root')
+      const targets = Array.from({ length: 301 }, (_, i) => `t${i}`)
+      targets.forEach((id) => { known[id] = { type: 'NOTE', spaceId: SPACE } })
+      relationsAre(targets.map((t) => ['root', t]))
+      const res = await post('/batch/preview', { source: items({ children: true, chain: true }) })
+      expect(res.json().tooMany).toBe(true)
+      expect(prisma.itemRelation.findMany.mock.calls[0][0].take).toBe(301)
+    })
+
+    it('article contenant déjà beaucoup d’éléments de la source : pas de TOO_MANY à tort', async () => {
+      known.root = { type: 'NOTE', spaceId: SPACE }
+      const ids = Array.from({ length: 155 }, (_, i) => `k${i}`)
+      children(ids, 'root')
+      present = ids.slice(0, 150)
+      const source = items({ children: true })
+      expect((await post('/batch/preview', { source })).json()).toMatchObject({ count: 6, skipped: { present: 150 }, tooMany: false })
+      expect((await post('/batch', { source })).statusCode).toBe(201)
+    })
+
+    it('enfant coché après un autre élément : reste juste après son parent', async () => {
+      known.p = { type: 'NOTE', spaceId: SPACE }
+      known.q = { type: 'NOTE', spaceId: SPACE }
+      known.c = { type: 'NOTE', spaceId: SPACE, parentId: 'p', position: 0 }
+      const res = await post('/batch', { source: items({ itemIds: ['p', 'q', 'c'], children: true }) })
+      expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['p', 'c', 'q'])
+    })
+
+    it('deux racines : chaque grappe garde sa chaîne, dans l’ordre reçu', async () => {
+      for (const id of ['a', 'a1', 'b', 'b1']) known[id] = { type: 'NOTE', spaceId: SPACE }
+      relationsAre([['a', 'a1'], ['b', 'b1']])
+      const res = await post('/batch', { source: items({ itemIds: ['b', 'a'], chain: true }) })
+      expect(res.json().blocks.map((b: any) => b.item.id)).toEqual(['b', 'b1', 'a', 'a1'])
+    })
   })
 
   it('espaces à parcourir : portée, nombre d’éléments, processus éventuel', async () => {

@@ -14,11 +14,17 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06 (2)
+- Lot poussé : Article, sécurité du parcours de l'ajout groupé (fix). Typecheck OK, TNR 1896/1896, en-têtes OK. `toItem` du select contrôlé contre le schéma Prisma
+
+### Sécurité ajout groupé d'un article — 2026-11-06
+- Correctif `clusterIds` : racine illisible 403, nœud illisible non étendu, doublons retirés, budget de 1000 lignes partagé. Spec : item enfant `Ajout groupé : droits et plafond du parcours` (to_validate), fiche parente inchangée. Poussé par la MEP du 2026-11-06. Non contrôlé à l'écran ni sur une vraie base
+
 ### MEP — 2026-11-06
 - 3 lots poussés : bouton Filtre ou Aperçu en ambre (feat), Copier la vignette (feat), bouton de la fiche d'un article (feat). ItemEditModal et item-modal.help, imbriqués, entiers dans le dernier commit (branchement du bouton vignette compris). Typecheck OK, TNR 1885/1885, en-têtes OK
 
 ### Écrans d'un article — 2026-11-06
-- Bouton commun aux modes Afficher et Modifier : « Composer l'article » (page ouverte en Composer) ou « Page de lecture » selon les droits. Inscrit dans PRÊT POUR MEP, NON COMMITÉ
+- Bouton commun aux modes Afficher et Modifier : « Composer l'article » (page ouverte en Composer) ou « Page de lecture » selon les droits. Poussé par la MEP du 2026-11-06. Non contrôlé à l'écran avant le push, test demandé à Thomas
 
 ### MEP — 2026-11-05 (3)
 - Lot poussé : filtre à choix multiple, filtre visible, Gantt élargi, badge de l'assigné (feat). Typecheck OK, TNR 1876/1876, en-têtes OK

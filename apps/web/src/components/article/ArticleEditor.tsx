@@ -10,7 +10,8 @@
  *   ou « Texte » (nouvelle note) ; un élément sans option = ajout unitaire ; plusieurs éléments, options enfants /
  *   chaîne, ou processus = ajout groupé : aperçu (articlesApi.previewBatch)
  *   → ArticleBatchConfirm → state.addBatch (confirmLessVisible = aperçu.lessVisible) ;
- * - 409 LESS_VISIBLE → ConfirmModal (texte de la fiche) puis renvoi avec confirmLessVisible ; 409 DUPLICATE_REFERENCE → message.
+ * - 409 LESS_VISIBLE → ConfirmModal (texte de la fiche) puis renvoi avec confirmLessVisible ; 409 DUPLICATE_REFERENCE → message ;
+ *   ajout groupé 403 SOURCE_UNREADABLE (élément ou processus illisible) → message batchForbidden de la fiche.
  * Props : spaceId, articleId, article (ArticleView), state (retour de useArticle). Textes : pages/help/article.help.ts.
  */
 import { useEffect, useRef, useState } from 'react';
@@ -183,20 +184,25 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
   };
 
   // Ajout groupé : aperçu de l'API, puis confirmation (ArticleBatchConfirm) et insertion
+  const batchError = (e: unknown) => {
+    const code = e instanceof ApiError ? e.code ?? (e.details as { code?: string } | undefined)?.code : undefined;
+    setBatch(null);
+    setMessage(code === 'SOURCE_UNREADABLE' ? pageHint('article', 'batchForbidden') ?? null : (e as Error).message);
+  };
   const startBatch = (source: ArticleBatchSource, position: number) => {
     setMessage(null);
     setPickAt(null);
     setBatch({ source, position, preview: null });
     articlesApi.previewBatch(spaceId, articleId, source).then(
       (preview) => setBatch((b) => (b && b.source === source ? { ...b, preview } : b)),
-      (e) => { setBatch(null); setMessage((e as Error).message); },
+      batchError,
     );
   };
   const confirmBatch = () => {
     if (!batch?.preview) return;
     state.addBatch.mutate({ source: batch.source, position: batch.position, confirmLessVisible: batch.preview.lessVisible }, {
       onSuccess: () => setBatch(null),
-      onError: (e) => { setBatch(null); setMessage((e as Error).message); },
+      onError: batchError,
     });
   };
   // Sélecteur : un élément sans option = ajout unitaire ; sinon ajout groupé confirmé

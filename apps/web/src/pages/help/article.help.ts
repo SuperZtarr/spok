@@ -80,7 +80,9 @@ export const help: HelpEntry = {
     pickChain: 'Ajoute aussi les éléments qui en découlent : liens « Entraîne », « Bloque » et « Permet » partant de l\'élément, de proche en proche (« Lié à » n\'est pas suivi).',
     batchConfirm: 'Ajoute ces éléments à cet endroit, chacun comme un bloc séparé, tels qu\'ils sont aujourd\'hui : ce qui sera ajouté plus tard à la grappe ou au processus n\'apparaîtra pas tout seul. Chaque bloc peut ensuite être retiré ou déplacé.',
     batchSkipped: 'Sautés : éléments déjà présents dans l\'article, articles (un article ne contient pas d\'article) et éléments que vous ne pouvez pas lire.',
-    batchTooMany: 'Plus de 100 éléments : ajoutez une partie plus petite (un couloir, ou sans les éléments qui en découlent).',
+    // Limite : 100 ajoutés (BATCH_MAX), 1 000 parcourus (BATCH_VISIT_MAX, routes/item-article.ts)
+    batchTooMany:'Trop d\'éléments : 100 au plus sont ajoutés à la fois, et 1 000 sont parcourus au plus, ceux déjà présents compris. Ajoutez une partie plus petite (un couloir, ou sans les éléments qui en découlent).',
+    batchForbidden: 'Vous n\'avez pas accès à cet espace ou à l\'un de ces éléments : rien n\'a été ajouté. Modifiez la sélection ou demandez l\'accès.',
     batchEmpty: 'Rien à ajouter : tous ces éléments sont déjà dans l\'article ou ne peuvent pas y figurer.',
     batchLessVisible: 'Certains de ces éléments sont moins visibles que l\'article (espace privé ou autre communauté) : tous les lecteurs de l\'article verront leur contenu, sans accès aux éléments eux-mêmes.',
     browserSpaces: 'Espaces que vous pouvez lire, avec leur nombre d\'éléments (hors articles). Choisissez-en un pour parcourir ses éléments.',

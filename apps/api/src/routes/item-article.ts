@@ -25,6 +25,11 @@
  * 409 LESS_VISIBLE). Source = éléments cochés (chacun avec enfants et/ou chaîne de relations sortantes, dans l'ordre
  * reçu, sans doublon) ou processus d'un espace / d'un couloir, ordonnée par utils/articleBatch.ts ; articles,
  * éléments présents et illisibles (hors mode admin) sautés et comptés. Photo au moment de l'ajout.
+ * Droits du parcours (2026-11-06) : racine cochée illisible hors mode admin → 403 SOURCE_UNREADABLE sur toute la requête ;
+ * un élément illisible atteint reste sauté et compté, mais on ne suit ni ses enfants ni ses relations. Budget de
+ * BATCH_VISIT_MAX lignes parcourues, partagé par toutes les racines (enfants + chaîne), arrêt immédiat au dépassement :
+ * tooMany à l'aperçu, 400 TOO_MANY à l'insertion. Il reste distinct de BATCH_MAX, calculé après filtrage : un arrêt à
+ * 100 tronquerait à tort une source dont la plupart des éléments sont déjà dans l'article.
  * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
  * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
  */
@@ -225,6 +230,7 @@ async function pickerSpaces(prisma: any, articleSpaceId: string, userId: string,
 }
 
 const BATCH_MAX = 100;
+const BATCH_VISIT_MAX = 10 * BATCH_MAX;
 const BROWSE_MAX = 500;
 const batchSourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('items'), itemIds: z.array(z.string().min(1)).min(1).max(BATCH_MAX), children: z.boolean(), chain: z.boolean() }),
@@ -237,69 +243,105 @@ const batchInsertSchema = z.object({
   confirmLessVisible: z.boolean().optional(),
 });
 
-type BatchError = { status: 403 | 404; message: string };
+type BatchError = { status: 403 | 404; message: string; code?: string };
+type VisitBudget = { left: number };
+type ReadableOf = (spaceIds: string[]) => Promise<Set<string>>;
 
-/** Éléments d'une source, ordonnés (articleBatch.ts), avant filtrage. */
-async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatchSource): Promise<string[] | BatchError> {
+/** Espaces lisibles hors mode admin, mémorisés le temps d'une requête (filterReadableSpaceIds lance plusieurs requêtes). */
+function readableSpacesMemo(prisma: any, userId: string): ReadableOf {
+  const known = new Map<string, boolean>();
+  return async (spaceIds) => {
+    const missing = [...new Set(spaceIds)].filter((id) => !known.has(id));
+    if (missing.length) {
+      const readable = new Set(await filterReadableSpaceIds(prisma, userId, missing, false));
+      missing.forEach((id) => known.set(id, readable.has(id)));
+    }
+    return new Set(spaceIds.filter((id) => known.get(id)));
+  };
+}
+
+/** Éléments d'une source, ordonnés (articleBatch.ts), avant filtrage ; 'overflow' si le budget de parcours est dépassé. */
+async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatchSource): Promise<string[] | BatchError | 'overflow'> {
   if (source.kind === 'process') {
     const readable = await filterReadableSpaceIds(prisma, userId, [source.spaceId], false);
-    if (readable.length === 0) return { status: 403, message: 'You cannot read this process' };
+    if (readable.length === 0) return { status: 403, code: 'SOURCE_UNREADABLE', message: 'You cannot read this process' };
     const lanes = await prisma.processLane.findMany({ where: { spaceId: source.spaceId }, select: { id: true, itemId: true, position: true } });
     if (source.laneId && !lanes.some((l: { id: string }) => l.id === source.laneId)) return { status: 404, message: 'Lane not found' };
     const nodes = await prisma.processNode.findMany({ where: { spaceId: source.spaceId }, select: { itemId: true, laneId: true, x: true, y: true } });
     return orderProcess(lanes, nodes, source.laneId);
   }
-  const out: string[] = [];
-  for (const itemId of source.itemIds) {
-    const ids = await clusterIds(prisma, itemId, source.children, source.chain);
-    if (ids) out.push(...ids);
-  }
-  if (out.length === 0) return { status: 404, message: 'Item not found' };
-  return [...new Set(out)];
+  const itemIds = [...new Set(source.itemIds)];
+  const roots: { id: string; spaceId: string }[] = await prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, spaceId: true } });
+  if (roots.length === 0) return { status: 404, message: 'Item not found' };
+  const readableOf = readableSpacesMemo(prisma, userId);
+  const readableRoots = await readableOf(roots.map((r) => r.spaceId));
+  if (roots.some((r) => !readableRoots.has(r.spaceId))) return { status: 403, code: 'SOURCE_UNREADABLE', message: 'You cannot read this item' };
+
+  const existing = new Set(roots.map((r) => r.id));
+  const rootIds = itemIds.filter((id) => existing.has(id));
+  const budget: VisitBudget = { left: BATCH_VISIT_MAX };
+  const childRows = source.children ? await walkChildren(prisma, rootIds, budget, readableOf) : [];
+  if (!childRows) return 'overflow';
+  const relations = source.chain ? await walkChain(prisma, rootIds, budget, readableOf) : [];
+  if (!relations) return 'overflow';
+  return [...new Set(rootIds.flatMap((id) => orderCluster(
+    id,
+    source.children ? orderDescendants(id, childRows) : null,
+    source.chain ? orderChain(id, relations) : null,
+  )))];
 }
 
-/** Un élément avec, au choix, sa descendance et la chaîne de ses relations sortantes ; null s'il n'existe pas. */
-async function clusterIds(prisma: any, itemId: string, withChildren: boolean, withChain: boolean): Promise<string[] | null> {
-  const root = await prisma.item.findUnique({ where: { id: itemId }, select: { id: true, spaceId: true } });
-  if (!root) return null;
-  let descendants: string[] | null = null;
-  if (withChildren) {
-    const rows: { id: string; parentId: string | null; position: number; createdAt: Date }[] = [];
-    const seen = new Set<string>([root.id]);
-    let frontier = [root.id];
-    while (frontier.length) {
-      const found = (await prisma.item.findMany({
-        where: { parentId: { in: frontier } },
-        select: { id: true, parentId: true, position: true, createdAt: true },
-      })).filter((r: { id: string }) => !seen.has(r.id));
-      found.forEach((r: { id: string }) => seen.add(r.id));
-      rows.push(...found);
-      frontier = found.map((r: { id: string }) => r.id);
-    }
-    descendants = orderDescendants(root.id, rows);
+/** Descendance de toutes les racines, une requête par niveau ; n'étend jamais un élément illisible ; null si budget dépassé.
+ *  Une racine atteinte comme enfant d'une autre garde sa ligne : elle se place après son parent, sans être parcourue deux fois. */
+async function walkChildren(prisma: any, rootIds: string[], budget: VisitBudget, readableOf: ReadableOf) {
+  const rows: { id: string; parentId: string | null; position: number; createdAt: Date; spaceId: string }[] = [];
+  const seen = new Set(rootIds);
+  let frontier = rootIds;
+  while (frontier.length) {
+    const found: typeof rows = await prisma.item.findMany({
+      where: { parentId: { in: frontier } },
+      take: budget.left + 1,
+      select: { id: true, parentId: true, position: true, createdAt: true, spaceId: true },
+    });
+    budget.left -= found.length;
+    if (budget.left < 0) return null;
+    rows.push(...found);
+    const readable = await readableOf(found.map((r) => r.spaceId));
+    frontier = found.filter((r) => !seen.has(r.id) && readable.has(r.spaceId)).map((r) => r.id);
+    frontier.forEach((id) => seen.add(id));
   }
-  let chain: string[] | null = null;
-  if (withChain) {
-    const relations: { fromItemId: string; toItemId: string; type: string }[] = [];
-    const seen = new Set<string>([root.id]);
-    let frontier = [root.id];
-    while (frontier.length) {
-      const found = await prisma.itemRelation.findMany({
-        where: { fromItemId: { in: frontier }, type: { in: ['blocks', 'implements', 'drives'] } },
-        select: { fromItemId: true, toItemId: true, type: true },
-      });
-      relations.push(...found);
-      frontier = found.map((r: { toItemId: string }) => r.toItemId).filter((id: string) => !seen.has(id));
-      frontier.forEach((id) => seen.add(id));
-    }
-    chain = orderChain(root.id, relations);
+  return rows;
+}
+
+/** Relations sortantes de la chaîne de toutes les racines, mêmes règles que walkChildren : une cible illisible reste
+ *  dans le résultat pour être comptée, mais ses propres relations ne sont pas suivies. */
+async function walkChain(prisma: any, rootIds: string[], budget: VisitBudget, readableOf: ReadableOf) {
+  const relations: { fromItemId: string; toItemId: string; type: string }[] = [];
+  const seen = new Set(rootIds);
+  let frontier = rootIds;
+  while (frontier.length) {
+    const found: { fromItemId: string; toItemId: string; type: string; toItem: { spaceId: string } }[] = await prisma.itemRelation.findMany({
+      where: { fromItemId: { in: frontier }, type: { in: ['blocks', 'implements', 'drives'] } },
+      take: budget.left + 1,
+      select: { fromItemId: true, toItemId: true, type: true, toItem: { select: { spaceId: true } } },
+    });
+    budget.left -= found.length;
+    if (budget.left < 0) return null;
+    relations.push(...found);
+    const readable = await readableOf(found.map((r) => r.toItem.spaceId));
+    const next = found.filter((r) => !seen.has(r.toItemId) && readable.has(r.toItem.spaceId)).map((r) => r.toItemId);
+    frontier = [...new Set(next)];
+    frontier.forEach((id) => seen.add(id));
   }
-  return orderCluster(root.id, descendants, chain);
+  return relations;
 }
 
 /** Source résolue pour un article : ids retenus dans l'ordre + aperçu (comptes, limite, visibilité). */
 async function resolveBatch(prisma: any, article: { id: string; spaceId: string }, userId: string, source: ArticleBatchSource): Promise<{ ids: string[]; preview: ArticleBatchPreview } | BatchError> {
   const ordered = await orderedSourceIds(prisma, userId, source);
+  if (ordered === 'overflow') {
+    return { ids: [], preview: { count: 0, skipped: { present: 0, unreadable: 0, articles: 0 }, tooMany: true, lessVisible: false } };
+  }
   if (!Array.isArray(ordered)) return ordered;
   const infos: { id: string; type: string; spaceId: string }[] = ordered.length
     ? await prisma.item.findMany({ where: { id: { in: ordered } }, select: { id: true, type: true, spaceId: true } })
@@ -339,7 +381,7 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     if (!ctx) return reply;
     const { source } = batchPreviewSchema.parse(request.body);
     const res = await resolveBatch(fastify.prisma, ctx.article, ctx.userId, source as ArticleBatchSource);
-    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, message: res.message });
+    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, code: res.code, message: res.message });
     return res.preview;
   });
 
@@ -348,7 +390,7 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     if (!ctx) return reply;
     const { source, position, confirmLessVisible } = batchInsertSchema.parse(request.body);
     const res = await resolveBatch(fastify.prisma, ctx.article, ctx.userId, source as ArticleBatchSource);
-    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, message: res.message });
+    if ('status' in res) return reply.status(res.status).send({ statusCode: res.status, code: res.code, message: res.message });
     const { ids, preview } = res;
     if (preview.tooMany) return reply.status(400).send({ statusCode: 400, code: 'TOO_MANY', message: `At most ${BATCH_MAX} items at once` });
     if (ids.length === 0) return reply.status(400).send({ statusCode: 400, code: 'EMPTY', message: 'Nothing to add' });

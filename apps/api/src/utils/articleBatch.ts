@@ -6,7 +6,8 @@
  * - orderCluster : racine, descendants, puis chaîne, sans doublon ;
  * - orderProcess : couloirs par position (élément du couloir puis ses membres par x puis y), puis éléments hors
  *   couloir par x puis y ; laneId → ce couloir seul. Sans doublon.
- * Le filtrage (articles, présents, illisibles) et la limite de 100 sont appliqués par la route.
+ * Le filtrage (articles, présents, illisibles), la limite de 100 et le budget de parcours sont appliqués par la route :
+ * les lignes reçues peuvent être communes à plusieurs racines, seul ce qui est atteint depuis rootId compte.
  */
 const CHAIN_TYPES = new Set(['blocks', 'implements', 'drives']);
 
@@ -39,17 +40,25 @@ export function orderDescendants(
 }
 
 export function orderChain(rootId: string, relations: { fromItemId: string; toItemId: string; type: string }[]): string[] {
+  // Index par source : la route appelle cette fonction jusqu'à 100 fois par requête sur le même jeu de relations
+  const targets = new Map<string, string[]>();
+  for (const r of relations) {
+    if (!CHAIN_TYPES.has(r.type)) continue;
+    const list = targets.get(r.fromItemId) ?? [];
+    list.push(r.toItemId);
+    targets.set(r.fromItemId, list);
+  }
   const out: string[] = [];
   const seen = new Set<string>([rootId]);
   let frontier = [rootId];
   while (frontier.length) {
     const next: string[] = [];
     for (const from of frontier) {
-      for (const r of relations) {
-        if (r.fromItemId !== from || !CHAIN_TYPES.has(r.type) || seen.has(r.toItemId)) continue;
-        seen.add(r.toItemId);
-        out.push(r.toItemId);
-        next.push(r.toItemId);
+      for (const to of targets.get(from) ?? []) {
+        if (seen.has(to)) continue;
+        seen.add(to);
+        out.push(to);
+        next.push(to);
       }
     }
     frontier = next;
