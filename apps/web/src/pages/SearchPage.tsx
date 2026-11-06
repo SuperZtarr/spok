@@ -1,13 +1,14 @@
 /*
  * Recherche avancée (/search?q=...) : communautés, espaces, items, utilisateurs, contributions.
+ * Catégorie Utilisateurs masquée sans connexion ; e-mail, rôle et compteurs affichés seulement si l'API les renvoie, en mode admin (règle search-users-scope).
  * Portée par défaut = espace/communauté d'où la recherche est lancée (?spaceId= / ?communityId=,
  * posés par lib/searchScope) ; l'utilisateur élargit explicitement (« Toute la communauté », « Partout »).
  * Tout l'état vit dans l'URL ; modifier plusieurs paramètres → updateParams (un seul setSearchParams).
  * Plusieurs mots : une pastille par mot (dès 2 mots) règle sa présence, obligatoire / au moins un / exclu (?any= et ?not=
  * répétables). Découpage et règles dans searchWords (@spok/shared), le même que l'API : ne pas redécouper ici.
- * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
  * Une ligne d'aide (FieldHelp) annonce ce choix dès l'arrivée, avant les 2 mots, et l'explique sur téléphone, où l'infobulle
  * des pastilles ne s'affiche pas au survol : ne pas la remplacer par une infobulle seule.
+ * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
  * plusieurs sections → les 10 premiers de chacune + « Voir les N résultats » (bascule sur cette section) ;
  * une seule section → chevrons. Filtres d'items (type, statut, tags) : l'API ne renvoie plus que Items et
  * Contributions (itemFiltersActive). Tags = ceux de l'espace choisi (les tags sont propres à un espace).
@@ -27,8 +28,8 @@ import type { SearchWord, SearchWordMode } from '@spok/shared';
 import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
 import { HelpHint } from '../help/HelpHint';
-import { pageHint } from '../help/pageHint';
 import { FieldHelp } from '../help/FieldHelp';
+import { pageHint } from '../help/pageHint';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -260,8 +261,8 @@ export function SearchPage() {
   const itemFiltersActive = !!(itemTypeParam || itemStatusParam || tagIdsParam);
   const activeFilterCount = [effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam].filter(Boolean).length;
   const shownTypes = useMemo(
-    () => [...enabledTypes].filter((t) => !itemFiltersActive || ITEM_FILTER_SECTIONS.has(t)),
-    [enabledTypes, itemFiltersActive],
+    () => [...enabledTypes].filter((t) => (!itemFiltersActive || ITEM_FILTER_SECTIONS.has(t)) && (user || t !== 'users')),
+    [enabledTypes, itemFiltersActive, user],
   );
   // Pagination par section : une seule section → page de l'URL ; plusieurs → 10 premiers de chacune
   const singleSection = shownTypes.length === 1;
@@ -351,11 +352,11 @@ export function SearchPage() {
             })}
           </div>
         )}
-
         {words.length >= 2
           ? <FieldHelp page="search" field="wordsChoice" />
           : <FieldHelp page="search" field="words" />}
         </div>
+
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
             élargissement explicite par l'utilisateur */}
         {user && (spaceIdParam || effectiveCommunityId) && (
@@ -392,7 +393,8 @@ export function SearchPage() {
         {/* Entity type toggles */}
         {/* Mobile : une seule ligne défilante ; desktop : retour à la ligne */}
         <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 sm:mb-4 overflow-x-auto no-scrollbar sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0" data-tour="search-types">
-          {ENTITY_TYPES.map(({ key, label, icon: Icon }) => (
+          {/* Catégorie Utilisateurs réservée aux connectés (règle search-users-scope) */}
+          {ENTITY_TYPES.filter(({ key }) => user || key !== 'users').map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => toggleType(key)}
@@ -642,10 +644,12 @@ export function SearchPage() {
                       </div>
                       {u.email && <p className="text-xs text-muted-foreground"><Highlight text={u.email} words={highlightWords} /></p>}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
-                      <span>{u.communityCount} comm.</span>
-                      <span>{u.spaceCount} esp.</span>
-                    </div>
+                    {u.communityCount !== undefined && (
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
+                        <span>{u.communityCount} comm.</span>
+                        <span>{u.spaceCount} esp.</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

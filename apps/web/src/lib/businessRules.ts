@@ -468,6 +468,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/communities.ts (POST /, PATCH /:id), apps/api/src/routes/admin/communities.ts (approve-public / reject-public), apps/web/src/pages/CommunitySettingsPage.tsx',
   },
   {
+    id: 'search-users-scope',
+    page: 'Recherche, section Utilisateurs',
+    trigger: 'Recherche avec la catégorie Utilisateurs (GET /search/advanced)',
+    effect: "Visiteur non connecté : aucun utilisateur, catégorie masquée. Connecté, admin hors mode admin compris : recherche sur le nom seul, comptes actifs, membres de la portée s'il peut la lire, sinon lui-même et les personnes avec qui il partage un espace ou une communauté ; réponse limitée à l'identifiant, au nom et à l'avatar. Admin en mode admin : tous les comptes, recherche sur le nom et l'e-mail, réponse complète (décision Thomas 2026-11-06)",
+    location: 'apps/api/src/routes/search.ts (section Users), apps/web/src/pages/SearchPage.tsx',
+  },
+  {
     id: 'members-email-scope',
     page: "Membres d'un espace ou d'une communauté, éléments et contributions",
     trigger: "Lecture de la liste des membres (GET /spaces/:id/members, GET /communities/:id/members), d'un élément ou de contributions",

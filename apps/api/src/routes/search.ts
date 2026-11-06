@@ -11,7 +11,11 @@
  * - filtres d'items (type, statut, priorité, tags) : appliqués aux items ET aux contributions (via leur item) ;
  *   les sections communautés, espaces et utilisateurs sont alors omises (itemFiltersActive dans la réponse) ;
  * - spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi la section
- *   utilisateurs aux membres (portée par défaut posée par la page Recherche).
+ *   utilisateurs aux membres (portée par défaut posée par la page Recherche) ;
+ * - section utilisateurs (décision Thomas 2026-11-06, businessRules search-users-scope) : anonyme = aucun résultat ;
+ *   connecté = nom seul, comptes actifs, membres de la portée lisible ou, sans portée, soi-même et ceux avec qui il
+ *   partage un espace ou une communauté, réponse limitée à id, nom, avatar ; admin en mode admin = tous, nom et e-mail,
+ *   réponse complète. Ne pas élargir sans décision : la colonne email ne se cherche jamais hors mode admin.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
@@ -214,39 +218,57 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     // ── Users ──
     let users: any[] = [];
     let totalUsers = 0;
-    if (enabledTypes.has('users')) {
-      const userWhere: Record<string, unknown> = buildWordsWhere(words, [{ name: 'name' }, { name: 'email' }]);
+    // Règle complète en tête de fichier. Anonyme : aucune requête, rien à deviner (businessRules search-users-scope).
+    if (enabledTypes.has('users') && userId) {
+      // E-mail cherché en mode admin seulement : le chercher ailleurs permettrait d'en deviner le contenu, mots exclus compris
+      const userWhere: Record<string, unknown> = buildWordsWhere(words, isAdmin ? [{ name: 'name' }, { name: 'email' }] : [{ name: 'name' }]);
       // Portée : membres de l'espace (sous-espaces inclus, déjà bornés aux espaces accessibles)
       // ou de la communauté — seulement si le demandeur peut la voir (admin, membre, ou publique
       // non privée), sinon on ne révèle pas ses membres
       let canListMembers = true;
       if (!effectiveSpaceIds && communityId && !isAdmin) {
         const [membership, publicCommunity] = await Promise.all([
-          userId ? fastify.prisma.communityMembership.findFirst({ where: { communityId, userId }, select: { id: true } }) : null,
+          fastify.prisma.communityMembership.findFirst({ where: { communityId, userId }, select: { id: true } }),
           fastify.prisma.community.findFirst({ where: { id: communityId, visibility: { not: 'PRIVATE' } }, select: { id: true } }),
         ]);
         canListMembers = !!(membership || publicCommunity);
       }
       if (effectiveSpaceIds) userWhere.memberships = { some: { spaceId: { in: effectiveSpaceIds } } };
       else if (communityId) userWhere.communityMemberships = { some: { communityId } };
+      else if (!isAdmin) {
+        // Sans portée : soi-même et les personnes avec qui on partage un espace ou une communauté
+        const [mySpaces, myCommunities] = await Promise.all([
+          fastify.prisma.spaceMembership.findMany({ where: { userId }, select: { spaceId: true } }),
+          fastify.prisma.communityMembership.findMany({ where: { userId }, select: { communityId: true } }),
+        ]);
+        userWhere.OR = [
+          { id: userId },
+          { memberships: { some: { spaceId: { in: mySpaces.map(m => m.spaceId) } } } },
+          { communityMemberships: { some: { communityId: { in: myCommunities.map(m => m.communityId) } } } },
+        ];
+      }
+      if (!isAdmin) userWhere.disabledAt = null;
 
       const [rows, count] = canListMembers ? await Promise.all([
         fastify.prisma.user.findMany({
           where: userWhere as any,
           select: {
-            id: true, name: true, email: true, avatarUrl: true, globalRole: true, createdAt: true,
-            _count: { select: { communityMemberships: true, memberships: true } },
-          },
+            id: true, name: true, avatarUrl: true,
+            // Rôle et compteurs (espaces privés compris) : mode admin seulement
+            ...(isAdmin ? {
+              email: true, globalRole: true,
+              _count: { select: { communityMemberships: true, memberships: true } },
+            } : {}),
+          } as any,
           orderBy: { name: 'asc' },
           skip, take: pageSize,
         }),
         fastify.prisma.user.count({ where: userWhere as any }),
       ]) : [[], 0] as const;
-      users = rows.map(u => ({
-        id: u.id, name: u.name, email: userId ? u.email : null, // hide email for anonymous
-        avatarUrl: u.avatarUrl, globalRole: u.globalRole,
+      users = (rows as any[]).map(u => isAdmin ? {
+        id: u.id, name: u.name, email: u.email, avatarUrl: u.avatarUrl, globalRole: u.globalRole,
         communityCount: u._count.communityMemberships, spaceCount: u._count.memberships,
-      }));
+      } : { id: u.id, name: u.name, avatarUrl: u.avatarUrl });
       totalUsers = count;
     }
 

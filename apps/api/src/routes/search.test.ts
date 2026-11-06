@@ -1,7 +1,8 @@
 /*
  * TNR de /search : résultats, pagination, périmètre par memberships, anonyme → vide.
  * /search/advanced : portée espace (sous-espaces inclus) / communauté sur items et utilisateurs ;
- * périmètre = espaces lisibles (visibilité effective, anonyme compris), filtres d'items, dès 1 caractère.
+ * périmètre = espaces lisibles (visibilité effective, anonyme compris), filtres d'items, dès 1 caractère ;
+ * section utilisateurs : anonyme = rien, connecté = nom seul et voisinage ou portée lisible, mode admin = tout.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -307,6 +308,117 @@ describe('Search routes', () => {
     })
   })
 
+  // Qui trouve qui, sur quelles colonnes (décision Thomas 2026-11-06)
+  describe('GET /search/advanced — section utilisateurs', () => {
+    const adminRow = {
+      id: 'u2', name: 'Alice', email: 'alice@secret.fr', avatarUrl: null, globalRole: 'ADMIN',
+      _count: { communityMemberships: 2, memberships: 3 },
+    }
+    const asUser = () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }])
+      prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'c1' }])
+      prisma.space.findMany.mockResolvedValue([])
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.user.findMany.mockResolvedValue([{ id: 'u2', name: 'Alice', avatarUrl: null }])
+      prisma.user.count.mockResolvedValue(1)
+    }
+    const auth = () => ({ authorization: `Bearer ${token}` })
+    const lastUserWhere = () => prisma.user.findMany.mock.calls.at(-1)![0].where
+
+    it.each(['', '&communityId=c1', '&spaceId=s1'])('anonyme : aucun utilisateur, aucune requête (portée « %s »)', async (scope) => {
+      prisma.space.findMany.mockResolvedValue([])
+      prisma.community.findFirst.mockResolvedValue({ id: 'c1' })
+
+      const res = await app.inject({ method: 'GET', url: `/search/advanced?q=a&types=users${scope}` })
+
+      expect(res.statusCode).toBe(200)
+      expect(res.json().users).toEqual([])
+      expect(res.json().totals.users).toBe(0)
+      expect(prisma.user.findMany).not.toHaveBeenCalled()
+      expect(prisma.user.count).not.toHaveBeenCalled()
+    })
+
+    it('connecté sans portée : soi-même et les personnes partageant un espace ou une communauté, comptes actifs', async () => {
+      asUser()
+
+      await app.inject({ method: 'GET', url: '/search/advanced?q=a&types=users', headers: auth() })
+
+      const where = lastUserWhere()
+      expect(where.OR).toEqual([
+        { id: USER_ID },
+        { memberships: { some: { spaceId: { in: ['s1'] } } } },
+        { communityMemberships: { some: { communityId: { in: ['c1'] } } } },
+      ])
+      expect(where.disabledAt).toBeNull()
+      expect(prisma.user.count.mock.calls.at(-1)![0].where).toEqual(where)
+    })
+
+    it('connecté : e-mail jamais cherché, mots exclus compris, jamais lu ni renvoyé', async () => {
+      asUser()
+
+      const res = await app.inject({ method: 'GET', url: '/search/advanced?q=alice%20gmail&not=gmail&types=users', headers: auth() })
+
+      expect(JSON.stringify(lastUserWhere())).not.toContain('email')
+      const { select } = prisma.user.findMany.mock.calls.at(-1)![0]
+      expect(Object.keys(select).sort()).toEqual(['avatarUrl', 'id', 'name'])
+      expect(res.json().users).toEqual([{ id: 'u2', name: 'Alice', avatarUrl: null }])
+    })
+
+    it('connecté, réponse réduite même si la base renvoie plus de champs', async () => {
+      asUser()
+      prisma.user.findMany.mockResolvedValue([adminRow])
+
+      const res = await app.inject({ method: 'GET', url: '/search/advanced?q=a&types=users', headers: auth() })
+
+      expect(res.json().users).toEqual([{ id: 'u2', name: 'Alice', avatarUrl: null }])
+    })
+
+    it('connecté, portée communauté lisible : ses membres, nom seul, sans filtre de voisinage', async () => {
+      asUser()
+      prisma.communityMembership.findFirst.mockResolvedValue(null)
+      prisma.community.findFirst.mockResolvedValue({ id: 'c-public' })
+
+      await app.inject({ method: 'GET', url: '/search/advanced?q=a&types=users&communityId=c-public', headers: auth() })
+
+      const where = lastUserWhere()
+      expect(where.communityMemberships).toEqual({ some: { communityId: 'c-public' } })
+      expect(where.OR).toBeUndefined()
+      expect(where.disabledAt).toBeNull()
+      expect(JSON.stringify(where)).not.toContain('email')
+    })
+
+    it('admin hors mode admin : mêmes règles qu\'un connecté', async () => {
+      asUser()
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+
+      const res = await app.inject({ method: 'GET', url: '/search/advanced?q=a&types=users', headers: auth() })
+
+      expect(lastUserWhere().OR).toBeDefined()
+      expect(JSON.stringify(lastUserWhere())).not.toContain('email')
+      expect(res.json().users[0].email).toBeUndefined()
+    })
+
+    it('admin en mode admin : tous, nom et e-mail, comptes désactivés compris, réponse complète', async () => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+      prisma.user.findMany.mockResolvedValue([adminRow])
+      prisma.user.count.mockResolvedValue(1)
+
+      const res = await app.inject({
+        method: 'GET', url: '/search/advanced?q=secret&types=users',
+        headers: { ...auth(), 'x-admin-mode': 'true' },
+      })
+
+      const where = lastUserWhere()
+      expect(where.AND[0].OR).toContainEqual({ email: { contains: 'secret', mode: 'insensitive' } })
+      expect(where.OR).toBeUndefined()
+      expect(where.disabledAt).toBeUndefined()
+      expect(res.json().users).toEqual([{
+        id: 'u2', name: 'Alice', email: 'alice@secret.fr', avatarUrl: null, globalRole: 'ADMIN', communityCount: 2, spaceCount: 3,
+      }])
+    })
+  })
+
   describe('GET /search/advanced — présence des mots', () => {
     const contains = (text: string) => ({ contains: text, mode: 'insensitive' })
 
@@ -329,7 +441,7 @@ describe('Search routes', () => {
       expect(itemAnd).toContainEqual({ OR: [{ description: null }, { NOT: { description: contains('taxe') } }] })
 
       expect(prisma.contribution.findMany.mock.calls[0][0].where.AND).toContainEqual({ NOT: { content: contains('taxe') } })
-      expect(prisma.user.findMany.mock.calls[0][0].where.AND).toContainEqual({ NOT: { email: contains('taxe') } })
+      expect(prisma.user.findMany.mock.calls[0][0].where.AND).toContainEqual({ NOT: { name: contains('taxe') } })
     })
 
     it('communautés : le filtre de texte reste en plus du périmètre d\'accès', async () => {

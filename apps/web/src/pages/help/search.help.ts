@@ -13,6 +13,7 @@ export const help: HelpEntry = {
     'Lancée depuis un espace, la recherche se limite à cet espace : « Toute la communauté » ou « Partout » pour élargir',
     'Les filtres d\'éléments (type, statut, tag) ne gardent que les éléments et les contributions',
     'Les éléments sont regroupés par communauté et par espace',
+    'Utilisateurs : connectez-vous pour en chercher. Vous trouvez par leur nom les personnes avec qui vous partagez un espace ou une communauté, ou les membres de la portée choisie. Les adresses e-mail n\'apparaissent pas',
     'Sur téléphone, les filtres sont repliés derrière le bouton « Filtres » (le chiffre = filtres actifs) et les catégories défilent sur une ligne',
   ],
   tour: [
@@ -63,11 +64,11 @@ export const help: HelpEntry = {
       },
     },
   ],
-  hints: {
   fields: {
     words: 'Avec plusieurs mots, vous pourrez choisir pour chacun : obligatoire, au moins un ou exclu. Entre guillemets : expression exacte.',
     wordsChoice: 'Cliquez ou touchez un mot pour changer son état. Obligatoire : il doit être présent. Au moins un : un seul des mots dans cet état suffit. Exclu : il ne doit pas être présent.',
   },
+  hints: {
     wordRequired: 'Obligatoire : seuls les résultats contenant ce mot sont gardés. Cliquez pour passer à « au moins un ».',
     wordAny: 'Au moins un : les résultats doivent contenir au moins un des mots dans cet état. Cliquez pour l\'exclure.',
     wordExcluded: 'Exclu : les résultats contenant ce mot sont écartés. Cliquez pour le rendre obligatoire.',
