@@ -1,7 +1,7 @@
 /*
  * Routes de la vue Process (positions partagées entre membres, mise en page : pas d'audit log).
  * Nœuds — /spaces/:spaceId/process-nodes (une ligne = un item placé ; pas de ligne = item « non placé ») :
- * - GET : tout accès à l'espace (checkSpaceAccess, VIEWER compris) → { itemId, x, y, laneId }.
+ * - GET : tout accès à l'espace (checkSpaceAccess, VIEWER et visiteur non connecté compris, comme les items) → { itemId, x, y, laneId }.
  * - PUT /:itemId { x, y, laneId? } : place ou déplace (upsert) — OWNER/MEMBER, item obligatoirement dans l'espace.
  *   laneId : couloir de l'espace (sinon 400) → x/y relatifs au couloir ; null → item libre (x/y absolus) ;
  *   absent → couloir inchangé.
@@ -47,7 +47,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
    * à undefined → le refus passait inaperçu et la route continuait d'écrire (faille corrigée le 2026-10-21).
    */
   async function denied(request: FastifyRequest, reply: FastifyReply, spaceId: string, write: boolean): Promise<boolean> {
-    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, spaceId, request.isAdminMode);
+    const membership = await checkSpaceAccess(fastify.prisma, request.user?.userId, spaceId, request.isAdminMode);
     if (!membership) { reply.notFound('Space not found'); return true; }
     if (write && membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
       reply.forbidden('Viewers cannot edit the process');
@@ -69,7 +69,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get<{ Params: { spaceId: string } }>(
     '/:spaceId/process-nodes',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.optionalAuthenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
       if (await denied(request, reply, spaceId, false)) return reply;
@@ -150,7 +150,7 @@ export const processNodesRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get<{ Params: { spaceId: string } }>(
     '/:spaceId/process-lanes',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.optionalAuthenticate] },
     async (request, reply) => {
       const { spaceId } = request.params;
       if (await denied(request, reply, spaceId, false)) return reply;

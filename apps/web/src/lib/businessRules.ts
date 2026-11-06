@@ -492,8 +492,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'read-only-all-views',
     page: 'Espace → barre de vues, Aperçu de l\'espace',
     trigger: "Ouvrir un espace sans droit de modification (rôle VIEWER, espace Lecture seule, visiteur non connecté)",
-    effect: "Toutes les vues restent proposées : le rôle ne retire aucune vue et n'en impose aucune (décision Thomas 2026-11-06). Chaque vue masque ses actions d'écriture via canEdit, et l'API refuse les écritures. Seul le réglage d'accès de /admin/views limite une vue (par exemple une vue réservée aux connectés reste masquée pour un visiteur)",
-    location: 'apps/web/src/pages/SpacePage.tsx (canEdit), apps/web/src/pages/SpaceToolbar.tsx, apps/web/src/hooks/useMenuItems.ts, apps/api/src/routes/items.ts',
+    effect: "Toutes les vues restent proposées : le rôle ne retire aucune vue et n'en impose aucune (décision Thomas 2026-11-06). Chaque vue masque ses actions d'écriture via canEdit, et l'API refuse les écritures. Un visiteur non connecté a les mêmes vues qu'un connecté ; seules les vues de niveau admin restent réservées au mode admin (VIEW_REGISTRY, décision Thomas 2026-11-06). Le réglage d'accès de /admin/views prime sur ce registre et peut limiter une vue",
+    location: 'packages/shared/src/constants/viewRegistry.ts, apps/web/src/pages/SpacePage.tsx (canEdit), apps/web/src/pages/SpaceToolbar.tsx, apps/web/src/hooks/useMenuItems.ts, apps/api/src/routes/items.ts, apps/api/src/routes/process-nodes.ts',
   },
   {
     id: 'private-space-direct-members-only',

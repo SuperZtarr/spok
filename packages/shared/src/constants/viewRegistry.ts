@@ -3,6 +3,8 @@
  * `access` contrôle la visibilité via useMenuItems (public < user < admin) — ne pas confondre avec
  * les modes d'interface (forum/projet/exploration, cf. stores/interfaceMode.ts) qui filtrent en plus
  * les vues déjà accessibles selon le contexte d'usage courant.
+ * Un visiteur non connecté a les mêmes vues qu'un connecté (décision Thomas 2026-11-06) : seul 'admin' reste réservé.
+ * Surcharges possibles dans /admin/views (AppConfig menu_overrides), qui priment sur ce registre.
  */
 export interface ViewDefinition {
   id: string;
@@ -20,40 +22,40 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
     { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare',category: 'basic',     order: 2, visible: true, access: 'public'   },
     { id: 'text',       label: 'Texte',          icon: 'FileText',     category: 'basic',     order: 3, visible: true, access: 'public' },
     { id: 'tree',       label: 'Arborescence',   icon: 'GitBranch',    category: 'basic',     order: 4, visible: true, access: 'public' },
-  { id: 'members',    label: 'Assignations',        icon: 'Users',        category: 'basic',     order: 5, visible: true, access: 'admin'   },
-  { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2',       category: 'basic',     order: 6, visible: true, access: 'admin'   },
-    { id: 'recent',     label: 'Récents',        icon: 'Clock',        category: 'basic',     order: 7, visible: true, access: 'user'   },
+  { id: 'members',    label: 'Assignations',        icon: 'Users',        category: 'basic',     order: 5, visible: true, access: 'admin' },
+  { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2',       category: 'basic',     order: 6, visible: true, access: 'admin' },
+    { id: 'recent',     label: 'Récents',        icon: 'Clock',        category: 'basic',     order: 7, visible: true, access: 'public'   },
 
   // ── itemTypes ──
-  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'user' },
-  { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'user' },
-  { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'user' },
-  { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'user'   },
-  { id: 'articles',  label: 'Articles',   icon: 'Newspaper',    category: 'itemTypes', order: 4, visible: true, access: 'user'   },
-  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 5, visible: true, access: 'user'   },
-  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 6, visible: true, access: 'user'   },
+  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'public' },
+  { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'public' },
+  { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'public' },
+  { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'public'   },
+  { id: 'articles',  label: 'Articles',   icon: 'Newspaper',    category: 'itemTypes', order: 4, visible: true, access: 'public'   },
+  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 5, visible: true, access: 'public'   },
+  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 6, visible: true, access: 'public'   },
 
   // ── planning ──
-  { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'user'   },
+  { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'public' },
   { id: 'timeline', label: 'Gantt',          icon: 'GanttChart',  category: 'planning', order: 1, visible: true, access: 'public' },
-  { id: 'pert',     label: 'PERT',           icon: 'GitMerge',    category: 'planning', order: 2, visible: true, access: 'user'   },
+  { id: 'pert',     label: 'PERT',           icon: 'GitMerge',    category: 'planning', order: 2, visible: true, access: 'public'   },
   { id: 'calendar', label: 'Calendrier',     icon: 'Calendar',    category: 'planning', order: 3, visible: true, access: 'public' },
-  { id: 'planning', label: 'Planning',       icon: 'CalendarCheck',category: 'planning', order: 4, visible: true, access: 'user'  },
-  { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 5, visible: true, access: 'admin'   },
-  { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 6, visible: true, access: 'admin'   },
-  { id: 'priority', label: 'Priorités',      icon: 'Flame',       category: 'planning', order: 7, visible: true, access: 'user'   },
-  { id: 'process',  label: 'Process',        icon: 'Workflow',    category: 'planning', order: 8, visible: true, access: 'user'   },
+  { id: 'planning', label: 'Planning',       icon: 'CalendarCheck',category: 'planning', order: 4, visible: true, access: 'public' },
+  { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 5, visible: true, access: 'admin' },
+  { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 6, visible: true, access: 'admin' },
+  { id: 'priority', label: 'Priorités',      icon: 'Flame',       category: 'planning', order: 7, visible: true, access: 'public'   },
+  { id: 'process',  label: 'Process',        icon: 'Workflow',    category: 'planning', order: 8, visible: true, access: 'public' },
 
   // ── exploration ──
   { id: 'mindmap',    label: 'Carte mentale', icon: 'Share2',     category: 'exploration', order: 0, visible: true, access: 'public' },
-  { id: 'graph',      label: 'Graphe',        icon: 'Network',    category: 'exploration', order: 1, visible: true, access: 'user'   },
-  { id: 'sunburst',   label: 'Sunburst',      icon: 'CircleDot',  category: 'exploration', order: 2, visible: true, access: 'admin'   },
-  { id: 'relations',  label: 'Relations',     icon: 'Waypoints',  category: 'exploration', order: 3, visible: true, access: 'admin'   },
-  { id: 'bubble',     label: 'Bulles',        icon: 'Circle',     category: 'exploration', order: 4, visible: true, access: 'admin'   },
-  { id: 'radialTree', label: 'Arbre radial',  icon: 'Orbit',      category: 'exploration', order: 5, visible: true, access: 'admin'   },
+  { id: 'graph',      label: 'Graphe',        icon: 'Network',    category: 'exploration', order: 1, visible: true, access: 'public' },
+  { id: 'sunburst',   label: 'Sunburst',      icon: 'CircleDot',  category: 'exploration', order: 2, visible: true, access: 'admin' },
+  { id: 'relations',  label: 'Relations',     icon: 'Waypoints',  category: 'exploration', order: 3, visible: true, access: 'admin' },
+  { id: 'bubble',     label: 'Bulles',        icon: 'Circle',     category: 'exploration', order: 4, visible: true, access: 'admin' },
+  { id: 'radialTree', label: 'Arbre radial',  icon: 'Orbit',      category: 'exploration', order: 5, visible: true, access: 'admin' },
   { id: 'treemap',    label: 'Treemap',       icon: 'SquareStack',category: 'exploration', order: 6, visible: true, access: 'public' },
-  { id: 'chord',      label: 'Chord',         icon: 'Disc',       category: 'exploration', order: 7, visible: true, access: 'admin'   },
-  { id: 'heatmap',    label: 'Heatmap',       icon: 'Grid3x3',    category: 'exploration', order: 8, visible: true, access: 'admin'   },
-  { id: 'ego',        label: 'Réseau ego',    icon: 'Focus',      category: 'exploration', order: 9, visible: true, access: 'admin'   },
-  { id: 'loupe',      label: 'Loupe',         icon: 'ZoomIn',     category: 'exploration', order: 10, visible: true, access: 'user'   },
+  { id: 'chord',      label: 'Chord',         icon: 'Disc',       category: 'exploration', order: 7, visible: true, access: 'admin' },
+  { id: 'heatmap',    label: 'Heatmap',       icon: 'Grid3x3',    category: 'exploration', order: 8, visible: true, access: 'admin' },
+  { id: 'ego',        label: 'Réseau ego',    icon: 'Focus',      category: 'exploration', order: 9, visible: true, access: 'admin' },
+  { id: 'loupe',      label: 'Loupe',         icon: 'ZoomIn',     category: 'exploration', order: 10, visible: true, access: 'public' },
 ];

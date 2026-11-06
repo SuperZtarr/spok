@@ -1,6 +1,6 @@
 /*
  * TNR de /spaces/:spaceId/process-nodes (positions des items sur le canevas de la vue Process) :
- * lecture pour tout accès, écriture OWNER/MEMBER, item obligatoirement dans l'espace, validation x/y.
+ * lecture pour tout accès (visiteur non connecté compris), écriture OWNER/MEMBER, item obligatoirement dans l'espace, validation x/y.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -69,6 +69,47 @@ describe('Process nodes routes', () => {
     const res = await app.inject({ method: 'GET', url: '/spaces/s1/process-nodes', headers })
 
     expect(res.statusCode).toBe(404)
+  })
+
+  // Visiteur non connecté : mêmes vues qu'un connecté (décision Thomas 2026-11-06), donc lecture du canevas Process
+  describe('visiteur non connecté', () => {
+    const asAnonymousOn = (communityVisibility: 'READONLY' | 'PRIVATE') => {
+      const space = { id: 's1', parentId: null, visibility: null, communityId: 'c1' }
+      prisma.space.findUnique.mockResolvedValue(space)
+      prisma.space.findMany.mockResolvedValue([space])
+      prisma.community.findUnique.mockResolvedValue({ id: 'c1', visibility: communityVisibility })
+      prisma.community.findMany.mockResolvedValue([{ id: 'c1', visibility: communityVisibility }])
+    }
+
+    it.each(['process-nodes', 'process-lanes'])('GET %s : espace d\'une communauté publique → 200', async (route) => {
+      asAnonymousOn('READONLY')
+      prisma.processNode.findMany.mockResolvedValue([{ itemId: 'i1', x: 10, y: 20 }])
+      prisma.processLane.findMany.mockResolvedValue([])
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/s1/${route}` })
+
+      expect(res.statusCode).toBe(200)
+    })
+
+    it.each(['process-nodes', 'process-lanes'])('GET %s : communauté privée → 404, rien de lu', async (route) => {
+      asAnonymousOn('PRIVATE')
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/s1/${route}` })
+
+      expect(res.statusCode).toBe(404)
+      expect(prisma.processNode.findMany).not.toHaveBeenCalled()
+      expect(prisma.processLane.findMany).not.toHaveBeenCalled()
+    })
+
+    it('écritures refusées sans jeton → 401', async () => {
+      asAnonymousOn('READONLY')
+
+      const put = await app.inject({ method: 'PUT', url: '/spaces/s1/process-nodes/i1', payload: { x: 1, y: 2 } })
+      const del = await app.inject({ method: 'DELETE', url: '/spaces/s1/process-nodes/i1' })
+      const lane = await app.inject({ method: 'POST', url: '/spaces/s1/process-lanes', payload: { itemId: 'i1' } })
+
+      expect([put.statusCode, del.statusCode, lane.statusCode]).toEqual([401, 401, 401])
+    })
   })
 
   it('PUT upsert la position', async () => {
