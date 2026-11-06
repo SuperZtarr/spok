@@ -1,11 +1,5 @@
 /* Barre de sélection de vue (boutons par section) utilisée par SpaceToolbar. */
-import {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
-  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
-  type LucideIcon,
-} from 'lucide-react';
+import { getViewIcon } from '../../constants/viewIcons';
 import type { ViewMode } from '../../stores/viewMode';
 import type { MenuItemConfig } from '@spok/shared';
 
@@ -15,13 +9,6 @@ const MOBILE_HIDDEN_VIEWS = new Set([
   'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
   'crossTable', 'heatmap', 'ego', 'loupe',
 ]);
-
-const VIEW_ICON_MAP: Record<string, LucideIcon> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
-  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
-};
 
 export interface ViewSelectorBarProps {
   viewMode: ViewMode;
@@ -54,7 +41,7 @@ export function ViewSelectorBar({ viewMode, onSetMode, allowedViews, spaceViews,
           </span>
           <div className="flex items-center gap-0.5">
             {section.views.map((v) => {
-              const Icon = VIEW_ICON_MAP[v.icon];
+              const Icon = getViewIcon(v.icon);
               const isActive = viewMode === v.viewMode;
               const isDefault = defaultView && v.viewMode === defaultView;
               const showPulse = isDefault && !isActive;
@@ -69,7 +56,7 @@ export function ViewSelectorBar({ viewMode, onSetMode, allowedViews, spaceViews,
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   } ${v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode) ? 'hidden sm:inline-flex' : ''}`}
                 >
-                  {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="hidden sm:inline">{v.label}</span>
                   {showPulse && (
                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />

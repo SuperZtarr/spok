@@ -36,39 +36,10 @@ import {
   History,
   SlidersHorizontal,
   List,
-  GitBranch,
-  Columns3,
-  FileText,
-  Newspaper,
   CalendarCheck,
-  GanttChart,
-  Calendar,
   LayoutGrid,
-  Share2,
   Network,
-  CircleDot,
-  Waypoints,
-  Circle,
-  Orbit,
-  SquareStack,
-  Disc,
-  TrendingDown,
-  Layers,
-  Users,
-  Flame,
-  Table2,
-  Grid3x3,
-  Focus,
-  ZoomIn,
-  ExternalLink,
-  Image,
-  Bug,
-  CheckSquare,
-  MessageSquare,
-  Clock,
   ArrowUpDown,
-  GitMerge,
-  Workflow,
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig } from '@spok/shared';
@@ -77,6 +48,7 @@ import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
+import { getViewIcon } from '../constants/viewIcons';
 import type { ViewMode } from '../stores/viewMode';
 import { useInterfaceModeStore } from '../stores/interfaceMode';
 import type { TreeSort } from '../lib/treeSort';
@@ -186,13 +158,6 @@ const MOBILE_HIDDEN_VIEWS = new Set([
   'bubble', 'radialTree', 'treemap', 'burndown', 'cfd', 'chord',
   'crossTable', 'heatmap', 'ego', 'loupe', 'process',
 ]);
-
-const VIEW_ICON_MAP: Record<string, LucideIcon> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
-  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
-  ExternalLink, Image, Newspaper, Bug, CheckSquare, MessageSquare, Clock, GitMerge, Workflow,
-};
 
 export interface SpaceToolbarProps {
   // Bloc Filtre ou Aperçu
@@ -345,7 +310,7 @@ export function SpaceToolbar({
                 </span>
                 <div className="flex items-center gap-0.5">
                   {section.views.map((v) => {
-                    const Icon = VIEW_ICON_MAP[v.icon];
+                    const Icon = getViewIcon(v.icon);
                     const isActive = viewMode === v.viewMode;
                     const isDefault = defaultView && v.viewMode === defaultView;
                     const showPulse = isDefault && !isActive;
@@ -441,7 +406,7 @@ export function SpaceToolbar({
                   {section.sectionLabel}
                 </div>
                 {section.views.map((v) => {
-                  const Icon = VIEW_ICON_MAP[v.icon];
+                  const Icon = getViewIcon(v.icon);
                   const isActive = viewMode === v.viewMode;
                   return (
                     <button

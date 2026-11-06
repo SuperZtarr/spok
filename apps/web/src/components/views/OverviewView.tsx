@@ -5,7 +5,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Users, FolderOpen, Settings, Crown, User, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame, ExternalLink, Image, Bug, MessageSquare } from 'lucide-react';
+import { Plus, Users, FolderOpen, Settings, Crown, User, LayoutGrid } from 'lucide-react';
+import { getViewIcon } from '../../constants/viewIcons';
 import { spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { Button } from '../ui/Button';
@@ -18,12 +19,6 @@ import type { SpaceWithRole } from '@spok/shared';
 import { VIEW_HELP } from './help';
 import { HelpHint } from '../../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
-
-const VIEW_ICONS: Record<string, typeof List> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
-  Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
-  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ExternalLink, Image, Bug, MessageSquare,
-};
 
 const HIGHLIGHTED_VIEWS = new Set<string>(['mindmap', 'kanban', 'timeline', 'images', 'documents', 'priority', 'thread']);
 
@@ -180,7 +175,7 @@ export function OverviewView({ spaceId, space }: OverviewViewProps) {
                   <h3 className="text-xs font-medium text-muted-foreground mb-2">{section.label}</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                     {views.map(view => {
-                      const Icon = VIEW_ICONS[view.icon] || List;
+                      const Icon = getViewIcon(view.icon);
                       const highlighted = HIGHLIGHTED_VIEWS.has(view.viewMode || '');
                       return (
                         <button

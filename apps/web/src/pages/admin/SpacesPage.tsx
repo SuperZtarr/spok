@@ -4,7 +4,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown, X, AlertTriangle, ChevronLeft, ChevronRight, Download, GitBranch, FileText, type LucideIcon, List, Columns3, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Flame, Table2, Grid3x3, Focus, ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock } from 'lucide-react';
+import { Search, Trash2, Users, FolderKanban, User, Building2, ArrowUp, ArrowDown, X, AlertTriangle, ChevronLeft, ChevronRight, Download, GitBranch, FileText } from 'lucide-react';
+import { getViewIcon } from '../../constants/viewIcons';
 import { VIEW_MODES } from '../../stores/viewMode';
 import { adminApi } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -37,13 +38,6 @@ interface AdminSpace {
   community: { id: string; name: string } | null;
   parent: { id: string; name: string } | null;
 }
-
-const SPACE_VIEW_ICON_MAP: Record<string, LucideIcon> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
-  LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
-  Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock,
-};
 
 const accessors: Record<string, (s: AdminSpace) => string | number> = {
   name: (s) => s.name?.toLowerCase() ?? '',
@@ -341,7 +335,7 @@ export function SpacesPage() {
                       {(() => {
                         if (!space.defaultView) return <span className="text-muted-foreground/40">—</span>;
                         const mode = VIEW_MODES.find(v => v.value === space.defaultView);
-                        const Icon = (mode && SPACE_VIEW_ICON_MAP[mode.icon]) || FolderKanban;
+                        const Icon = mode ? getViewIcon(mode.icon) : FolderKanban;
                         return (
                           <span className="inline-flex items-center gap-1.5">
                             <Icon className="w-3.5 h-3.5" />

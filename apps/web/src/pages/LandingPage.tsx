@@ -3,20 +3,12 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   FolderTree, Users, Eye, CalendarRange, GitBranch, Palette, Globe, FolderOpen,
-  List, Columns3, GanttChart, Network, Share2, CircleDot, Waypoints, Circle,
-  FileText, LayoutGrid, CalendarCheck, Calendar, Orbit, SquareStack, Disc,
-  TrendingDown, Layers, Table2, Grid3x3, Focus, Flame,
 } from 'lucide-react';
+import { getViewIcon } from '../constants/viewIcons';
 import { communitiesApi } from '../lib/api';
 import logoUrl from '../assets/logo.png';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { VIEW_HELP } from '../components/views/help';
-
-const VIEW_ICONS: Record<string, typeof List> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
-  Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
-  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-};
 
 const features = [
   {
@@ -194,7 +186,7 @@ export function LandingPage() {
                   <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{sectionLabel}</h4>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {sectionViews.map((v) => {
-                      const Icon = VIEW_ICONS[v.icon] || List;
+                      const Icon = getViewIcon(v.icon);
                       return (
                         <div
                           key={v.key}

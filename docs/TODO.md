@@ -166,6 +166,7 @@
 - [x] Article, ajout groupé : racine illisible refusée, parcours borné, sans passer par un élément illisible — 2026-11-06
 - [x] Article : page en lecture seule, Composer dans la fiche, vue Articles, « Lire l'article » au menu ⋮ — 2026-11-06
 - [x] Déplacement : parent toujours dans le même espace, aucune branche coupée entre deux espaces, Loupe sans lien illisible — 2026-11-06
+- [x] Icônes de vues : une seule liste, Loupe, Articles, PERT et Process affichés partout — 2026-11-06
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)

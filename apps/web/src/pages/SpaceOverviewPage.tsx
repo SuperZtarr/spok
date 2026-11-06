@@ -2,7 +2,8 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink, List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, TrendingDown, Layers, Table2, Grid3x3, Focus, Flame } from 'lucide-react';
+import { Users, FolderOpen, Settings, Crown, User, ChevronRight, ExternalLink, LayoutGrid } from 'lucide-react';
+import { getViewIcon } from '../constants/viewIcons';
 import { spacesApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
@@ -11,12 +12,6 @@ import { useViewModeStore, type ViewMode } from '../stores/viewMode';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { VIEW_HELP } from '../components/views/help';
 import { PageHelpButton } from '../help/PageHelpButton';
-
-const VIEW_ICONS: Record<string, typeof List> = {
-  List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar, LayoutGrid,
-  Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc,
-  TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus,
-};
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER: { label: 'Propriétaire', icon: Crown, color: 'text-amber-500' },
@@ -190,7 +185,7 @@ export function SpaceOverviewPage() {
                     <h3 className="text-xs font-medium text-muted-foreground mb-2">{section.label}</h3>
                     <div className="flex flex-wrap gap-2">
                       {views.map(view => {
-                        const Icon = VIEW_ICONS[view.icon] || List;
+                        const Icon = getViewIcon(view.icon);
                         return (
                           <button
                             key={view.key}
