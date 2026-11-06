@@ -1329,6 +1329,10 @@ interface SearchResults {
 
 export interface AdvancedSearchParams {
   q: string;
+  /** Mots dont au moins un doit être présent (les autres mots de q sont obligatoires) */
+  any?: string[];
+  /** Mots exclus */
+  not?: string[];
   types?: string;
   communityId?: string;
   spaceId?: string;
@@ -1361,6 +1365,8 @@ export const searchApi = {
   advanced: (params: AdvancedSearchParams) => {
     const sp = new URLSearchParams();
     sp.set('q', params.q);
+    params.any?.forEach((word) => sp.append('any', word));
+    params.not?.forEach((word) => sp.append('not', word));
     if (params.types) sp.set('types', params.types);
     if (params.communityId) sp.set('communityId', params.communityId);
     if (params.spaceId) sp.set('spaceId', params.spaceId);

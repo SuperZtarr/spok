@@ -14,6 +14,15 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06 (6)
+- 2 lots poussés : lecture seule, toutes les vues proposées (fix) ; recherche, présence des mots (feat). build:packages, typecheck OK, TNR 2038/2038, en-têtes OK. Pastilles et surbrillance de la recherche non vérifiées à l'écran
+
+### Recherche, présence des mots — 2026-11-06
+- Pastille par mot sur la page Recherche (obligatoire, au moins un, exclu), tous les mots obligatoires par défaut, guillemets pour l'expression exacte. Poussé par la MEP du 2026-11-06
+
+### Lecture seule : toutes les vues — 2026-11-06
+- `VIEWER_ALLOWED_VIEWS` et `allowedViews` retirés, renvoi forcé vers Liste supprimé. Aucune vue à corriger à la lecture du code. Poussé par la MEP du 2026-11-06
+
 ### MEP — 2026-11-06 (5)
 - 3 lots poussés : icônes de vues, source unique (fix) ; Loupe, zoom après 0,1 s et dézoom immédiat (fix) ; Loupe dans les modes Forum, Projet et Loisirs (feat). Typecheck OK, TNR 2022/2022, en-têtes OK. Signalé par le lot : spec SPOK `cmw4qaks5000113he7ao35to8`, zoom immédiat à passer à 0,1 s
 

@@ -5,6 +5,8 @@
  * - périmètre = espaces LISIBLES : directs + communautés de l'utilisateur + communautés non privées,
  *   filtrés par la visibilité effective (allReadableSpaceIds, items.ts), anonyme compris ; admin en mode admin = tout ;
  * - dès 1 caractère, 10 résultats par page (pagination par section : page s'applique à chaque section) ;
+ * - plusieurs mots : chacun obligatoire par défaut, dans n'importe quel ordre ; any (répétable) = au moins un de ces mots,
+ *   not (répétable) = mot exclu ; "guillemets" = expression exacte (searchWords, @spok/shared ; searchWhere, utils) ;
  * - items et contributions triés communauté › espace › récence (regroupés à l'affichage, groupes contigus) ;
  * - filtres d'items (type, statut, priorité, tags) : appliqués aux items ET aux contributions (via leur item) ;
  *   les sections communautés, espaces et utilisateurs sont alors omises (itemFiltersActive dans la réponse) ;
@@ -13,10 +15,14 @@
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { resolveSearchWords } from '@spok/shared';
 import { allReadableSpaceIds } from './items.js';
+import { buildWordsWhere } from '../utils/searchWhere.js';
 
 interface AdvancedSearchQuery {
   q?: string;
+  any?: string | string[]; // répétable : mots dont au moins un doit être présent
+  not?: string | string[]; // répétable : mots exclus
   types?: string; // comma-separated: communities,spaces,items,users,contributions
   communityId?: string;
   spaceId?: string;
@@ -32,14 +38,14 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── Advanced search (multiple entity types) ──
   fastify.get<{ Querystring: AdvancedSearchQuery }>('/advanced', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
-    const { q, types: typesParam, communityId, spaceId, itemType, itemStatus, itemPriority, tagIds: tagIdsParam } = request.query;
+    const { q, any: anyWords, not: notWords, types: typesParam, communityId, spaceId, itemType, itemStatus, itemPriority, tagIds: tagIdsParam } = request.query;
 
     // Dès 1 caractère (spec SearchPage)
     if (!q || q.trim().length < 1) {
       return reply.status(400).send({ statusCode: 400, message: 'Le terme de recherche est requis' });
     }
 
-    const query = q.trim();
+    const words = resolveSearchWords(q, ([] as string[]).concat(anyWords ?? []), ([] as string[]).concat(notWords ?? []));
     const page = Math.max(1, parseInt(request.query.page || '1', 10));
     const pageSize = Math.min(50, Math.max(1, parseInt(request.query.pageSize || '10', 10)));
     const skip = (page - 1) * pageSize;
@@ -105,12 +111,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let communities: any[] = [];
     let totalCommunities = 0;
     if (enabledTypes.has('communities') && !spaceId) {
-      const communityWhere: Record<string, unknown> = {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-        ],
-      };
+      const communityWhere: Record<string, unknown> = buildWordsWhere(words, [{ name: 'name' }, { name: 'description', nullable: true }]);
       if (communityId) {
         communityWhere.id = communityId;
       }
@@ -122,11 +123,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
           where: { userId },
           select: { communityId: true },
         })).map(m => m.communityId);
-        communityWhere.OR = [
-          { id: { in: myCommunityIds }, OR: (communityWhere as any).OR },
-          { visibility: { not: 'PRIVATE' }, OR: (communityWhere as any).OR },
-        ];
-        delete (communityWhere as any).OR; // moved into nested OR
+        communityWhere.OR = [{ id: { in: myCommunityIds } }, { visibility: { not: 'PRIVATE' } }];
       }
 
       const [rows, count] = await Promise.all([
@@ -150,9 +147,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let spaces: any[] = [];
     let totalSpaces = 0;
     if (enabledTypes.has('spaces')) {
-      const spaceWhere: Record<string, unknown> = {
-        name: { contains: query, mode: 'insensitive' },
-      };
+      const spaceWhere: Record<string, unknown> = buildWordsWhere(words, [{ name: 'name' }]);
       if (communityId) spaceWhere.communityId = communityId;
       if (effectiveSpaceFilter) spaceWhere.id = effectiveSpaceFilter;
       else if (!isAdmin) {
@@ -184,13 +179,9 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let items: any[] = [];
     let totalItems = 0;
     if (enabledTypes.has('items')) {
-      const itemWhere: Record<string, unknown> = {
-        OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { url: { contains: query, mode: 'insensitive' } },
-        ],
-      };
+      const itemWhere: Record<string, unknown> = buildWordsWhere(words, [
+        { name: 'title' }, { name: 'description', nullable: true }, { name: 'url', nullable: true },
+      ]);
       if (effectiveSpaceFilter) itemWhere.spaceId = effectiveSpaceFilter;
       else if (spaceFilter) itemWhere.spaceId = spaceFilter;
       if (communityId && !spaceId) itemWhere.space = { communityId };
@@ -224,12 +215,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let users: any[] = [];
     let totalUsers = 0;
     if (enabledTypes.has('users')) {
-      const userWhere: Record<string, unknown> = {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' as const } },
-          { email: { contains: query, mode: 'insensitive' as const } },
-        ],
-      };
+      const userWhere: Record<string, unknown> = buildWordsWhere(words, [{ name: 'name' }, { name: 'email' }]);
       // Portée : membres de l'espace (sous-espaces inclus, déjà bornés aux espaces accessibles)
       // ou de la communauté — seulement si le demandeur peut la voir (admin, membre, ou publique
       // non privée), sinon on ne révèle pas ses membres
@@ -268,9 +254,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let contributions: any[] = [];
     let totalContributions = 0;
     if (enabledTypes.has('contributions')) {
-      const contribWhere: Record<string, unknown> = {
-        content: { contains: query, mode: 'insensitive' },
-      };
+      const contribWhere: Record<string, unknown> = buildWordsWhere(words, [{ name: 'content' }]);
       // Contraintes sur l'item de la contribution : périmètre + mêmes filtres d'items que la section Items
       const contribItem: Record<string, unknown> = {};
       if (effectiveSpaceFilter) contribItem.spaceId = effectiveSpaceFilter;

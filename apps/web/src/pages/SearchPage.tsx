@@ -3,6 +3,8 @@
  * Portée par défaut = espace/communauté d'où la recherche est lancée (?spaceId= / ?communityId=,
  * posés par lib/searchScope) ; l'utilisateur élargit explicitement (« Toute la communauté », « Partout »).
  * Tout l'état vit dans l'URL ; modifier plusieurs paramètres → updateParams (un seul setSearchParams).
+ * Plusieurs mots : une pastille par mot (dès 2 mots) règle sa présence, obligatoire / au moins un / exclu (?any= et ?not=
+ * répétables). Découpage et règles dans searchWords (@spok/shared), le même que l'API : ne pas redécouper ici.
  * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
  * plusieurs sections → les 10 premiers de chacune + « Voir les N résultats » (bascule sur cette section) ;
  * une seule section → chevrons. Filtres d'items (type, statut, tags) : l'API ne renvoie plus que Items et
@@ -18,9 +20,12 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, ChevronDown, Tag, SlidersHorizontal } from 'lucide-react';
-import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES } from '@spok/shared';
+import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES, nextSearchWordMode, resolveSearchWords } from '@spok/shared';
+import type { SearchWord, SearchWordMode } from '@spok/shared';
 import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
+import { HelpHint } from '../help/HelpHint';
+import { pageHint } from '../help/pageHint';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -39,6 +44,23 @@ type EntityType = typeof ENTITY_TYPES[number]['key'];
 const PAGE_SIZE = 10;
 /** Sections que les filtres d'items laissent affichées (les autres sont omises par l'API). */
 const ITEM_FILTER_SECTIONS = new Set<string>(['items', 'contributions']);
+
+/** Pastille d'un mot selon sa présence demandée : libellé, style, clé de l'infobulle (hints de la fiche « search »). */
+const WORD_MODES: Record<SearchWordMode, { label: string; className: string; hint: string }> = {
+  required: { label: 'obligatoire', className: 'bg-primary text-primary-foreground border-primary', hint: 'wordRequired' },
+  any: { label: 'au moins un', className: 'bg-background text-primary border-primary border-dashed', hint: 'wordAny' },
+  excluded: { label: 'exclu', className: 'bg-destructive/10 text-destructive border-destructive/40', hint: 'wordExcluded' },
+};
+
+/** Réécrit ?any= et ?not= d'après les mots : ne garde que les mots présents dans q et non obligatoires. */
+function writeWordModes(params: URLSearchParams, words: SearchWord[]) {
+  params.delete('any');
+  params.delete('not');
+  for (const { text, mode } of words) {
+    if (mode === 'any') params.append('any', text);
+    if (mode === 'excluded') params.append('not', text);
+  }
+}
 
 /** Regroupe des résultats déjà triés communauté › espace (API) en groupes consécutifs « Communauté › Espace ». */
 function groupBySpace<T extends { spaceId: string; spaceName: string; communityName: string | null }>(rows: T[]) {
@@ -77,15 +99,19 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString('fr-FR');
 }
 
-function Highlight({ text, query }: { text: string | null; query: string }) {
-  if (!text || !query) return <>{text}</>;
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return <>{text}</>;
+/** Surligne chaque occurrence des mots cherchés ; les plus longs d'abord, pour qu'un mot inclus dans un autre ne le coupe pas. */
+function Highlight({ text, words }: { text: string | null; words: string[] }) {
+  if (!text || words.length === 0) return <>{text}</>;
+  const alternatives = [...words]
+    .sort((a, b) => b.length - a.length)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  // split avec groupe capturant : les indices impairs sont les occurrences trouvées
+  const parts = text.split(new RegExp(`(${alternatives.join('|')})`, 'gi'));
   return (
     <>
-      {text.slice(0, idx)}
-      <mark className="bg-primary/20 text-foreground rounded px-0.5">{text.slice(idx, idx + query.length)}</mark>
-      {text.slice(idx + query.length)}
+      {parts.map((part, i) => i % 2 === 1
+        ? <mark key={i} className="bg-primary/20 text-foreground rounded px-0.5">{part}</mark>
+        : part)}
     </>
   );
 }
@@ -103,6 +129,15 @@ export function SearchPage() {
   const itemStatusParam = searchParams.get('itemStatus') || '';
   const tagIdsParam = searchParams.get('tagIds') || '';
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
+  // Clés de cache et d'effet stables : getAll renvoie un nouveau tableau à chaque rendu
+  const anyKey = searchParams.getAll('any').join('\n');
+  const notKey = searchParams.getAll('not').join('\n');
+
+  const words = useMemo(
+    () => resolveSearchWords(qParam, anyKey ? anyKey.split('\n') : [], notKey ? notKey.split('\n') : []),
+    [qParam, anyKey, notKey],
+  );
+  const highlightWords = useMemo(() => words.filter(w => w.mode !== 'excluded').map(w => w.text), [words]);
 
   const [search, setSearch] = useState(qParam);
   // Mobile seulement : filtres repliés par défaut (desktop : toujours dépliés, cf. sm:flex)
@@ -119,6 +154,8 @@ export function SearchPage() {
           const params = new URLSearchParams(prev);
           if (current) params.set('q', current);
           else params.delete('q');
+          // Un mot retiré du texte perd sa présence demandée (sinon elle reviendrait s'il est ressaisi)
+          writeWordModes(params, resolveSearchWords(current, params.getAll('any'), params.getAll('not')));
           params.set('page', '1');
           return params;
         }, { replace: true });
@@ -163,6 +200,16 @@ export function SearchPage() {
     }, { replace: true });
   };
   const updateParam = (key: string, value: string) => updateParams({ [key]: value });
+
+  const cycleWordMode = (index: number) => {
+    const next = words.map((w, i) => (i === index ? { ...w, mode: nextSearchWordMode(words, index) } : w));
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      writeWordModes(params, next);
+      params.set('page', '1');
+      return params;
+    }, { replace: true });
+  };
 
   const setPage = (p: number) => {
     setSearchParams(prev => {
@@ -219,9 +266,11 @@ export function SearchPage() {
 
   // Search query
   const { data, isLoading } = useQuery({
-    queryKey: ['advanced-search', qParam, typesParam, effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, effectivePage],
+    queryKey: ['advanced-search', qParam, anyKey, notKey, typesParam, effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam, effectivePage],
     queryFn: () => searchApi.advanced({
       q: qParam,
+      any: words.filter(w => w.mode === 'any').map(w => w.text),
+      not: words.filter(w => w.mode === 'excluded').map(w => w.text),
       types: typesParam,
       communityId: effectiveCommunityId || undefined,
       spaceId: spaceIdParam || undefined,
@@ -275,6 +324,28 @@ export function SearchPage() {
           )}
         </div>
         </div>
+
+        {/* Présence de chaque mot : un clic passe à l'état suivant (dès 2 mots) */}
+        {words.length >= 2 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4 text-sm" data-tour="search-words">
+            <span className="text-muted-foreground">Mots :</span>
+            {words.map((word, index) => {
+              const mode = WORD_MODES[word.mode];
+              return (
+                <HelpHint key={word.text} text={pageHint('search', mode.hint)}>
+                  <button
+                    type="button"
+                    onClick={() => cycleWordMode(index)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${mode.className}`}
+                  >
+                    <span className={word.mode === 'excluded' ? 'line-through' : undefined}>{word.text}</span>
+                    <span className="font-normal opacity-80">{mode.label}</span>
+                  </button>
+                </HelpHint>
+              );
+            })}
+          </div>
+        )}
 
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
             élargissement explicite par l'utilisateur */}
@@ -455,10 +526,10 @@ export function SearchPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm"><Highlight text={c.name} query={qParam} /></span>
+                        <span className="font-medium text-sm"><Highlight text={c.name} words={highlightWords} /></span>
                         {c.visibility !== 'PRIVATE' && <Globe className="w-3 h-3 text-muted-foreground" />}
                       </div>
-                      {c.description && <p className="text-xs text-muted-foreground line-clamp-1"><Highlight text={c.description} query={qParam} /></p>}
+                      {c.description && <p className="text-xs text-muted-foreground line-clamp-1"><Highlight text={c.description} words={highlightWords} /></p>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
                       <span>{c.memberCount} membres</span>
@@ -482,7 +553,7 @@ export function SearchPage() {
                   <Link key={s.id} to={`/spaces/${s.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <FolderKanban className={`w-5 h-5 flex-shrink-0 ${s.type === 'GROUP' ? 'text-green-500' : 'text-blue-500'}`} />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm"><Highlight text={s.name} query={qParam} /></span>
+                      <span className="font-medium text-sm"><Highlight text={s.name} words={highlightWords} /></span>
                       {s.communityName && <span className="text-xs text-muted-foreground ml-2">{s.communityName}</span>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
@@ -510,14 +581,14 @@ export function SearchPage() {
                   <Link key={item.id} to={`/spaces/${item.spaceId}?item=${item.id}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{typeLabel(item.type)}</Badge>
-                      <span className="font-medium text-sm"><Highlight text={item.title} query={qParam} /></span>
+                      <span className="font-medium text-sm"><Highlight text={item.title} words={highlightWords} /></span>
                       {item.status && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{statusLabel(item.status)}</Badge>}
                       {item.priority != null && item.priority > 0 && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">P{item.priority}</Badge>
                       )}
                     </div>
                     {item.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1"><Highlight text={item.description} query={qParam} /></p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1"><Highlight text={item.description} words={highlightWords} /></p>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span>{formatRelativeDate(item.createdAt)}</span>
@@ -555,12 +626,12 @@ export function SearchPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm"><Highlight text={u.name} query={qParam} /></span>
+                        <span className="font-medium text-sm"><Highlight text={u.name} words={highlightWords} /></span>
                         {u.globalRole === 'ADMIN' && (
                           <Badge variant="default" className="text-[10px] px-1.5 py-0"><Shield className="w-3 h-3 mr-0.5" />Admin</Badge>
                         )}
                       </div>
-                      {u.email && <p className="text-xs text-muted-foreground"><Highlight text={u.email} query={qParam} /></p>}
+                      {u.email && <p className="text-xs text-muted-foreground"><Highlight text={u.email} words={highlightWords} /></p>}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
                       <span>{u.communityCount} comm.</span>
@@ -586,7 +657,7 @@ export function SearchPage() {
                 {group.rows.map(c => (
                   <Link key={c.id} to={`/spaces/${c.spaceId}?item=${c.itemId}`} className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
                     {c.content && (
-                      <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} query={qParam} /></p>
+                      <p className="text-sm line-clamp-2 mb-1"><Highlight text={c.content} words={highlightWords} /></p>
                     )}
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                       <span className="font-medium">{c.authorName}</span>

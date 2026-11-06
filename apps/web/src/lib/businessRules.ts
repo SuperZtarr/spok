@@ -118,6 +118,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
+    id: 'search-word-presence',
+    page: 'Recherche (/search) ; recherche du header et sélecteur d\'éléments pour le comportement par défaut',
+    trigger: 'Recherche de plusieurs mots',
+    effect: "Tous les mots sont obligatoires, dans n'importe quel ordre, et peuvent être dans des champs différents d'un même résultat ; \"entre guillemets\" = expression exacte, comptée pour un seul mot. Sur la page Recherche, une pastille par mot règle sa présence : obligatoire, au moins un (au moins un des mots dans cet état doit être présent) ou exclu. Il reste toujours au moins un mot non exclu. S'applique à toutes les sections. 20 mots au plus. Avant le 2026-11-06, plusieurs mots étaient cherchés comme une seule expression exacte",
+    location: 'packages/shared/src/utils/searchWords.ts, apps/api/src/utils/searchWhere.ts, apps/api/src/routes/search.ts (GET /advanced), apps/web/src/pages/SearchPage.tsx',
+  },
+  {
     id: 'mindmap-frozen-positions',
     page: 'Vue Carte mentale (MindMapView)',
     trigger: 'Ouverture de la carte, repli ou dépli, ajout, suppression ou déplacement d\'un élément',

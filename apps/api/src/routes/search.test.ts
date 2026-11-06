@@ -306,4 +306,44 @@ describe('Search routes', () => {
       expect(prisma.item.findMany.mock.calls[0][0].take).toBe(10)
     })
   })
+
+  describe('GET /search/advanced — présence des mots', () => {
+    const contains = (text: string) => ({ contains: text, mode: 'insensitive' })
+
+    it('applique les modes des mots à toutes les sections, any et not répétables', async () => {
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.space.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([])
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      const res = await app.inject({
+        method: 'GET', url: '/search/advanced?q=plan%20projet%20budget%20taxe&any=projet&any=budget&not=taxe',
+        headers: { authorization: `Bearer ${token}` },
+      })
+      expect(res.statusCode).toBe(200)
+
+      const itemAnd = prisma.item.findMany.mock.calls[0][0].where.AND
+      expect(itemAnd[0].OR).toContainEqual({ title: contains('plan') })
+      expect(itemAnd[1].OR).toContainEqual({ title: contains('projet') })
+      expect(itemAnd[1].OR).toContainEqual({ url: contains('budget') })
+      expect(itemAnd).toContainEqual({ NOT: { title: contains('taxe') } })
+      expect(itemAnd).toContainEqual({ OR: [{ description: null }, { NOT: { description: contains('taxe') } }] })
+
+      expect(prisma.contribution.findMany.mock.calls[0][0].where.AND).toContainEqual({ NOT: { content: contains('taxe') } })
+      expect(prisma.user.findMany.mock.calls[0][0].where.AND).toContainEqual({ NOT: { email: contains('taxe') } })
+    })
+
+    it('communautés : le filtre de texte reste en plus du périmètre d\'accès', async () => {
+      prisma.community.findMany.mockResolvedValue([])
+      prisma.space.findMany.mockResolvedValue([])
+      prisma.communityMembership.findMany.mockResolvedValue([{ communityId: 'c1' }])
+      prisma.spaceMembership.findMany.mockResolvedValue([])
+      await app.inject({
+        method: 'GET', url: '/search/advanced?q=plan&types=communities',
+        headers: { authorization: `Bearer ${token}` },
+      })
+      const where = prisma.community.findMany.mock.calls.at(-1)![0].where
+      expect(where.OR).toEqual([{ id: { in: ['c1'] } }, { visibility: { not: 'PRIVATE' } }])
+      expect(where.AND[0].OR).toContainEqual({ name: contains('plan') })
+    })
+  })
 })
