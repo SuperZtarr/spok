@@ -157,7 +157,7 @@ export function TodayPage() {
         await itemsApi.delete(item.spaceId, item.id);
         invalidateAgenda();
       },
-    }, { canEdit: true, itemSpaceId: item.spaceId, statusOptions, currentStatusId: item.status ?? undefined });
+    }, { item: item, canEdit: true, itemSpaceId: item.spaceId, statusOptions, currentStatusId: item.status ?? undefined });
 
   // Drop depuis la liste : une tâche engagée est placée, une suggestion est engagée + placée
   const handleDropAt = (payload: DropPayload, startIso: string, durationMin: number) => {

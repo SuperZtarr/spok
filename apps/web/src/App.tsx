@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
+import { setAppNavigate } from './lib/appNavigate';
 import { LiveSessionHost } from './components/live/LiveSessionHost';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -163,6 +164,8 @@ export default function App() {
   const logout = useAuthStore((state) => state.logout);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
+
+  useEffect(() => { setAppNavigate(navigate); }, [navigate]);
 
   useEffect(() => {
     const handleLogout = () => {

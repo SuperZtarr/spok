@@ -425,7 +425,7 @@ function TextItem({
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,
-            }, {
+            }, { item: item,
               canEdit: canEditItem ? canEditItem(item) : canEdit,
               statusOptions,
               currentStatusId: item.status || undefined,

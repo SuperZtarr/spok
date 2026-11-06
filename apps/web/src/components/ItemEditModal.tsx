@@ -13,11 +13,11 @@
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
  * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
  * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
- * Bouton vers la page d'un article (ArticleOpenButton, « Composer l'article » ou « Page de lecture » selon les droits) :
- * actif seulement si la fiche est enregistrée en ARTICLE (type choisi mais pas enregistré → grisé, hint
- * openArticleUnsaved, aussi affiché en phrase visible dessous, et seul pour un élément en création) ;
- * départ via guardClose (modifications non enregistrées), espace = item.spaceId.
- * Deux modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
+ * Mode Composer d'un article (décision Thomas 2026-11-06) : troisième choix du sélecteur, si article.canEditArticle.
+ * Grisé si la fiche n'est pas enregistrée en ARTICLE (hint openArticleUnsaved, aussi affiché en phrase visible dans le
+ * formulaire, et seul pour un élément en création) ou a des modifications non enregistrées. Sans droit, un
+ * ?mode=composition retombe sur Afficher.
+ * Modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
  * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
  * Afficher est bloqué tant qu'il y a des modifications non enregistrées (la lecture montre la version enregistrée).
@@ -51,8 +51,8 @@
  * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
- * Type ARTICLE : ArticleOpenButton (section média) vers sa page de lecture / composition (ArticlePage) ;
- * en mode « Afficher », les blocs de l'article sont lus directement dans la fiche (ArticleReadBlocks), avec le même bouton.
+ * Type ARTICLE : en mode « Afficher », les blocs sont lus dans la fiche (ArticleReadBlocks) et Imprimer sort l'article
+ * complet (printArticle) ; la lecture en pleine page (ArticlePage) s'ouvre depuis la vue Articles ou le menu ⋮.
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
@@ -75,10 +75,12 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
-import { ArticleOpenButton } from './article/ArticleOpenButton';
+import { ArticleEditor } from './article/ArticleEditor';
+import { printArticle } from './article/printArticle';
+import { useArticle } from '../hooks/useArticle';
 import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
 import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
@@ -172,10 +174,10 @@ export function ItemEditModal({
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
   const [thumbnailState, setThumbnailState] = useState<'idle' | 'busy' | 'copied' | 'downloaded' | 'error'>('idle');
-  // Mode Afficher (ItemReadView) ou Modifier / Fiche : fixé à chaque ouverture, conservé en naviguant d'item en item
-  const [readMode, setReadMode] = useState(false);
+  // Mode Afficher (ItemReadView), Modifier / Fiche ou Composer : fixé à chaque ouverture, conservé en naviguant d'item en item
+  const [displayMode, setDisplayMode] = useState<ItemOpenMode>('edit');
   useEffect(() => {
-    if (isOpen) setReadMode(!!itemId && resolveItemMode(initialMode, canEditProp) === 'read');
+    if (isOpen) setDisplayMode(itemId ? resolveItemMode(initialMode, canEditProp) : 'edit');
   }, [isOpen, initialMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [title, setTitle] = useState('');
@@ -927,6 +929,15 @@ export function ItemEditModal({
     return path;
   }, [item, allItems]);
 
+  // Article enregistré : ses blocs et le droit de les composer. Composer sans ce droit retombe sur Afficher.
+  const savedArticle = item?.type === 'ARTICLE';
+  const articleState = useArticle(savedArticle ? (item?.spaceId ?? spaceId) : undefined, savedArticle ? (itemId ?? undefined) : undefined);
+  const canCompose = !!articleState.article?.canEditArticle;
+  const composing = displayMode === 'compose' && canCompose;
+  const readMode = displayMode === 'read' || (displayMode === 'compose' && !canCompose);
+  const formMode = !readMode && !composing;
+  const articlePrintRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen) return null;
 
   const TypeIcon = TYPE_ICONS[type];
@@ -986,27 +997,19 @@ export function ItemEditModal({
   );
   const printSheet = () => {
     if (!item) return;
+    if (item.type === 'ARTICLE' && articlePrintRef.current) {
+      printArticle(articlePrintRef.current, item.title, { description: item.description });
+      return;
+    }
     printItem({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName });
   };
 
   // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
   // Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
   // rendus sous la Description dans la colonne principale.
-  // Départ vers la page d'un article : passe par la garde des modifications non enregistrées.
-  const leaveForArticle = (go: () => void) => guardClose(() => { onClose(); go(); });
-
   const mediaSection = (
     <>
-      {/* Article : ses blocs se composent et se lisent sur sa page (pages/ArticlePage.tsx).
-          Actif seulement si la fiche est ENREGISTRÉE en Article (sinon l'API répond « introuvable »). */}
-      {type === 'ARTICLE' && itemId && (
-        <ArticleOpenButton
-          spaceId={item?.spaceId ?? spaceId}
-          articleId={item?.type === 'ARTICLE' ? itemId : undefined}
-          leave={leaveForArticle}
-        />
-      )}
-      {/* Pas encore enregistré en Article (création, ou type changé sans enregistrer) : phrase visible, le bouton grisé
+      {/* Pas encore enregistré en Article (création, ou type changé sans enregistrer) : phrase visible, Composer grisé
           ne montre pas son infobulle */}
       {type === 'ARTICLE' && (!itemId || item?.type !== 'ARTICLE') && (
         <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
@@ -1148,7 +1151,7 @@ export function ItemEditModal({
               {TypeIcon && <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
             </div>
             <div className="flex-1 min-w-0" data-tour="item-title">
-              {readMode ? (
+              {!formMode ? (
                 <span className="text-sm text-muted-foreground">{typeConfig?.labelShort || type}</span>
               ) : canEdit ? (
                 <Input
@@ -1162,7 +1165,7 @@ export function ItemEditModal({
                 <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
               )}
             </div>
-            {/* Sélecteur Afficher / Modifier (Fiche sans droit d'édition) — item existant seulement */}
+            {/* Sélecteur Afficher / Modifier (Fiche sans droit d'édition) / Composer (article) — item existant seulement */}
             {!isNewItem && (
               <div className="flex items-center rounded-md bg-muted p-0.5 flex-shrink-0" role="group" aria-label="Mode d'affichage" data-tour="item-mode-switch">
                 <HelpHint text={itemHints?.[!readMode && hasChanges ? 'readModeUnsaved' : 'readMode']}>
@@ -1170,7 +1173,7 @@ export function ItemEditModal({
                     type="button"
                     aria-pressed={readMode}
                     disabled={!readMode && hasChanges}
-                    onClick={() => setReadMode(true)}
+                    onClick={() => setDisplayMode('read')}
                     className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <BookOpen className="w-3 h-3" />
@@ -1180,17 +1183,32 @@ export function ItemEditModal({
                 <HelpHint text={itemHints?.[canEdit ? 'editMode' : 'sheetMode']}>
                   <button
                     type="button"
-                    aria-pressed={!readMode}
-                    onClick={() => setReadMode(false)}
-                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${!readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    aria-pressed={formMode}
+                    onClick={() => setDisplayMode('edit')}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${formMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <Pencil className="w-3 h-3" />
                     <span className="hidden sm:inline">{canEdit ? 'Modifier' : 'Fiche'}</span>
                   </button>
                 </HelpHint>
+                {(canCompose || (type === 'ARTICLE' && !savedArticle && canEdit)) && (
+                  <HelpHint text={itemHints?.[!savedArticle ? 'openArticleUnsaved' : hasChanges ? 'composeModeUnsaved' : 'composeMode']}>
+                    <button
+                      type="button"
+                      aria-pressed={composing}
+                      disabled={!savedArticle || hasChanges}
+                      onClick={() => setDisplayMode('compose')}
+                      data-tour="item-mode-compose"
+                      className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${composing ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <PenLine className="w-3 h-3" />
+                      <span className="hidden sm:inline">Composer</span>
+                    </button>
+                  </HelpHint>
+                )}
               </div>
             )}
-            {!readMode && <button
+            {formMode && <button
               type="button"
               onClick={() => setExpanded(v => !v)}
               data-tour="item-more-fields"
@@ -1221,11 +1239,9 @@ export function ItemEditModal({
                   sheet={buildSheet()}
                   onOpenChild={onNavigate}
                   articleContent={item?.type === 'ARTICLE' && itemId ? (
-                    <ArticleReadBlocks
-                      spaceId={item.spaceId ?? spaceId}
-                      articleId={itemId}
-                      leave={leaveForArticle}
-                    />
+                    <div ref={articlePrintRef}>
+                      <ArticleReadBlocks spaceId={item.spaceId ?? spaceId} articleId={itemId} />
+                    </div>
                   ) : undefined}
                   toolbar={(
                     <>
@@ -1253,7 +1269,23 @@ export function ItemEditModal({
             </>
           )}
 
-          {!readMode && (<>
+          {/* Mode Composer d'un article : titre et chapeau en rappel, puis ses blocs. Pied réduit à Fermer. */}
+          {composing && item && articleState.article && (
+            <>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <h2 className="text-2xl font-bold leading-tight">{item.title}</h2>
+                {item.description && (
+                  <div className="prose dark:prose-invert max-w-none mt-2 mb-4 text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />
+                )}
+                <ArticleEditor spaceId={item.spaceId ?? spaceId} articleId={item.id} article={articleState.article} state={articleState} />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
+                <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
+              </div>
+            </>
+          )}
+
+          {formMode && (<>
           {/* Fiche réduite (tous modes) : résumé cliquable des champs avancés renseignés */}
           {!expanded && item && (() => {
             const parts = buildForumSummary(item, {

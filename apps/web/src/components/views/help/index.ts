@@ -31,6 +31,7 @@ import { help as links } from './links.help';
 import { help as bugs } from './bugs.help';
 import { help as todo } from './todo.help';
 import { help as documents } from './documents.help';
+import { help as articles } from './articles.help';
 import { help as thread } from './thread.help';
 import { help as images } from './images.help';
 import { help as recent } from './recent.help';
@@ -67,6 +68,7 @@ export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   bugs: bugs,
   todo: todo,
   documents: documents,
+  articles: articles,
   thread: thread,
   images: images,
   recent: recent,

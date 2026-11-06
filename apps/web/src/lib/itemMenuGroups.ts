@@ -5,12 +5,15 @@
  * connecté (même sans droit d'édition), absent pour un visiteur anonyme (lu via useAuthStore.getState()).
  * Groupe Ouvrir : « Afficher » (onOpen(id, 'read'), modale en mode lecture) et « Ouvrir » (onOpen(id, 'edit'), fiche
  * modifiable selon les droits) — pour tout le monde ; à défaut d'onOpen, onEdit sert d'« Ouvrir » (pas d'Afficher).
+ * « Lire l'article » (groupe Ouvrir) : sur un article (option item), page de lecture avec retour à la vue d'origine ; via
+ * appNavigate, ce menu étant construit hors des hooks. Les vues passent toujours { item } pour que l'action apparaisse.
  * L'ancienne entrée « Modifier » (doublon d'Ouvrir) est retirée (décision Thomas 2026-10-23).
  * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  */
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle } from 'lucide-react';
-import type { ItemOpenMode } from './itemOpenMode';
+import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
+import { articlePageUrl, articleReturnState, type ItemOpenMode } from './itemOpenMode';
+import { appNavigate } from './appNavigate';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 import { activityApi } from './api';
 import { queryClient } from './queryClient';
@@ -69,6 +72,8 @@ export interface ItemMenuOptions {
   extraSections?: Array<{ label?: string; actions: ItemAction[] }>;
   // spaceId de l'item courant (pour addChild multi-espace)
   itemSpaceId?: string;
+  // Élément du menu : son type et son espace (« Lire l'article » sur un article)
+  item?: { type?: string; spaceId?: string | null };
   // Permissions : false = masquer toutes les actions d'écriture (delete, move, merge...)
   canEdit?: boolean;
 }
@@ -93,12 +98,14 @@ export function buildItemMenuGroups(
     onAbsorbChildren,
     onSplitDescription,
   } = callbacks;
-  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true } = options;
+  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true, item } = options;
 
   // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
   const isLoggedIn = !!useAuthStore.getState().user;
   const openFiche = onOpen ? () => onOpen(itemId, 'edit') : onEdit ? () => onEdit(itemId) : null;
+  const articleSpaceId = item?.type === 'ARTICLE' ? item.spaceId : null;
   const group1: ItemAction[] = [
+    ...(articleSpaceId ? [{ id: 'read-article', label: "Lire l'article", icon: Newspaper, onClick: () => appNavigate(articlePageUrl(articleSpaceId, itemId), { state: articleReturnState(window.location) }) }] : []),
     ...(onOpen ? [{ id: 'view', label: 'Afficher', icon: BookOpen, onClick: () => onOpen(itemId, 'read') }] : []),
     ...(openFiche ? [{ id: 'open', label: 'Ouvrir', icon: Pencil, onClick: openFiche }] : []),
     ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),

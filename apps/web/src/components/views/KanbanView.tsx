@@ -248,7 +248,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
             onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
             onOpen,
             onOpenInNewTab,
-          }, {
+          }, { item: item,
             canEdit: canEditItem ? canEditItem(item) : canEdit,
             statusOptions,
             currentStatusId: item.status || undefined,

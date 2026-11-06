@@ -229,7 +229,7 @@ function ProcessCanvas({
       onUpdateStatus: cb.onUpdateStatus, onAddChild: cb.onAddChild, onMoveToSpace: cb.onMoveToSpace,
       onDuplicateToSpace: cb.onDuplicateToSpace, onConvertToSpace: cb.onConvertToSpace, onSelfAssign: cb.onSelfAssign,
       onMerge: cb.onMerge, onAbsorbChildren: cb.onAbsorbChildren, onSplitDescription: cb.onSplitDescription,
-    }, {
+    }, { item: item,
       canEdit: itemCanEdit, statusOptions, currentStatusId: item.status || undefined,
       extraSections: canEdit ? [{ actions: [
         { id: 'process-lane', label: 'Définir comme couloir', icon: Rows3, onClick: () => addLane(item.id) },

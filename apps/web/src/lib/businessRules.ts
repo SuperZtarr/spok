@@ -230,6 +230,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/web/src/components/article/articleLayout.ts (groupRows), ArticleFlow.tsx, ArticleEditor.tsx ; champ article_blocks.beside',
   },
   {
+    id: 'article-screens',
+    page: 'Article : fiche et page de lecture',
+    trigger: "Ouverture d'un article : vue Articles, menu ⋮, sélecteur de la fiche, adresse",
+    effect: "La page (/spaces/:spaceId/articles/:itemId) sert à lire, imprimer et partager, en lecture seule ; on y arrive par un clic sur l'article dans toute vue d'espace (seule exception à « un clic ouvre la fiche » ; le menu ⋮ garde « Afficher » et « Ouvrir » vers la fiche), par « Lire l'article » du menu ⋮ ou par un lien, et son retour ramène à la vue d'origine. La fiche sert à consulter sans quitter la vue (Afficher), à changer les champs (Modifier) et à travailler les blocs (Composer, seulement pour qui peut modifier l'article et sans modification en attente ; ?mode=composition sans ce droit retombe sur Afficher)",
+    location: 'apps/web/src/pages/SpacePage.tsx (openItemFromView), apps/web/src/pages/ArticlePage.tsx, apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/views/ArticlesView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/lib/itemOpenMode.ts',
+  },
+  {
     id: 'article-blocks-references',
     page: 'Article (/spaces/:spaceId/articles/:itemId)',
     trigger: 'Composition d\'un article (mode Composer)',

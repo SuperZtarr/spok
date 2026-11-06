@@ -14,6 +14,15 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-06 (3)
+- 2 lots poussés : vue Loupe (feat), article avec Composer dans la fiche, vue Articles, page en lecture seule (feat). SpacePage entier dans le second commit (lignes des deux lots imbriquées), donc la Loupe n'est branchée qu'à ce commit. Micro-correction : viewMode.test.ts passe à 34 vues. Typecheck OK, TNR 1962 verts + viewMode.test.ts vert après correction, en-têtes OK. Non vérifiés à l'écran pour la Loupe : geste réel à la souris, Document avec fichier, plusieurs centaines d'items
+
+### Article, Composer dans la fiche — 2026-11-06
+- Page en lecture seule, Composer dans la fiche, vue Articles, « Lire l'article » au menu ⋮. Remplace le bouton de c7e3389. Poussé par la MEP du 2026-11-06, test demandé à Thomas
+
+### Vue Loupe — 2026-11-06
+- Vue d'exploration de lien en lien codée, poussée par la MEP du 2026-11-06. Mise de côté : carte de session sur une possible fuite de titres via `relationsFrom`/`relationsTo` dans `items.ts`, non testée
+
 ### MEP — 2026-11-06 (2)
 - Lot poussé : Article, sécurité du parcours de l'ajout groupé (fix). Typecheck OK, TNR 1896/1896, en-têtes OK. `toItem` du select contrôlé contre le schéma Prisma
 

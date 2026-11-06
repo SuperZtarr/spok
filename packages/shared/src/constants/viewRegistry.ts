@@ -29,8 +29,9 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
   { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'user' },
   { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'user' },
   { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'user'   },
-  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 4, visible: true, access: 'user'   },
-  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 5, visible: true, access: 'user'   },
+  { id: 'articles',  label: 'Articles',   icon: 'Newspaper',    category: 'itemTypes', order: 4, visible: true, access: 'user'   },
+  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 5, visible: true, access: 'user'   },
+  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 6, visible: true, access: 'user'   },
 
   // ── planning ──
   { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'user'   },

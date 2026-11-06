@@ -359,7 +359,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
               onSplitDescription: canEdit && hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,
-            }, {
+            }, { item: item,
               statusOptions: canEdit ? statusOptions : null,
               currentStatusId: item.status || undefined,
               extraChildren: [

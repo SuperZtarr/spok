@@ -39,6 +39,7 @@ import {
   GitBranch,
   Columns3,
   FileText,
+  Newspaper,
   CalendarCheck,
   GanttChart,
   Calendar,
@@ -190,7 +191,7 @@ const VIEW_ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, Columns3, FileText, CalendarCheck, GanttChart, Calendar,
   LayoutGrid, Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack,
   Disc, TrendingDown, Layers, Users, Flame, Table2, Grid3x3, Focus, ZoomIn,
-  ExternalLink, Image, Bug, CheckSquare, MessageSquare, Clock, GitMerge, Workflow,
+  ExternalLink, Image, Newspaper, Bug, CheckSquare, MessageSquare, Clock, GitMerge, Workflow,
 };
 
 export interface SpaceToolbarProps {
@@ -311,7 +312,7 @@ export function SpaceToolbar({
 
 
   return (
-    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','loupe','priority','mindmap','process'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
+    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${['list','types','thread','members','recent','text','tree','crossTable','links','images','documents','articles','bugs','todo','kanban','timeline','pert','calendar','planning','graph','sunburst','relations','bubble','radialTree','treemap','burndown','cfd','chord','heatmap','ego','loupe','priority','mindmap','process'].includes(viewMode) ? '' : 'mb-3 pb-2'}`}>
 
       {/* View mode buttons row */}
       {(() => {

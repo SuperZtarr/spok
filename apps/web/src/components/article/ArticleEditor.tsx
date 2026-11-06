@@ -1,5 +1,5 @@
 /*
- * Mode « Composer » d'un article (ArticlePage, seulement si article.canEditArticle) :
+ * Mode « Composer » d'un article (fiche ItemEditModal, seulement si article.canEditArticle) :
  * - blocs réordonnables par glisser-déposer (@dnd-kit/sortable, poignée) → reorder optimiste (useArticle) ;
  * - barre de chaque bloc : « À côté » (sauf le 1er : à droite du bloc précédent, rangée de 3 colonnes max — largeur et
  *   position alors masquées), largeur (pleine / large / moyenne), position (centrée / gauche / droite, IMAGE et DIAGRAM

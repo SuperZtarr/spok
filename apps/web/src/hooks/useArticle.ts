@@ -4,7 +4,7 @@
  * demande confirmation puis rappelle avec confirmLessVisible ; addBatch({ source, position, confirmLessVisible }) insère
  * une grappe ou un processus (aperçu préalable par articlesApi.previewBatch) ; addText(position) crée une note dans l'espace de l'article ;
  * updateBlock(blockId, { width, align, beside }) et reorder(blockIds) optimistes (cache restauré en cas d'échec) ;
- * removeBlock(blockId) retire la référence (l'élément n'est jamais supprimé). Réservé à ArticlePage / ArticleEditor.
+ * removeBlock(blockId) retire la référence (l'élément n'est jamais supprimé). Réservé à ArticlePage, ArticleReadBlocks, ItemEditModal / ArticleEditor.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ArticleBatchSource, ArticleBlockAlign, ArticleBlockWidth, ArticleView } from '@spok/shared';

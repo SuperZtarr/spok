@@ -237,7 +237,7 @@ export function TreeItemRow({
                 onMerge,
                 onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined,
                 onSplitDescription: onSplitDescription && hasHeadings(item.description) ? onSplitDescription : undefined,
-              }, {
+              }, { item: item,
                 canEdit: canEditItem ? canEditItem(item) : editable,
                 statusOptions,
                 currentStatusId: item.status || undefined,

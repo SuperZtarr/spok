@@ -8,6 +8,8 @@
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
+ * Clic sur un élément dans une vue (openItemFromView) : sa fiche, sauf un article, qui s'ouvre sur sa page de lecture
+ * (décision Thomas 2026-11-06) ; le menu ⋮ reste le chemin vers sa fiche. Création et ?item= ouvrent toujours la fiche.
  * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Afficher / Ouvrir, liens partagés) — itemOpenMode.ts.
  * Le paramètre quitte aussitôt l'adresse : l'élément ouvert est publié dans useOpenItemStore (titre de l'onglet, Layout).
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
@@ -19,7 +21,7 @@
  * vue — « Se connecter » pour un visiteur, « Accueil » sinon (2026-10-28).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -79,10 +81,12 @@ import { ChordView } from '../components/views/ChordView';
 import { CrossTableView } from '../components/views/CrossTableView';
 import { HeatmapView } from '../components/views/HeatmapView';
 import { EgoNetworkView } from '../components/views/EgoNetworkView';
+import { LoupeView } from '../components/views/LoupeView';
 import { MembersKanbanView } from '../components/views/MembersKanbanView';
 import { PriorityView } from '../components/views/PriorityView';
 import { ImagesView } from '../components/views/ImagesView';
 import { LinksView } from '../components/views/LinksView';
+import { ArticlesView } from '../components/views/ArticlesView';
 import { DocumentsView } from '../components/views/DocumentsView';
 import { BugsView } from '../components/views/BugsView';
 import { TodoView } from '../components/views/TodoView';
@@ -97,7 +101,7 @@ import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
-import { parseItemMode, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
+import { articlePageUrl, articleReturnState, parseItemMode, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
@@ -282,8 +286,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert' || viewMode === 'process';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'bugs' || viewMode === 'todo';
-  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'articles' || viewMode === 'bugs' || viewMode === 'todo';
+  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe';
   const activeTypeFilter = filter.length > 0 ? filter : undefined;
   const activeStatusFilter = statusFilter.length > 0 ? statusFilter : undefined;
 
@@ -322,6 +326,18 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     if (!itemsData?.data) return [];
     return itemsData.data.filter((item: Item) => !item.parentId && item.spaceId === spaceId);
   }, [itemsData?.data, spaceId]);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Clic sur un élément dans une vue : un article s'ouvre sur sa page de lecture, le reste sur sa fiche.
+  const openItemFromView = (itemId: string) => {
+    const clicked = itemsData?.data?.find((i) => i.id === itemId);
+    if (clicked?.type === 'ARTICLE') {
+      navigate(articlePageUrl(clicked.spaceId ?? spaceId!, itemId), { state: articleReturnState(location) });
+    } else {
+      setEditingItemId(itemId);
+    }
+  };
 
   const portalGroups = useMemo(() => {
     if (checkedDescendantIds.length === 0 || !itemsData?.data) return [];
@@ -653,8 +669,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   }
 
   return (
-    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full' : ''}`}>
+    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
@@ -689,7 +705,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         />
 
         {/* Items / Views */}
-        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'members' || viewMode === 'types' || viewMode === 'priority' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'text' || viewMode === 'thread' || viewMode === 'tree' ? ' overflow-hidden flex flex-col' : ''}`}>
+        <div ref={viewContainerRef} className={`bg-card border rounded-lg flex-1 min-h-0${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'members' || viewMode === 'types' || viewMode === 'priority' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'text' || viewMode === 'thread' || viewMode === 'tree' ? ' overflow-hidden flex flex-col' : ''}`}>
           {itemsLoading ? (
             <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -700,7 +716,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -730,7 +746,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -764,7 +780,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               spaceId={spaceId}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -788,7 +804,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           ) : viewMode === 'thread' ? (
             <ThreadView
               items={filterBySearch(textViewData?.data || allItemsData?.data)}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -819,7 +835,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -847,7 +863,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               spaceId={spaceId!}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateType={(id, type) => actions.handleInlineUpdate(id, { type })}
               onAddChild={handleAddChild}
@@ -875,7 +891,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -905,7 +921,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
@@ -933,7 +949,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               spaceId={spaceId}
               spaceName={space?.name ?? ''}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onUpdateDates={(id, startDate, endDate) => actions.handleInlineUpdate(id, { startDate, endDate })}
@@ -976,7 +992,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1003,7 +1019,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               spaceName={space?.name ?? ''}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1043,7 +1059,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
               searchMatchIds={searchMatchIds}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1085,7 +1101,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 spaceName={space?.name}
                 communityId={space?.communityId || undefined}
                 communityName={space?.community?.name}
-                onNodeClick={(itemId) => setEditingItemId(itemId)}
+                onNodeClick={openItemFromView}
                 highlightType={activeTypeFilter}
                 highlightStatus={activeStatusFilter}
                 highlightColor={highlightColor}
@@ -1107,7 +1123,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 <SunburstView
                   spaceId={spaceId}
                   spaceName={space?.name}
-                  onNodeClick={(itemId) => setEditingItemId(itemId)}
+                  onNodeClick={openItemFromView}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   highlightColor={highlightColor}
@@ -1130,7 +1146,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   items={(itemsData?.data || []) as Item[]}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onNodeClick={(itemId) => setEditingItemId(itemId)}
+                  onNodeClick={openItemFromView}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   highlightColor={highlightColor}
@@ -1152,7 +1168,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   items={(allItemsData?.data || []) as Item[]}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  onItemClick={openItemFromView}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   highlightColor={highlightColor}
@@ -1174,7 +1190,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   items={(allItemsData?.data || []) as Item[]}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  onItemClick={openItemFromView}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   searchMatchIds={searchMatchIds}
@@ -1195,7 +1211,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 items={(allItemsData?.data || []) as Item[]}
                 portalGroups={portalGroups}
                 currentSpaceId={spaceId}
-                onItemClick={(itemId) => setEditingItemId(itemId)}
+                onItemClick={openItemFromView}
                 highlightType={activeTypeFilter}
                 highlightStatus={activeStatusFilter}
                 searchMatchIds={searchMatchIds}
@@ -1216,7 +1232,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 items={(allItemsData?.data || []) as Item[]}
                 portalGroups={portalGroups}
                 currentSpaceId={spaceId}
-                onItemClick={(itemId) => setEditingItemId(itemId)}
+                onItemClick={openItemFromView}
                 highlightType={activeTypeFilter}
                 highlightStatus={activeStatusFilter}
                 searchMatchIds={searchMatchIds}
@@ -1237,7 +1253,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 items={(allItemsData?.data || []) as Item[]}
                 portalGroups={portalGroups}
                 currentSpaceId={spaceId}
-                onItemClick={(itemId) => setEditingItemId(itemId)}
+                onItemClick={openItemFromView}
                 highlightType={activeTypeFilter}
                 highlightStatus={activeStatusFilter}
                 searchMatchIds={searchMatchIds}
@@ -1258,7 +1274,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   items={(allItemsData?.data || []) as Item[]}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onItemClick={(itemId) => setEditingItemId(itemId)}
+                  onItemClick={openItemFromView}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   searchMatchIds={searchMatchIds}
@@ -1270,7 +1286,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(allItemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               referentiels={referentiels}
               highlightType={activeTypeFilter}
               highlightStatus={activeStatusFilter}
@@ -1295,7 +1311,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   items={filterBySearch(allItemsData?.data)}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onEdit={setEditingItemId}
+                  onEdit={openItemFromView}
                   referentiels={referentiels}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
@@ -1318,8 +1334,42 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                   relations={(allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || [])}
                   portalGroups={portalGroups}
                   currentSpaceId={spaceId}
-                  onEdit={setEditingItemId}
+                  onEdit={openItemFromView}
                   referentiels={referentiels}
+                  highlightType={activeTypeFilter}
+                  highlightStatus={activeStatusFilter}
+                  searchMatchIds={searchMatchIds}
+                />
+              </div>
+            </div>
+          ) : viewMode === 'loupe' ? (
+            <div className="flex flex-col h-full overflow-hidden">
+              <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+                <div className="flex-1" />
+                <ViewHelpButton viewMode="loupe" onStartTour={() => startViewTour(viewMode)} pulse={pulseHelp} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <LoupeView
+                  key={spaceId}
+                  items={allItemsData?.data ?? []}
+                  spaceId={spaceId!}
+                  spaceName={space?.name}
+                  referentiels={referentiels}
+                  canEdit={canEdit}
+                  canEditItem={canEditItem}
+                  onEdit={openItemFromView}
+                  onDelete={actions.handleDelete}
+                  onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+                  onAddChild={handleAddChild}
+                  onMoveToSpace={(id) => setMoveItemId(id)}
+                  onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+                  onConvertToSpace={actions.handleConvertToSpace}
+                  onSelfAssign={handleSelfAssign}
+                  onMerge={actions.handleMerge}
+                  onAbsorbChildren={actions.handleAbsorbChildren}
+                  onSplitDescription={actions.handleSplitDescription}
+                  onOpen={actions.handleOpen}
+                  onOpenInNewTab={actions.handleOpenInNewTab}
                   highlightType={activeTypeFilter}
                   highlightStatus={activeStatusFilter}
                   searchMatchIds={searchMatchIds}
@@ -1332,7 +1382,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               spaceId={spaceId!}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateAssignee={(id, assignedToId) => actions.handleInlineUpdate(id, { assignedToId })}
               onAddChild={handleAddChild}
@@ -1360,7 +1410,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdatePriority={(id, priority) => actions.handleInlineUpdate(id, { priority })}
               onAddChild={handleAddChild}
@@ -1386,7 +1436,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1406,12 +1456,36 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
             />
+          ) : viewMode === 'articles' ? (
+              <ArticlesView
+              items={filterBySearch(itemsData?.data)}
+              currentSpaceId={spaceId}
+              portalGroups={portalGroups}
+              onEdit={openItemFromView}
+              onDelete={actions.handleDelete}
+              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+              onAddChild={handleAddChild}
+              onMoveToSpace={(id) => setMoveItemId(id)}
+              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+              onConvertToSpace={actions.handleConvertToSpace}
+              onSelfAssign={handleSelfAssign}
+              onMerge={actions.handleMerge}
+              onAbsorbChildren={actions.handleAbsorbChildren}
+              onSplitDescription={actions.handleSplitDescription}
+              onOpen={actions.handleOpen}
+              onOpenInNewTab={actions.handleOpenInNewTab}
+              canEdit={canEdit}
+              spaceName={space?.name}
+              viewContainerRef={viewContainerRef}
+              onStartTour={() => startViewTour(viewMode)}
+              pulseHelp={pulseHelp}
+            />
           ) : viewMode === 'bugs' ? (
               <BugsView
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1436,7 +1510,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1463,7 +1537,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1490,7 +1564,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               portalGroups={portalGroups}
               currentSpaceId={spaceId}
-              onEdit={setEditingItemId}
+              onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
               onAddChild={handleAddChild}
@@ -1543,7 +1617,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                       orderNumber={`${index + 1}`}
                       isExpanded={expandedItems.has(item.id)}
                       onToggleExpand={toggleExpanded}
-                      onEdit={setEditingItemId}
+                      onEdit={openItemFromView}
                       onDelete={actions.handleDelete}
                       onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
                       onAddChild={handleAddChild}
@@ -1593,7 +1667,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                           orderNumber={`${index + 1}`}
                           isExpanded={expandedItems.has(item.id)}
                           onToggleExpand={toggleExpanded}
-                          onEdit={setEditingItemId}
+                          onEdit={openItemFromView}
                           onDelete={actions.handleDelete}
                           onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
                           onAddChild={handleAddChild}

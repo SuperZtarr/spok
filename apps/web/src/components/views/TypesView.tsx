@@ -210,7 +210,7 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
       <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <ItemActionMenu
           groups={buildItemMenuGroups(item.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(item) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined, onOpen,
-            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit })}
+            onOpenInNewTab }, { item: item, canEdit: canEditItem ? canEditItem(item) : canEdit })}
         />
       </div>
     </div>

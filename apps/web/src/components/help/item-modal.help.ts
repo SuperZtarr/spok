@@ -2,7 +2,7 @@
    Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts.
    hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
    hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
-   hints.readMode / readModeUnsaved / editMode / sheetMode : sélecteur Afficher / Modifier (data-tour item-mode-switch) ;
+   hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
    hints.print : Imprimer du mode Afficher. zones read-media / read-content : mode Aide sur ItemReadView. */
 import type { HelpEntry } from '../../help/types';
 
@@ -37,9 +37,17 @@ export const help: HelpEntry = {
     {
       element: '[data-tour="item-mode-switch"]',
       popover: {
-        title: 'Afficher / Modifier',
-        description: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+        title: 'Afficher / Modifier / Composer',
+        description: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
         side: 'bottom',
+      },
+    },
+    {
+      element: '[data-tour="article-insert"]',
+      popover: {
+        title: 'Insérer un bloc',
+        description: 'En mode Composer : « Élément » ouvre le sélecteur (parcourir les espaces, cocher un ou plusieurs éléments, ou prendre un processus) ; « Texte » crée une note. Un ajout groupé est confirmé avec le nombre d\'éléments.',
+        side: 'top',
       },
     },
     {
@@ -144,9 +152,7 @@ export const help: HelpEntry = {
     contentTypes: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
-    composeArticle: 'Composer l\'article : ouvre sa page en mode Composer, pour ajouter, réordonner, régler ou retirer ses blocs (éléments existants mis bout à bout). Rien n\'est modifié à l\'ouverture ; si la fiche a des modifications non enregistrées, une confirmation est demandée.',
-    readArticle: 'Page de lecture : ouvre l\'article en pleine page, pour le lire en grand ou l\'imprimer.',
-    openArticleUnsaved: 'Enregistrez d\'abord l\'élément : la construction de l\'article (choix et mise en page des blocs) s\'ouvre une fois qu\'il est enregistré avec le type « Article ».',
+    openArticleUnsaved: 'Enregistrez d\'abord l\'élément : le mode Composer (choix et mise en page des blocs) s\'active une fois qu\'il est enregistré avec le type « Article ».',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     copyThumbnail: 'Copier la vignette : met dans le presse-papier une image PNG de l\'élément (type, statut, titre, image ou début de la description, espace, dates, assigné), à coller dans Teams, Slack, un mail ou PowerPoint. L\'image reflète la version enregistrée. Rien n\'est modifié dans SPOK.',
@@ -157,6 +163,8 @@ export const help: HelpEntry = {
     readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (image ou schéma en grand). C\'est exactement ce que copie « Copier la fiche ». Rien ne peut y être modifié.',
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
     editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
+    composeMode: 'Composer : ajouter, réordonner, régler ou retirer les blocs de l\'article (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place.',
+    composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour passer en mode Composer.',
     sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
   },
   zones: {

@@ -284,7 +284,7 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
               onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
               onOpen,
             onOpenInNewTab,
-            }, {
+            }, { item: item,
               canEdit: canEditItem ? canEditItem(item) : canEdit,
               statusOptions: statuses,
               currentStatusId: item.status || undefined,

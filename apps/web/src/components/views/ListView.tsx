@@ -430,7 +430,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                           onSplitDescription: hasHeadings(item.description) ? onSplitDescription : undefined,
                           onOpen,
             onOpenInNewTab,
-                        }, {
+                        }, { item: item,
                           canEdit: canEditItem ? canEditItem(item) : canEdit,
                           statusOptions,
                           currentStatusId: item.status || undefined,

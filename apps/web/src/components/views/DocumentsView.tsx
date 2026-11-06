@@ -226,7 +226,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <ItemActionMenu
                           groups={buildItemMenuGroups(doc.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(doc) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(doc.description) ? onSplitDescription : undefined, onOpen,
-            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(doc) : canEdit, statusOptions, currentStatusId: doc.status || undefined })}
+            onOpenInNewTab }, { item: doc, canEdit: canEditItem ? canEditItem(doc) : canEdit, statusOptions, currentStatusId: doc.status || undefined })}
                         />
                       </div>
                     </div>

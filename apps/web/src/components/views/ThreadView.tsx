@@ -268,7 +268,7 @@ export function ThreadView({
             <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
               <ItemActionMenu
                 groups={buildItemMenuGroups(node.id, { onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(node) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(node.description) ? onSplitDescription : undefined, onOpen,
-            onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(node) : canEdit })}
+            onOpenInNewTab }, { item: node, canEdit: canEditItem ? canEditItem(node) : canEdit })}
               />
             </div>
           </div>

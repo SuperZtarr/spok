@@ -81,7 +81,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
 
       <div className="ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
         <ItemActionMenu
-          groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: hasChildItems(item) ? actions.onAbsorbChildren : undefined, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined, onOpen: actions.onOpen, onOpenInNewTab: actions.onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(item) : canEdit, statusOptions, currentStatusId: item.status || undefined })}
+          groups={buildItemMenuGroups(item.id, { onEdit, onDelete: actions.onDelete, onUpdateStatus: actions.onUpdateStatus, onAddChild: actions.onAddChild, onMoveToSpace: actions.onMoveToSpace, onDuplicateToSpace: actions.onDuplicateToSpace, onConvertToSpace: actions.onConvertToSpace, onSelfAssign: actions.onSelfAssign, onMerge: actions.onMerge, onAbsorbChildren: hasChildItems(item) ? actions.onAbsorbChildren : undefined, onSplitDescription: hasHeadings(item.description) ? actions.onSplitDescription : undefined, onOpen: actions.onOpen, onOpenInNewTab: actions.onOpenInNewTab }, { item: item, canEdit: canEditItem ? canEditItem(item) : canEdit, statusOptions, currentStatusId: item.status || undefined })}
         />
       </div>
     </div>

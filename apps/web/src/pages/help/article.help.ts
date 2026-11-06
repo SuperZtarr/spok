@@ -1,4 +1,4 @@
-/* Aide utilisateur de la page « Article » (/spaces/:spaceId/articles/:itemId) : lecture et mode Composer.
+/* Aide utilisateur de la page « Article » (/spaces/:spaceId/articles/:itemId), la lecture, et du mode Composer de la fiche.
    Lue par le point d'interrogation (PageHelpButton), son tour et les rappels (pageHint) — registre help/pageHelp.ts.
    Rappels écrits d'après apps/api/src/routes/item-article.ts : à revoir si la route change. */
 import type { HelpEntry } from '../../help/types';
@@ -7,7 +7,8 @@ export const help: HelpEntry = {
   title: 'Article',
   summary: 'Une page qui assemble, dans l\'ordre choisi, des éléments existants : notes, images, schémas, liens. Ils restent à leur place et peuvent servir dans plusieurs articles.',
   tips: [
-    '« Composer » (si vous pouvez modifier l\'article) : ajouter, réordonner, régler ou retirer des blocs. Depuis la fiche de l\'article, « Composer l\'article » ouvre directement ce mode ; sans droit de modification, « Page de lecture » ouvre la lecture',
+    'On arrive ici d\'un clic sur l\'article dans une vue de l\'espace, par « Lire l\'article » dans le menu ⋮ ou par un lien partagé ; le menu ⋮ garde l\'accès à sa fiche ; « Retour à l\'espace » ramène à la vue d\'origine',
+    '« Composer » (si vous pouvez modifier l\'article) ouvre sa fiche dans ce mode, pour ajouter, réordonner, régler ou retirer des blocs',
     'Ajout groupé : un élément avec ses enfants ou avec les éléments qui en découlent, ou tout un processus (ou un couloir), en une fois — 100 éléments au plus, tels qu\'ils sont au moment de l\'ajout',
     'Un bloc affiche un élément existant : le corriger le corrige partout où il apparaît',
     'Le texte d\'une note se modifie directement dans l\'article ; les autres blocs s\'ouvrent dans leur fiche',
@@ -44,16 +45,8 @@ export const help: HelpEntry = {
       element: '[data-tour="article-compose"]',
       popover: {
         title: 'Composer',
-        description: 'Passe en mode édition : ajouter des éléments ou du texte, glisser pour réordonner, régler la largeur et la position.',
+        description: 'Ouvre la fiche de l\'article en mode Composer : ajouter des éléments ou du texte, glisser pour réordonner, régler la largeur et la position.',
         side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="article-insert"]',
-      popover: {
-        title: 'Insérer ici',
-        description: 'En mode Composer : « Élément » ouvre le sélecteur (parcourir les espaces, cocher un ou plusieurs éléments, ou prendre un processus) ; « Texte » crée une note. Un ajout groupé est confirmé avec le nombre d\'éléments.',
-        side: 'top',
       },
     },
   ],
@@ -61,8 +54,7 @@ export const help: HelpEntry = {
     unavailable: 'Contenu indisponible : la personne qui a ajouté ce bloc n\'a plus accès à l\'élément d\'origine.',
     empty: 'Cet article est vide. Passez en mode « Composer » pour y ajouter des éléments ou du texte.',
     print: 'Ouvre l\'impression du navigateur (papier ou PDF), sans le cadre de l\'application.',
-    compose: 'Passe en mode édition de l\'article.',
-    read: 'Revient à la lecture de l\'article.',
+    compose: 'Ouvre la fiche de l\'article en mode Composer, pour travailler ses blocs.',
     openSource: 'Ouvre la fiche de l\'élément d\'origine.',
     addItem: 'Ouvre le sélecteur : parcourez les espaces, cochez un ou plusieurs éléments existants (ou prenez un processus) et ajoutez-les à cet endroit. Les éléments restent à leur place ; ils peuvent figurer dans d\'autres articles.',
     addText: 'Crée une nouvelle note dans l\'espace de l\'article et l\'insère à cet endroit.',
