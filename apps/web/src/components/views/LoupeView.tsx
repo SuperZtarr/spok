@@ -1,6 +1,6 @@
 /*
  * Vue Loupe : explorer les items à travers leurs liens (parent, enfants, relations), y compris vers d'autres espaces.
- * Gestes : survol (court arrêt) = zoom sur l'item et zoom intermédiaire sur ses liés ; clic = fige le zoom et ajoute
+ * Gestes : survol (ouverture après 0,1 s, fermeture immédiate, décision Thomas 2026-11-06) = zoom sur l'item et zoom intermédiaire sur ses liés ; clic = fige le zoom et ajoute
  * l'item au chemin ; clic sur la vignette figée, bouton « Libérer le zoom » ou Échap = le survol reprend, chemin conservé ; clic sur le fond ou bouton
  * Départ = retour au départ, chemin effacé ; double-clic = fiche ; molette et glisser = déplacer la carte.
  * Aperçu : zoom figé, le survol d'un autre item l'agrandit à mi-taille sans déplacer la carte ni charger ses liens.
@@ -34,8 +34,7 @@ import {
   type LoupeEdge, type LoupeSourceItem, type MapView, type Point, type TrailEntry,
 } from './loupe-scene';
 
-const HOVER_DELAY_MS = 300;
-const RELEASE_DELAY_MS = 150;
+const HOVER_DELAY_MS = 100;
 const TRANSITION_MS = 200;
 const DRAG_THRESHOLD_PX = 4;
 const MIN_SCALE = 0.05;
@@ -227,11 +226,6 @@ export function LoupeView(props: LoupeViewProps) {
     hoverTimer.current = null;
   };
 
-  const scheduleRelease = useCallback(() => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHoverId(null), RELEASE_DELAY_MS);
-  }, []);
-
   const scheduleHover = (id: string) => {
     if (menuOpen.current) return;
     clearHoverTimer();
@@ -251,8 +245,8 @@ export function LoupeView(props: LoupeViewProps) {
   const handleMenuOpenChange = useCallback((open: boolean) => {
     const wasOpen = menuOpen.current;
     menuOpen.current = open;
-    if (wasOpen && !open && pointerOver.current === null) scheduleRelease();
-  }, [scheduleRelease]);
+    if (wasOpen && !open && pointerOver.current === null) setHoverId(null);
+  }, []);
 
   const describe = (id: string): TrailEntry | null => {
     const local = index.byId.get(id);
@@ -435,12 +429,9 @@ export function LoupeView(props: LoupeViewProps) {
         onMouseLeave={() => {
           pointerOver.current = null;
           if (menuOpen.current) return;
-          if (pinnedId) {
-            clearHoverTimer();
-            setPreviewId(null);
-          } else {
-            scheduleRelease();
-          }
+          clearHoverTimer();
+          if (pinnedId) setPreviewId(null);
+          else setHoverId(null);
         }}
         onClick={(event) => {
           event.stopPropagation();

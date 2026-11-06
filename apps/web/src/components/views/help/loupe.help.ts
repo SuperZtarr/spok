@@ -9,7 +9,7 @@ export const help: HelpEntry = {
   short: 'Exploration de lien en lien',
   empty: 'Cet espace ne contient encore aucun élément à explorer. Créez des éléments, puis reliez-les pour suivre leurs liens.',
   tips: [
-    'Marquez un court arrêt sur un élément : il s\'agrandit, ses éléments liés aussi, à moitié',
+    'Survolez un élément : il s\'agrandit, ses éléments liés aussi, à moitié',
     'Cliquez pour figer le zoom et aller chercher un élément lié sans le perdre',
     'Cliquez sur un élément lié pour avancer d\'un pas, le chemin parcouru s\'affiche au-dessus de la carte',
     'Zoom figé, survolez un autre élément pour le lire : il s\'agrandit le temps du survol, sans rien changer d\'autre',
@@ -31,7 +31,7 @@ export const help: HelpEntry = {
   zones: {
     carte: { title: 'La carte', text: 'Les éléments de l\'espace, disposés selon leur hiérarchie. Les traits pleins relient parents et enfants, les pointillés sont les relations. Les éléments d\'autres espaces n\'apparaissent qu\'en suivant un lien, si vous avez le droit de les lire.' },
     chemin: { title: 'Le chemin', text: 'Les éléments parcourus depuis le départ. Un clic sur une étape y revient et efface les suivantes.' },
-    vignette: { title: 'Un élément', text: 'Un court arrêt l\'agrandit avec ses éléments liés. Un clic fige le zoom, un nouveau clic le libère, un double-clic ouvre sa fiche. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire.' },
+    vignette: { title: 'Un élément', text: 'Le survol l\'agrandit avec ses éléments liés. Un clic fige le zoom, un nouveau clic le libère, un double-clic ouvre sa fiche. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire.' },
   },
   tour: [
     {
@@ -52,7 +52,7 @@ export const help: HelpEntry = {
       element: '[data-tour="loupe-node"]',
       popover: {
         title: 'Un élément',
-        description: 'Un court arrêt l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un clic sur un élément lié avance d\'un pas ; un nouveau clic sur l\'élément figé rend le survol ; un double-clic ouvre la fiche.',
+        description: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un clic sur un élément lié avance d\'un pas ; un nouveau clic sur l\'élément figé rend le survol ; un double-clic ouvre la fiche.',
         side: 'right',
       },
     },
