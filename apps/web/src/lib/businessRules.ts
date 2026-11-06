@@ -321,6 +321,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/url-meta.ts',
   },
   {
+    id: 'item-thumbnail-copy',
+    page: "Modale d'un élément (Afficher et Modifier)",
+    trigger: 'Clic sur « Copier la vignette »',
+    effect: "Une image PNG de 600 px (double résolution, toujours en thème clair) part dans le presse-papier : type, statut, priorité, titre, image ou schéma de l'élément, sinon début de la description, puis espace, échéance ou dates, assigné. Elle reflète la version enregistrée. Image illisible : la vignette montre la description. Presse-papier refusé : le PNG est téléchargé, avec un message. Rien n'est modifié dans SPOK",
+    location: 'apps/web/src/lib/itemThumbnail.ts, apps/web/src/components/ItemThumbnailCard.tsx, apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
     id: 'item-open-mode-default',
     page: "Modale d'un élément (toutes les pages qui l'ouvrent)",
     trigger: "Ouverture d'un élément : menu ⋮ « Afficher » / « Ouvrir », clic dans une vue, adresse ?item=…[&mode=lecture]",
