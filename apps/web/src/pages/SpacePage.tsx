@@ -19,6 +19,8 @@
  * qui n'est pas une séance, le bouton « Séances » (ParentSessionsButton) est passé à SpaceToolbar.
  * Espace non chargeable (401/403/404, sans nouvelle tentative) : écran SpaceUnavailable à la place de la barre et de la
  * vue — « Se connecter » pour un visiteur, « Accueil » sinon (2026-10-28).
+ * Lecture seule (canEdit faux : VIEWER, visiteur) : toutes les vues restent proposées (décision Thomas 2026-11-06) ;
+ * passer canEdit à chaque vue qui peut écrire — c'est elle qui masque ses actions.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -53,7 +55,7 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useAdminMode } from '../components/DevDbStatus';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { useViewModeStore, VIEWER_ALLOWED_VIEWS, type ViewMode } from '../stores/viewMode';
+import { useViewModeStore, type ViewMode } from '../stores/viewMode';
 import { useSpaceStore } from '../stores/space';
 import { useOpenItemStore } from '../stores/openItem';
 import { ListView } from '../components/views/ListView';
@@ -125,7 +127,7 @@ export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { mode: viewMode, setMode, setAllowedViews } = useViewModeStore();
+  const { mode: viewMode, setMode } = useViewModeStore();
   const { spaceViews } = useMenuItems();
   const { user } = useAuthStore();
 
@@ -240,19 +242,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
       return next;
     }, { replace: true });
   }, [viewMode, spaceId, setSearchParams]);
-
-  // Restrict views for VIEWER role
-  useEffect(() => {
-    setAllowedViews(canEdit ? null : VIEWER_ALLOWED_VIEWS);
-    return () => setAllowedViews(null);
-  }, [canEdit, setAllowedViews]);
-
-  // Force allowed view when current view is not in VIEWER_ALLOWED_VIEWS
-  useEffect(() => {
-    if (!canEdit && !VIEWER_ALLOWED_VIEWS.includes(viewMode)) {
-      setMode('list');
-    }
-  }, [canEdit, viewMode, setMode]);
 
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
@@ -686,7 +675,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           referentiels={referentiels}
           viewMode={viewMode}
           onSetMode={setMode}
-          allowedViews={canEdit ? null : VIEWER_ALLOWED_VIEWS}
           spaceViews={spaceViews}
           defaultView={space?.defaultView as ViewMode | undefined}
           treeSort={treeSort}

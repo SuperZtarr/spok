@@ -89,7 +89,6 @@ interface PertViewProps {
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
   spaceViews?: MenuItemConfig[];
-  allowedViews?: ViewMode[] | null;
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
   spaceRole?: string;
@@ -129,7 +128,7 @@ export function PertView({
   highlightColor,
   searchMatchIds,
   spaceName = '',
-  spaceViews: _spaceViews, allowedViews: _allowedViews, onSetMode: _onSetMode, defaultView: _defaultView,
+  spaceViews: _spaceViews, onSetMode: _onSetMode, defaultView: _defaultView,
   spaceRole: _spaceRole, onStartTour, pulseHelp,
   treeSort: treeSortProp,
 }: PertViewProps) {

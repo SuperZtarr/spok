@@ -1,6 +1,9 @@
 /*
- * Store Zustand : vue active d'un espace (ViewMode) + vues autorisées (allowedViews, rôle VIEWER).
+ * Store Zustand : vue active d'un espace (ViewMode).
  * Les définitions des vues viennent de VIEW_REGISTRY (@spok/shared) — ne pas dupliquer ici.
+ * Le droit de modifier ne limite pas les vues (décision Thomas 2026-11-06) : toutes sont proposées en lecture seule,
+ * chaque vue masque ses actions d'écriture via canEdit. Ne pas réintroduire de liste de vues par rôle ;
+ * l'accès à une vue se règle dans /admin/views (useMenuItems).
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -9,8 +12,6 @@ import { VIEW_REGISTRY } from '@spok/shared';
 export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'loupe' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'articles' | 'bugs' | 'thread' | 'overview' | 'todo' | 'recent' | 'pert' | 'process';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
-
-export const VIEWER_ALLOWED_VIEWS: ViewMode[] = ['overview', 'list', 'kanban', 'timeline', 'mindmap'];
 
 export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
   { value: 'dashboard', label: 'Tableau de bord' },
@@ -26,8 +27,6 @@ export const VIEW_MODES: { value: ViewMode; label: string; icon: string; categor
 interface ViewModeState {
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
-  allowedViews: ViewMode[] | null;
-  setAllowedViews: (views: ViewMode[] | null) => void;
 }
 
 export const useViewModeStore = create<ViewModeState>()(
@@ -35,8 +34,6 @@ export const useViewModeStore = create<ViewModeState>()(
     (set) => ({
       mode: 'tree',
       setMode: (mode) => set({ mode }),
-      allowedViews: null,
-      setAllowedViews: (allowedViews) => set({ allowedViews }),
     }),
     {
       name: 'view-mode-storage',

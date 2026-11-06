@@ -22,7 +22,7 @@
 | `useAuthStore` | `stores/auth.ts` | `user`, `accessToken`, `refreshToken`, `isAuthenticated` — **persisté localStorage** |
 | `useSpaceStore` | `stores/space.ts` | `currentSpace`, `includeChildrenSpaceIds` (quels espaces incluent leurs enfants) — persisté |
 | `useCommunityStore` | `stores/community.ts` | `currentCommunity` — persisté |
-| `useViewModeStore` | `stores/viewMode.ts` | `mode` (vue active), `allowedViews` — persisté |
+| `useViewModeStore` | `stores/viewMode.ts` | `mode` (vue active) — persisté |
 | `useThemeStore` | `stores/theme.ts` | `theme` light/dark — sync avec préférences utilisateur via API |
 | `useDashboardTabStore` | `stores/dashboardTab.ts` | `tab` (onglet dashboard actif) — persisté |
 | `useNotificationPanelStore` | `stores/notificationPanel.ts` | `open` (menu de la cloche) — volatil ; ouvrable depuis l'accueil (pas de page /notifications) |

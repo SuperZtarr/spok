@@ -13,15 +13,12 @@ const MOBILE_HIDDEN_VIEWS = new Set([
 export interface ViewSelectorBarProps {
   viewMode: ViewMode;
   onSetMode: (mode: ViewMode) => void;
-  allowedViews: ViewMode[] | null;
   spaceViews: MenuItemConfig[];
   defaultView?: ViewMode;
 }
 
-export function ViewSelectorBar({ viewMode, onSetMode, allowedViews, spaceViews, defaultView }: ViewSelectorBarProps) {
-  const filteredViews = spaceViews.filter(
-    (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
-  );
+export function ViewSelectorBar({ viewMode, onSetMode, spaceViews, defaultView }: ViewSelectorBarProps) {
+  const filteredViews = spaceViews.filter((v) => v.viewMode);
   const sectionMap = new Map<string, { sectionOrder: number; views: typeof filteredViews }>();
   for (const v of filteredViews) {
     if (!sectionMap.has(v.section)) {

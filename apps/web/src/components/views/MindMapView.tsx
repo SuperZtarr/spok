@@ -132,7 +132,6 @@ interface MindMapViewProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   spaceViews?: MenuItemConfig[];
-  allowedViews?: ViewMode[] | null;
   onSetMode?: (mode: ViewMode) => void;
   defaultView?: ViewMode;
   // Toolbar props
@@ -1690,7 +1689,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
-  spaceViews, allowedViews, onSetMode, defaultView,
+  spaceViews, onSetMode, defaultView,
   onStartTour, pulseHelp,
 }, ref) {
   return (
@@ -1699,7 +1698,6 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
         <ViewSelectorBar
           viewMode="mindmap"
           onSetMode={onSetMode}
-          allowedViews={allowedViews ?? null}
           spaceViews={spaceViews}
           defaultView={defaultView}
         />

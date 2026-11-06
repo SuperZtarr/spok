@@ -11,6 +11,7 @@
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
  * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées.
+ * Le rôle ne retire aucune vue, lecture seule comprise (décision Thomas 2026-11-06).
  * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
  * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier, Loupe ; Projet : sans Liste/Types/Images/
  * Liens/Documents, avec Carte mentale et Loupe). Loisirs liste aussi la Loupe (décision Thomas 2026-11-06). Répartition calculée par splitViewsForMode, seule source des deux affichages.
@@ -180,7 +181,6 @@ export interface SpaceToolbarProps {
   // View mode
   viewMode: ViewMode;
   onSetMode: (mode: ViewMode) => void;
-  allowedViews: ViewMode[] | null;
   spaceViews: MenuItemConfig[];
   defaultView?: ViewMode;
   // Ordre
@@ -213,7 +213,6 @@ export function SpaceToolbar({
   referentiels,
   viewMode,
   onSetMode,
-  allowedViews,
   spaceViews,
   defaultView,
   treeSort,
@@ -281,9 +280,7 @@ export function SpaceToolbar({
 
       {/* View mode buttons row */}
       {(() => {
-        const baseViews = spaceViews.filter(
-          (v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))
-        );
+        const baseViews = spaceViews.filter((v) => v.viewMode);
         // Mode à liste choisie (Loisirs) : une seule section ordonnée ; sinon famille principale ajustée (forum/projet) ou tout
         const { curated, primary: primaryViews, secondary: secondaryGroups } = splitViewsForMode(baseViews, interfaceMode);
 
@@ -379,7 +376,7 @@ export function SpaceToolbar({
       {otherGroupOpen && otherGroupPos && (() => {
         // Même répartition que la ligne de boutons : les vues déjà en boutons directs ne sont pas répétées ici
         const group = splitViewsForMode(
-          spaceViews.filter((v) => v.viewMode && (allowedViews === null || allowedViews.includes(v.viewMode as ViewMode))),
+          spaceViews.filter((v) => v.viewMode),
           interfaceMode,
         ).secondary.find((g) => g.key === otherGroupOpen);
         if (!group) return null;
