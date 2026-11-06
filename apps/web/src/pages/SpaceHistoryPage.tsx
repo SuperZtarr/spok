@@ -1,4 +1,5 @@
-/* Historique d'un espace (/spaces/:id/history) : journal d'audit filtré (useAuditLogs). */
+/* Historique d'un espace (/spaces/:id/history) : journal d'audit filtré (useAuditLogs).
+   Réservé à l'admin en mode admin (AdminRoute dans App.tsx, garde API, règle space-history-admin-only). */
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';

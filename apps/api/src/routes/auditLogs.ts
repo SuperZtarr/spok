@@ -1,4 +1,6 @@
-/* Journal d'audit d'un espace : liste filtrée (entité, action, dates) — lecture réservée aux membres. */
+/* Journal d'audit d'un espace : liste filtrée (entité, action, dates), détail, restauration.
+ * Réservé à l'admin en mode admin, lecture et restauration (règle space-history-admin-only, décision Thomas 2026-11-06) :
+ * ni les membres ni les propriétaires n'y accèdent. L'en-tête X-Admin-Mode ne suffit pas, le rôle global est relu en base. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
@@ -19,6 +21,16 @@ const querySchema = z.object({
 export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   // Audit logs always require authentication
   fastify.addHook('preHandler', fastify.authenticate);
+
+  // Puis le mode admin d'un admin global (règle space-history-admin-only)
+  fastify.addHook('preHandler', async (request, reply) => {
+    const currentUser = request.isAdminMode
+      ? await fastify.prisma.user.findUnique({ where: { id: request.user.userId }, select: { globalRole: true } })
+      : null;
+    if (currentUser?.globalRole !== 'ADMIN') {
+      throw fastify.httpErrors.forbidden('Space history is restricted to admin mode');
+    }
+  });
 
   // List audit logs
   fastify.get<{

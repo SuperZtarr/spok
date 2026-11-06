@@ -1,4 +1,4 @@
-/* TNR du journal d'audit d'espace : accès par rôle, filtres, pagination. */
+/* TNR du journal d'audit d'espace : réservé au mode admin (règle space-history-admin-only), filtres, pagination, restauration. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -76,14 +76,52 @@ describe('AuditLogs routes', () => {
     token = getTestToken(app)
   })
 
-  function allowAccess(role = 'MEMBER') {
-    prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership(role))
+  function allowAccess() {
+    prisma.spaceMembership.findUnique.mockResolvedValue(null)
+    prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'ADMIN' })
   }
 
-  function denyAccess() {
-    prisma.spaceMembership.findUnique.mockResolvedValue(null)
-    prisma.space.findUnique.mockResolvedValue(null)
-  }
+  // ─── RÉSERVÉ AU MODE ADMIN ────────────────────────────────────
+
+  describe('space-history-admin-only', () => {
+    const routes = [
+      ['GET', `/spaces/${SPACE_ID}/audit-logs`],
+      ['GET', `/spaces/${SPACE_ID}/audit-logs/log-1`],
+      ['POST', `/spaces/${SPACE_ID}/audit-logs/log-1/restore`],
+    ] as const
+
+    it.each(routes)('%s %s : 401 pour un visiteur', async (method, url) => {
+      const res = await app.inject({ method, url })
+      expect(res.statusCode).toBe(401)
+    })
+
+    it.each(routes)('%s %s : 403 pour un propriétaire d\'espace', async (method, url) => {
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership('OWNER'))
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+
+      const res = await app.inject({ method, url, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(403)
+      expect(prisma.auditLog.findMany).not.toHaveBeenCalled()
+      expect(prisma.auditLog.findFirst).not.toHaveBeenCalled()
+    })
+
+    it.each(routes)('%s %s : 403 pour un compte normal qui envoie X-Admin-Mode', async (method, url) => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
+
+      const res = await app.inject({ method, url, headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' } })
+
+      expect(res.statusCode).toBe(403)
+    })
+
+    it.each(routes)('%s %s : 403 pour un admin hors mode admin', async (method, url) => {
+      prisma.user.findUnique.mockResolvedValue({ globalRole: 'ADMIN' })
+
+      const res = await app.inject({ method, url, headers: { authorization: `Bearer ${token}` } })
+
+      expect(res.statusCode).toBe(403)
+    })
+  })
 
   // ─── LIST AUDIT LOGS ──────────────────────────────────────────
 
@@ -96,7 +134,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'GET',
         url: `/spaces/${SPACE_ID}/audit-logs`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(200)
@@ -114,7 +152,7 @@ describe('AuditLogs routes', () => {
       await app.inject({
         method: 'GET',
         url: `/spaces/${SPACE_ID}/audit-logs?entity=Item&action=DELETE`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       const where = prisma.auditLog.findMany.mock.calls[0][0].where
@@ -122,17 +160,6 @@ describe('AuditLogs routes', () => {
       expect(where.action).toBe('DELETE')
     })
 
-    it('should return 404 when no access', async () => {
-      denyAccess()
-
-      const res = await app.inject({
-        method: 'GET',
-        url: `/spaces/${SPACE_ID}/audit-logs`,
-        headers: { authorization: `Bearer ${token}` },
-      })
-
-      expect(res.statusCode).toBe(404)
-    })
   })
 
   // ─── GET SINGLE LOG ───────────────────────────────────────────
@@ -145,7 +172,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'GET',
         url: `/spaces/${SPACE_ID}/audit-logs/log-1`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(200)
@@ -159,7 +186,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'GET',
         url: `/spaces/${SPACE_ID}/audit-logs/non-existent`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(404)
@@ -182,7 +209,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/audit-logs/log-1/restore`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(200)
@@ -203,14 +230,14 @@ describe('AuditLogs routes', () => {
         },
       }))
       prisma.item.findUnique.mockResolvedValue(null) // item doesn't exist
-      prisma.user.findUnique.mockResolvedValue({ id: USER_ID }) // creator exists
+      prisma.user.findUnique.mockResolvedValue({ id: USER_ID, globalRole: 'ADMIN' }) // admin en mode admin, et créateur existant
       prisma.item.create.mockResolvedValue({ id: 'item-1', title: 'Deleted' })
       prisma.auditLog.create.mockResolvedValue({})
 
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/audit-logs/log-1/restore`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(200)
@@ -224,22 +251,10 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/audit-logs/log-1/restore`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(400)
-    })
-
-    it('should reject restore by VIEWER', async () => {
-      allowAccess('VIEWER')
-
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/audit-logs/log-1/restore`,
-        headers: { authorization: `Bearer ${token}` },
-      })
-
-      expect(res.statusCode).toBe(403)
     })
 
     it('should return 404 for non-existent log', async () => {
@@ -249,7 +264,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/audit-logs/non-existent/restore`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(404)
@@ -266,7 +281,7 @@ describe('AuditLogs routes', () => {
       const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/audit-logs/log-1/restore`,
-        headers: { authorization: `Bearer ${token}` },
+        headers: { authorization: `Bearer ${token}`, 'x-admin-mode': 'true' },
       })
 
       expect(res.statusCode).toBe(409)

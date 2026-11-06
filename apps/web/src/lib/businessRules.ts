@@ -468,6 +468,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/communities.ts (POST /, PATCH /:id), apps/api/src/routes/admin/communities.ts (approve-public / reject-public), apps/web/src/pages/CommunitySettingsPage.tsx',
   },
   {
+    id: 'space-history-admin-only',
+    page: "Historique d'un espace (/spaces/:id/history)",
+    trigger: "Consulter l'historique d'un espace ou y restaurer un état précédent",
+    effect: "Réservé à l'admin en mode admin, lecture et restauration : membres, propriétaires d'espace ou de communauté et admin hors mode admin en sont exclus (API 403, page redirigée vers l'accueil, bouton masqué). Le rôle global est relu en base, l'en-tête X-Admin-Mode seul ne donne rien (décision Thomas 2026-11-06)",
+    location: 'apps/api/src/routes/auditLogs.ts, apps/web/src/App.tsx, apps/web/src/pages/SpaceToolbar.tsx, apps/web/src/components/ui/ViewToolbar.tsx',
+  },
+  {
     id: 'read-only-all-views',
     page: 'Espace → barre de vues, Aperçu de l\'espace',
     trigger: "Ouvrir un espace sans droit de modification (rôle VIEWER, espace Lecture seule, visiteur non connecté)",

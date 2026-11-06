@@ -26,10 +26,12 @@
  * Zones data-devzone toolbar-vues/ordre/filtre/apercu/actions : vocabulaire de DevZoneInspector ET zones du mode Aide
  * (textes : help/shellZones.ts).
  */
+ * Bouton Historique : en mode admin seulement (règle space-history-admin-only).
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
+import { useAdminMode } from '../components/DevDbStatus';
   ChevronDown,
   Search,
   X,
@@ -220,6 +222,7 @@ export function SpaceToolbar({
   canEdit,
   onNewItem,
   onInsertTemplate,
+  const adminMode = useAdminMode();
   spaceId,
   spaceRole,
   liveSessionsSlot,
@@ -614,7 +617,7 @@ export function SpaceToolbar({
             {(activeTypeFilter || activeStatusFilter) && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />}
           </button>
           </HelpHint>
-          {canEdit && (
+          {adminMode && (
             <HelpHint text={H.history}>
               {/* Un seul arrêt clavier : le lien porte le nom, le bouton n'est que l'habillage */}
               <Link to={`/spaces/${spaceId}/history`} aria-label="Historique des modifications" className="inline-flex">

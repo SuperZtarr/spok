@@ -76,7 +76,7 @@ export const SPACE_TOOLBAR_STEPS: TourStep[] = [
     element: '[aria-label="Historique des modifications"]',
     popover: {
       title: 'Historique',
-      description: 'Qui a modifié quoi et quand dans cet espace — et restauration d\'une version précédente.',
+      description: 'Mode admin : qui a modifié quoi et quand dans cet espace, et restauration d\'une version précédente.',
       side: 'bottom',
     },
   },

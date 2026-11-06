@@ -18,7 +18,7 @@ export const SPACE_TOOLBAR_HINTS = {
   count: 'Nombre d\'éléments affichés / nombre total dans l\'espace.',
   mobileFilters: 'Afficher le filtre ou l\'aperçu de la vue',
   insertTemplate: 'Insérer un modèle : ajoute d\'un coup un ensemble d\'éléments enregistré comme modèle.',
-  history: 'Historique : toutes les modifications de l\'espace, avec restauration possible.',
+  history: 'Historique (mode admin) : toutes les modifications de l\'espace, avec restauration possible.',
   settings: 'Paramètres de l\'espace : nom, visibilité, membres, vue par défaut…',
   expandAll: 'Tout étendre : déplie toutes les branches d\'un coup.',
   collapseAll: 'Tout réduire : replie toutes les branches, seuls les éléments de premier niveau restent visibles.',

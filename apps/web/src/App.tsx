@@ -213,7 +213,7 @@ export default function App() {
         <Route path="spaces/:spaceId/overview" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpaceContentRedirect />} />
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
-        <Route path="spaces/:spaceId/history" element={<SpaceHistoryPage />} />
+        <Route path="spaces/:spaceId/history" element={<AdminRoute><SpaceHistoryPage /></AdminRoute>} />
         <Route path="spaces/:spaceId/articles/:itemId" element={<ArticlePage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />

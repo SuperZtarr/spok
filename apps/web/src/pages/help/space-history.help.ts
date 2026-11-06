@@ -4,7 +4,7 @@ import type { HelpEntry } from '../../help/types';
 
 export const help: HelpEntry = {
   title: 'Historique',
-  summary: 'Toutes les modifications de l\'espace — qui, quoi, quand — et la restauration d\'un état précédent.',
+  summary: 'Toutes les modifications de l\'espace — qui, quoi, quand — et la restauration d\'un état précédent. Page réservée au mode admin.',
   tips: [
     'Filtrez par action, type d\'objet ou période',
     'Cliquez sur une entrée pour voir l\'avant / après',

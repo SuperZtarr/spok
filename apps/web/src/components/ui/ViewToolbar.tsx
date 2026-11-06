@@ -1,7 +1,9 @@
-/* Toolbar de vue legacy (slots extraControls/customExport) — ne plus utiliser pour du neuf, cf. skill spok-menu. */
+/* Toolbar de vue legacy (slots extraControls/customExport) — ne plus utiliser pour du neuf, cf. skill spok-menu.
+   Bouton Historique : en mode admin seulement (règle space-history-admin-only). */
 import { Plus, History, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ItemType, Item, SpaceReferentiels } from '@spok/shared';
+import { useAdminMode } from '../DevDbStatus';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { TreeSortButton } from './TreeSortButton';
@@ -67,6 +69,7 @@ export function ViewToolbar({
   className = '',
 }: ViewToolbarProps) {
   const showExport = !['pert', 'timeline', 'mindmap'].includes(viewMode);
+  const adminMode = useAdminMode();
 
   return (
     <div className={`sticky top-0 z-[1] flex items-center gap-2 px-4 py-1 border-b border-border bg-background flex-shrink-0 ${className}`}>
@@ -110,7 +113,7 @@ export function ViewToolbar({
         ))}
 
         {/* Droite : Historique, Paramètres */}
-        {canEdit && spaceId && (
+        {adminMode && spaceId && (
           <Link to={`/spaces/${spaceId}/history`}>
             <button className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Historique">
               <History className="w-4 h-4" />
