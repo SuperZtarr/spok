@@ -269,7 +269,7 @@ export function CommunitiesPage() {
 
       {/* Pending public approval banner */}
       {pendingCommunities.length > 0 && (
-        <div data-tour="admin-communities-pending" className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
+        <div data-tour="admin-communities-pending" data-help-zone="admin-communities:pending" className="mb-6 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-950/30 p-4">
           <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4" />
             En attente d'approbation ({pendingCommunities.length})
@@ -330,7 +330,7 @@ export function CommunitiesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-communities-table">
+          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-communities-table" data-help-zone="admin-communities:liste">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>

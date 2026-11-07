@@ -14,7 +14,7 @@ export function ApiDocPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-6 text-xs" data-tour="admin-apidoc-legend">
+      <div className="flex flex-wrap gap-3 mb-6 text-xs" data-tour="admin-apidoc-legend" data-help-zone="admin-api-doc:legende">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
           Public (optionalAuthenticate)
@@ -34,7 +34,7 @@ export function ApiDocPage() {
       </div>
 
       {/* Public endpoints */}
-      <div data-tour="admin-apidoc-content">
+      <div data-tour="admin-apidoc-content" data-help-zone="admin-api-doc:points">
       <Section title="Endpoints publics" subtitle="Accessibles aux visiteurs non connectes. Si connecte, la reponse est enrichie avec les donnees de l'utilisateur.">
         <Row method="GET" path="/menu" auth="none" desc="Entrées de menu : MENU_REGISTRY + surcharges (AppConfig menu_overrides)" />
         <Row method="GET" path="/communities" auth="optional" desc="Visiteur : communautes publiques. Connecte : les siennes + publiques non-rejointes" />
@@ -64,6 +64,7 @@ export function ApiDocPage() {
       <Section title="Endpoints utilisateur (lecture)" subtitle="Necessitent une connexion. Donnees specifiques a l'utilisateur.">
         <Row method="GET" path="/auth/me" auth="user" desc="Profil de l'utilisateur connecte" />
         <Row method="GET" path="/user/preferences" auth="user" desc="Preferences utilisateur (theme, etc.)" />
+        <Row method="GET" path="/user/help-state" auth="user" desc="Suivi de l'aide : tutoriel d'accueil traite, annonces traitees" />
         <Row method="GET" path="/user/notification-preferences" auth="user" desc="Preferences de notifications" />
         <Row method="GET" path="/user/tasks" auth="user" desc="Items multi-espaces de l'utilisateur (tous types, filtres multi-valeurs)" />
         <Row method="GET" path="/invitations/my" auth="user" desc="Invitations en attente de l'utilisateur" />
@@ -82,6 +83,7 @@ export function ApiDocPage() {
         <Row method="POST" path="/auth/reset-password" auth="none" desc="Reinitialisation mot de passe" />
         <Row method="POST" path="/auth/resend-verification" auth="user" desc="Renvoyer l'email de verification" />
         <Row method="PATCH" path="/user/preferences" auth="user" desc="Modifier preferences" />
+        <Row method="PATCH" path="/user/help-state" auth="user" desc="Enregistrer la reponse au tutoriel d'accueil, ajouter ou retirer des annonces traitees" />
         <Row method="PATCH" path="/user/profile" auth="user" desc="Modifier profil (nom, email)" />
         <Row method="PATCH" path="/user/password" auth="user" desc="Changer mot de passe" />
         <Row method="PATCH" path="/user/notification-preferences" auth="user" desc="Modifier preferences notifications" />

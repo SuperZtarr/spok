@@ -100,7 +100,7 @@ export function ViewsConfigPage() {
             </HelpHint>
           </div>
         </div>
-        <div className="flex gap-1 border-b border-border" data-tour="admin-views-tabs">
+        <div className="flex gap-1 border-b border-border" data-tour="admin-views-tabs" data-help-zone="admin-views:onglets">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -117,7 +117,7 @@ export function ViewsConfigPage() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement…</div>
       ) : (
-        <div className="mt-4 space-y-6" data-tour="admin-views-list">
+        <div className="mt-4 space-y-6" data-tour="admin-views-list" data-help-zone="admin-views:liste">
           {sections.map((section) => (
             <div key={section.label}>
               <h2 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-2">{section.label}</h2>

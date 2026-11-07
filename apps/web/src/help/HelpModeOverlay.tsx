@@ -35,7 +35,8 @@ const isTyping = (t: EventTarget | null) => {
 const isShiftQuestion = (e: KeyboardEvent) => e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey;
 const inUi = (t: EventTarget | null) => !!(t as Element | null)?.closest?.('[data-help-mode-ui]');
 
-function cardPosition(r: DOMRect, minTop: number): { top: number; left: number } {
+/** Position d'une carte à côté d'une zone, gardée dans la fenêtre. Partagée avec NewFeatureOverlay. */
+export function cardPosition(r: DOMRect, minTop: number): { top: number; left: number } {
   const vw = window.innerWidth, vh = window.innerHeight;
   let left = r.right + 8;
   if (left + CARD_W > vw - 8) left = r.left - CARD_W - 8;
@@ -125,7 +126,7 @@ export function HelpModeOverlay() {
       </div>
       {shown && pos && (
         <>
-          <div aria-hidden className="fixed z-[10001] pointer-events-none rounded border-2 border-primary bg-primary/5"
+          <div aria-hidden className="fixed z-[10001] pointer-events-none rounded border-2 border-sky-500 bg-sky-400/15"
             style={{ top: shown.rect.top, left: shown.rect.left, width: shown.rect.width, height: shown.rect.height }} />
           <div role="dialog" aria-label={shown.zone.title} aria-live="polite"
             className={`fixed z-[10002] rounded-lg border bg-card shadow-xl p-3 text-xs overflow-y-auto ${pinned ? 'border-primary' : 'border-border pointer-events-none'}`}

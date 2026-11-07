@@ -30,8 +30,8 @@ dans l'interface. Cette skill est la seule porte d'entrée du code : elle appell
    - Code ≠ spec → signaler la divergence, ne pas suivre le code silencieusement.
 2. **Skill de domaine** si concernée : `spok-menu` (menus, barres d'outils, vues), `spok-layout` (header, sidebar,
    bandeau), `docs/ARCHITECTURE.md` (vues, stores, hooks, SpacePage).
-3. **Plan** : exposer ce qui va être fait et pourquoi, **y compris l'aide utilisateur prévue** (fiche, rappels
-   fonctionnels, tour), puis attendre la validation de Thomas. Pas de code avant.
+3. **Plan** : exposer ce qui va être fait et pourquoi, **y compris l'aide utilisateur prévue** (éléments d'aide, rappels
+   fonctionnels, annonce si le comportement visible change), puis attendre la validation de Thomas. Pas de code avant.
 
 ## 2. Pendant
 
@@ -50,7 +50,8 @@ Rappeler `spok-doc` et dérouler, pour chaque composant touché :
 |---|---|
 | Spec | Item SPOK mis à jour (statut `to_validate`, Markdown) ou signalé absent |
 | Doc technique | En-têtes à jour ; `businessRules.ts` si règle de gestion |
-| Aide utilisateur | Fiche du composant (créée si elle n'existait pas — même pour un composant ancien), « ? » branché, tour et repères `data-tour`, **rappels fonctionnels sur chaque action à effet et chaque bloc de décision**, `fields` / `empty` / zones du mode Aide si concernés |
+| Aide utilisateur | Élément d'aide de chaque fonction touchée, dans la fiche du composant (créée si elle n'existait pas — même pour un composant ancien), « ? » branché, repères à l'écran, **rappels fonctionnels sur chaque action à effet et chaque bloc de décision**, `fields` / `empty` si concernés |
+| Nouveauté | Comportement visible changé → annonce sans date dans `changes` de l'élément (règles : `spok-doc`) ; choix d'annoncer ou non signalé à Thomas dans le compte rendu du lot |
 | Contrôle | `apps/web/src/help` vert ; test ciblé vert ; typecheck du paquet |
 
 Puis :

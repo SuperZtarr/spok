@@ -144,7 +144,7 @@ export function DuplicateToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="max-h-60 overflow-y-auto mb-4" data-tour="duplicate-targets">
+            <div className="max-h-60 overflow-y-auto mb-4" data-tour="duplicate-targets" data-help-zone="duplicate-to-space:cibles">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">

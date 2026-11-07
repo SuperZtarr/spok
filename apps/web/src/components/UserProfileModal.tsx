@@ -378,7 +378,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
 
         {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</div>}
 
-        <div className="space-y-3" data-tour="profile-identity">
+        <div className="space-y-3" data-tour="profile-identity" data-help-zone="profile:identite">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -457,9 +457,9 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
           </div>
         </div>
 
-        <div data-tour="profile-notifications"><NotificationPreferencesSection /></div>
+        <div data-tour="profile-notifications" data-help-zone="profile:notifications"><NotificationPreferencesSection /></div>
 
-        <div data-tour="profile-claude"><PersonalTokensSection /></div>
+        <div data-tour="profile-claude" data-help-zone="profile:claude"><PersonalTokensSection /></div>
 
         <div className="pt-4 border-t border-border">
           <div className="flex items-center justify-between">
@@ -472,6 +472,8 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
               onClick={() => {
                 const keys = Object.keys(localStorage).filter(k => k.startsWith('spok-onboarding') || k.startsWith('spok-view-tour') || k.startsWith('spok-page-tour') || k.startsWith('spok-dashboard-tour'));
                 keys.forEach(k => localStorage.removeItem(k));
+                // Le tutoriel d'accueil est suivi par compte : sa proposition reviendra à la prochaine visite
+                userApi.updateHelpState({ onboardingDone: false }).catch(() => {});
                 alert(`${keys.length} tutoriel(s) réinitialisé(s). Ils se relanceront à la prochaine visite.`);
               }}
               className="text-xs px-2 py-1 rounded bg-muted hover:bg-accent transition-colors"

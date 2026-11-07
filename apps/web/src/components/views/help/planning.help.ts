@@ -1,22 +1,31 @@
-/* Aide utilisateur de la vue « Planning » (planning) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Planning » (planning), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
+   le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  contenu: {
+    title: 'Sections par urgence',
+    short: 'Les éléments rangés selon leur échéance.',
+    text: 'Les éléments rangés selon leur échéance : En retard (rouge), Aujourd\'hui (bleu), Cette semaine, Ce mois, Plus tard, Sans date.',
+    target: '[data-tour="planning-sections"]',
+    side: 'top',
+  },
+  element: {
+    title: 'Un élément',
+    short: 'Cliquez pour ouvrir sa fiche.',
+    text: 'Son échéance et son statut ; cliquez pour ouvrir sa fiche.',
+    side: 'bottom',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Planning',
   summary: 'Les éléments datés regroupés par urgence : en retard, aujourd\'hui, cette semaine, ce mois, plus tard, sans date.',
   short: 'Échéances rangées par urgence',
   empty: 'Aucune tâche en cours à planifier. Les tâches non terminées apparaissent ici, rangées selon leur échéance.',
-  tips: [
-    'Les éléments sont rangés selon leur échéance',
-    'En retard en rouge, aujourd\'hui en bleu',
-    'Cliquez sur un élément pour ouvrir sa fiche',
-  ],
-  zones: {
-    contenu: { title: 'Échéances', text: 'Les éléments classés par urgence de leur échéance : en retard, aujourd\'hui, cette semaine, plus tard.' },
-    element: { title: 'Un élément', text: 'Son échéance et son statut ; cliquez pour ouvrir sa fiche.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,14 +33,7 @@ export const help: HelpEntry = {
         description: 'Ce qui arrive, rangé par urgence — pour savoir quoi traiter en premier.',
       },
     },
-    {
-      element: '[data-tour="planning-sections"]',
-      popover: {
-        title: 'Sections par urgence',
-        description: 'En retard (rouge), Aujourd\'hui (bleu), Cette semaine, Ce mois, Plus tard, Sans date. Cliquez un élément pour ouvrir sa fiche.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('planning', elements),
     ...ITEM_MENU_STEP,
     ...SPACE_TOOLBAR_STEPS,
   ],

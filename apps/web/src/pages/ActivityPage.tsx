@@ -88,7 +88,7 @@ export function ActivityPage() {
           const community = { ...group.community, ...(communityById.get(group.community.id) ?? {}) };
           return (
             <div key={group.community.id} className="space-y-2">
-              <div className="max-w-xs" data-tour="activity-community">
+              <div className="max-w-xs" data-tour="activity-community" data-help-zone="activity:communaute">
                 {group.community.id === PERSONAL_GROUP_ID ? (
                   // Items d'espaces perso marqués non lus : pas une vraie communauté (ni lien, ni mute)
                   <h2 className="text-sm font-semibold text-muted-foreground px-1">{group.community.name}</h2>
@@ -105,13 +105,13 @@ export function ActivityPage() {
               <div className="ml-4 border border-border rounded-xl bg-muted/30 p-3 space-y-3">
                 {group.spaces.map((spaceGroup: any) => (
                   <div key={spaceGroup.space.id} className="space-y-2">
-                    <div className="max-w-xs" data-tour="activity-space">
+                    <div className="max-w-xs" data-tour="activity-space" data-help-zone="activity:espace">
                       <SpaceCard space={spaceGroup.space} />
                     </div>
 
                     {/* Items de l'espace */}
                     {spaceGroup.items.length > 0 && (
-                      <div className="border border-border rounded-lg bg-background p-2 flex flex-wrap gap-2" data-tour="activity-items">
+                      <div className="border border-border rounded-lg bg-background p-2 flex flex-wrap gap-2" data-tour="activity-items" data-help-zone="activity:elements">
                         {spaceGroup.items.map((item: any) => (
                           <ItemCard
                             key={item.id}

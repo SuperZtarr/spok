@@ -1,155 +1,153 @@
-/* Aide utilisateur de la fiche d'un élément (ItemEditModal).
-   Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts.
+/* Aide utilisateur de la fiche d'un élément (ItemEditModal), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le « ? »
+   (HelpButton), le tour (usePageTourPulse) et le mode Aide : `elements` est exporté, shellZones.ts en dérive les zones item-* correspondantes (posées
+   en data-devzone, d'où noZone ici). Registre help/pageHelp.ts.
    hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
    hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
    hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
-   hints.print : Imprimer du mode Afficher. zones read-media / read-content : mode Aide sur ItemReadView. */
+   hints.print : Imprimer du mode Afficher. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+export const elements = {
+  chemin: {
+    title: 'Fil d\'Ariane',
+    short: 'Communauté, espace et parents de l\'élément.',
+    text: 'Communauté → Espace → Parents. Cliquez sur l\'espace pour y retourner, ou sur un parent pour naviguer dans la hiérarchie.',
+    target: '[data-tour="item-breadcrumb"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  titre: {
+    title: 'Titre',
+    short: 'Cliquez pour modifier le titre.',
+    text: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type de l\'élément.',
+    target: '[data-tour="item-title"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  modes: {
+    title: 'Modes de la fiche',
+    short: 'Afficher, Modifier ou Composer.',
+    text: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+    target: '[data-tour="item-mode-switch"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  insertion: {
+    title: 'Insérer un bloc',
+    short: 'Ajoutez un élément ou du texte à l\'article.',
+    text: 'En mode Composer : « Élément » ouvre le sélecteur (parcourir les espaces, cocher un ou plusieurs éléments, ou prendre un processus) ; « Texte » crée une note. Un ajout groupé est confirmé avec le nombre d\'éléments.',
+    target: '[data-tour="article-insert"]',
+    noZone: true,
+    side: 'top',
+  },
+  // Présent dans tous les modes ; fiche réduite, les étapes Type → Tags n'apparaissent qu'une fois dépliée
+  champs: {
+    title: 'Plus de champs',
+    short: 'Déplie ou replie la fiche.',
+    text: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la (« Moins de champs ») pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
+    target: '[data-tour="item-more-fields"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  type: {
+    title: 'Type',
+    short: 'La nature de l\'élément.',
+    text: 'La nature de l\'élément : Note, Tâche, Projet, Réunion, Document, Diagramme, etc. Elle détermine les statuts proposés et le rangement dans les vues.',
+    target: '[data-tour="item-type-selector"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  contentTypes: {
+    title: 'Type de contenu',
+    short: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
+    text: 'Fiche réduite : choisissez Note, Lien, Document, Image, Schéma ou Article ; la zone correspondante apparaît sous la description.',
+    target: '[data-tour="item-content-types"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  description: {
+    title: 'Description',
+    short: 'Le texte de l\'élément.',
+    text: 'Éditeur riche : texte formaté, liens, images, @mentions de membres et #références d\'items.',
+    target: '[data-tour="item-description"]',
+    noZone: true,
+    side: 'right',
+  },
+  reactions: {
+    title: 'Réactions',
+    short: 'Votre avis d\'un clic.',
+    text: 'Exprimez votre avis d\'un clic : utile, intéressant, urgent… Cliquez le smiley pour choisir. Réservé aux utilisateurs connectés : un visiteur voit seulement les compteurs.',
+    target: '[data-tour="item-reactions"]',
+    noZone: true,
+    side: 'top',
+  },
+  contributions: {
+    title: 'Contributions',
+    short: 'Discussions sur cet élément.',
+    text: 'Discussions et commentaires sur cet élément. Chaque contribution a ses propres réactions.',
+    target: '[data-tour="item-contributions"]',
+    noZone: true,
+    side: 'top',
+  },
+  statut: {
+    title: 'Statut',
+    short: 'L\'avancement de l\'élément.',
+    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban.',
+    target: '[data-tour="item-status"]',
+    noZone: true,
+    side: 'left',
+  },
+  dates: {
+    title: 'Dates',
+    short: 'Début, fin et échéance.',
+    text: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning. Dans le sélecteur, les flèches changent le mois et la liste à côté du mois choisit l\'année.',
+    target: '[data-tour="item-dates"]',
+    noZone: true,
+    side: 'left',
+  },
+  relations: {
+    title: 'Relations',
+    short: 'Les liens avec d\'autres éléments.',
+    text: 'Liez cet élément à d\'autres, sans lien de parenté, de cet espace, de la communauté ou de tous vos espaces : bloque, permet, entraîne (décaler l\'un décale l\'autre) ou lié à. Ajoutez un commentaire sur chaque relation.',
+    target: '[data-tour="item-relations"]',
+    noZone: true,
+    side: 'left',
+  },
+  tags: {
+    title: 'Tags',
+    short: 'Les étiquettes de l\'élément.',
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément. Les tags d\'espace et de communauté sont disponibles. Créez-en de nouveaux en tapant.',
+    target: '[data-tour="item-tags"]',
+    noZone: true,
+    side: 'left',
+  },
+  enfants: {
+    title: 'Éléments enfants',
+    short: 'Les sous-éléments de cet élément.',
+    text: 'Les sous-éléments de cet élément. Cliquez pour naviguer. Le compteur indique les petits-enfants.',
+    target: '[data-tour="item-children"]',
+    noZone: true,
+    side: 'top',
+  },
+  actions: {
+    title: 'Actions',
+    short: 'Enregistrer, fermer et autres actions.',
+    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion) ou copier sa vignette en image.',
+    target: '[data-tour="item-actions"]',
+    noZone: true,
+    side: 'top',
+  },
+} satisfies HelpElements;
+
+const derived = helpFromElements(elements);
 
 export const help: HelpEntry = {
   title: 'Fiche élément',
   summary: 'Toutes les informations d\'un élément : description, contributions, relations, tags, dates et priorité.',
-  tips: [
-    'Utilisez @mentions et #références dans la description',
-    'Ajoutez des réactions pour donner votre avis (une fois connecté — un visiteur voit seulement les compteurs)',
-    'Les contributions permettent de discuter sur l\'élément',
-    'Créez des relations pour lier les éléments entre eux',
-    'Les enfants sont listés en bas de la fiche',
-    '« Plus de champs » affiche type, statut, dates, relations et tags ; « Moins de champs » les masque (fiche ouverte réduite en Forum et Loisirs, complète ailleurs)',
-  ],
-  tour: [
-    {
-      element: '[data-tour="item-breadcrumb"]',
-      popover: {
-        title: 'Fil d\'Ariane',
-        description: 'Communauté → Espace → Parents. Cliquez sur l\'espace pour y retourner, ou sur un parent pour naviguer dans la hiérarchie.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="item-title"]',
-      popover: {
-        title: 'Titre',
-        description: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type de l\'élément.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="item-mode-switch"]',
-      popover: {
-        title: 'Afficher / Modifier / Composer',
-        description: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="article-insert"]',
-      popover: {
-        title: 'Insérer un bloc',
-        description: 'En mode Composer : « Élément » ouvre le sélecteur (parcourir les espaces, cocher un ou plusieurs éléments, ou prendre un processus) ; « Texte » crée une note. Un ajout groupé est confirmé avec le nombre d\'éléments.',
-        side: 'top',
-      },
-    },
-    {
-      // Présent dans tous les modes ; fiche réduite, les étapes Type → Tags n'apparaissent qu'une fois dépliée
-      element: '[data-tour="item-more-fields"]',
-      popover: {
-        title: 'Plus de champs / Moins de champs',
-        description: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="item-type-selector"]',
-      popover: {
-        title: 'Type',
-        description: 'Changez le type de l\'élément : Note, Tâche, Projet, Réunion, Document, Diagramme, etc.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="item-content-types"]',
-      popover: {
-        title: 'Type de contenu',
-        description: 'Fiche réduite : choisissez Note, Lien, Document, Image, Schéma ou Article ; la zone correspondante apparaît sous la description.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="item-description"]',
-      popover: {
-        title: 'Description',
-        description: 'Éditeur riche : texte formaté, liens, images, @mentions de membres et #références d\'items.',
-        side: 'right',
-      },
-    },
-    {
-      element: '[data-tour="item-reactions"]',
-      popover: {
-        title: 'Réactions',
-        description: 'Exprimez votre avis d\'un clic : utile, intéressant, urgent… Cliquez le smiley pour choisir. Réservé aux utilisateurs connectés : un visiteur voit seulement les compteurs.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="item-contributions"]',
-      popover: {
-        title: 'Contributions',
-        description: 'Discussions et commentaires sur cet élément. Chaque contribution a ses propres réactions.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="item-status"]',
-      popover: {
-        title: 'Statut',
-        description: 'Cliquez sur un statut pour le sélectionner : À faire, En cours, Terminé, À valider…',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="item-dates"]',
-      popover: {
-        title: 'Dates',
-        description: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning. Dans le sélecteur, les flèches changent le mois et la liste à côté du mois choisit l\'année.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="item-relations"]',
-      popover: {
-        title: 'Relations',
-        description: 'Liez cet élément à d\'autres, de cet espace, de la communauté ou de tous vos espaces : bloque, permet, entraîne (décaler l\'un décale l\'autre) ou lié à. Ajoutez un commentaire sur chaque relation.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="item-tags"]',
-      popover: {
-        title: 'Tags',
-        description: 'Classez avec des tags. Les tags d\'espace et de communauté sont disponibles. Créez-en de nouveaux en tapant.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="item-children"]',
-      popover: {
-        title: 'Éléments enfants',
-        description: 'Les sous-éléments de cet item. Cliquez pour naviguer. Le compteur indique les petits-enfants.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="item-actions"]',
-      popover: {
-        title: 'Actions',
-        description: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion) ou copier sa vignette en image.',
-        side: 'top',
-      },
-    },
-  ],
+  ...derived,
   hints: {
-    contentTypes: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
+    ...derived.hints,
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
     openArticleUnsaved: 'Enregistrez d\'abord l\'élément : le mode Composer (choix et mise en page des blocs) s\'active une fois qu\'il est enregistré avec le type « Article ».',
@@ -167,10 +165,6 @@ export const help: HelpEntry = {
     composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour passer en mode Composer.',
     sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
   },
-  zones: {
-    'read-media': { title: 'Média', text: 'L\'image ou le schéma de l\'élément en grand ; cliquez pour le plein écran. Pour un document ou un lien : de quoi l\'ouvrir.' },
-    'read-content': { title: 'Contenu', text: 'Description, éléments enfants (cliquables), relations et contributions, en lecture seule — le même contenu que celui copié par « Copier la fiche ».' },
-  },
   fields: {
     startEnd: 'Début et fin : la période pendant laquelle l\'élément a lieu (barre du Gantt, calendrier).',
     dueDate: 'La date limite à respecter : elle classe l\'élément dans le Planning et le signale en retard une fois dépassée.',
@@ -178,4 +172,5 @@ export const help: HelpEntry = {
     parent: 'L\'élément sous lequel celui-ci se range, dans le même espace : il en devient un sous-élément.',
     assignee: 'La personne chargée de l\'élément. Un membre de l\'espace le voit dans ses tâches (« Mes tâches », « Ma journée ») et peut le modifier. Vous pouvez aussi saisir le nom d\'une personne sans compte SPOK : elle n\'est que nommée, sans droit ni notification.',
   },
+  tour: elementTourSteps('item-modal', elements),
 };

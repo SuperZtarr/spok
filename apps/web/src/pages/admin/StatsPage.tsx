@@ -88,7 +88,7 @@ export function StatsPage() {
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">Vue d'ensemble de l'activite</p>
           </div>
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1" data-tour="admin-stats-period">
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1" data-tour="admin-stats-period" data-help-zone="admin-stats:periode">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
@@ -116,7 +116,7 @@ export function StatsPage() {
       {data && (
         <>
           {/* Totals */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tour="admin-stats-content">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tour="admin-stats-content" data-help-zone="admin-stats:indicateurs">
             <StatCard label="Items" value={data.totals.items} icon={FileText} />
             <StatCard label="Contributions" value={data.totals.contributions} icon={MessageSquare} />
             <StatCard label="Utilisateurs" value={data.totals.users} icon={Users} />

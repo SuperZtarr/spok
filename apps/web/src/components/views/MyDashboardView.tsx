@@ -494,7 +494,7 @@ export function MyDashboardView() {
     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
 
       {/* KPI Banner */}
-      <div className="flex flex-wrap gap-3" data-tour="dashboard-kpis">
+      <div className="flex flex-wrap gap-3" data-tour="dashboard-kpis" data-help-zone="dashboard:indicateurs">
         <KpiBadge label="en retard" count={overdueTasks.length}
           color={overdueTasks.length > 0 ? 'border-red-300 bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 dark:border-red-800' : 'border-border text-muted-foreground'}
           icon={AlertTriangle} />
@@ -513,12 +513,12 @@ export function MyDashboardView() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-card border rounded-lg p-4" data-tour="org-filters">
+      <div className="bg-card border rounded-lg p-4" data-tour="org-filters" data-help-zone="dashboard:filtres">
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
       {/* Ligne A : Échéances + colonne de listes */}
-      <div className="flex flex-wrap gap-4 items-start" data-tour="org-priorities">
+      <div className="flex flex-wrap gap-4 items-start" data-tour="org-priorities" data-help-zone="dashboard:priorites">
 
         {/* Échéances — plancher à 672px, grandit avec l'espace dispo (pas de max) */}
         <div className="bg-card border rounded-lg p-4 flex-[2] min-w-[672px]">
@@ -602,7 +602,7 @@ export function MyDashboardView() {
       </div>
 
       {/* Ligne B : répartitions pleine largeur */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-tour="org-distributions">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-tour="org-distributions" data-help-zone="dashboard:repartitions">
           <div className="bg-card border rounded-lg">
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <Target className="w-4 h-4 text-violet-500" />
@@ -637,7 +637,7 @@ export function MyDashboardView() {
       </div>
 
       {/* Semaine */}
-      <div className="bg-card border rounded-lg p-4" data-tour="org-week">
+      <div className="bg-card border rounded-lg p-4" data-tour="org-week" data-help-zone="dashboard:semaine">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-muted-foreground" />

@@ -145,7 +145,7 @@ export function BookmarksPage() {
       </div>
 
       {/* Espaces favoris */}
-      <section data-tour="bookmarks-favorites">
+      <section data-tour="bookmarks-favorites" data-help-zone="bookmarks:favoris">
         <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Star className="w-5 h-5 text-yellow-500" />
           Espaces favoris
@@ -168,7 +168,7 @@ export function BookmarksPage() {
 
       {/* Espaces recents */}
       {recentSpaces.length > 0 && (
-        <section data-tour="bookmarks-recent">
+        <section data-tour="bookmarks-recent" data-help-zone="bookmarks:recents">
           <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
             <Clock className="w-5 h-5 text-muted-foreground" />
             Espaces recents
@@ -187,7 +187,7 @@ export function BookmarksPage() {
       )}
 
       {/* Items epingles */}
-      <section data-tour="bookmarks-pinned">
+      <section data-tour="bookmarks-pinned" data-help-zone="bookmarks:epingles">
         <h2 className="flex items-center gap-2 text-lg font-semibold mb-3">
           <Bookmark className="w-5 h-5 text-blue-500" />
           Items epingles

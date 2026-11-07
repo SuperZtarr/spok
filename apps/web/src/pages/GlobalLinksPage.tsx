@@ -74,7 +74,7 @@ function LinkCard({ item }: { item: any }) {
   const tooltip = [meta?.description || item.description, item.url].filter(Boolean).join('\n');
 
   return (
-    <a data-tour="global-links-link"
+    <a data-tour="global-links-link" data-help-zone="global-links:lien"
       href={safeHref(item.url) ?? '#'}
       target="_blank"
       rel="noopener noreferrer"
@@ -248,6 +248,7 @@ export function GlobalLinksPage() {
             onChange={(e) => setScope(e.target.value)}
             aria-label="Périmètre : communauté ou espace"
             data-tour="global-links-scope"
+            data-help-zone="global-links:perimetre"
             className="max-w-[16rem] px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value="">Tous mes espaces</option>
@@ -258,7 +259,7 @@ export function GlobalLinksPage() {
               </optgroup>
             ))}
           </select>
-          <div className="relative w-64" data-tour="global-links-search">
+          <div className="relative w-64" data-tour="global-links-search" data-help-zone="global-links:recherche">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}
@@ -292,7 +293,7 @@ export function GlobalLinksPage() {
           <>
           <div className="space-y-8">
             {communities.map(community => (
-              <div key={community.communityId} data-tour="global-links-community" className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
+              <div key={community.communityId} data-tour="global-links-community" data-help-zone="global-links:communaute" className="rounded-lg border border-border bg-card/50 shadow-sm overflow-hidden">
                 {/* Community header */}
                 <div className="flex items-center gap-2 px-5 py-3 bg-muted/50 border-b border-border">
                   <Building2 className="w-5 h-5 text-primary" />

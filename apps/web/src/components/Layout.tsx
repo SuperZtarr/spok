@@ -8,7 +8,7 @@
  * Sidebar : chaque communauté affiche sa visibilité et le statut non membre via CommunityBadge. Liens d'espace par
  * spaceHref (lib/spaceDefaultView.ts) : ?view= = vue de l'espace, sinon celle du contexte de sa communauté (2026-10-24).
  * Monte DevZoneInspector (zones de dev), HelpModeOverlay (mode Aide, qui réutilise les mêmes data-devzone) et
- * TouchHelpCard (première visite sur écran tactile, hors fenêtre de bienvenue).
+ * TouchHelpCard (première visite sur écran tactile, hors fenêtre de bienvenue), NewFeatureOverlay (zone allumée d'une nouveauté).
  * Actions d'espace dans la sidebar (2026-10-16) : au survol d'une ligne d'espace, « + » (nouveau sous-espace) et
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
  * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
@@ -41,6 +41,7 @@ import { useAuthStore } from '../stores/auth';
 import { useCommunityContexts } from '../hooks/useCommunityContexts';
 import { spaceHref, contextDefaultView } from '../lib/spaceDefaultView';
 import { useThemeStore } from '../stores/theme';
+import { useHelpAnnouncementsStore } from '../stores/helpAnnouncements';
 import { useSpaceStore } from '../stores/space';
 import { spacesApi, communitiesApi, authApi, itemsApi } from '../lib/api';
 import { resolveMenuRoute } from '../lib/searchScope';
@@ -53,6 +54,7 @@ import { UserProfileModal } from './UserProfileModal';
 import { DevZoneInspector } from './DevZoneInspector';
 import { HelpModeOverlay } from '../help/HelpModeOverlay';
 import { TouchHelpCard } from '../help/TouchHelpCard';
+import { NewFeatureOverlay } from '../help/NewFeatureOverlay';
 import { HelpHint } from '../help/HelpHint';
 import { SIDEBAR_HINTS } from '../help/shellZones';
 import { NotificationBell } from './NotificationBell';
@@ -431,7 +433,7 @@ export function Layout() {
   const adminMenuItems = visibleItems.filter(item => item.section === 'admin');
   const adminMode = useAdminMode();
   const { clearIncludeChildren } = useSpaceStore();
-  const { startTour, showWelcome, closeWelcome, pulseHelp } = useOnboarding();
+  const { startTour, showWelcome, closeWelcome } = useOnboarding();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -562,6 +564,14 @@ export function Layout() {
       // Token invalid — will be handled by 401 interceptor
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suivi de l'aide du compte (tutoriel d'accueil, annonces traitées) : rechargé à chaque changement de compte
+  const helpUserId = user?.id;
+  useEffect(() => {
+    const { load, clear } = useHelpAnnouncementsStore.getState();
+    clear();
+    if (helpUserId) void load();
+  }, [helpUserId]);
 
   // Close sidebar on navigation (mobile)
   useEffect(() => {
@@ -996,11 +1006,7 @@ export function Layout() {
         <button
           id="sidebar-help-button-top"
           onClick={() => startTour()}
-          className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md transition-colors ${
-            pulseHelp
-              ? 'text-primary-foreground bg-primary animate-pulse'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-          }`}
+          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
         >
           <HelpCircle className="w-4 h-4" />
           Guide de démarrage
@@ -1330,6 +1336,7 @@ export function Layout() {
       <DevZoneInspector />
       <HelpModeOverlay />
       {user && !isAuthPage && !showWelcome && <TouchHelpCard />}
+      {user && !isAuthPage && !showWelcome && <NewFeatureOverlay />}
       {/* Mobile overlay */}
       {sidebarOpen && !isAuthPage && (
         <div
@@ -1594,7 +1601,7 @@ export function Layout() {
       />
 
       <WelcomeModal
-        isOpen={showWelcome}
+        isOpen={showWelcome && !!user && !isAuthPage}
         onClose={closeWelcome}
         onStartTour={startTour}
       />

@@ -349,7 +349,7 @@ function CommunityNode({ data, dragging }: { data: TreeDatum & { dropState?: Dro
   const drop = data.dropState ? DROP_STYLES[data.dropState] : null;
 
   return (
-    <div data-tour="global-mindmap-community"
+    <div data-tour="global-mindmap-community" data-help-zone="global-mindmap:communaute"
       className={`relative px-4 py-2.5 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         drop?.className ?? ''} ${dragging ? 'opacity-50' : ''}`}
       style={{ backgroundColor: drop?.bg ?? colors.bg, borderColor: drop?.border ?? colors.border }}
@@ -390,7 +390,7 @@ function SpaceNode({ data, dragging }: { data: TreeDatum & { dropState?: DropSta
   const drop = data.dropState ? DROP_STYLES[data.dropState] : null;
 
   return (
-    <div data-tour="global-mindmap-space"
+    <div data-tour="global-mindmap-space" data-help-zone="global-mindmap:espace"
       className={`relative px-4 py-2 rounded-lg shadow-md border-2 min-w-[100px] cursor-pointer transition-all hover:shadow-lg hover:scale-105 group ${
         drop?.className ?? ''} ${dragging ? 'opacity-50' : ''}`}
       style={{ backgroundColor: drop?.bg ?? colors.bg, borderColor: drop?.border ?? colors.border }}

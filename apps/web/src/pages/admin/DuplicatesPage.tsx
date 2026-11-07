@@ -114,7 +114,7 @@ export function DuplicatesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border" data-tour="admin-duplicates-tabs">
+      <div className="flex gap-1 mb-6 border-b border-border" data-tour="admin-duplicates-tabs" data-help-zone="admin-duplicates:criteres">
         {tabs.map((tab) => (
           <button
             key={tab.key}

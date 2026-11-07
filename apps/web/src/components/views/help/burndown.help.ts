@@ -1,22 +1,32 @@
-/* Aide utilisateur de la vue « Burndown » (burndown) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Burndown » (burndown), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
+   le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  bascule: {
+    title: 'Burndown / Burnup',
+    short: 'Reste à faire, ou total et terminés.',
+    text: 'Burndown : le reste à faire descend, à comparer à l\'objectif en pointillés. Burnup : le total et les terminés, deux courbes montantes ; l\'écart est ce qui reste.',
+    target: '[data-tour="burndown-toggle"]',
+    side: 'bottom',
+  },
+  graphique: {
+    title: 'Le graphique',
+    short: 'Survolez pour le détail d\'une date.',
+    text: 'L\'avancement jour après jour. Survolez pour le détail d\'une date ; une courbe au-dessus de l\'idéal signale un retard.',
+    target: '[data-tour="burndown-chart"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Burndown',
   summary: 'L\'avancement des tâches dans le temps : ce qui reste à faire (burndown) ou ce qui est fait face au total (burnup).',
   short: 'Courbe d\'avancement',
   empty: 'Aucune tâche à suivre. La courbe se construit à partir des tâches de l\'espace et de leur avancement.',
-  tips: [
-    'Burndown : le reste à faire descend, comparé à une ligne idéale en pointillés',
-    'Burnup : le total et les tâches terminées, deux courbes montantes',
-    'Survolez la courbe pour le détail d\'une date',
-  ],
-  zones: {
-    bascule: { title: 'Burndown / Burnup', text: 'Burndown : le reste à faire face à l\'objectif. Burnup : le total et le terminé, l\'écart est ce qui reste.' },
-    graphique: { title: 'Courbe', text: 'L\'avancement jour après jour ; une courbe au-dessus de l\'idéal signale un retard. Survolez pour le détail d\'une date.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,22 +34,7 @@ export const help: HelpEntry = {
         description: 'Êtes-vous dans les temps ? La courbe compare l\'avancement réel au rythme idéal.',
       },
     },
-    {
-      element: '[data-tour="burndown-toggle"]',
-      popover: {
-        title: 'Burnup ou Burndown',
-        description: 'Burndown : reste à faire, à comparer à l\'objectif en pointillés. Burnup : total et terminés, l\'écart est ce qui reste.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="burndown-chart"]',
-      popover: {
-        title: 'Le graphique',
-        description: 'Survolez pour le détail d\'une date. Une courbe au-dessus de l\'idéal signale un retard.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('burndown', elements),
     ...SPACE_TOOLBAR_STEPS,
   ],
 };

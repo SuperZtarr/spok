@@ -1,25 +1,33 @@
-/* Aide utilisateur de la vue « Liste » (list) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Liste » (list), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
+   par le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. `elements` est exporté : À faire et Bugs,
+   qui affichent ListView, reprennent les mêmes en-têtes. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+export const elements = {
+  entetes: {
+    title: 'Colonnes triables',
+    short: 'Cliquez sur un en-tête pour trier.',
+    text: 'Les informations clés de chaque élément. Cliquez sur un en-tête pour trier ; un second clic inverse l\'ordre.',
+    target: '[data-tour="list-headers"]',
+    side: 'bottom',
+  },
+  ligne: {
+    title: 'Un élément',
+    short: 'Cliquez pour ouvrir sa fiche, glissez pour le déplacer.',
+    text: 'Cliquez pour ouvrir sa fiche. Glissez-le pour le réordonner ou le ranger sous un autre élément du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮. Le nom de la personne assignée s\'affiche à côté du titre, avec une icône.',
+    target: '[data-tour="list-row"]',
+    side: 'bottom',
+  },
+} satisfies HelpElements;
 
 export const help: HelpEntry = {
   title: 'Liste',
   summary: 'Tous les éléments de l\'espace en tableau : titre, type, statut, priorité, dates, parent.',
   short: 'Tableau avec colonnes triables',
   empty: 'L\'espace ne contient encore aucun élément. Créez le premier avec « Nouveau ».',
-  tips: [
-    'Le nom de la personne assignée s\'affiche à côté du titre, avec une icône',
-    'Cliquez sur un en-tête de colonne pour trier, un second clic inverse l\'ordre',
-    'Cliquez sur une ligne pour ouvrir la fiche de l\'élément',
-    'Un élément ne se range que sous un parent du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮',
-    'Glissez-déposez une ligne pour la réordonner ou la ranger sous un autre élément',
-    'Le menu ⋮ d\'une ligne regroupe toutes les actions',
-  ],
-  zones: {
-    entetes: { title: 'Colonnes', text: 'Titre, parent, type, statut, priorité : les informations clés de chaque élément.' },
-    ligne: { title: 'Un élément', text: 'Cliquez pour ouvrir sa fiche ; glissez-le pour le déplacer ; le menu ⋮ regroupe ses actions.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -27,22 +35,7 @@ export const help: HelpEntry = {
         description: 'Tous vos éléments en tableau. Triez, filtrez et agissez rapidement sur chaque ligne.',
       },
     },
-    {
-      element: '[data-tour="list-headers"]',
-      popover: {
-        title: 'Colonnes triables',
-        description: 'Cliquez sur Titre, Type, Statut, Priorité ou Date pour trier. Un second clic inverse l\'ordre.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="list-row"]',
-      popover: {
-        title: 'Une ligne = un élément',
-        description: 'Cliquez pour ouvrir sa fiche. Glissez-la pour la déplacer dans la liste ou la ranger sous un autre élément.',
-        side: 'bottom',
-      },
-    },
+    ...elementTourSteps('list', elements),
     ...ITEM_MENU_STEP,
     ...SPACE_TOOLBAR_STEPS,
   ],

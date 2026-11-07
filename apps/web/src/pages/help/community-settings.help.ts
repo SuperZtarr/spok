@@ -1,90 +1,88 @@
-/* Aide utilisateur des Paramètres de la communauté (/communities/:id/settings).
-   Lue par le point d'interrogation de l'écran (HelpButton) et le tour (usePageTourPulse) — registre help/pageHelp.ts. */
+/* Aide utilisateur des Paramètres de la communauté (/communities/:id/settings), écrite en éléments d'aide (help/elements.ts) : un texte par onglet,
+   repris par le « ? » (HelpButton) et le tour (usePageTourPulse) ; un onglet n'a pas de zone du mode Aide. `fields` : aide sous les champs (FieldHelp).
+   Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  general: {
+    title: 'Général',
+    short: 'Nom, description, visibilité et contexte.',
+    text: 'Nom, description, visibilité et contexte (Forum, Projet, Loisirs) de la communauté.',
+    target: '[data-tour="community-tab-general"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  images: {
+    title: 'Images',
+    short: 'Avatar et couverture.',
+    text: 'Avatar (affiché dans la barre latérale et les cartes) et image de couverture. Glissez ou cliquez pour envoyer une image.',
+    target: '[data-tour="community-tab-images"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  espaces: {
+    title: 'Espaces',
+    short: 'Les espaces et leur hiérarchie.',
+    text: 'Liste des espaces de la communauté. Glissez une ligne sur le haut ou le bas d\'une autre pour changer l\'ordre, sur son milieu pour la ranger dedans. Créez de nouveaux espaces.',
+    target: '[data-tour="community-tab-spaces"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  membres: {
+    title: 'Membres',
+    short: 'Les accès en 3 colonnes.',
+    text: '3 colonnes : non-membres → membres → propriétaires. Cliquez les flèches pour déplacer entre colonnes.',
+    target: '[data-tour="community-tab-members"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  emails: {
+    title: 'Emails',
+    short: 'Historique et renvoi des emails.',
+    text: 'Historique des emails envoyés à la communauté. Renvoyez un email aux nouveaux membres ou individuellement.',
+    target: '[data-tour="community-tab-emails"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  referentiels: {
+    title: 'Référentiels',
+    short: 'Statuts et libellés de types.',
+    text: 'Les statuts et les libellés de types de la communauté : libellés, couleurs, ordre. Les espaces en héritent.',
+    target: '[data-tour="community-tab-referentiels"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  tags: {
+    title: 'Tags',
+    short: 'Les tags partagés par les espaces.',
+    text: 'Les tags partagés par les espaces de la communauté : nom et couleur.',
+    target: '[data-tour="community-tab-tags"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  apercu: {
+    title: 'Aperçu',
+    short: 'Comment la communauté apparaît dans les listes.',
+    text: 'Comment la communauté apparaît dans les listes (vignette).',
+    target: '[data-tour="community-tab-apercu"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  danger: {
+    title: 'Danger',
+    short: 'Supprimer la communauté.',
+    text: 'Supprimer la communauté, avec ou sans ses espaces.',
+    target: '[data-tour="community-tab-danger"]',
+    noZone: true,
+    side: 'bottom',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Paramètres de la communauté',
   summary: 'Gérez votre communauté : informations et contexte, images, référentiels, tags, espaces, membres et emails.',
-  tips: [
-    'Général : nom, description, visibilité et contexte (Forum, Projet, Loisirs)',
-    'Espaces : glissez une ligne sur le haut ou le bas d\'une autre pour changer l\'ordre, sur son milieu pour la ranger dedans',
-    'Membres : 3 colonnes (non-membres, membres, propriétaires)',
-    'Emails : historique des envois, renvoi aux nouveaux membres',
-  ],
-  tour: [
-    {
-      element: '[data-tour="community-tab-general"]',
-      popover: {
-        title: 'Général',
-        description: 'Nom, description et visibilité (publique/privée) de la communauté. Les tags partagés entre tous les espaces de la communauté.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-images"]',
-      popover: {
-        title: 'Images',
-        description: 'Avatar (affiché dans la sidebar et les cartes) et image de couverture. Glissez ou cliquez pour uploader.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-spaces"]',
-      popover: {
-        title: 'Espaces',
-        description: 'Liste des espaces de la communauté. Réorganisez la hiérarchie par glisser-déposer. Créez de nouveaux espaces.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-members"]',
-      popover: {
-        title: 'Membres',
-        description: '3 colonnes : non-membres → membres → propriétaires. Cliquez les flèches pour déplacer entre colonnes.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-emails"]',
-      popover: {
-        title: 'Emails',
-        description: 'Historique des emails envoyés à la communauté. Renvoyez un email aux nouveaux membres ou individuellement.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-referentiels"]',
-      popover: {
-        title: 'Référentiels',
-        description: 'Les statuts et les libellés de types de la communauté : libellés, couleurs, ordre. Les espaces en héritent.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-tags"]',
-      popover: {
-        title: 'Tags',
-        description: 'Les tags partagés par les espaces de la communauté : nom et couleur.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-apercu"]',
-      popover: {
-        title: 'Aperçu',
-        description: 'Comment la communauté apparaît dans les listes (vignette).',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="community-tab-danger"]',
-      popover: {
-        title: 'Danger',
-        description: 'Supprimer la communauté, avec ou sans ses espaces.',
-        side: 'bottom',
-      },
-    },
-  ],
+  ...helpFromElements(elements),
   fields: {
     spacesOpenSettings: 'Cliquer un espace ouvre ses paramètres (pas l\'espace lui-même) — pour y entrer, passez par la barre latérale ou la page de la communauté.',
     spacesOrder:'Glissez un espace sur le haut ou le bas d\'une ligne pour le placer avant ou après (ordre vu par tous les membres), sur son milieu pour en faire un sous-espace, ou sur le bandeau du haut pour le remettre au premier niveau.',
@@ -92,4 +90,5 @@ export const help: HelpEntry = {
     context: 'Le contexte adapte automatiquement l\'interface (vues proposées, champs) pour tous les visiteurs de la communauté. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',
   },
+  tour: elementTourSteps('community-settings', elements),
 };

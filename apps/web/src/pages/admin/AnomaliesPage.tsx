@@ -395,7 +395,7 @@ export function AnomaliesPage() {
         </div>
         <p className="text-sm text-muted-foreground mb-3">Detection d'anomalies et tests d'integrite</p>
 
-        <div className="flex gap-1 border-b border-border" data-tour="admin-anomalies-tabs">
+        <div className="flex gap-1 border-b border-border" data-tour="admin-anomalies-tabs" data-help-zone="admin-anomalies:onglets">
           <button
             onClick={() => setActiveTab('anomalies')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -421,7 +421,7 @@ export function AnomaliesPage() {
         </div>
       </div>
 
-      <div className="mt-4" data-tour="admin-anomalies-content">
+      <div className="mt-4" data-tour="admin-anomalies-content" data-help-zone="admin-anomalies:contenu">
         {activeTab === 'anomalies' ? <AnomaliesTab /> : <TestsTab />}
       </div>
     </div>

@@ -251,12 +251,12 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
             <div className="ml-auto"><PageHelpButton pageKey="tasks" /></div>
           </div>
 
-          <div data-tour="tasks-filters"><GlobalTaskFilterBar filters={filters} /></div>
+          <div data-tour="tasks-filters" data-help-zone="tasks:filtres"><GlobalTaskFilterBar filters={filters} /></div>
         </div>
       )}
 
       {/* Table header — hidden on mobile */}
-      <div data-tour="tasks-headers" className="hidden md:grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
+      <div data-tour="tasks-headers" data-help-zone="tasks:colonnes" className="hidden md:grid grid-cols-[1fr_10rem_9rem_7rem_6rem_7rem_7rem] items-center gap-2 px-6 py-2 border-b border-border bg-muted/50 flex-shrink-0">
         <SortHeader label="Titre" field="title" />
         <SortHeader label="Espace" field="spaceName" />
         <SortHeader label="Assigné" field="assignedToName" />
@@ -305,7 +305,7 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         ) : (
           <>
             {/* Desktop table rows */}
-            <div className="hidden md:block" data-tour="tasks-horizons">
+            <div className="hidden md:block" data-tour="tasks-horizons" data-help-zone="tasks:horizons">
               {horizonGroups.map((g) => (
                 <HorizonGroup key={g.label} title={g.label} items={g.items} renderItem={renderDesktopRow} getKey={(t: GlobalTask) => t.id} />
               ))}

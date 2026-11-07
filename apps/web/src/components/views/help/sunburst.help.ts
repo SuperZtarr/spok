@@ -1,39 +1,39 @@
-/* Aide utilisateur de la vue « Sunburst » (sunburst) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Sunburst » (sunburst), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
+   le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  diagramme: {
+    title: 'Sunburst',
+    short: 'La hiérarchie en anneaux.',
+    text: 'La structure de l\'espace d\'un coup d\'œil : du centre vers l\'extérieur, chaque anneau descend d\'un niveau. La taille d\'un segment reflète son nombre de descendants.',
+    side: 'top',
+  },
+  segment: {
+    title: 'Un segment',
+    short: 'Survolez pour son chemin, cliquez pour l\'ouvrir.',
+    text: 'Survolez-le pour voir son chemin (espace › parent › élément). Cliquez : un élément ouvre sa fiche, un espace ou une communauté vous y emmène.',
+    target: '[data-tour="sunburst-segment"]',
+    side: 'right',
+  },
+  communautes: {
+    title: 'Communautés',
+    short: 'Choisissez les communautés représentées.',
+    text: 'Choisissez les communautés représentées dans les anneaux.',
+    side: 'bottom',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Sunburst',
   summary: 'La hiérarchie en anneaux : le centre est l\'espace, chaque anneau un niveau, la taille d\'un segment son poids.',
   short: 'Cercles concentriques',
   empty: 'Aucune hiérarchie à dessiner. Créez des éléments, puis des enfants sous eux, pour former les anneaux.',
-  tips: [
-    'Chaque anneau représente un niveau de profondeur',
-    'La taille d\'un segment reflète son nombre de descendants',
-    'Survolez un segment pour voir son chemin complet',
-    'Cliquez sur un élément pour ouvrir sa fiche, sur un espace pour y aller',
-  ],
-  zones: {
-    diagramme: { title: 'Sunburst', text: 'La hiérarchie en anneaux : le centre, puis chaque niveau d\'enfants vers l\'extérieur ; la taille d\'un segment suit son contenu.' },
-    segment: { title: 'Un segment', text: 'Un élément, un espace ou une communauté. Survolez pour voir son chemin ; cliquez pour ouvrir sa fiche ou y aller.' },
-    communautes: { title: 'Communautés', text: 'Choisissez les communautés représentées dans les anneaux.' },
-  },
+  ...helpFromElements(elements),
   tour: [
-    {
-      popover: {
-        title: 'Vue Sunburst',
-        description: 'La structure de l\'espace d\'un coup d\'œil : du centre vers l\'extérieur, chaque anneau descend d\'un niveau.',
-      },
-    },
-    {
-      element: '[data-tour="sunburst-segment"]',
-      popover: {
-        title: 'Un segment',
-        description: 'Survolez-le pour voir son chemin (espace › parent › élément). Cliquez : un élément ouvre sa fiche, un espace ou une communauté vous y emmène.',
-        side: 'right',
-      },
-    },
+    ...elementTourSteps('sunburst', elements),
     ...SPACE_TOOLBAR_STEPS,
   ],
 };

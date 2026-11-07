@@ -134,7 +134,7 @@ export function MoveToSpaceModal({ isOpen, onClose, currentSpaceId, itemIds }: M
                 Aucun espace trouvé
               </p>
             ) : (
-            <div className="flex-1 overflow-y-auto mb-4" data-tour="move-targets">
+            <div className="flex-1 overflow-y-auto mb-4" data-tour="move-targets" data-help-zone="move-to-space:cibles">
               {spaceGroups.map((group) => (
                 <div key={group.communityId || '_personal'}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 py-1.5 sticky top-0 bg-card">

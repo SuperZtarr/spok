@@ -93,7 +93,7 @@ export function UserAccessPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 text-xs" data-tour="admin-access-legend">
+      <div className="flex flex-wrap items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30 flex-shrink-0 text-xs" data-tour="admin-access-legend" data-help-zone="admin-user-access:legende">
         {(Object.keys(ROLE_LABELS) as Exclude<AccessRole, null>[]).map((role) => (
           <div key={role} className="flex items-center gap-1">
             <span
@@ -117,7 +117,7 @@ export function UserAccessPage() {
       ) : roots.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">Aucune communauté</div>
       ) : (
-        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden flex flex-col" data-tour="admin-access-tree">
+        <div className="flex-1 min-h-0 border rounded-lg overflow-hidden flex flex-col" data-tour="admin-access-tree" data-help-zone="admin-user-access:arbre">
           <BoxTreeDiagram roots={roots} />
         </div>
       )}

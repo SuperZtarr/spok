@@ -485,7 +485,7 @@ export function UsersPage() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
-        <div className="space-y-6" data-tour="admin-users-table">
+        <div className="space-y-6" data-tour="admin-users-table" data-help-zone="admin-users:liste">
           {adminUsers.length > 0 && (
             <UserTable users={adminUsers} title="Administrateurs" icon={Shield} iconColor="text-primary" />
           )}

@@ -296,7 +296,7 @@ export function SpaceToolbar({
 
         if (sections.length === 0 && secondaryGroups.length === 0) return null;
         return (
-          <div data-devzone="toolbar-vues" className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
+          <div data-tour="toolbar-views" data-devzone="toolbar-vues" className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
             {sections.map((section, idx) => (
               <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
                 <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
@@ -586,7 +586,7 @@ export function SpaceToolbar({
           {/* Item count */}
           {showFiltersForView && (
             <HelpHint text={H.count}>
-            <span className="inline-flex items-center justify-center h-7 rounded px-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+            <span data-tour="toolbar-count" className="inline-flex items-center justify-center h-7 rounded px-2 text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
               {(() => {
                 const hasFilter = activeTypeFilter || activeStatusFilter;
                 const hasSearch = searchQuery.trim().length > 0;

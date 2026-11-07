@@ -61,7 +61,7 @@ export function PerfPage() {
             <span className="text-xs text-muted-foreground">{timeAgo(new Date(dataUpdatedAt).toISOString())}</span>
           )}
         </div>
-        <div className="flex gap-2" data-tour="admin-perf-actions">
+        <div className="flex gap-2" data-tour="admin-perf-actions" data-help-zone="admin-perf:actions">
           <HelpHint text={pageHint('admin-perf', 'refresh')}>
             <Button variant="bordered" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'perf'] })}>
               <RefreshCw className="w-4 h-4 mr-1" /> Actualiser
@@ -94,7 +94,7 @@ export function PerfPage() {
 
       {/* Top slow endpoints */}
       {topSlow.length > 0 && (
-        <div data-tour="admin-perf-slow">
+        <div data-tour="admin-perf-slow" data-help-zone="admin-perf:lents">
           <h2 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Endpoints les plus lents (moyenne)</h2>
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">

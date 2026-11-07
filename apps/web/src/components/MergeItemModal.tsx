@@ -157,7 +157,7 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
       {step === 'pick' && (
         <div className="space-y-3">
           {/* Source item display */}
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-md" data-tour="merge-source">
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-md" data-tour="merge-source" data-help-zone="merge-item:source">
             <SourceIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="text-sm text-muted-foreground">Source :</span>
             <span className="font-semibold truncate">{sourceItem.title}</span>
@@ -183,7 +183,7 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
           </div>
 
           {/* Item list */}
-          <div className="max-h-[400px] overflow-y-auto border rounded-md divide-y" data-tour="merge-targets">
+          <div className="max-h-[400px] overflow-y-auto border rounded-md divide-y" data-tour="merge-targets" data-help-zone="merge-item:cible">
             {filteredItems.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 {pickableItems.length === 0 ? pageHint('merge-item', 'noTarget') : 'Aucun élément trouvé'}

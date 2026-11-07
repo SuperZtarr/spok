@@ -45,6 +45,7 @@ import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { PerfPage } from './pages/admin/PerfPage';
 import { ContactPage } from './pages/ContactPage';
 import { BookmarksPage } from './pages/BookmarksPage';
+import { NewsPage } from './pages/NewsPage';
 import { SitemapPage } from './pages/SitemapPage';
 import { SearchPage } from './pages/SearchPage';
 import { HomePage } from './pages/HomePage';
@@ -105,6 +106,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/today$/, 'pages/TodayPage.tsx'],
   [/^\/links$/, 'pages/GlobalLinksPage.tsx'],
   [/^\/bookmarks$/, 'pages/BookmarksPage.tsx'],
+  [/^\/news$/, 'pages/NewsPage.tsx'],
   [/^\/search$/, 'pages/SearchPage.tsx'],
   [/^\/spaces\/[^/]+\/content$/, 'pages/SpacePage.tsx'],
   [/^\/spaces\/[^/]+\/settings$/, 'pages/SpaceSettingsPage.tsx'],
@@ -209,6 +211,7 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
+        <Route path="news" element={<NewsPage />} />
         <Route path="spaces/:spaceId" element={<SpacePage />} />
         <Route path="spaces/:spaceId/overview" element={<SpaceOverviewPage />} />
         <Route path="spaces/:spaceId/content" element={<SpaceContentRedirect />} />

@@ -188,7 +188,7 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
   ];
 
   return (
-    <div className="p-4 md:p-6 flex-1 overflow-auto" data-tour="communities-grid">
+    <div className="p-4 md:p-6 flex-1 overflow-auto" data-tour="communities-grid" data-help-zone="communities:grille">
       {sections.every(s => s.items.length === 0) ? (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">

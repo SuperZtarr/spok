@@ -41,7 +41,7 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
   const item = block.item;
   if (!block.available || !item) {
     return (
-      <div className={inRow ? 'min-w-0' : `w-full my-4 ${depthIndentClasses(block.depth)}`} data-tour="article-block">
+      <div className={inRow ? 'min-w-0' : `w-full my-4 ${depthIndentClasses(block.depth)}`} data-tour="article-block" data-help-zone="article:bloc">
         <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
           <Lock className="w-4 h-4 flex-shrink-0" />
           {pageHint('article', 'unavailable')}
@@ -50,7 +50,7 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
     );
   }
   return (
-    <div className={inRow ? 'min-w-0' : `${blockClasses(block, item.type)} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block">
+    <div className={inRow ? 'min-w-0' : `${blockClasses(block, item.type)} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block" data-help-zone="article:bloc">
       {renderBody(item, block.depth, children)}
     </div>
   );

@@ -1,15 +1,37 @@
-/* Aide utilisateur de la page « Aperçu de l'espace » (/spaces/:id/overview).
-   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+/* Aide utilisateur de la page « Aperçu de l'espace » (/spaces/:id/overview), écrite en éléments d'aide (help/elements.ts) : un texte par
+   fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  ouvrir: {
+    title: 'Ouvrir',
+    short: 'Entre dans l\'espace.',
+    text: 'Entre dans l\'espace, sur sa vue par défaut.',
+    target: '[data-tour="space-overview-open"]',
+    noZone: true,
+    side: 'left',
+  },
+  vues: {
+    title: 'Vues disponibles',
+    short: 'Chaque carte ouvre une vue.',
+    text: 'Chaque carte ouvre l\'espace sur cette vue.',
+    target: '[data-tour="space-overview-views"]',
+    side: 'bottom',
+  },
+  sousespaces: {
+    title: 'Sous-espaces',
+    short: 'Les espaces rangés sous celui-ci.',
+    text: 'Les espaces rangés sous celui-ci ; cliquez sur un sous-espace pour y aller.',
+    target: '[data-tour="space-overview-children"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Aperçu de l\'espace',
   summary: 'La carte d\'identité d\'un espace : ses vues, ses sous-espaces, ses membres.',
-  tips: [
-    '« Ouvrir » entre dans l\'espace',
-    'Cliquez sur une vue pour l\'ouvrir directement',
-    'Cliquez sur un sous-espace pour y aller',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -17,29 +39,6 @@ export const help: HelpEntry = {
         description: 'Avant d\'entrer : ce que contient l\'espace et qui y participe.',
       },
     },
-    {
-      element: '[data-tour="space-overview-open"]',
-      popover: {
-        title: 'Ouvrir',
-        description: 'Entre dans l\'espace, sur sa vue par défaut.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="space-overview-views"]',
-      popover: {
-        title: 'Vues disponibles',
-        description: 'Chaque carte ouvre l\'espace sur cette vue.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="space-overview-children"]',
-      popover: {
-        title: 'Sous-espaces',
-        description: 'Les espaces rangés sous celui-ci.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('space-overview', elements),
   ],
 };

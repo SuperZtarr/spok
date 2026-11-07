@@ -1,14 +1,24 @@
 /* Profil utilisateur : préférences (thème), avatar (R2 ; formats/tailles via validateUpload('image')
-   de @spok/shared), changement de mot de passe. */
+   de @spok/shared), changement de mot de passe, suivi de l'aide (GET/PATCH /help-state : tutoriel d'accueil et annonces
+   traitées, règles dans utils/helpState.ts). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
 import { validateUpload } from '@spok/shared';
 import { processAvatar, uploadEntityImage, isR2Configured, deleteFileFromR2 } from '../utils/r2.js';
 import { generateTokens, sendVerificationEmail } from './auth.js';
+import { mergeHandled, resolveOnboardingDone } from '../utils/helpState.js';
 
 const updatePreferencesSchema = z.object({
   themePreference: z.enum(['light', 'dark', 'system']).optional(),
+});
+
+const helpAnnouncementIdsSchema = z.array(z.string().min(1).max(100)).max(500);
+
+const updateHelpStateSchema = z.object({
+  onboardingDone: z.boolean().optional(),
+  add: helpAnnouncementIdsSchema.optional(),
+  remove: helpAnnouncementIdsSchema.optional(),
 });
 
 const notificationChannelSchema = z.enum(['all', 'in_app', 'none']);
@@ -52,6 +62,42 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return { themePreference: user.themePreference };
+  });
+
+  // GET /user/help-state — tutoriel d'accueil traité ou non, annonces déjà traitées
+  fastify.get('/help-state', { preHandler: [fastify.authenticate] }, async (request) => {
+    const user = await fastify.prisma.user.findUniqueOrThrow({
+      where: { id: request.user.userId },
+      select: { onboardingDone: true, helpAnnouncementsHandled: true, createdAt: true },
+    });
+
+    return {
+      onboardingDone: resolveOnboardingDone(user.onboardingDone, user.createdAt),
+      handled: user.helpAnnouncementsHandled,
+    };
+  });
+
+  // PATCH /user/help-state — ajoute ou retire des annonces traitées, enregistre la réponse au tutoriel
+  fastify.patch('/help-state', { preHandler: [fastify.authenticate] }, async (request) => {
+    const { onboardingDone, add, remove } = updateHelpStateSchema.parse(request.body);
+
+    const current = await fastify.prisma.user.findUniqueOrThrow({
+      where: { id: request.user.userId },
+      select: { helpAnnouncementsHandled: true },
+    });
+    const user = await fastify.prisma.user.update({
+      where: { id: request.user.userId },
+      data: {
+        ...(onboardingDone === undefined ? {} : { onboardingDone }),
+        helpAnnouncementsHandled: mergeHandled(current.helpAnnouncementsHandled, add, remove),
+      },
+      select: { onboardingDone: true, helpAnnouncementsHandled: true, createdAt: true },
+    });
+
+    return {
+      onboardingDone: resolveOnboardingDone(user.onboardingDone, user.createdAt),
+      handled: user.helpAnnouncementsHandled,
+    };
   });
 
   // PATCH /user/profile — update name and/or email

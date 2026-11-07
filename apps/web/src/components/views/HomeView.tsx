@@ -5,7 +5,8 @@
    « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications.
    FirstTimeSetup (2026-10-16) : « Créer une communauté » ouvre directement la modale (/communities?new=community) ;
    « Créer un espace personnel » le crée (POST /spaces PERSONAL) et l'ouvre — l'écran n'apparaît que sans aucun
-   espace, donc sans espace personnel (il est normalement créé à l'inscription / à la connexion). */
+   espace, donc sans espace personnel (il est normalement créé à l'inscription / à la connexion).
+   Section « Nouveautés » (help/NewsCards, pilote 2026-11-07) : cartes des annonces non traitées, sous le mot de bienvenue. */
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logoUrl from '../../assets/logo.png';
@@ -20,6 +21,7 @@ import { useAuthStore } from '../../stores/auth';
 import { useNotificationPanelStore } from '../../stores/notificationPanel';
 import { SpaceCard } from '../ui/SpaceCard';
 import { PageHelpButton } from '../../help/PageHelpButton';
+import { NewsCards } from '../../help/NewsCards';
 
 function FirstTimeSetup({ userName }: { userName: string }) {
   const navigate = useNavigate();
@@ -345,7 +347,7 @@ export function HomeView() {
         {/* Aide de la page d'accueil */}
         <div className="flex justify-end"><PageHelpButton pageKey="home" /></div>
         {/* Welcome */}
-        <div className="mb-8 text-center" data-tour="home-welcome">
+        <div className="mb-8 text-center" data-tour="home-welcome" data-help-zone="home:accueil">
           <img src={logoUrl} alt="SPOK" className="h-24 sm:h-48 md:h-80 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Bonjour {firstName}</h1>
           <p className="text-muted-foreground mt-1">
@@ -354,6 +356,8 @@ export function HomeView() {
             {totalSpaces} espace{totalSpaces > 1 ? 's' : ''}
           </p>
         </div>
+
+        <NewsCards spaces={allSpaces || []} />
 
         {/* Pending invitations */}
         {(() => {
@@ -395,7 +399,7 @@ export function HomeView() {
         })()}
 
         {/* Shortcuts */}
-        <div className="grid grid-cols-3 gap-3 mb-8" data-tour="home-shortcuts">
+        <div className="grid grid-cols-3 gap-3 mb-8" data-tour="home-shortcuts" data-help-zone="home:raccourcis">
           {SHORTCUTS.map(({ to, icon: Icon, label, description }) => (
             <Link
               key={to}
@@ -411,7 +415,7 @@ export function HomeView() {
 
         {/* Dashboard preview sections */}
         {!!user && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8" data-tour="home-previews">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8" data-tour="home-previews" data-help-zone="home:apercus">
             <DashboardPreviewCard
               title="Échéances proches"
               icon={<CalendarDays className="w-3.5 h-3.5 text-orange-500" />}
@@ -458,7 +462,7 @@ export function HomeView() {
             )
           ).slice(0, 5);
           return (
-            <section className="mb-8" data-tour="home-activity">
+            <section className="mb-8" data-tour="home-activity" data-help-zone="home:activite">
               <div className="bg-card border border-border rounded-xl overflow-hidden w-fit max-w-full">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <div className="flex items-center gap-1.5">
@@ -499,7 +503,7 @@ export function HomeView() {
 
         {/* Communities with recent activity */}
         {(communities || []).filter(c => c.role && c.role !== 'INVITED' && c.role !== 'ADMIN_VIEW').length > 0 && (
-          <section className="mb-8" data-tour="home-communities">
+          <section className="mb-8" data-tour="home-communities" data-help-zone="home:communautes">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -555,7 +559,7 @@ export function HomeView() {
 
         {/* Favorite spaces */}
         {favoriteSpaces.length > 0 && (
-          <section className="mb-8" data-tour="home-favorites">
+          <section className="mb-8" data-tour="home-favorites" data-help-zone="home:favoris">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-500" />
               Espaces favoris

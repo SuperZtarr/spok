@@ -213,7 +213,7 @@ export function TodayPage() {
         </button>
       </div>
 
-      <div className="px-3 py-1 border-b border-border" data-tour="today-filters">
+      <div className="px-3 py-1 border-b border-border" data-tour="today-filters" data-help-zone="today:filtres">
         <GlobalTaskFilterBar filters={filters} />
       </div>
 
@@ -248,7 +248,7 @@ export function TodayPage() {
               ))}
               {/* Choix des colonnes d'agenda affichées — indépendant de l'activation des
                   feeds (icône réglages) : ici on ne joue que sur l'affichage. */}
-              <div className="flex flex-wrap gap-1 mb-2" data-tour="today-agendas">
+              <div className="flex flex-wrap gap-1 mb-2" data-tour="today-agendas" data-help-zone="today:agendas">
                 {allSources.map((s) => {
                   const visible = visibleSources[s.key] ?? true;
                   return (
@@ -284,7 +284,7 @@ export function TodayPage() {
               />
             </div>
               <div className="flex flex-row gap-3">
-                <div className="flex-1 min-w-0" data-tour="today-review">
+                <div className="flex-1 min-w-0" data-tour="today-review" data-help-zone="today:revision">
                   <ReviewQueueSection
                     toTriage={reviewData?.toTriage ?? []}
                     overdue={reviewData?.overdue ?? []}
@@ -294,7 +294,7 @@ export function TodayPage() {
                     onPlanNow={handleReviewPlanNow}
                   />
                 </div>
-                <div className="flex-1 min-w-0" data-tour="today-plan">
+                <div className="flex-1 min-w-0" data-tour="today-plan" data-help-zone="today:plan">
                   <DayPlanList
                     plan={data?.plan ?? []}
                     suggestions={data?.suggestions ?? []}

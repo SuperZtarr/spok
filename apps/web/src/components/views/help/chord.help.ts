@@ -1,22 +1,32 @@
-/* Aide utilisateur de la vue « Cordes » (chord) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Cordes » (chord), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
+   le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  mode: {
+    title: 'Grouper et filtrer',
+    short: 'Groupez par type ou par espace.',
+    text: 'Groupez par type d\'élément ou par espace ; incluez ou non les liens parent-enfant.',
+    target: '[data-tour="chord-mode"]',
+    side: 'bottom',
+  },
+  diagramme: {
+    title: 'Lire le diagramme',
+    short: 'Un arc par groupe, un ruban par liaison.',
+    text: 'Chaque arc est un groupe ; un ruban relie deux groupes, et plus il est large, plus il y a de relations. Survolez un arc ou un ruban pour le détail.',
+    target: '[data-tour="chord-chart"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Cordes',
   summary: 'Les relations croisées entre groupes (types ou espaces), en arcs reliés par des rubans.',
   short: 'Relations croisées entre groupes',
   empty: 'Aucune relation à dessiner. Les rubans relient des éléments de types ou d\'espaces différents liés par une relation (Bloque, Permet…).',
-  tips: [
-    'Les arcs sont les groupes (types ou espaces), les rubans les relations entre eux',
-    'Plus un ruban est large, plus il y a de relations',
-    'Survolez un arc ou un ruban pour voir le détail',
-  ],
-  zones: {
-    mode: { title: 'Regroupement', text: 'Groupez par type d\'élément ou par espace ; incluez ou non les liens parent-enfant.' },
-    diagramme: { title: 'Cordes', text: 'Chaque arc du cercle est un groupe, chaque corde les liens entre deux groupes : plus elle est large, plus ils sont reliés.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,22 +34,7 @@ export const help: HelpEntry = {
         description: 'Quels groupes sont reliés entre eux, et à quel point.',
       },
     },
-    {
-      element: '[data-tour="chord-mode"]',
-      popover: {
-        title: 'Grouper et filtrer',
-        description: 'Groupez par type d\'élément ou par espace ; incluez ou non les liens parent-enfant.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="chord-chart"]',
-      popover: {
-        title: 'Lire le diagramme',
-        description: 'Chaque arc est un groupe ; un ruban relie deux groupes, sa largeur dit combien de relations. Survolez pour le détail.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('chord', elements),
     ...SPACE_TOOLBAR_STEPS,
   ],
 };

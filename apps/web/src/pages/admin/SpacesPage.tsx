@@ -255,7 +255,7 @@ export function SpacesPage() {
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
       ) : (
         <>
-          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-spaces-table">
+          <div className="border border-border rounded-lg overflow-hidden" data-tour="admin-spaces-table" data-help-zone="admin-spaces:liste">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>

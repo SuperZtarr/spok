@@ -423,6 +423,15 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
 
+  getHelpState: () =>
+    fetchApi<{ onboardingDone: boolean; handled: string[] }>('/user/help-state'),
+
+  updateHelpState: (data: { onboardingDone?: boolean; add?: string[]; remove?: string[] }) =>
+    fetchApi<{ onboardingDone: boolean; handled: string[] }>('/user/help-state', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   updateProfile: (data: { name?: string; email?: string }) =>
     fetchApi<{ name: string; email: string; emailVerified?: boolean; tokens?: { accessToken: string; refreshToken: string } }>('/user/profile', {
       method: 'PATCH',

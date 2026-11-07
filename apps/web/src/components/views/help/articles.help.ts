@@ -1,22 +1,31 @@
-/* Aide utilisateur de la vue « Articles » (articles) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton), le tour (useViewOnboarding) et l'état vide (EmptyHelp). */
+/* Aide utilisateur de la vue « Articles » (articles), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
+   par le « ? » (ViewHelpButton), le tour (useViewOnboarding), le mode Aide et l'état vide (EmptyHelp). */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  liste: {
+    title: 'Les articles',
+    short: 'Tous les articles de l\'espace.',
+    text: 'Tous les articles de l\'espace, puis ceux des espaces enfants liés. Le filtre de la barre s\'applique aussi ici.',
+    side: 'top',
+  },
+  carte: {
+    title: 'Un article',
+    short: 'Cliquez pour le lire en pleine page.',
+    text: 'Son titre et son chapeau viennent de sa fiche. Cliquez pour le lire en pleine page ; « Retour à l\'espace » ramène à cette vue. Le menu ⋮ apparaît au survol : « Afficher » lit l\'article dans sa fiche, « Ouvrir » donne accès à Modifier et Composer, où l\'on ajoute ou réordonne ses blocs.',
+    target: '[data-tour="articles-card"]',
+    side: 'bottom',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Articles',
-  summary: 'Les articles de l\'espace, à portée de clic : chacun s\'ouvre sur sa page de lecture.',
+  summary: 'Les articles de l\'espace, à portée de clic : chacun s\'ouvre sur sa page de lecture. Le même clic fonctionne dans les autres vues de l\'espace.',
   short: 'Les articles à lire',
   empty: 'Aucun article. Créez un élément de type Article, puis composez-le depuis sa fiche.',
-  tips: [
-    'Cliquez sur un article pour le lire en pleine page ; « Retour à l\'espace » ramène à cette vue. Le même clic fonctionne dans les autres vues de l\'espace',
-    'Le menu ⋮ apparaît au survol : « Afficher » lit l\'article dans sa fiche, « Ouvrir » donne accès à Modifier et Composer',
-    'Pour ajouter ou réordonner ses blocs : mode « Composer » de la fiche',
-  ],
-  zones: {
-    liste: { title: 'Les articles', text: 'Tous les articles de l\'espace, puis ceux des espaces enfants liés. Le filtre de la barre s\'applique aussi ici.' },
-    carte: { title: 'Un article', text: 'Son titre et son chapeau ; cliquez pour l\'ouvrir sur sa page de lecture.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,14 +33,7 @@ export const help: HelpEntry = {
         description: 'Les articles de l\'espace, regroupés pour les retrouver et les lire facilement.',
       },
     },
-    {
-      element: '[data-tour="articles-card"]',
-      popover: {
-        title: 'Un article',
-        description: 'Cliquez pour le lire en pleine page. Le titre et le chapeau viennent de sa fiche.',
-        side: 'bottom',
-      },
-    },
+    ...elementTourSteps('articles', elements),
     ...ITEM_MENU_STEP,
     ...SPACE_TOOLBAR_STEPS,
   ],

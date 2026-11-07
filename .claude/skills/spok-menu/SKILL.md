@@ -99,26 +99,29 @@ export type ViewMode = '...' | 'ma-vue';
 ### 3. Web — fiche d'aide utilisateur de la vue (OBLIGATOIRE)
 
 `viewDescriptions.ts` et `viewTours.ts` n'existent plus (2026-10-14) : l'aide d'une vue est UNE fiche
-`apps/web/src/components/views/help/ma-vue.help.ts` (type `HelpEntry`, `help/types.ts`) — titre, résumé,
-conseils, tour guidé — enregistrée dans `components/views/help/index.ts` (`VIEW_HELP`, Record strict).
+`apps/web/src/components/views/help/ma-vue.help.ts` (type `HelpEntry`, `help/types.ts`), écrite en éléments d'aide
+(règles : skill `spok-doc`, couche 3), enregistrée dans `components/views/help/index.ts` (`VIEW_HELP`, Record strict).
 
 ```ts
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+const elements: HelpElements = {
+  contenu: { title: 'Ma Vue', short: 'Texte de survol.', text: 'Ce que ça fait et comment s\'en servir.', side: 'top' },
+  carte: { title: 'Une carte', short: '…', text: '…', target: '[data-tour="ma-vue-carte"]', side: 'right' },
+};
 export const help: HelpEntry = {
-  title: 'Ma Vue', summary: 'À quoi elle sert.', tips: ['Geste 1', 'Geste 2'],
-  tour: [ { popover: { title: 'Vue Ma Vue', description: '…' } },
-          { element: '[data-tour="ma-vue-xxx"]', popover: { title: '…', description: '…', side: 'bottom' } },
-          ...ITEM_MENU_STEP, ...SPACE_TOOLBAR_STEPS ],
+  title: 'Ma Vue', summary: 'À quoi elle sert.', short: 'Accroche', empty: 'État vide.',
+  ...helpFromElements(elements),
+  tour: [...elementTourSteps('ma-vue', elements), ...ITEM_MENU_STEP, ...SPACE_TOOLBAR_STEPS],
 };
 ```
 
-Modèle de tour : intro → chaque commande propre à la vue (repère `data-tour` posé sur le bouton) → un élément du
-contenu → ses gestes → barre commune (étapes partagées). `help/coverage.test.ts` échoue si la fiche manque ;
-ajouter la vue à `FULL_TOUR_VIEWS` (≥ 5 étapes dont 3 pointées). Le bouton « ? » : `ViewHelpButton`, à droite du
+`help/coverage.test.ts` échoue si la fiche manque, si elle écrit `tips` ou `zones` à la main, ou si un élément n'est ni
+posé à l'écran ni parcouru par le tour (≥ 5 étapes dont 3 pointées). Le bouton « ? » : `ViewHelpButton`, à droite du
 `#view-header` (avant Export). Champ `empty` obligatoire (état vide affiché par `EmptyHelp`). Mode Aide : poser au
-moins 2 zones `data-help-zone="<vue>:<zone>"` sur des éléments existants de la vue (conteneur, colonne, carte, panneau…)
-et leurs textes dans le champ `zones` de la fiche — contrôlé par coverage.test (aucun texte orphelin).
+moins 2 zones `data-help-zone="<vue>:<clé de l'élément>"` sur des éléments existants de la vue (conteneur, colonne, carte, panneau…).
+Nouvelle vue = nouveauté : l'annoncer dans `changes` d'un de ses éléments.
 
 **Page ou modale** (même principe, couche 3 du skill `spok-doc`) : fiche `pages/help/<page>.help.ts` ou
 `components/help/<modale>.help.ts`, clé ajoutée à `PAGE_HELP` (`help/pageHelp.ts`), puis une ligne dans l'en-tête,

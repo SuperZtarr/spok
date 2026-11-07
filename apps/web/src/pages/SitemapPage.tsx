@@ -84,6 +84,8 @@ function buildSitePages(viewNodes: SiteNode[], viewCount: number): SiteNode[] {
           description: 'Éléments modifiés par d\'autres que vous n\'avez pas encore vus, par communauté et par espace' },
         { label: 'Favoris et épingles', path: '/bookmarks', component: 'BookmarksPage', auth: 'authenticated',
           description: 'Vos espaces favoris, vos espaces récents et les éléments épinglés' },
+        { label: 'Toutes les nouveautés', path: '/news', component: 'NewsPage', auth: 'authenticated',
+          description: 'L\'historique de ce qui a changé dans SPOK, pour retrouver une annonce déjà ignorée ou lue' },
         { label: 'Espaces', path: '/spaces', component: 'SpacesListPage', auth: 'authenticated', note: 'Redirige vers /communities si aucune communauté n\'est sélectionnée',
           description: 'Espaces groupés par communauté, création depuis un modèle, hiérarchie par glisser-déposer' },
         { label: 'Graphe global', path: '/graph', component: 'GraphPage', auth: 'authenticated',
@@ -330,7 +332,7 @@ export function SitemapPage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
-        <section data-tour="sitemap-public">
+        <section data-tour="sitemap-public" data-help-zone="sitemap:public">
           <h2 className="text-sm font-semibold mb-2">Communautés et espaces publics</h2>
           <div className="border border-border rounded-xl overflow-hidden py-2">
             {isLoading && <p className="px-4 py-2 text-sm text-muted-foreground">Chargement…</p>}
@@ -344,7 +346,7 @@ export function SitemapPage() {
           </div>
         </section>
 
-        <section data-tour="sitemap-pages">
+        <section data-tour="sitemap-pages" data-help-zone="sitemap:pages">
           <h2 className="text-sm font-semibold mb-2">Pages et vues</h2>
           <div className="border border-border rounded-xl overflow-hidden py-2">
             {visibleTree.map((node, i) => (

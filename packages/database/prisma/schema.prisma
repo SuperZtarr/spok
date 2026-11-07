@@ -28,6 +28,10 @@ model User {
   globalRole        GlobalRole @default(USER)
   themePreference           String     @default("system")
   notificationPreferences   Json?      // { INVITATION: "all", ASSIGNMENT: "all", CONTRIBUTION: "in_app", MENTION: "all" }
+  // Aide : tutoriel d'accueil traité ; null = jamais répondu, décidé selon l'ancienneté du compte (apps/api/src/utils/helpState.ts).
+  onboardingDone            Boolean?
+  // Aide : identifiants des nouveautés et évolutions ignorées ou lues (`changes` des éléments d'aide, côté web).
+  helpAnnouncementsHandled  String[]   @default([])
   disabledAt        DateTime?
   lastLoginAt       DateTime?
   // Accès MCP distant (jetons spok_pat_) : accordé par un admin, null = refusé (les admins globaux l'ont toujours).

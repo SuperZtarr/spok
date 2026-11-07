@@ -172,7 +172,7 @@ export function SpaceOverviewPage() {
           {/* Left: views + child spaces */}
           <div className="flex-1 min-w-0">
             {/* Views grid */}
-            <div className="mb-8" data-tour="space-overview-views">
+            <div className="mb-8" data-tour="space-overview-views" data-help-zone="space-overview:vues">
               <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 Vues disponibles
@@ -211,7 +211,7 @@ export function SpaceOverviewPage() {
 
             {/* Child spaces */}
             {spaceTree.length > 0 && (
-              <div className="mb-8" data-tour="space-overview-children">
+              <div className="mb-8" data-tour="space-overview-children" data-help-zone="space-overview:sousespaces">
                 <h2 className="text-sm font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
                   <FolderOpen className="w-4 h-4" />
                   Sous-espaces ({childSpaces?.length || 0})

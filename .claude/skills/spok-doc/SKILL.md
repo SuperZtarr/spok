@@ -36,7 +36,13 @@ laisser un composant modifié sans « ? » ni rappels fonctionnels.
 - **Une fiche `HelpEntry` par composant** (`apps/web/src/help/types.ts`), à côté du composant :
   - vues : `components/views/help/<vue>.help.ts`, registre `VIEW_HELP` (`components/views/help/index.ts`)
   - pages et modales : `pages/help/<page>.help.ts` ou `components/help/<modale>.help.ts`, registre `PAGE_HELP` (`help/pageHelp.ts`)
-- Champs d'une fiche : `title`, `summary`, `short` (accroche des cartes), `tips`, `tour` (étapes driver.js, repères `data-tour`), `hints` (infobulles), `empty` (état vide d'une vue), `fields` (aide sous les champs).
+- **Un élément d'aide par fonction** (décision Thomas 2026-11-07, `help/elements.ts`) : la fiche déclare ses `elements`, et chaque fonction n'est écrite qu'une fois. `helpFromElements` en dérive `tips`, `zones` et `hints` ; `elementTourSteps` en dérive les étapes du tour. Ne jamais écrire `tips` ni `zones` à la main (`coverage.test.ts` échoue).
+  - Élément : clé = zone (`data-help-zone="<fiche>:<clé>"`, minuscules), `title` (≤ 4 mots), `short` (survol), `text` (explication : comportement actuel), `side`, `target` (repère existant si l'étape vise autre chose que la zone), `noZone` (commande expliquée en mode Aide par son infobulle : bouton partagé, onglet…), `changes` (annonces).
+  - Autres champs de la fiche : `title`, `summary`, `short` (accroche des cartes), `route` (page à adresse fixe : destination de « Montrer »), `empty` (état vide), `fields` (aide sous les champs), `hints` en plus des dérivés pour les détails propres au survol (options d'un menu, rappels fonctionnels), `tour` : `[intro éventuelle, ...elementTourSteps('<fiche>', elements), ...ITEM_MENU_STEP, ...SPACE_TOOLBAR_STEPS]`.
+  - Barre commune d'un espace : `help/spaceToolbar.elements.ts` ; un texte corrigé l'est dans toutes les vues. Tutoriel d'accueil et fenêtre de bienvenue : `help/onboarding.elements.ts`. Les actions de chaque ligne restent au survol : le tour présente les fonctions visibles de l'écran.
+- **Nouveautés et évolutions** (décision Thomas 2026-11-07) : `changes: [{ id, kind: 'new' | 'evolution', text }]` sur l'élément concerné, sans date : la session MEP date (`scripts/stamp-help-dates.mjs`). Ce seul champ alimente la carte d'accueil, la zone allumée, l'étape du tutoriel et la page `/news`.
+  - **Par défaut, un lot qui change un comportement visible s'annonce** : nouvelle fonction, ou comportement, résultat ou geste modifié. Pas d'annonce pour un correctif qui rétablit l'attendu, un texte ou une retouche visuelle. Signaler ce choix à Thomas dans le compte rendu du lot.
+  - Une annonce par évolution, pas par commit. `text` dit seulement ce qui vient de changer, et `text` de l'élément décrit déjà le nouveau comportement. `id` stable et unique : il est conservé par compte (`User.helpAnnouncementsHandled`).
 - **Les textes ne s'écrivent jamais en dur dans un composant** : les affichages lisent la fiche.
   - `?` : `ViewHelpButton` (vue) / `PageHelpButton` (page, modale) — jamais de bouton d'aide maison
   - infobulles : `HelpHint` ; états vides : `EmptyHelp` ; aide sous un champ : `FieldHelp`
@@ -56,15 +62,16 @@ laisser un composant modifié sans « ? » ni rappels fonctionnels.
   comment l'utilisateur l'apprend. Un geste invisible (appui long, clic droit, survol) n'est jamais le seul accès à une
   fonction, et un clic droit qui modifie des données est ignoré sur écran tactile (`isTouchDevice`), où l'appui long le
   déclenche.
-- **Modifier un comportement d'interface = mettre à jour sa fiche** : bouton ajouté/retiré/renommé → conseil, étape de tour et repère `data-tour` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
+- **Modifier un comportement d'interface = mettre à jour son élément** : bouton ajouté/retiré/renommé → élément et repère ; comportement visible changé → `text` de l'élément et annonce dans `changes` ; nouveau champ → `fields` ; nouvelle vue/page → fiche + registre.
 - Une étape dont la cible est absente est sautée (`runTour`) : acceptable pour une section conditionnelle (favoris, enfants…), pas pour une commande toujours présente — vérifier les repères à l'écran.
 - La dernière étape « Besoin d'aide ? » est ajoutée automatiquement sur le `?` qui a lancé le tour (`TOUR_ANCHOR_ATTR`) : ne pas l'écrire dans les fiches.
 - **Mode Aide** (Maj+? ou bouton « Mode Aide » du `?`, lecture seule, survol = zone encadrée + explication) : les zones sont marquées SANS wrapper —
   - cadre et barre d'espace : `data-devzone="<nom>"` (vocabulaire de `DevZoneInspector`), texte dans `help/shellZones.ts` ;
-  - vues (puis pages/modales) : `data-help-zone="<fiche>:<zone>"` sur un élément existant, texte dans le champ `zones` de la fiche (`{ title, text }`, titre ≤ 4 mots, 1 à 3 phrases, sans lister les boutons).
+  - vues, pages et modales : `data-help-zone="<fiche>:<zone>"` sur un élément existant, texte dérivé de l'élément d'aide de même clé.
+  - Barre d'espace et champs de la fiche d'élément : `help/shellZones.ts` reprend leurs éléments ; seules les zones qui regroupent plusieurs fonctions y gardent un texte propre.
   - Composants : `help/HelpModeOverlay.tsx` (monté dans Layout), `help/helpZones.ts` (résolution), `stores/helpMode.ts`.
   - Une zone renommée/ajoutée/supprimée = son texte dans le même changement.
-- Contrôle : `apps/web/src/help/coverage.test.ts` (fiche de chaque vue/page, tours complets, repères existants, `EmptyHelp`/`FieldHelp` branchés, pas de `title` natif dans les en-têtes, zones du cadre ⇔ textes, ≥ 2 zones par vue et aucun texte de zone orphelin).
+- Contrôle : `apps/web/src/help/coverage.test.ts` (fiche de chaque vue/page, tours complets, repères existants, `EmptyHelp`/`FieldHelp` branchés, pas de `title` natif dans les en-têtes, zones du cadre ⇔ textes, ≥ 2 zones par vue et aucun texte de zone orphelin, toute fiche écrite en éléments et son tour passant par chacun, cibles du guide de démarrage existantes). Le test vérifie qu'un repère existe dans le code, pas qu'il est visible à l'écran.
 
 ---
 

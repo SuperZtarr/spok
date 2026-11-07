@@ -1,15 +1,37 @@
-/* Aide utilisateur de la page « Historique » (/spaces/:id/history).
-   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+/* Aide utilisateur de la page « Historique » (/spaces/:id/history), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
+   par le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  filtres: {
+    title: 'Filtres',
+    short: 'Par action, type d\'objet et période.',
+    text: 'Par action (création, modification, suppression, déplacement, relations), type d\'objet et période.',
+    target: '[data-tour="history-filters"]',
+    side: 'bottom',
+  },
+  entree: {
+    title: 'Une entrée',
+    short: 'Cliquez pour le détail avant / après.',
+    text: 'Qui a fait quoi et quand. Cliquez pour le détail avant / après.',
+    target: '[data-tour="history-entry"]',
+    side: 'bottom',
+  },
+  restaurer: {
+    title: 'Restaurer',
+    short: 'Rétablit l\'état d\'avant la modification.',
+    text: 'Rétablit l\'état d\'avant cette modification (une confirmation est demandée).',
+    target: '[data-tour="history-restore"]',
+    noZone: true,
+    side: 'left',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Historique',
   summary: 'Toutes les modifications de l\'espace — qui, quoi, quand — et la restauration d\'un état précédent. Page réservée au mode admin.',
-  tips: [
-    'Filtrez par action, type d\'objet ou période',
-    'Cliquez sur une entrée pour voir l\'avant / après',
-    '« Restaurer » rétablit l\'état d\'avant la modification',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -17,29 +39,6 @@ export const help: HelpEntry = {
         description: 'Le journal des modifications de l\'espace.',
       },
     },
-    {
-      element: '[data-tour="history-filters"]',
-      popover: {
-        title: 'Filtres',
-        description: 'Par action (création, modification, suppression, déplacement, relations), type d\'objet et période.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="history-entry"]',
-      popover: {
-        title: 'Une entrée',
-        description: 'Qui a fait quoi et quand. Cliquez pour le détail avant / après.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="history-restore"]',
-      popover: {
-        title: 'Restaurer',
-        description: 'Rétablit l\'état d\'avant cette modification (une confirmation est demandée).',
-        side: 'left',
-      },
-    },
+    ...elementTourSteps('space-history', elements),
   ],
 };

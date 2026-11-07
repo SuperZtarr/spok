@@ -71,7 +71,7 @@ export function ArticlePage() {
         </div>
 
         <div ref={contentRef}>
-          <header className="mb-6" data-tour="article-header">
+          <header className="mb-6" data-tour="article-header" data-help-zone="article:entete">
             <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{item?.title}</h1>
             {item?.description && (
               <div className="prose sm:prose-lg dark:prose-invert max-w-none mt-3 text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />

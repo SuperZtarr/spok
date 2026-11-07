@@ -1,15 +1,36 @@
-/* Aide utilisateur de la page « Favoris & Épingles » (/bookmarks).
-   Lue par son point d'interrogation (PageHelpButton) et son tour — registre help/pageHelp.ts. */
+/* Aide utilisateur de la page « Favoris & Épingles » (/bookmarks), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
+   par le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  favoris: {
+    title: 'Espaces favoris',
+    short: 'Les espaces marqués d\'une étoile.',
+    text: 'Les espaces marqués d\'une étoile ; cliquez l\'étoile pour les ajouter ou les retirer.',
+    target: '[data-tour="bookmarks-favorites"]',
+    side: 'bottom',
+  },
+  recents: {
+    title: 'Espaces récents',
+    short: 'Les derniers espaces visités.',
+    text: 'Les derniers espaces visités.',
+    target: '[data-tour="bookmarks-recent"]',
+    side: 'bottom',
+  },
+  epingles: {
+    title: 'Éléments épinglés',
+    short: 'Les éléments épinglés depuis leur menu.',
+    text: 'Les éléments épinglés depuis leur menu ; le bouton corbeille les retire.',
+    target: '[data-tour="bookmarks-pinned"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Favoris & Épingles',
   summary: 'Vos espaces favoris, vos espaces récents et les éléments que vous avez épinglés.',
-  tips: [
-    'L\'étoile d\'un espace l\'ajoute ou le retire des favoris',
-    'Épinglez un élément depuis son menu pour le retrouver ici',
-    'Le bouton corbeille retire un élément des épingles',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -17,29 +38,6 @@ export const help: HelpEntry = {
         description: 'Vos raccourcis personnels vers ce que vous utilisez le plus.',
       },
     },
-    {
-      element: '[data-tour="bookmarks-favorites"]',
-      popover: {
-        title: 'Espaces favoris',
-        description: 'Les espaces marqués d\'une étoile ; cliquez l\'étoile pour les retirer.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="bookmarks-recent"]',
-      popover: {
-        title: 'Espaces récents',
-        description: 'Les derniers espaces visités.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="bookmarks-pinned"]',
-      popover: {
-        title: 'Éléments épinglés',
-        description: 'Les éléments épinglés depuis leur menu ; la corbeille les retire.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('bookmarks', elements),
   ],
 };

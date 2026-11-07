@@ -20,6 +20,7 @@ import { help as spacesPage } from '../pages/help/spaces.help';
 import { help as spaceOverviewPage } from '../pages/help/space-overview.help';
 import { help as spaceHistoryPage } from '../pages/help/space-history.help';
 import { help as bookmarksHelp } from '../pages/help/bookmarks.help';
+import { help as newsHelp } from '../pages/help/news.help';
 import { help as profileHelp } from '../components/help/profile.help';
 import { help as liveWindowHelp } from '../components/help/live-window.help';
 import { help as liveSessionHelp } from '../components/help/live-session.help';
@@ -61,6 +62,7 @@ export const PAGE_HELP = {
   'space-overview': spaceOverviewPage,
   'space-history': spaceHistoryPage,
   bookmarks: bookmarksHelp,
+  news: newsHelp,
   profile: profileHelp,
   'live-window': liveWindowHelp,
   'live-session': liveSessionHelp,

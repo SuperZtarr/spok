@@ -312,7 +312,7 @@ export function SearchPage() {
 
         {/* Search input — seul élément collé en mobile */}
         <div className="sticky top-0 z-10 bg-background -mx-4 px-4 py-2 mb-2 sm:static sm:z-auto sm:mx-0 sm:px-0 sm:py-0 sm:mb-4">
-        <div className="relative" data-tour="search-input">
+        <div className="relative" data-tour="search-input" data-help-zone="search:terme">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             value={search}
@@ -331,7 +331,7 @@ export function SearchPage() {
 
         {/* Présence de chaque mot : l'explication reste visible dès l'arrivée et au toucher (l'infobulle ne suffit pas) ;
             pastilles dès 2 mots, un clic passe à l'état suivant */}
-        <div className="mb-3 sm:mb-4" data-tour="search-words">
+        <div className="mb-3 sm:mb-4" data-tour="search-words" data-help-zone="search:mots">
         {words.length >= 2 && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-muted-foreground">Mots :</span>
@@ -360,7 +360,7 @@ export function SearchPage() {
         {/* Portée : par défaut l'espace / la communauté d'où la recherche a été lancée,
             élargissement explicite par l'utilisateur */}
         {user && (spaceIdParam || effectiveCommunityId) && (
-          <div className="flex flex-wrap items-center gap-2 mb-4 text-sm" data-tour="search-scope">
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-sm" data-tour="search-scope" data-help-zone="search:portee">
             <span className="text-muted-foreground">Recherche dans :</span>
             {spaceIdParam ? (
               <span className="inline-flex items-center gap-1.5 font-medium">
@@ -392,7 +392,7 @@ export function SearchPage() {
 
         {/* Entity type toggles */}
         {/* Mobile : une seule ligne défilante ; desktop : retour à la ligne */}
-        <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 sm:mb-4 overflow-x-auto no-scrollbar sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0" data-tour="search-types">
+        <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 sm:mb-4 overflow-x-auto no-scrollbar sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0" data-tour="search-types" data-help-zone="search:categories">
           {/* Catégorie Utilisateurs réservée aux connectés (règle search-users-scope) */}
           {ENTITY_TYPES.filter(({ key }) => user || key !== 'users').map(({ key, label, icon: Icon }) => (
             <button
@@ -418,7 +418,7 @@ export function SearchPage() {
         </div>
 
         {/* Scope filters — repliés en mobile derrière « Filtres », toujours dépliés sur desktop */}
-        <div data-tour="search-filters">
+        <div data-tour="search-filters" data-help-zone="search:filtres">
         <button
           type="button"
           onClick={() => setFiltersOpen(o => !o)}

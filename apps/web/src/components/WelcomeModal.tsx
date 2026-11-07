@@ -1,54 +1,26 @@
-/* Modale de bienvenue à la première connexion : lance le tour d'onboarding (useOnboarding). */
-import { useState, useRef } from 'react';
+/* Modale de bienvenue : propose le tutoriel d'accueil une seule fois au nouvel arrivant (useOnboarding), sans case « afficher au
+   prochain démarrage ». Le fermer sans suivre le tutoriel revient à le passer ; il reste relançable par « Guide de démarrage ».
+   Textes : éléments d'aide partagés avec le tutoriel (help/onboarding.elements.ts) ; ici, seulement l'icône et la couleur de chaque notion.
+   Props : isOpen, onClose (proposition traitée), onStartTour (lance le tutoriel après fermeture). */
+import { useRef } from 'react';
+import { ONBOARDING_ELEMENTS, ONBOARDING_FEATURES } from '../help/onboarding.elements';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import logoUrl from '../assets/logo.png';
 import { Users, FolderKanban, LayoutGrid, GitBranch, BarChart3, Search, Bell, ArrowRight } from 'lucide-react';
 import { DevModalBadge } from './ui/DevModalBadge';
 
-const FEATURES = [
-  {
-    icon: Users,
-    title: 'Communautés',
-    description: 'Regroupez des personnes autour de sujets communs. Chaque communauté a ses propres espaces et membres.',
-    color: 'text-red-500 bg-red-50 dark:bg-red-950/30',
-  },
-  {
-    icon: FolderKanban,
-    title: 'Espaces',
-    description: 'Organisez votre travail en espaces : projets, équipes, thématiques. Chaque espace contient des items structurés.',
-    color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/30',
-  },
-  {
-    icon: LayoutGrid,
-    title: 'Items',
-    description: 'Notes, tâches, projets, réunions, documents, diagrammes... Créez, liez et hiérarchisez tous vos contenus.',
-    color: 'text-green-500 bg-green-50 dark:bg-green-950/30',
-  },
-  {
-    icon: GitBranch,
-    title: 'Relations',
-    description: 'Reliez vos items entre eux : dépendances, blocages, liens. Visualisez les connexions dans les vues graphe et relations.',
-    color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/30',
-  },
-  {
-    icon: BarChart3,
-    title: '25+ vues',
-    description: 'Liste, Kanban, MindMap, Timeline, Calendrier, Graphe, Schéma, Burndown, Heatmap... Changez de perspective en un clic.',
-    color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/30',
-  },
-  {
-    icon: Search,
-    title: 'Recherche & filtres',
-    description: 'Recherche globale cross-espaces. Filtrez par type, statut, priorité. Mode lumière pour mettre en évidence.',
-    color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/30',
-  },
-  {
-    icon: Bell,
-    title: 'Notifications & emails',
-    description: 'Mentions @utilisateur, notifications in-app, emails communauté. Restez informé de l\'activité de vos espaces.',
-    color: 'text-orange-500 bg-orange-50 dark:bg-orange-950/30',
-  },
-];
+const FEATURE_STYLES: Record<(typeof ONBOARDING_FEATURES)[number], { icon: typeof Users; color: string } | undefined> = {
+  communautes: { icon: Users, color: 'text-red-500 bg-red-50 dark:bg-red-950/30' },
+  espaces: { icon: FolderKanban, color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/30' },
+  elements: { icon: LayoutGrid, color: 'text-green-500 bg-green-50 dark:bg-green-950/30' },
+  relations: { icon: GitBranch, color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/30' },
+  vues: { icon: BarChart3, color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/30' },
+  recherche: { icon: Search, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' },
+  notifications: { icon: Bell, color: 'text-orange-500 bg-orange-50 dark:bg-orange-950/30' },
+  bienvenue: undefined,
+  favoris: undefined,
+  aide: undefined,
+};
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -56,26 +28,13 @@ interface WelcomeModalProps {
   onStartTour: () => void;
 }
 
-const STORAGE_KEY = 'spok-hide-welcome';
-
 export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps) {
-  const [hideNextTime, setHideNextTime] = useState(localStorage.getItem(STORAGE_KEY) === 'true');
-
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(dialogRef, isOpen);
   if (!isOpen) return null;
 
-  const handleClose = () => {
-    if (hideNextTime) {
-      localStorage.setItem(STORAGE_KEY, 'true');
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={handleClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div ref={dialogRef}
         className="outline-none bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -92,16 +51,19 @@ export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps
         {/* Features grid */}
         <div className="px-8 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
+            {ONBOARDING_FEATURES.map((key) => {
+              const element = ONBOARDING_ELEMENTS[key];
+              const style = FEATURE_STYLES[key];
+              if (!style) return null;
+              const Icon = style.icon;
               return (
-                <div key={feature.title} className="flex gap-3 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${feature.color}`}>
+                <div key={key} className="flex gap-3 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${style.color}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{feature.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.description}</p>
+                    <p className="text-sm font-medium">{element.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{element.text}</p>
                   </div>
                 </div>
               );
@@ -110,25 +72,16 @@ export function WelcomeModal({ isOpen, onClose, onStartTour }: WelcomeModalProps
         </div>
 
         {/* Actions */}
-        <div className="px-8 pb-8 pt-2 space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={!hideNextTime}
-              onChange={(e) => setHideNextTime(!e.target.checked)}
-              className="rounded border-border"
-            />
-            <span className="text-xs text-muted-foreground">Afficher cette page au prochain demarrage</span>
-          </label>
+        <div className="px-8 pb-8 pt-2">
           <div className="flex items-center justify-between">
             <button
-              onClick={handleClose}
+              onClick={onClose}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Commencer directement
             </button>
             <button
-              onClick={() => { handleClose(); setTimeout(onStartTour, 300); }}
+              onClick={() => { onClose(); setTimeout(onStartTour, 300); }}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               Faire le tour

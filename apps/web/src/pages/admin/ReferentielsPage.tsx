@@ -51,7 +51,7 @@ export function ReferentielsPage() {
       {data && (
         <div className="space-y-6">
           {/* Section 1: Statuts par defaut */}
-          <div data-tour="admin-referentiels-statuses">
+          <div data-tour="admin-referentiels-statuses" data-help-zone="admin-referentiels:statuts">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Statuts par defaut
               <span className="ml-2 font-normal">({data.defaults.statuses.length})</span>

@@ -39,7 +39,18 @@ description: Déployer SPOK en production depuis la session MEP (seule session q
    - Retirer de « PRÊT POUR MEP » les lots poussés (une ligne dans EN COURS : lot, date, MEP)
    - Une ligne par action
 
-4 bis. **Vérification complète — une seule passe sur l'ensemble des lots à pousser**
+4 bis. **Dater les nouveautés de l'aide** — avant la vérification complète, pour qu'elle porte sur l'état daté
+   ```bash
+   node scripts/stamp-help-dates.mjs                       # liste les annonces sans date
+   node scripts/stamp-help-dates.mjs <fichiers du lot>     # date celles de ces fichiers avec la date du jour
+   ```
+   - Une annonce sans date n'apparaît qu'en développement local : un lot qui en contient une partirait **sans l'annoncer**.
+   - Ne passer au script que les fichiers d'aide des lots poussés (`*.help.ts`, `*.elements.ts`), jamais une annonce du travail
+     en cours d'une autre session, qui recevrait une date trop ancienne. Vérifier ensuite que le fichier daté reste dans son lot.
+   - **Toute première MEP du suivi de l'aide** : mettre `HELP_STATE_SINCE` (`apps/api/src/utils/helpState.ts`) à la date du jour,
+     sinon les comptes créés entre-temps sont traités comme anciens et ne se voient pas proposer le tutoriel d'accueil.
+
+4 ter. **Vérification complète — une seule passe sur l'ensemble des lots à pousser**
    - Typecheck des 5 paquets et TNR (`pnpm typecheck`, `pnpm exec vitest run`, en arrière-plan) sur l'état exact qui
      sera commité : si des fichiers en cours d'autres sessions sont présents, vérifier dans une copie de l'index
      (`git checkout-index -a --prefix=<scratchpad>/`, `node_modules` reliés par jonction) plutôt que sur le dossier
@@ -52,7 +63,7 @@ description: Déployer SPOK en production depuis la session MEP (seule session q
    - Checklist complémentaire (non scriptable) :
      - Comportement documenté modifié ? → item SPOK à jour (status `to_validate`)
      - Nouveau composant/route/script ? → l'item SPOK existe ou a été signalé comme absent
-     - Interface modifiée (vue, page, modale, bouton, champ) ? → fiche d'aide utilisateur à jour (conseils, tour + repères `data-tour`, infobulles, état vide, aide des champs — cf. skill spok-doc, couche 3)
+     - Interface modifiée (vue, page, modale, bouton, champ) ? → élément d'aide à jour dans la fiche (texte court, explication, repère, annonce si le comportement visible change ; état vide, aide des champs — cf. skill spok-doc, couche 3)
      - Actions à effet et blocs de décision touchés ? → rappel fonctionnel présent (ce qui va se passer) — liste de contrôle « terminé » de la skill `spok-dev`
    - Contrôle de l'aide utilisateur (si `apps/web` est dans le diff) :
      ```bash

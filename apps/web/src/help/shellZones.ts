@@ -1,8 +1,14 @@
 /* Textes du mode Aide pour le cadre commun et la barre d'espace, indexés par nom de zone data-devzone (le même
    vocabulaire que DevZoneInspector). Une zone ajoutée ici doit exister dans le code, et toute zone data-devzone posée
    doit avoir son texte ici (sauf « contenu », trop large) — contrôlé par coverage.test. Titre ≤ 4 mots, 1 à 3 phrases,
-   sans lister les boutons (rôle des infobulles). */
-import type { HelpZone } from './types';
+   sans lister les boutons (rôle des infobulles). Les commandes de la barre d'espace et les champs de la fiche d'élément
+   reprennent le texte de leur élément d'aide (spaceToolbar.elements.ts, item-modal.help.ts) ; seules les zones qui
+   regroupent plusieurs fonctions gardent un texte ici. */
+import { elements as I } from '../components/help/item-modal.help';
+import { SPACE_TOOLBAR_ELEMENTS as E } from './spaceToolbar.elements';
+import type { HelpElement, HelpZone } from './types';
+
+const elementZone = ({ title, text }: HelpElement): HelpZone => ({ title, text });
 
 /** Infobulles de la barre latérale (lues par HelpHint dans Layout.tsx). */
 export const SIDEBAR_HINTS = {
@@ -24,25 +30,30 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   header: { title: 'En-tête', text: 'Où vous êtes, le mode d\'affichage (Forum, Projet, Loisirs, Tous), la création rapide, les séances en direct, les notifications et votre compte.' },
   bandeau: { title: 'Navigation globale', text: 'Les pages qui couvrent toutes vos communautés (accueil, communautés, espaces, graphes, liens), puis vos pages personnelles.' },
   toolbar: { title: 'Barre de l\'espace', text: 'Commune à toutes les vues de l\'espace : choix de la vue, ordre, filtre ou aperçu selon la vue, et actions de l\'espace.' },
-  'toolbar-vues': { title: 'Vues', text: 'Les vues du mode courant en accès direct ; les autres sont dans les menus « Autres vues », un par catégorie (Basique, Types, Planification, Exploration). Le contenu reste le même, seule la présentation change.' },
-  'toolbar-ordre': { title: 'Ordre', text: 'L\'ordre des éléments dans les vues en liste : votre ordre manuel ou alphabétique.' },
-  'toolbar-filtre': { title: 'Filtre', text: 'Ne garde que les éléments des types et statuts cochés (plusieurs choix possibles) ou contenant un texte. Vos critères restent actifs quand vous changez de vue ; dans une vue en Aperçu, ils mettent en évidence au lieu de masquer. « Effacer » les retire tous.' },
-  'toolbar-apercu': { title: 'Aperçu', text: 'Remplace le filtre dans les vues qui montrent des liens ou une structure (carte mentale, Gantt, graphes…) : met en évidence les éléments qui correspondent, sans masquer les autres. « Effacer » retire tous les critères.' },
+  'toolbar-vues': elementZone(E.vues),
+  'toolbar-ordre': elementZone(E.ordre),
+  'toolbar-filtre': elementZone(E.filtre),
+  'toolbar-apercu': elementZone(E.apercu),
   'toolbar-actions': { title: 'Actions de l\'espace', text: 'Séances en direct, nombre d\'éléments, modèles, historique et paramètres de l\'espace.' },
   'contenu-barre-vue': { title: 'Barre de la vue', text: 'Les commandes propres à la vue affichée : créer un élément, régler l\'affichage, aide et export.' },
   // Fiche d'un élément (ItemEditModal, ItemReadView)
-  'item-chemin': { title: 'Chemin de l\'élément', text: 'La communauté, l\'espace et les parents de l\'élément. Cliquez sur un parent pour l\'ouvrir.' },
+  'item-chemin': elementZone(I.chemin),
   'item-entete': { title: 'En-tête de la fiche', text: 'Le type et le titre de l\'élément, le choix entre Afficher et Modifier, et qui l\'a créé.' },
-  'item-description': { title: 'Description', text: 'Le texte de l\'élément, avec sa mise en forme, ses images et ses mentions d\'autres éléments.' },
+  'item-description': elementZone(I.description),
   'item-contributions': { title: 'Réactions et contributions', text: 'Les réactions à l\'élément et les messages des membres, avec leurs réponses.' },
   'item-champs': { title: 'Champs de pilotage', text: 'Le type, le statut, les dates et le média de l\'élément.' },
-  'item-type': { title: 'Type', text: 'La nature de l\'élément. Elle détermine les statuts proposés et le rangement dans les vues.' },
-  'item-statut': { title: 'Statut', text: 'L\'avancement de l\'élément. Il définit sa colonne dans le Kanban.' },
-  'item-dates': { title: 'Dates', text: 'Le début, la fin et l\'échéance. Elles placent l\'élément dans le Gantt et le calendrier.' },
+  'item-type': elementZone(I.type),
+  'item-statut': elementZone(I.statut),
+  'item-dates': elementZone(I.dates),
   'item-details': { title: 'Détails', text: 'L\'identifiant de l\'élément, son assignation, ses relations, ses tags et ses enfants.' },
-  'item-relations': { title: 'Relations', text: 'Les liens avec d\'autres éléments, sans lien de parenté.' },
-  'item-tags': { title: 'Tags', text: 'Les étiquettes de l\'élément, pour le retrouver et le filtrer.' },
-  'item-enfants': { title: 'Éléments enfants', text: 'Les sous-éléments de cet élément. Cliquez sur l\'un d\'eux pour l\'ouvrir.' },
-  'item-pied': { title: 'Pied de la fiche', text: 'Enregistrer ou fermer la fiche, et les autres actions sur l\'élément.' },
+  'item-relations': elementZone(I.relations),
+  'item-tags': elementZone(I.tags),
+  'item-enfants': elementZone(I.enfants),
+  'item-pied': elementZone(I.actions),
   'item-lecture': { title: 'Mode Afficher', text: 'La fiche présentée comme un document à lire. On modifie en passant sur « Modifier ».' },
+  'item-lecture-media': { title: 'Média', text: 'L\'image ou le schéma de l\'élément en grand ; cliquez pour le plein écran. Pour un document ou un lien : de quoi l\'ouvrir.' },
+  'item-lecture-contenu': { title: 'Contenu', text: 'Description, éléments enfants (cliquables), relations et contributions, en lecture seule — le même contenu que celui copié par « Copier la fiche ».' },
+  'item-resume': { title: 'Résumé des champs', text: 'Les champs renseignés mais masqués dans la fiche réduite. Cliquez pour afficher tous les champs.' },
+  'item-medias': { title: 'Média', text: 'Le lien, l\'image, le fichier ou le schéma de l\'élément, selon son type.' },
+  'item-composer': { title: 'Mode Composer', text: 'Le titre et le chapeau de l\'article en rappel, puis ses blocs à ajouter, réordonner, régler ou retirer. Les éléments eux-mêmes restent à leur place.' },
 };

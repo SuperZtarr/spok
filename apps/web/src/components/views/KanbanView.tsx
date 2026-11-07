@@ -1,5 +1,7 @@
 /* Vue Kanban : colonnes par statut (référentiels), DnD des cartes, création rapide.
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Aide : repère unique data-help-zone sur la colonne et la carte, partagé par le mode Aide, le tutoriel et les
+ * nouveautés (pilote « élément d'aide », kanban.help.ts). Infobulle du nom de colonne : `hints` de la fiche.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -29,6 +31,8 @@ import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { TagBadge } from '../ui/TagBadge';
 import { RoleGuard } from '../RoleGuard';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { HelpHint } from '../../help/HelpHint';
+import { help as kanbanHelp } from './help/kanban.help';
 import { safeHref } from '../../lib/sanitizeHtml';
 
 // Format date for display
@@ -97,7 +101,6 @@ interface KanbanColumnProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
-  isFirstColumn?: boolean;
 }
 
 interface KanbanCardProps {
@@ -121,13 +124,12 @@ interface KanbanCardProps {
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
-  isFirstCard?: boolean;
 }
 
 const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
-function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusOptions, canEdit = true, canEditItem, referentiels, isFirstCard }: KanbanCardProps) {
+function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusOptions, canEdit = true, canEditItem, referentiels }: KanbanCardProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
   const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -146,7 +148,6 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
     <div
       ref={setNodeRef}
       style={style}
-      {...(isFirstCard ? { 'data-tour': 'kanban-card' } : {})}
       data-help-zone="kanban:carte"
       className={`relative bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow group ${
         isDragging ? 'opacity-50' : ''
@@ -266,7 +267,7 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
   );
 }
 
-function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusOptions, canEdit, canEditItem, referentiels, isFirstColumn }: KanbanColumnProps) {
+function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isOver, statusOptions, canEdit, canEditItem, referentiels }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: droppableId,
   });
@@ -278,7 +279,6 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
 
   return (
     <div
-      {...(isFirstColumn ? { 'data-tour': 'kanban-column' } : {})}
       data-help-zone="kanban:colonne"
       className={`flex-1 min-w-[180px] bg-muted/50 rounded-lg border-t-4 flex flex-col ${borderColorClass} transition-colors ${
         isOver ? bgHoverClass : ''
@@ -287,7 +287,9 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
       {/* Column header */}
       <div className="p-3 border-b border-border sticky top-0 z-10 bg-muted/95 backdrop-blur-sm rounded-t-lg">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">{column.label}</h3>
+          <HelpHint text={kanbanHelp.hints?.colonne}>
+            <h3 className="font-medium">{column.label}</h3>
+          </HelpHint>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
             {items.length}
           </span>
@@ -301,7 +303,7 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
           isOver ? 'ring-2 ring-primary ring-inset' : ''
         }`}
       >
-        {items.map((item, cardIdx) => (
+        {items.map((item) => (
           <KanbanCard
             key={item.id}
             item={item}
@@ -324,7 +326,6 @@ function KanbanColumn({ column, items, droppableId, onEdit, onDelete, onUpdateSt
             canEdit={canEdit}
             canEditItem={canEditItem}
             referentiels={referentiels}
-            isFirstCard={isFirstColumn && cardIdx === 0}
           />
         ))}
 
@@ -539,7 +540,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                 style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
               >
                 <div className="flex gap-3 h-full min-h-0">
-                  {statuses.map((status, statusIdx) => {
+                  {statuses.map((status) => {
                     const droppableId = `${section.spaceId}::${status.id}`;
                     return (
                       <KanbanColumn
@@ -566,7 +567,6 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                         canEdit={canEdit}
                         canEditItem={canEditItem}
                         referentiels={referentiels}
-                        isFirstColumn={idx === 0 && statusIdx === 0}
                       />
                     );
                   })}

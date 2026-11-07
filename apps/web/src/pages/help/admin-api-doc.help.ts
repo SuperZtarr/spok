@@ -1,16 +1,29 @@
-/* Aide utilisateur de la page d'administration « Documentation API » (/admin/api-doc, ApiDocPage).
-   Lue par son point d'interrogation (PageHelpButton), son tour et ses rappels fonctionnels (hints, via pageHint :
-   infobulles des actions à effet, explication des blocs de décision) — registre help/pageHelp.ts.
-   Les rappels décrivent l'effet réel côté API : à revérifier à chaque évolution des routes /admin. */
+/* Aide utilisateur de la page d'administration « Documentation API » (/admin/api-doc, ApiDocPage), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
+   le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  legende: {
+    title: 'Légende',
+    short: 'Le niveau d\'accès exigé, par couleur.',
+    text: 'Le niveau d\'accès de chaque point, par couleur : public, utilisateur, administrateur.',
+    target: '[data-tour="admin-apidoc-legend"]',
+    side: 'bottom',
+  },
+  points: {
+    title: 'Les points d\'accès',
+    short: 'Regroupés par domaine.',
+    text: 'Regroupés par domaine. Page statique en lecture seule : elle peut être en retard sur l\'API (date de mise à jour sous le titre).',
+    target: '[data-tour="admin-apidoc-content"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Documentation API',
   summary: 'La référence interne des points d\'accès de l\'API SPOK, de leur niveau d\'authentification et de leur logique d\'accès.',
-  tips: [
-    'Page statique en lecture seule : elle peut être en retard sur l\'API (date de mise à jour sous le titre)',
-    'La légende donne le niveau d\'accès de chaque point : public, utilisateur, administrateur',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -18,21 +31,6 @@ export const help: HelpEntry = {
         description: 'Comment l\'API est organisée et protégée.',
       },
     },
-    {
-      element: '[data-tour="admin-apidoc-legend"]',
-      popover: {
-        title: 'Légende',
-        description: 'Le niveau d\'accès exigé, par couleur.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="admin-apidoc-content"]',
-      popover: {
-        title: 'Les points d\'accès',
-        description: 'Regroupés par domaine.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('admin-api-doc', elements),
   ],
 };

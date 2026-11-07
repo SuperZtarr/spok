@@ -1,16 +1,30 @@
-/* Aide utilisateur de la page d'administration « Référentiels » (/admin/referentiels, ReferentielsPage).
-   Lue par son point d'interrogation (PageHelpButton), son tour et ses rappels fonctionnels (hints, via pageHint :
-   infobulles des actions à effet, explication des blocs de décision) — registre help/pageHelp.ts.
-   Les rappels décrivent l'effet réel côté API : à revérifier à chaque évolution des routes /admin. */
+/* Aide utilisateur de la page d'administration « Référentiels » (/admin/referentiels, ReferentielsPage), écrite en éléments d'aide (help/elements.ts) : un texte par fonction,
+   repris par le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  statuts: {
+    title: 'Statuts par défaut',
+    short: 'Les statuts proposés par défaut.',
+    text: 'Les statuts proposés quand une communauté n\'a rien personnalisé. Page en lecture seule : les référentiels se personnalisent dans les paramètres de chaque communauté (onglet Référentiels) ; les communautés personnalisées sont listées avec un lien vers leurs paramètres.',
+    target: '[data-tour="admin-referentiels-statuses"]',
+    side: 'top',
+  },
+  actualiser: {
+    title: 'Actualiser',
+    short: 'Recharge les référentiels.',
+    text: 'Recharge les référentiels.',
+    target: '[data-tour="admin-referentiels-refresh"]',
+    noZone: true,
+    side: 'left',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Référentiels',
   summary: 'Les statuts et types d\'éléments par défaut de SPOK, et les communautés qui les ont personnalisés.',
-  tips: [
-    'Page en lecture seule : les référentiels se personnalisent dans les paramètres de chaque communauté (onglet Référentiels)',
-    'Les communautés personnalisées sont listées avec un lien vers leurs paramètres',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -18,21 +32,6 @@ export const help: HelpEntry = {
         description: 'Les listes de valeurs communes à tout SPOK.',
       },
     },
-    {
-      element: '[data-tour="admin-referentiels-statuses"]',
-      popover: {
-        title: 'Statuts par défaut',
-        description: 'Les statuts proposés quand une communauté n\'a rien personnalisé.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="admin-referentiels-refresh"]',
-      popover: {
-        title: 'Actualiser',
-        description: 'Recharge les référentiels.',
-        side: 'left',
-      },
-    },
+    ...elementTourSteps('admin-referentiels', elements),
   ],
 };

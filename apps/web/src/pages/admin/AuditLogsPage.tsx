@@ -205,7 +205,7 @@ export function AuditLogsPage() {
               {stats.estimatedSizeMB} Mo
             </p>
           </div>
-          <div className="bg-card border border-border rounded-lg p-4" data-tour="admin-audit-maintenance">
+          <div className="bg-card border border-border rounded-lg p-4" data-tour="admin-audit-maintenance" data-help-zone="admin-audit:maintenance">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Maintenance</p>
             </div>
@@ -296,7 +296,7 @@ export function AuditLogsPage() {
       </div>
 
       {/* Logs table */}
-      <div className="bg-card border border-border rounded-lg overflow-auto max-h-[70vh]" data-tour="admin-audit-list">
+      <div className="bg-card border border-border rounded-lg overflow-auto max-h-[70vh]" data-tour="admin-audit-list" data-help-zone="admin-audit:journal">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

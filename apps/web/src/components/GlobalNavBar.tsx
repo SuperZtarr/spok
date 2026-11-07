@@ -86,6 +86,7 @@ export function GlobalNavBar() {
                 return (
                   <button
                     key={item.key}
+                    data-tour={`nav-${item.key}`}
                     onClick={() => handleItemClick(item)}
                     title={item.label}
                     className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${

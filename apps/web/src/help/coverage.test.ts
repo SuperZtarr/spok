@@ -9,7 +9,9 @@
    - chaque repère data-tour cité par un tour existe dans le code (littéral ou généré : `prefix-${…}`) ;
    - barre d'espace (SpaceToolbar, Séances, Exporter) : aucun `title` natif, et toute commande nommée (aria-label)
      est enveloppée d'un HelpHint ou porte un repère de tour ; chaque repère toolbar-* / view-export posé a son
-     étape dans SPACE_TOOLBAR_STEPS.
+     étape dans SPACE_TOOLBAR_STEPS ;
+   - format « élément d'aide » (2026-11-07) : toute fiche est écrite en éléments (help/elements.ts), sans conseils ni zones
+     à la main, et son tour parcourt tous ses éléments : une nouvelle fiche naît au bon format.
    Ajouter une vue ou une page aidée sans sa fiche, ou renommer un repère sans son tour, fait échouer ce test. */
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -20,6 +22,9 @@ import { VIEW_HELP } from '../components/views/help'
 import { PAGE_HELP } from './pageHelp'
 import { SPACE_TOOLBAR_STEPS } from './commonTourSteps'
 import { SHELL_ZONES } from './shellZones'
+import { zoneSelector } from './elements'
+import { ONBOARDING_STEPS } from './onboarding.elements'
+import { SPACE_TOOLBAR_ELEMENTS } from './spaceToolbar.elements'
 import type { HelpEntry } from './types'
 
 const allModes = [...new Set([...VIEW_MODES.map((v) => v.value as string), ...VIEW_REGISTRY.map((v: { id: string }) => v.id)])]
@@ -41,6 +46,11 @@ const code = (() => {
   return files.join('\n')
 })()
 
+/** Zones posées dans le code : data-help-zone="fiche:zone" ou 'data-help-zone': 'fiche:zone'. */
+const postedZones = [...code.matchAll(/data-help-zone="([A-Za-z-]+):([a-z-]+)"|'data-help-zone': '([A-Za-z-]+):([a-z-]+)'/g)]
+  .map((m) => [m[1] ?? m[3], m[2] ?? m[4]] as const)
+const zonePosted = (fiche: string, zone: string) => postedZones.some(([f, z]) => f === fiche && z === zone)
+
 /** Le repère existe : littéral (data-tour="x" / 'data-tour': 'x') ou généré par un gabarit (`prefix-${…}`). */
 function anchorExists(name: string): boolean {
   if (code.includes(`data-tour="${name}"`) || code.includes(`'data-tour': '${name}'`)) return true
@@ -51,6 +61,8 @@ function expectAnchors(entry: HelpEntry, where: string) {
   for (const step of entry.tour) {
     const m = step.element?.match(/data-tour="([^"]+)"/)
     if (m) expect(anchorExists(m[1]), `repère absent : ${m[1]} (${where})`).toBe(true)
+    const z = step.element?.match(/data-help-zone="([A-Za-z-]+):([a-z-]+)"/)
+    if (z) expect(zonePosted(z[1], z[2]), `zone absente du code : ${z[1]}:${z[2]} (${where})`).toBe(true)
   }
 }
 
@@ -181,8 +193,7 @@ describe('mode Aide — zones du cadre', () => {
 })
 
 describe('mode Aide — zones des vues', () => {
-  const posted = [...code.matchAll(/data-help-zone="([A-Za-z]+):([a-z-]+)"|'data-help-zone': '([A-Za-z]+):([a-z-]+)'/g)]
-    .map((m) => [m[1] ?? m[3], m[2] ?? m[4]] as const)
+  const posted = postedZones
   it.each([...new Set(posted.map(([v, z]) => `${v}:${z}`))])('zone %s : texte dans la fiche', (id) => {
     const [v, z] = id.split(':')
     expect((viewHelp[v] ?? pageHelp[v])?.zones?.[z], `zones.${z} manquant dans la fiche ${v}`).toBeDefined()
@@ -197,5 +208,60 @@ describe('mode Aide — zones des vues', () => {
     const min = ONE_ZONE.has(mode) ? 1 : 2
     expect(own.size + base, `vue ${mode} : ${own.size + base} zone(s) visible(s), ${min} minimum`).toBeGreaterThanOrEqual(min)
     for (const z of Object.keys(viewHelp[mode]?.zones ?? {})) expect(own.has(z), `texte orphelin ${mode}.zones.${z}`).toBe(true)
+  })
+})
+
+describe('format « élément d\'aide »', () => {
+  const allEntries = { ...viewHelp, ...pageHelp } as Record<string, HelpEntry>
+  const fiches = Object.keys(allEntries)
+  const HELP_DIRS = ['components/views/help', 'pages/help', 'components/help']
+  const source = (key: string) => {
+    const dir = HELP_DIRS.find((d) => readdirSync(join(__dirname, '..', d)).includes(`${key}.help.ts`))
+    expect(dir, `fichier ${key}.help.ts introuvable`).toBeDefined()
+    return readFileSync(join(__dirname, '..', dir!, `${key}.help.ts`), 'utf8')
+  }
+
+  it.each(fiches)('%s : écrite en éléments, sans conseils ni zones à la main', (key) => {
+    const entry = allEntries[key]
+    expect(Object.keys(entry.elements ?? {}).length, `${key} : décrire ses fonctions dans elements (help/elements.ts)`).toBeGreaterThan(0)
+    const code = source(key)
+    expect(/^\s*tips:/m.test(code), `${key} : conseils à dériver de helpFromElements`).toBe(false)
+    expect(/^\s*zones:/m.test(code), `${key} : zones à dériver de helpFromElements`).toBe(false)
+  })
+
+  it.each(fiches)('%s : chaque élément est complet, posé à l\'écran et parcouru par le tour', (key) => {
+    const entry = allEntries[key]
+    for (const [zone, element] of Object.entries(entry.elements ?? {})) {
+      expect(element.title.trim().split(/\s+/).length, `${key}.${zone} : titre de 4 mots au plus`).toBeLessThanOrEqual(4)
+      expect(element.short.trim(), `${key}.${zone} : texte court manquant`).not.toBe('')
+      expect(element.text.trim(), `${key}.${zone} : explication manquante`).not.toBe('')
+      if (element.noZone) expect(element.target, `${key}.${zone} : sans zone, il lui faut un repère (target)`).toBeTruthy()
+      else expect(zonePosted(key, zone), `${key}.${zone} : poser data-help-zone="${key}:${zone}"`).toBe(true)
+      const selector = element.target ?? zoneSelector(key, zone)
+      expect(entry.tour.some((step) => step.element === selector), `${key}.${zone} : absent du tour`).toBe(true)
+    }
+  })
+
+  it('guide de démarrage : chaque cible existe dans le code', () => {
+    for (const { element } of ONBOARDING_STEPS) {
+      if (!element) continue
+      const anchor = element.match(/data-tour="([^"]+)"/)?.[1]
+      if (anchor) expect(anchorExists(anchor), `repère absent : ${anchor}`).toBe(true)
+      else expect(code.includes(element.slice(1)), `identifiant absent : ${element}`).toBe(true)
+    }
+  })
+
+  it('barre commune : chaque commande a un repère dans le code', () => {
+    for (const element of Object.values(SPACE_TOOLBAR_ELEMENTS)) {
+      const anchor = element.target.match(/data-tour="([^"]+)"/)?.[1]
+      if (anchor) expect(anchorExists(anchor), `repère absent : ${anchor}`).toBe(true)
+      else expect(code.includes(element.target.slice(1, -1)), `repère absent : ${element.target}`).toBe(true)
+    }
+  })
+
+  it('une annonce a un identifiant unique', () => {
+    const elements = [...Object.values(allEntries).flatMap((entry) => Object.values(entry.elements ?? {})), ...Object.values(SPACE_TOOLBAR_ELEMENTS)]
+    const ids = elements.flatMap((element) => (element as { changes?: { id: string }[] }).changes ?? []).map((change) => change.id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })

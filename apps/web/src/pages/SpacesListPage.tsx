@@ -79,7 +79,7 @@ export function SpacesListPage() {
                 {!currentCommunity && (
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces de groupe</h2>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" data-tour="spaces-group">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" data-tour="spaces-group" data-help-zone="spaces:groupe">
                   {spaces.map(space => (
                     <SpaceCard key={space.id} space={space} />
                   ))}
@@ -88,7 +88,7 @@ export function SpacesListPage() {
             )}
 
             {personalSpaces.length > 0 && (
-              <div className="mb-8" data-tour="spaces-personal">
+              <div className="mb-8" data-tour="spaces-personal" data-help-zone="spaces:personnels">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Espaces personnels</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {personalSpaces.map(space => (

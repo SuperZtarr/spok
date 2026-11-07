@@ -14,6 +14,18 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-07 (2)
+- 3 lots poussés : Loupe, allègement sur un grand espace (fix) ; mode dev dans les modales et la fiche (fix) ; aide restructurée, élément unique, nouveautés, tutoriel d'accueil, suivi par compte (feat). shellZones.ts et item-modal.help.ts entiers dans le lot Aide. Avant vérification : HELP_STATE_SINCE mis au 2026-11-07, annonce search-mots-presence datée. Schéma : 2 colonnes User (db push au démarrage de l'API). db:generate, build:packages, typecheck OK, TNR 2410/2410, en-têtes OK. db:generate local en EPERM (moteur verrouillé par l'API locale) : client TS déjà à jour, la session Start doit redémarrer l'API locale (db push + client)
+
+### Aide restructurée — 2026-11-07
+- Plan en 10 étapes terminé, lot Poussé par la MEP du 2026-11-07. Modèle : item SPOK `cmv7xld7h00055de22u5fihif`. Base LOCALE à jour ; si l'API de dev n'a pas été redémarrée, la session Start lance `pnpm dev:stop`, `pnpm db:generate`, `pnpm dev:start`
+
+### Mode dev dans les modales — 2026-11-07
+- Correctif Poussé par la MEP du 2026-11-07. Validé à l'écran par Thomas
+
+### Loupe, grand espace — 2026-11-07
+- Allègement Poussé par la MEP du 2026-11-07
+
 ### MEP — 2026-11-07
 - 9 lots poussés : historique en mode admin (fix), plan du site (feat), membres et e-mails (fix), aide visible de la recherche (fix), recherche d'utilisateurs (fix), rappels tactiles (feat), bouton Séances (fix), visiteur mêmes vues (feat), listes de vues dans VIEW_REGISTRY (refactor). SitemapPage entier dans le lot plan du site, ligne Historique comprise. build:packages, typecheck OK, TNR 2101/2101, en-têtes OK. RESTE OUVERT : `GET /:id` expose `parent` et `children` sans filtre ; `/invitations/by-token/:token` renvoie l'e-mail de la personne qui invite ; `list_space_members` et `list_community_members` (mcp-core) lisent `m.user?.email` alors que l'API renvoie un champ à plat
 

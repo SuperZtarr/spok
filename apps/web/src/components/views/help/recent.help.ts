@@ -1,22 +1,32 @@
-/* Aide utilisateur de la vue « Modifications récentes » (recent) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Modifications récentes » (recent), écrite en éléments d'aide (help/elements.ts) : un texte par
+   fonction, repris par le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  nouveaux: {
+    title: 'Nouveaux',
+    short: 'Les éléments créés depuis votre dernière visite.',
+    text: 'Les éléments créés depuis votre dernière visite, listés en vert. La liste fonctionne comme la vue Liste (clic, menu ⋮, tri).',
+    target: '[data-tour="recent-new"]',
+    side: 'bottom',
+  },
+  modifies: {
+    title: 'Modifiés',
+    short: 'Les éléments modifiés depuis votre dernière visite.',
+    text: 'Les éléments modifiés depuis votre dernière visite, listés en bleu. Ouvrez-en un pour voir ce qui a changé. La liste fonctionne comme la vue Liste (clic, menu ⋮, tri).',
+    target: '[data-tour="recent-modified"]',
+    side: 'bottom',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Modifications récentes',
-  summary: 'Les éléments ajoutés ou modifiés depuis votre dernière visite de l\'espace.',
+  summary: 'Les éléments ajoutés ou modifiés depuis votre dernière visite de l\'espace. La date de visite est mise à jour à chaque ouverture : la vue repart de maintenant.',
   short: 'Nouveautés depuis votre visite',
   empty: 'Rien de nouveau depuis votre dernière visite de l\'espace.',
-  tips: [
-    'Les nouveaux éléments sont listés en vert, les éléments modifiés en bleu',
-    'Chaque liste fonctionne comme la vue Liste (clic, menu ⋮, tri)',
-    'La date de visite est mise à jour à chaque ouverture : la vue repart de maintenant',
-  ],
-  zones: {
-    nouveaux: { title: 'Nouveautés', text: 'Les éléments créés depuis votre dernière visite.' },
-    modifies: { title: 'Modifiés', text: 'Les éléments changés depuis votre dernière visite.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,22 +34,7 @@ export const help: HelpEntry = {
         description: 'Ce qui a changé depuis votre dernier passage dans cet espace.',
       },
     },
-    {
-      element: '[data-tour="recent-new"]',
-      popover: {
-        title: 'Nouveaux',
-        description: 'Les éléments créés depuis votre dernière visite.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="recent-modified"]',
-      popover: {
-        title: 'Modifiés',
-        description: 'Les éléments modifiés depuis votre dernière visite. Ouvrez-en un pour voir ce qui a changé.',
-        side: 'bottom',
-      },
-    },
+    ...elementTourSteps('recent', elements),
     ...ITEM_MENU_STEP,
     ...SPACE_TOOLBAR_STEPS,
   ],

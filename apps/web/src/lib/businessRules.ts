@@ -558,4 +558,18 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     effect: "La communauté disparaît du fil d'activité, sans limite de durée, jusqu'à ce qu'il la réaffiche ; les items qu'il a lui-même marqués non lus restent visibles. Les notifications de la cloche (mentions, assignations, contributions) ne sont PAS coupées — d'où un libellé « Masquer / Afficher l'activité » et une icône d'œil, jamais de cloche",
     location: 'apps/api/src/routes/activity.ts, apps/api/src/routes/communities.ts (mute), apps/web/src/components/ui/CommunityCard.tsx',
   },
+  {
+    id: 'onboarding-proposed-once',
+    page: 'Fenêtre de bienvenue et Guide de démarrage, pour un utilisateur connecté',
+    trigger: 'Compte connecté qui n\'a pas encore répondu au tutoriel d\'accueil (GET /user/help-state)',
+    effect: "Le tutoriel d'accueil est proposé une seule fois par compte, aux comptes créés après la mise en place du suivi ; les comptes plus anciens reçoivent directement les nouveautés. Le suivre ou le passer revient au même : les nouveautés déjà présentes comptent comme vues, seules les suivantes s'annonceront. Relancer le guide plus tard ne touche pas aux annonces en attente ; « Réinitialiser tous les tutoriels » repropose l'accueil (décision Thomas 2026-11-07)",
+    location: 'apps/web/src/hooks/useOnboarding.ts, apps/web/src/components/WelcomeModal.tsx, apps/web/src/help/onboarding.elements.ts, apps/api/src/utils/helpState.ts, apps/api/src/routes/user.ts',
+  },
+  {
+    id: 'help-announcement-visibility',
+    page: 'Accueil (section Nouveautés), Toutes les nouveautés (/news) et tout écran dont un élément d\'aide porte un changement',
+    trigger: 'Un élément d\'aide déclare un changement (`changes` : nouveauté ou évolution)',
+    effect: "Le changement s'annonce par une carte sur l'accueil, une zone allumée sur son écran et l'étape de sa fonction dans le tutoriel, jusqu'à ce que l'utilisateur l'ignore, lise son explication ou voie cette étape. Il reste dans l'historique /news, où Montrer le remet à traiter. Sans date, il n'apparaît qu'en développement local et ne peut pas partir en production. Le suivi est conservé par compte côté serveur, donc le même sur tous les appareils ; sans compte, rien n'est annoncé (décision Thomas 2026-11-07)",
+    location: 'apps/web/src/help/announcements.ts, apps/web/src/help/announcementSources.ts, apps/web/src/help/NewFeatureOverlay.tsx, apps/web/src/help/NewsCards.tsx, apps/web/src/pages/NewsPage.tsx, apps/web/src/stores/helpAnnouncements.ts',
+  },
 ];

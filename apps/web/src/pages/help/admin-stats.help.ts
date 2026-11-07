@@ -1,16 +1,29 @@
-/* Aide utilisateur de la page d'administration « Statistiques » (/admin/stats, StatsPage).
-   Lue par son point d'interrogation (PageHelpButton), son tour et ses rappels fonctionnels (hints, via pageHint :
-   infobulles des actions à effet, explication des blocs de décision) — registre help/pageHelp.ts.
-   Les rappels décrivent l'effet réel côté API : à revérifier à chaque évolution des routes /admin. */
+/* Aide utilisateur de la page d'administration « Statistiques » (/admin/stats, StatsPage), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le
+   « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  periode: {
+    title: 'Période',
+    short: 'La période des tendances et des courbes.',
+    text: 'La période couverte par les tendances et les courbes.',
+    target: '[data-tour="admin-stats-period"]',
+    side: 'left',
+  },
+  indicateurs: {
+    title: 'Indicateurs',
+    short: 'Compteurs, tendances et courbes d\'activité.',
+    text: 'Les compteurs donnent les totaux ; les tendances et les courbes, l\'activité sur la période choisie.',
+    target: '[data-tour="admin-stats-content"]',
+    side: 'top',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Statistiques',
   summary: 'L\'activité de l\'instance : utilisateurs, espaces, communautés et éléments, avec leur évolution.',
-  tips: [
-    'Choisissez la période en haut à droite',
-    'Les compteurs donnent les totaux ; les graphiques, l\'activité sur la période choisie',
-  ],
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -18,21 +31,6 @@ export const help: HelpEntry = {
         description: 'Comment SPOK est utilisé.',
       },
     },
-    {
-      element: '[data-tour="admin-stats-period"]',
-      popover: {
-        title: 'Période',
-        description: 'La période couverte par les tendances et les courbes.',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="admin-stats-content"]',
-      popover: {
-        title: 'Indicateurs',
-        description: 'Compteurs, tendances et courbes d\'activité.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('admin-stats', elements),
   ],
 };

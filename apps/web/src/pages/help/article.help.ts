@@ -1,60 +1,46 @@
-/* Aide utilisateur de la page « Article » (/spaces/:spaceId/articles/:itemId), la lecture, et du mode Composer de la fiche.
-   Lue par le point d'interrogation (PageHelpButton), son tour et les rappels (pageHint) — registre help/pageHelp.ts.
-   Rappels écrits d'après apps/api/src/routes/item-article.ts : à revoir si la route change. */
+/* Aide utilisateur de la page « Article » (/spaces/:spaceId/articles/:itemId), la lecture, et du mode Composer de la fiche, écrite en éléments
+   d'aide (help/elements.ts) : un texte par fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide. Les rappels (`hints`, via
+   pageHint) détaillent les actions du mode Composer ; écrits d'après apps/api/src/routes/item-article.ts : à revoir si la route change.
+   La clé `compose` de l'élément est lue par pageHint : ne pas la renommer. Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  entete: {
+    title: 'Titre et chapeau',
+    short: 'Le titre et la description de l\'article.',
+    text: 'Le titre et la description de l\'article. Ils se modifient dans sa fiche ; le menu ⋮ garde l\'accès à celle-ci, et « Retour à l\'espace » ramène à la vue d\'origine. « Imprimer » produit une version papier ou PDF propre.',
+    target: '[data-tour="article-header"]',
+    side: 'bottom',
+  },
+  bloc: {
+    title: 'Un bloc',
+    short: 'Un élément existant affiché dans l\'article.',
+    text: 'Un élément existant affiché dans l\'article : le corriger le corrige partout où il apparaît. Le texte d\'une note se modifie directement ici ; les autres blocs s\'ouvrent dans leur fiche. Chaque bloc montre ce qui compte pour son type : le titre et le texte ; la légende sous une image ; l\'icône du site pour un lien ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Tags, assignation et contributions n\'y figurent pas. Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
+    target: '[data-tour="article-block"]',
+    side: 'top',
+  },
+  compose: {
+    title: 'Composer',
+    short: 'Ouvre la fiche de l\'article en mode Composer, pour travailler ses blocs.',
+    text: 'Si vous pouvez modifier l\'article, ouvre sa fiche en mode Composer : ajouter des éléments ou du texte, glisser pour réordonner, régler la largeur et la position, retirer un bloc. Ajout groupé : un élément avec ses enfants ou avec les éléments qui en découlent, ou tout un processus (ou un couloir), en une fois — 100 éléments au plus, tels qu\'ils sont au moment de l\'ajout. Colonnes : « À côté » met un bloc à droite du précédent — jusqu\'à 3 colonnes de même largeur, empilées sur mobile. Hiérarchie : un élément placé sous son parent (ou un ancêtre) est décalé vers la droite, avec un titre plus petit — 3 niveaux au plus.',
+    target: '[data-tour="article-compose"]',
+    noZone: true,
+    side: 'bottom',
+  },
+};
+
+const derived = helpFromElements(elements);
 
 export const help: HelpEntry = {
   title: 'Article',
-  summary: 'Une page qui assemble, dans l\'ordre choisi, des éléments existants : notes, images, schémas, liens. Ils restent à leur place et peuvent servir dans plusieurs articles.',
-  tips: [
-    'On arrive ici d\'un clic sur l\'article dans une vue de l\'espace, par « Lire l\'article » dans le menu ⋮ ou par un lien partagé ; le menu ⋮ garde l\'accès à sa fiche ; « Retour à l\'espace » ramène à la vue d\'origine',
-    '« Composer » (si vous pouvez modifier l\'article) ouvre sa fiche dans ce mode, pour ajouter, réordonner, régler ou retirer des blocs',
-    'Ajout groupé : un élément avec ses enfants ou avec les éléments qui en découlent, ou tout un processus (ou un couloir), en une fois — 100 éléments au plus, tels qu\'ils sont au moment de l\'ajout',
-    'Un bloc affiche un élément existant : le corriger le corrige partout où il apparaît',
-    'Le texte d\'une note se modifie directement dans l\'article ; les autres blocs s\'ouvrent dans leur fiche',
-    'Chaque bloc montre ce qui compte pour son type : le titre et le texte ; la légende sous une image ; l\'icône du site pour un lien ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Tags, assignation et contributions n\'y figurent pas',
-    'Colonnes : « À côté » met un bloc à droite du précédent — jusqu\'à 3 colonnes de même largeur, empilées sur mobile',
-    'Hiérarchie : un élément placé sous son parent (ou un ancêtre) dans l\'article est décalé vers la droite, avec un titre plus petit — 3 niveaux au plus',
-    'Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine',
-    '« Imprimer » produit une version papier ou PDF propre',
-  ],
-  tour: [
-    {
-      popover: {
-        title: 'Article',
-        description: 'Des éléments existants mis bout à bout, dans une page de lecture continue.',
-      },
-    },
-    {
-      element: '[data-tour="article-header"]',
-      popover: {
-        title: 'Titre et chapeau',
-        description: 'Le titre et la description de l\'article. Ils se modifient dans sa fiche.',
-        side: 'bottom',
-      },
-    },
-    {
-      element: '[data-tour="article-block"]',
-      popover: {
-        title: 'Un bloc',
-        description: 'Un élément existant affiché dans l\'article. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="article-compose"]',
-      popover: {
-        title: 'Composer',
-        description: 'Ouvre la fiche de l\'article en mode Composer : ajouter des éléments ou du texte, glisser pour réordonner, régler la largeur et la position.',
-        side: 'bottom',
-      },
-    },
-  ],
+  summary: 'Une page qui assemble, dans l\'ordre choisi, des éléments existants : notes, images, schémas, liens. Ils restent à leur place et peuvent servir dans plusieurs articles. On y arrive d\'un clic sur l\'article dans une vue de l\'espace, par « Lire l\'article » dans le menu ⋮ ou par un lien partagé.',
+  ...derived,
   hints: {
+    ...derived.hints,
     unavailable: 'Contenu indisponible : la personne qui a ajouté ce bloc n\'a plus accès à l\'élément d\'origine.',
     empty: 'Cet article est vide. Passez en mode « Composer » pour y ajouter des éléments ou du texte.',
     print: 'Ouvre l\'impression du navigateur (papier ou PDF), sans le cadre de l\'application.',
-    compose: 'Ouvre la fiche de l\'article en mode Composer, pour travailler ses blocs.',
     openSource: 'Ouvre la fiche de l\'élément d\'origine.',
     addItem: 'Ouvre le sélecteur : parcourez les espaces, cochez un ou plusieurs éléments existants (ou prenez un processus) et ajoutez-les à cet endroit. Les éléments restent à leur place ; ils peuvent figurer dans d\'autres articles.',
     addText: 'Crée une nouvelle note dans l\'espace de l\'article et l\'insère à cet endroit.',
@@ -85,4 +71,13 @@ export const help: HelpEntry = {
     browserAdd: 'Ajoute les éléments cochés à cet endroit, dans l\'ordre de l\'arbre. Un seul élément sans option est ajouté directement ; sinon le nombre d\'éléments est confirmé avant l\'ajout.',
     browserEmptySpace: 'Aucun élément dans cet espace.',
   },
+  tour: [
+    {
+      popover: {
+        title: 'Article',
+        description: 'Des éléments existants mis bout à bout, dans une page de lecture continue.',
+      },
+    },
+    ...elementTourSteps('article', elements),
+  ],
 };

@@ -1,22 +1,32 @@
-/* Aide utilisateur de la vue « Kanban » (kanban) : à quoi elle sert, comment s'en servir, tour guidé (modèle 2026-10-14).
-   Lue par le point d'interrogation (ViewHelpButton → HelpButton) et le tour (useViewOnboarding). */
+/* Aide utilisateur de la vue « Kanban » (kanban), écrite en éléments d'aide (2026-11-07).
+   Chaque fonction est écrite une fois dans `elements` ; conseils, zones du mode Aide, infobulles et étapes du tour en
+   sont dérivés (help/elements.ts). Lue par le « ? » (ViewHelpButton → HelpButton), le tour (useViewOnboarding), le mode
+   Aide (helpZones), l'infobulle de colonne (KanbanView) et les nouveautés (help/announcements.ts). */
 import type { HelpEntry } from '../../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
+
+const elements: HelpElements = {
+  colonne: {
+    title: 'Colonne de statut',
+    short: 'Un statut de l\'espace : déposez-y une carte pour le lui donner.',
+    text: 'Une colonne correspond à un statut de l\'espace, avec le nombre d\'éléments à côté de son nom. Déposez une carte dans une colonne pour lui donner ce statut.',
+    side: 'right',
+  },
+  carte: {
+    title: 'Carte d\'élément',
+    short: 'Un élément : cliquez pour ouvrir sa fiche, glissez pour changer son statut.',
+    text: 'Une carte représente un élément, avec son type, sa priorité, son échéance et ses tags. Cliquez pour ouvrir sa fiche ; glissez-la vers une autre colonne pour changer son statut.',
+    side: 'right',
+  },
+};
 
 export const help: HelpEntry = {
   title: 'Kanban',
   summary: 'Les éléments en colonnes par statut, pour suivre l\'avancement du travail.',
   short: 'Colonnes par statut',
   empty: 'Aucun élément à classer par statut. Créez-en un avec « Nouveau » : il se range dans la colonne de son statut.',
-  tips: [
-    'Glissez une carte d\'une colonne à l\'autre pour changer son statut',
-    'Les colonnes sont les statuts de l\'espace (référentiels)',
-    'Cliquez sur une carte pour ouvrir sa fiche',
-  ],
-  zones: {
-    colonne: { title: 'Colonne', text: 'Un statut. Glissez une carte d\'une colonne à l\'autre pour changer son statut.' },
-    carte: { title: 'Carte', text: 'Un élément ; cliquez pour ouvrir sa fiche, glissez pour changer son statut.' },
-  },
+  ...helpFromElements(elements),
   tour: [
     {
       popover: {
@@ -24,22 +34,7 @@ export const help: HelpEntry = {
         description: 'Vos éléments en colonnes par statut : on voit d\'un coup d\'œil ce qui est à faire, en cours, terminé.',
       },
     },
-    {
-      element: '[data-tour="kanban-column"]',
-      popover: {
-        title: 'Une colonne = un statut',
-        description: 'Le compteur donne le nombre d\'éléments. Déposez une carte dans une colonne pour lui donner ce statut.',
-        side: 'right',
-      },
-    },
-    {
-      element: '[data-tour="kanban-card"]',
-      popover: {
-        title: 'Une carte = un élément',
-        description: 'Cliquez pour ouvrir sa fiche. Elle montre le type, la priorité, l\'échéance et les tags. Glissez-la pour changer son statut.',
-        side: 'right',
-      },
-    },
+    ...elementTourSteps('kanban', elements),
     ...ITEM_MENU_STEP,
     ...SPACE_TOOLBAR_STEPS,
   ],

@@ -1,16 +1,53 @@
-/* Aide utilisateur de la page « Espaces » (/spaces).
-   Lue par le point d'interrogation de la page (PageHelpButton) et son tour — registre help/pageHelp.ts.
+/* Aide utilisateur de la page « Espaces » (/spaces), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le « ? »
+   (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts.
    hints unavailable* : textes de l'écran « espace inaccessible » (SpaceUnavailable, page d'un espace). */
 import type { HelpEntry } from '../../help/types';
+import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const elements: HelpElements = {
+  groupe: {
+    title: 'Espaces de groupe',
+    short: 'Les espaces partagés avec d\'autres.',
+    text: 'Les espaces partagés avec d\'autres, dans vos communautés.',
+    target: '[data-tour="spaces-group"]',
+    side: 'top',
+  },
+  carte: {
+    title: 'Une carte',
+    short: 'Cliquez pour ouvrir l\'espace.',
+    text: 'Cliquez pour ouvrir l\'espace. La pastille indique sa visibilité (héritée ou propre).',
+    target: '[data-tour="space-card"]',
+    side: 'right',
+  },
+  raccourcis: {
+    title: 'Raccourcis',
+    short: 'Ouvrir directement la vue par défaut.',
+    text: 'L\'icône de vue ouvre directement la vue par défaut de l\'espace ; la roue dentée mène aux paramètres (propriétaire).',
+    target: '[data-tour="space-card-open-view"]',
+    noZone: true,
+    side: 'left',
+  },
+  personnels: {
+    title: 'Espaces personnels',
+    short: 'Vos espaces privés, hors communauté.',
+    text: 'Vos espaces privés, hors communauté.',
+    target: '[data-tour="spaces-personal"]',
+    side: 'top',
+  },
+};
+
+const derived = helpFromElements(elements);
 
 export const help: HelpEntry = {
   title: 'Espaces',
   summary: 'Tous les espaces auxquels vous avez accès : espaces de groupe et espaces personnels.',
-  tips: [
-    'Cliquez sur une carte pour ouvrir l\'espace',
-    'L\'icône de vue ouvre directement la vue par défaut de l\'espace',
-    'La pastille indique la visibilité (héritée ou propre)',
-  ],
+  ...derived,
+  // Écran « espace inaccessible » de la page d'un espace (components/SpaceUnavailable.tsx)
+  hints: {
+    ...derived.hints,
+    unavailableAnonymous: 'Cet espace n\'est pas public. Connectez-vous pour y accéder : après connexion, « Retourner à » vous ramène ici.',
+    unavailable: 'Espace introuvable ou accès refusé : il a peut-être été supprimé, ou vous n\'en êtes pas membre.',
+  },
   tour: [
     {
       popover: {
@@ -18,42 +55,6 @@ export const help: HelpEntry = {
         description: 'Tous vos espaces, en cartes.',
       },
     },
-    {
-      element: '[data-tour="spaces-group"]',
-      popover: {
-        title: 'Espaces de groupe',
-        description: 'Les espaces partagés avec d\'autres, dans vos communautés.',
-        side: 'top',
-      },
-    },
-    {
-      element: '[data-tour="space-card"]',
-      popover: {
-        title: 'Une carte',
-        description: 'Cliquez pour ouvrir l\'espace.',
-        side: 'right',
-      },
-    },
-    {
-      element: '[data-tour="space-card-open-view"]',
-      popover: {
-        title: 'Raccourcis',
-        description: 'Ouvrir directement la vue par défaut ; la roue dentée mène aux paramètres (propriétaire).',
-        side: 'left',
-      },
-    },
-    {
-      element: '[data-tour="spaces-personal"]',
-      popover: {
-        title: 'Espaces personnels',
-        description: 'Vos espaces privés, hors communauté.',
-        side: 'top',
-      },
-    },
+    ...elementTourSteps('spaces', elements),
   ],
-  // Écran « espace inaccessible » de la page d'un espace (components/SpaceUnavailable.tsx)
-  hints: {
-    unavailableAnonymous: 'Cet espace n\'est pas public. Connectez-vous pour y accéder : après connexion, « Retourner à » vous ramène ici.',
-    unavailable: 'Espace introuvable ou accès refusé : il a peut-être été supprimé, ou vous n\'en êtes pas membre.',
-  },
 };
