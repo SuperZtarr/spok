@@ -33,6 +33,8 @@ const FISHEYE_STRENGTH = 0.75;
 const GAP = 8;
 const FRAME_MARGIN = 4;
 const SETTLE_ROUNDS = 200;
+/** Budget du calcul : le nombre de passes baisse quand l'espace grandit, pour que la molette reste fluide. */
+const SETTLE_BUDGET = 12_000;
 
 export interface LoupeSourceItem {
   id: string;
@@ -204,12 +206,13 @@ function separate(p: Placed, q: Placed, moveQ: number): boolean {
 /**
  * Positions de la carte à l'échelle k (en pixels, sans le déplacement de la carte), vignettes minimales écartées pour ne
  * pas se recouvrir. Balayage trié par abscisse : seules les voisines sont comparées, un grand espace reste rapide.
- * Sur un très grand espace, quelques recouvrements peuvent subsister après SETTLE_ROUNDS passes.
+ * Passes bornées par SETTLE_ROUNDS et SETTLE_BUDGET : sur un très grand espace, des recouvrements peuvent subsister.
  */
 export function settlePositions(positions: Map<string, Point>, k: number): Map<string, Point> {
   const placed: Placed[] = [...positions].map(([id, p]) => ({ id, cx: p.x * k, cy: p.y * k, size: 'small', fixed: false }));
   const reach = VIGNETTE_SIZES.small.w + GAP;
-  for (let round = 0; round < SETTLE_ROUNDS; round++) {
+  const rounds = Math.min(SETTLE_ROUNDS, Math.ceil(SETTLE_BUDGET / Math.max(placed.length, 1)));
+  for (let round = 0; round < rounds; round++) {
     let moved = false;
     placed.sort((a, b) => a.cx - b.cx);
     for (let i = 0; i < placed.length; i++) {
@@ -236,7 +239,7 @@ export function fitMap(positions: Map<string, Point>, width: number, height: num
  * Positions et tailles à l'écran, à partir des positions écartées (settlePositions) et du déplacement de la carte.
  * Sans item zoomé : la carte telle quelle.
  * Avec : l'item grossit à sa place (ramené dans le cadre s'il le faut), ses liés passent en taille intermédiaire et
- * restent visibles dans le cadre, les autres s'estompent et s'écartent.
+ * restent visibles dans le cadre, les autres s'estompent sur place.
  * previewId (zoom figé) : cet item passe en taille intermédiaire par-dessus la carte, sans déplacer aucune autre vignette.
  * tallIds : items à miniature (Image, Diagramme), dont la vignette agrandie est plus haute.
  */
@@ -299,13 +302,11 @@ export function computeScene(params: {
   scene.set(focusId, { cx: focus.cx, cy: focus.cy, size: focus.size, state: 'focus' });
   zoomed.forEach((p) => scene.set(p.id, { cx: p.cx, cy: p.cy, size: p.size, state: 'linked' }));
 
-  const active = [focus, ...zoomed];
+  // Les autres ne bougent jamais (décision Thomas 2026-11-07) : déplacer toute la carte à chaque survol la rendait illisible
   for (const [id, p] of positions) {
     if (scene.has(id)) continue;
-    const s = pushed(p);
-    const other: Placed = { id, cx: s.x, cy: s.y, size: rest, fixed: false };
-    active.forEach((a) => separate(a, other, 1));
-    scene.set(id, { cx: other.cx, cy: other.cy, size: rest, state: allLinks.has(id) ? 'linked' : 'dim' });
+    const s = toScreen(p);
+    scene.set(id, { cx: s.x, cy: s.y, size: rest, state: allLinks.has(id) ? 'linked' : 'dim' });
   }
 
   const preview = previewId ? scene.get(previewId) : undefined;

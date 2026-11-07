@@ -119,6 +119,15 @@ describe('scène', () => {
     expect(scene.get('o')).toMatchObject({ size: 'small', state: 'dim' });
   });
 
+  it('les éléments ni zoomés ni liés restent exactement à leur place, même sous la vignette zoomée', () => {
+    const positions = new Map<string, Point>([['f', { x: 0, y: 0 }], ['l', { x: 250, y: 0 }], ['proche', { x: 20, y: 10 }], ['loin', { x: -300, y: 200 }]]);
+    const rest = computeScene({ ...base, positions, focusId: null, linkedIds: [] });
+    const scene = computeScene({ ...base, positions, focusId: 'f', linkedIds: ['l'] });
+    (['proche', 'loin'] as const).forEach((id) => {
+      expect(scene.get(id)).toMatchObject({ cx: rest.get(id)!.cx, cy: rest.get(id)!.cy, state: 'dim' });
+    });
+  });
+
   it('aperçu : l\'item survolé passe en taille intermédiaire, aucune autre vignette ne bouge', () => {
     const positions = new Map<string, Point>([['f', { x: 0, y: 0 }], ['l', { x: 250, y: 0 }], ['o', { x: -300, y: 200 }], ['p', { x: -300, y: 230 }]]);
     const params = { ...base, positions, focusId: 'f', linkedIds: ['l'] };

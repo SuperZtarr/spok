@@ -31,7 +31,7 @@ import { hasImage, vignetteContent, type VignetteSource } from './loupe-vignette
 import {
   VIGNETTE_SIZES, advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene, edgesFromLinks,
   externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, settlePositions, worldPositions,
-  type LoupeEdge, type LoupeSourceItem, type MapView, type Point, type TrailEntry,
+  type LoupeEdge, type LoupeSourceItem, type MapView, type Point, type SceneNode, type TrailEntry,
 } from './loupe-scene';
 
 const HOVER_DELAY_MS = 100;
@@ -66,6 +66,7 @@ export function LoupeView(props: LoupeViewProps) {
   const nodeRefs = useRef(new Map<string, HTMLDivElement>());
   const lineRefs = useRef(new Map<string, SVGLineElement>());
   const labelRefs = useRef(new Map<string, SVGTextElement>());
+  const previousScene = useRef<Map<string, SceneNode>>(new Map());
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuOpen = useRef(false);
@@ -173,8 +174,18 @@ export function LoupeView(props: LoupeViewProps) {
     return ids;
   }, [items, externals]);
 
-  // Déplacer la carte ne recalcule pas l'écartement : il ne dépend que de l'échelle
-  const settled = useMemo(() => settlePositions(positions, view.k), [positions, view.k]);
+  // L'écartement ne porte que sur l'espace courant et ne dépend que de l'échelle : ni le survol ni le déplacement de la
+  // carte ne le relancent (calcul coûteux, il saturait l'interface sur un grand espace). Les autres espaces s'y ajoutent.
+  const settledWorld = useMemo(() => settlePositions(world, view.k), [world, view.k]);
+  const settled = useMemo(() => {
+    if (visibleExternals.size === 0) return settledWorld;
+    const all = new Map(settledWorld);
+    visibleExternals.forEach((id) => {
+      const external = externals.get(id);
+      if (external) all.set(id, { x: external.pos.x * view.k, y: external.pos.y * view.k });
+    });
+    return all;
+  }, [settledWorld, visibleExternals, externals, view.k]);
 
   const scene = useMemo(
     () => computeScene({ positions: settled, offset: { x: view.x, y: view.y }, width: size.width, height: size.height, focusId, linkedIds, previewId, tallIds }),
@@ -188,14 +199,23 @@ export function LoupeView(props: LoupeViewProps) {
     return [...all.values()].filter((e) => scene.has(e.from) && scene.has(e.to));
   }, [localEdges, remoteEdges, scene]);
 
-  // Les traits suivent les vignettes pendant leur animation : lecture des positions réelles, image par image
+  // Les traits suivent les vignettes pendant leur animation : lecture des positions réelles, image par image, mais
+  // seulement pour les traits d'une vignette qui a changé ou d'un trait neuf (tout relire saturait un grand espace)
   useLayoutEffect(() => {
     let frame = 0;
     const start = performance.now();
+    const previous = previousScene.current;
+    const changed = (id: string) => {
+      const before = previous.get(id);
+      const now = scene.get(id);
+      return !before || !now || before.cx !== now.cx || before.cy !== now.cy || before.size !== now.size;
+    };
+    const moving = edges.filter((edge) => !lineRefs.current.get(edge.id)?.hasAttribute('x1') || changed(edge.from) || changed(edge.to));
+    previousScene.current = scene;
     const update = () => {
       const box = containerRef.current?.getBoundingClientRect();
       if (box) {
-        for (const edge of edges) {
+        for (const edge of moving) {
           const line = lineRefs.current.get(edge.id);
           const from = nodeRefs.current.get(edge.from)?.getBoundingClientRect();
           const to = nodeRefs.current.get(edge.to)?.getBoundingClientRect();
@@ -215,7 +235,7 @@ export function LoupeView(props: LoupeViewProps) {
           }
         }
       }
-      if (!interacting && performance.now() - start < TRANSITION_MS + 80) frame = requestAnimationFrame(update);
+      if (moving.length > 0 && !interacting && performance.now() - start < TRANSITION_MS + 80) frame = requestAnimationFrame(update);
     };
     update();
     return () => cancelAnimationFrame(frame);
