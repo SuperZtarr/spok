@@ -14,6 +14,11 @@
  *     fois (pas d'empilement des zones parentes).
  * Mode dev OFF → rien monté, `data-devzone` totalement inerte.
  *
+ * Limite de modale : `Modal` n'a pas de portail, sa fiche reste dans le DOM de `contenu`. La remontée s'arrête donc au
+ * panneau (`role="dialog"`) : sans zone plus précise, on encadre la modale avec son nom (`data-dev-name`, prop devName),
+ * et le fond (`data-modal-root`) n'affiche rien. Jamais de zone de la page par-dessus une modale. Une modale maison sans
+ * `role="dialog"` n'est pas couverte.
+ *
  * Convention : ajouter une zone = poser `data-devzone="x"` sur l'élément + une couleur
  * dans ZONE_COLORS. Sous-zones nommées `<parent>-<enfant>` (ex. `sidebar-favoris`).
  * `contenu-barre-vue` : posé sur chaque `#view-header` (19 vues + SpacePage) — toute nouvelle vue
@@ -66,28 +71,45 @@ const ZONE_COLORS: Record<string, string> = {
   'item-enfants': '#0d9488',
   'item-pied': '#475569',
   'item-lecture': '#4f46e5',
+  'item-lecture-media': '#a21caf',
+  'item-lecture-contenu': '#0369a1',
+  'item-resume': '#57534e',
+  'item-medias': '#b45309',
+  'item-composer': '#be123c',
 };
+
+/** Couleur du cadre d'une modale survolée hors de toute zone */
+const MODAL_COLOR = '#0f172a';
+const LOOKUP = '[data-devzone],[role="dialog"],[data-modal-root]';
 
 interface Hit { zone: string; top: number; left: number; right: number; width: number; height: number; }
 
+/** Élément à encadrer sous le curseur et son nom : zone connue la plus proche, sinon modale, sans sortir de la modale. */
+export function findDevTarget(target: Element | null): { el: HTMLElement; name: string } | null {
+  const el = target?.closest<HTMLElement>(LOOKUP) ?? null;
+  if (!el) return null;
+  if (el.dataset.devzone) return ZONE_COLORS[el.dataset.devzone] ? { el, name: el.dataset.devzone } : null;
+  if (el.getAttribute('role') === 'dialog') return { el, name: el.dataset.devName ?? 'modale' };
+  return null; // fond de la modale
+}
+
 function DevZoneInspectorOverlay() {
   const [hit, setHit] = useState<Hit | null>(null);
-  const elRef = useRef<HTMLElement | null>(null);
+  const targetRef = useRef<{ el: HTMLElement; name: string } | null>(null);
 
   useEffect(() => {
     let raf = 0;
 
     const compute = () => {
-      const el = elRef.current;
-      if (!el || !el.isConnected) { setHit(null); return; }
-      const r = el.getBoundingClientRect();
-      setHit({ zone: el.dataset.devzone!, top: r.top, left: r.left, right: r.right, width: r.width, height: r.height });
+      const t = targetRef.current;
+      if (!t || !t.el.isConnected) { setHit(null); return; }
+      const r = t.el.getBoundingClientRect();
+      setHit({ zone: t.name, top: r.top, left: r.left, right: r.right, width: r.width, height: r.height });
     };
     const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(compute); };
 
     const onMove = (e: MouseEvent) => {
-      const el = (e.target as Element | null)?.closest<HTMLElement>('[data-devzone]') ?? null;
-      elRef.current = el && el.dataset.devzone && ZONE_COLORS[el.dataset.devzone] ? el : null;
+      targetRef.current = findDevTarget(e.target as Element | null);
       schedule();
     };
 
@@ -103,7 +125,7 @@ function DevZoneInspectorOverlay() {
   }, []);
 
   if (!hit) return null;
-  const color = ZONE_COLORS[hit.zone];
+  const color = ZONE_COLORS[hit.zone] ?? MODAL_COLOR;
   const labelAbove = hit.top > 18;
 
   return (

@@ -9,7 +9,7 @@
  * - onOpenChild : clic sur un enfant (navigation dans la modale)
  * - articleContent : blocs d'un article (ArticleReadBlocks) sous la description, pour le type ARTICLE
  * Règles : aucun champ modifiable ici — l'édition reste dans la fiche (ItemEditModal, sélecteur Afficher / Modifier).
- * Les textes d'aide (zones du mode Aide) sont dans components/help/item-modal.help.ts (zones read-media / read-content).
+ * Zones data-devzone item-lecture, item-lecture-media, item-lecture-contenu : DevZoneInspector et mode Aide (textes : help/shellZones.ts).
  * HTML de description et contributions : toujours nettoyé par sanitizeHtml (l'API ne filtre pas le HTML). */
 import { useState, type ReactNode } from 'react';
 import { ExternalLink, Paperclip } from 'lucide-react';
@@ -63,7 +63,7 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
       </header>
 
       {media && (
-        <section data-help-zone="item-modal:read-media">
+        <section data-devzone="item-lecture-media">
           {media.kind === 'image' ? (
             <>
               <img
@@ -92,7 +92,7 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
         </section>
       )}
 
-      <div className="space-y-8" data-help-zone="item-modal:read-content">
+      <div className="space-y-8" data-devzone="item-lecture-contenu">
         {sheet.descriptionHtml && (
           <section className={PROSE} dangerouslySetInnerHTML={{ __html: sanitizeHtml(sheet.descriptionHtml) }} />
         )}

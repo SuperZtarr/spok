@@ -1,4 +1,6 @@
-/* Modale de base : portal, overlay, Escape, tailles, focus — socle de toutes les modales.
+/* Modale de base : overlay, Escape, tailles, focus — socle de toutes les modales.
+ * Pas de portail : rendue là où elle est appelée, donc souvent dans <main>. data-modal-root et role="dialog" marquent
+ * sa limite pour DevZoneInspector ; data-dev-name lui donne son nom (devName).
  * Focus (useDialogFocus) : à l'ouverture, champ en autoFocus ou élément `data-autofocus` du contenu,
  * sinon le panneau ; Tab piégé dans la modale ; focus rendu à l'élément d'origine à la fermeture. */
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -43,7 +45,7 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-0 sm:p-4">
+    <div data-modal-root className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-0 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 transition-opacity hidden sm:block z-40"
@@ -71,6 +73,7 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'def
           className
         )}
         role="dialog"
+        data-dev-name={devName}
         aria-modal="true"
         aria-labelledby="modal-title"
       >

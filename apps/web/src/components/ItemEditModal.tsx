@@ -1015,7 +1015,7 @@ export function ItemEditModal({
         <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
       )}
       {/* URL — seulement pour le type LINK */}
-      {type === 'LINK' && <div className="space-y-2">
+      {type === 'LINK' && <div className="space-y-2" data-devzone="item-medias">
         <label className="text-sm font-medium">URL</label>
         {canEdit ? (
           <Input type="url" value={url}
@@ -1030,7 +1030,7 @@ export function ItemEditModal({
       </div>}
 
       {/* Diagramme — seulement pour le type DIAGRAM */}
-      {type === 'DIAGRAM' && <div className="space-y-2">
+      {type === 'DIAGRAM' && <div className="space-y-2" data-devzone="item-medias">
         <label className="text-sm font-medium">Diagramme</label>
         <DrawioEditor
           xml={diagramXml}
@@ -1053,7 +1053,7 @@ export function ItemEditModal({
       </div>}
 
       {/* Image — seulement pour le type IMAGE */}
-      {type === 'IMAGE' && <div className="space-y-2">
+      {type === 'IMAGE' && <div className="space-y-2" data-devzone="item-medias">
         <label className="text-sm font-medium">Image</label>
         {canEdit ? (
           <>
@@ -1077,7 +1077,7 @@ export function ItemEditModal({
       </div>}
 
       {/* Fichier — seulement pour le type DOCUMENT */}
-      {type === 'DOCUMENT' && <div className="space-y-2">
+      {type === 'DOCUMENT' && <div className="space-y-2" data-devzone="item-medias">
         <label className="text-sm font-medium">Fichier</label>
         {canEdit ? (
           <>
@@ -1263,7 +1263,7 @@ export function ItemEditModal({
                   )}
                 />
               </div>
-              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
               </div>
             </>
@@ -1272,14 +1272,14 @@ export function ItemEditModal({
           {/* Mode Composer d'un article : titre et chapeau en rappel, puis ses blocs. Pied réduit à Fermer. */}
           {composing && item && articleState.article && (
             <>
-              <div className="flex-1 overflow-y-auto pr-1">
+              <div className="flex-1 overflow-y-auto pr-1" data-devzone="item-composer">
                 <h2 className="text-2xl font-bold leading-tight">{item.title}</h2>
                 {item.description && (
                   <div className="prose dark:prose-invert max-w-none mt-2 mb-4 text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />
                 )}
                 <ArticleEditor spaceId={item.spaceId ?? spaceId} articleId={item.id} article={articleState.article} state={articleState} />
               </div>
-              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0">
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
               </div>
             </>
@@ -1299,6 +1299,7 @@ export function ItemEditModal({
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
+                data-devzone="item-resume"
                 className="self-start -mt-1 mb-2 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
                 title="Afficher tous les champs"
               >
@@ -1324,7 +1325,7 @@ export function ItemEditModal({
                 const isContentType = (CONTENT_TYPES as string[]).includes(type);
                 return (
                   <HelpHint text={itemHints?.contentTypes}>
-                    <div className="flex flex-wrap items-center gap-1.5" data-tour="item-content-types">
+                    <div className="flex flex-wrap items-center gap-1.5" data-tour="item-content-types" data-devzone="item-type">
                       {isContentType ? offered.map((key) => {
                         const config = typeLabels[key];
                         const Icon = TYPE_ICONS[key];
