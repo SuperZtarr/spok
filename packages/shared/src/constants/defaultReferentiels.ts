@@ -1,6 +1,9 @@
 /* Référentiels par défaut : statuts (couleurs, ordre) et labels de types — base des personnalisations.
    labelShort en toutes lettres (« Document », « Diagramme »… — décision Thomas 2026-10-29, plus d'abréviations) ;
-   une communauté aux référentiels personnalisés garde ses propres libellés. */
+   une communauté aux référentiels personnalisés garde ses propres libellés.
+   Statuts réservés à un type (StatusConfig.types) : les 4 issues d'une question (QUESTION_STATUS) ne sont proposées
+   que pour une Question, qui n'utilise qu'elles — statusesForType / statusAllowedForType sont la source unique de ce tri (API, MCP, web) ;
+   withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation. */
 import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
 
 // =============================================================================
@@ -73,7 +76,111 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     order: 7,
     visible: true,
   },
+  // Issues d'une question (type QUESTION, 2026-11-08) — réservées à ce type
+  {
+    id: 'question_open',
+    label: 'Ouverte',
+    color: 'bg-sky-100 text-sky-800',
+    borderColor: 'border-sky-300 bg-sky-50',
+    order: 8,
+    visible: true,
+    types: ['QUESTION'],
+  },
+  {
+    id: 'question_decided',
+    label: 'Tranchée',
+    color: 'bg-emerald-100 text-emerald-800',
+    borderColor: 'border-emerald-300 bg-emerald-50',
+    order: 9,
+    visible: true,
+    types: ['QUESTION'],
+  },
+  {
+    id: 'question_postponed',
+    label: 'Reportée',
+    color: 'bg-amber-100 text-amber-800',
+    borderColor: 'border-amber-300 bg-amber-50',
+    order: 10,
+    visible: true,
+    types: ['QUESTION'],
+  },
+  {
+    id: 'question_no_conclusion',
+    label: 'Sans conclusion',
+    color: 'bg-slate-100 text-slate-700',
+    borderColor: 'border-slate-300 bg-slate-50',
+    order: 11,
+    visible: true,
+    types: ['QUESTION'],
+  },
 ];
+
+/** Identifiants des issues d'une question (statuts réservés au type QUESTION). */
+export const QUESTION_STATUS = {
+  OPEN: 'question_open',
+  DECIDED: 'question_decided',
+  POSTPONED: 'question_postponed',
+  NO_CONCLUSION: 'question_no_conclusion',
+} as const;
+
+/** Statuts réservés livrés par défaut : non supprimables, réservation non modifiable. */
+export const RESERVED_STATUS_IDS: string[] = DEFAULT_STATUSES.filter((s) => s.types?.length).map((s) => s.id);
+
+/**
+ * Un statut est-il permis pour ce type ? Un type qui a des statuts réservés (QUESTION) n'utilise QUE ceux-là ;
+ * les autres types utilisent les statuts sans réservation. Vide / 'undefined' / 'none' = toujours permis
+ * (sauf pour une question, que l'API remet à « Ouverte »).
+ */
+export function statusAllowedForType(
+  statusId: string | null | undefined,
+  type: string | null | undefined,
+  statuses: StatusConfig[] = DEFAULT_STATUSES,
+): boolean {
+  if (!statusId || statusId === 'undefined' || statusId === 'none') return true;
+  const all = withDefaultStatuses(statuses);
+  const cfg = all.find((s) => s.id === statusId);
+  const typeHasReserved = !!type && all.some((s) => s.types?.includes(type));
+  if (typeHasReserved) return !!cfg?.types?.includes(type!);
+  // Statut inconnu de cette liste (statut propre à une communauté) : permis s'il n'est pas réservé
+  return !cfg?.types?.length;
+}
+
+/**
+ * Statuts proposés au choix pour un élément de ce type : ses statuts réservés s'il en a (une question ne
+ * propose que ses 4 issues), sinon les statuts sans réservation. Sans type (choix groupé, filtre global) :
+ * les statuts sans réservation.
+ */
+export function statusesForType<T extends StatusConfig>(statuses: T[], type: string | null | undefined): T[] {
+  const reserved = type ? statuses.filter((s) => s.types?.includes(type)) : [];
+  if (reserved.length > 0) return reserved;
+  return statuses.filter((s) => !s.types?.length);
+}
+
+/**
+ * Statuts à montrer pour un ensemble d'éléments (colonnes du Kanban, filtres, regroupements) : les statuts sans
+ * réservation + les statuts réservés dont un type est présent (les issues d'une question n'apparaissent que si
+ * l'espace contient une question).
+ */
+export function statusesForItems<T extends StatusConfig>(statuses: T[], items: Iterable<{ type?: string | null }>): T[] {
+  const present = new Set<string>();
+  for (const it of items) if (it.type) present.add(it.type);
+  return statuses.filter((s) => !s.types?.length || s.types.some((t) => present.has(t)));
+}
+
+/**
+ * Statuts réservés absents d'un référentiel personnalisé (enregistré avant leur création) : ajoutés ; présents :
+ * leur réservation est rétablie (libellé, couleur, ordre, visibilité personnalisés conservés).
+ */
+export function withDefaultStatuses(statuses: StatusConfig[]): StatusConfig[] {
+  const out = statuses.map((s) => {
+    const def = DEFAULT_STATUSES.find((d) => d.id === s.id && d.types?.length);
+    return def ? { ...s, types: def.types } : s;
+  });
+  for (const def of DEFAULT_STATUSES) {
+    if (def.types?.length && !out.some((s) => s.id === def.id)) out.push({ ...def });
+  }
+  return out;
+}
 
 // =============================================================================
 // DEFAULT TYPE LABELS - Configuration par défaut des labels de types
@@ -184,6 +291,15 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
     bgHover: 'bg-fuchsia-50',
     visible: true,
     order: 11,
+  },
+  // Question : préparée à l'avance (options), issue notée par les statuts réservés, votes des membres
+  QUESTION: {
+    label: 'Questions',
+    labelShort: 'Question',
+    color: 'border-sky-400',
+    bgHover: 'bg-sky-50',
+    visible: true,
+    order: 12,
   },
 };
 

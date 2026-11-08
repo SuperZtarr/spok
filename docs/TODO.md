@@ -341,8 +341,11 @@
 - [x] Propriétaire de communauté = OWNER dans tous les espaces de sa communauté, privés compris (checkSpaceAccess, isSpaceOwnerOrAdmin, GET / sidebar, GET /:id, PATCH, join) — 2026-10-12 (ac14b92)
 - [x] Revue sécu de ac14b92 : graphes/sunburst (items des espaces privés aux membres de la communauté, `additionalSpaceIds` jamais contrôlé → items de n'importe quel espace) → `filterReadableSpaceIds` (items.ts, règle checkSpaceAccess en masse) ; PATCH /spaces/:id parentId = écriture au parent requise ; join réservé aux espaces OUVERTS (READONLY donnait MEMBER, pas de rôle VIEWER en base) — 2026-10-12 (144474b)
 - [x] Sidebar (GET /spaces) : espaces non-membre filtrés sur la visibilité effective (`getEffectiveVisibilities`, version en masse dans items.ts) — sous-espace hérité d'un parent privé retiré, rôle implicite selon la visibilité héritée (anonymes compris) ; OWNER de communauté et mode admin : liste complète — 2026-10-12 (e86878b)
-- [ ] Plus tard : compte-rendu généré à la clôture ; tri « présenté le » dans les vues
-- [ ] Plus tard (peut-être) : invités sans compte, réactions/votes/questions, passage de main, mobile
+- [x] Compte-rendu généré à la clôture : Note figée dans l'espace de séance (présents, déroulé, commentaires et relations, non présentés, créés pendant la séance), décisions écrites après coup, « Régénérer » qui garde la section « Décisions », « Créer le compte-rendu » pour une séance qui n'en a pas (LiveSession.reportItemId) — 2026-11-08
+- [ ] Plus tard : tri « présenté le » dans les vues
+- [x] Type Question (options préparées, issue par statuts réservés Ouverte / Tranchée / Reportée / Sans conclusion, gros boutons de l'animateur en séance, questions Reportées reprises dans la suite) et votes nominatifs des membres (décompte en direct, figés une fois l'issue notée, ne tranchent jamais) — 2026-11-08
+- [x] Section « Questions » du compte-rendu de séance (questions présentées : issue, précision, votes nommés par option, qui et quand) — 2026-11-08
+- [ ] Plus tard (peut-être) : invités sans compte, réactions, passage de main, mobile
 
 ### Serveur MCP (Model Context Protocol)
 - [x] Section de conception close le 2026-09-28 — le serveur existe et sert en prod (doc SPOK : Système › Architecture technique › « Serveur MCP SPOK [apps/mcp] »). Réponses de fait aux 6 questions d'origine :

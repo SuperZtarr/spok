@@ -10,6 +10,8 @@
  * dans Layout.tsx. « Aller à la séance » ouvre l'espace de séance ; « Quitter le direct » oublie la séance active.
  * Écran étroit (< 768px, useIsNarrowScreen) : plein écran, sans déplacement ni redimensionnement ; « Voir l'espace »
  * réduit la fenêtre en barre en bas d'écran, « Retour au direct » la rouvre ; chaque nouvel affichage la ramène au premier plan.
+ * Question affichée (2026-11-08) : QuestionPanel variant="live" sous le contenu — chacun vote, l'animateur note l'issue
+ * en un clic ; décompte relu à chaque événement « question » du flux (useLiveSession). Ses clics n'ouvrent pas la fiche.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,6 +22,7 @@ import { clampGeometry, loadGeometry, saveGeometry, type Geometry } from './live
 import { AgendaPanel } from './AgendaPanel';
 import { PresenterPanel } from './PresenterPanel';
 import { PendingChildren } from './PendingChildren';
+import { QuestionPanel } from '../question/QuestionPanel';
 import { PageHelpButton } from '../../help/PageHelpButton';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 
@@ -179,6 +182,12 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
                 <ul className="mt-3 space-y-1 text-sm list-disc pl-5">
                   {current.children.map((c) => <li key={c.id}>{c.title || 'Sans titre'}</li>)}
                 </ul>
+              )}
+              {/* Question affichée : votes de tous, gros boutons d'issue pour l'animateur (l'API réserve l'issue à l'animateur) */}
+              {current.item.type === 'QUESTION' && (
+                <div data-help-zone="live-window:question" className="mt-3 cursor-default">
+                  <QuestionPanel spaceId={state.session.spaceId} itemId={current.item.id} variant="live" />
+                </div>
               )}
               {state.myRole === 'HOST' && <PendingChildren sessionId={state.session.id} entryId={current.entry.id} live={live} />}
             </>

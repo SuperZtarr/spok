@@ -1,4 +1,6 @@
-/* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage. */
+/* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage.
+   Statuts réservés à un type (status.types, ex. issues d'une question — RESERVED_STATUS_IDS) : badge « Réservé aux
+   questions » (aide sous FieldHelp community-settings.reservedStatus), suppression impossible (l'API les rétablit). */
 import { useState, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -7,7 +9,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { BadgeColorPicker } from './ColorPicker';
-import { BADGE_COLOR_OPTIONS } from '@spok/shared';
+import { BADGE_COLOR_OPTIONS, RESERVED_STATUS_IDS } from '@spok/shared';
+import { FieldHelp } from '../../help/FieldHelp';
 
 interface StatusManagerProps {
   statuses: StatusConfig[];
@@ -205,6 +208,9 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                 </span>
               )}
 
+              {status.types?.includes('QUESTION') && (
+                <span className="px-2 py-1 rounded text-xs border border-sky-300 text-sky-700">Réservé aux questions</span>
+              )}
               <span className={`px-2 py-1 rounded text-xs ${status.color}`}>
                 Aperçu
               </span>
@@ -224,13 +230,14 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                 size="sm"
                 className="text-destructive"
                 onClick={() => handleDelete(status.id)}
-                disabled={status.id === 'undefined'}
+                disabled={status.id === 'undefined' || RESERVED_STATUS_IDS.includes(status.id)}
                 title={status.id === 'undefined' ? 'Le statut "Non défini" ne peut pas être supprimé' : 'Supprimer'}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
 
+            {status.types?.length ? <FieldHelp page="community-settings" field="reservedStatus" className="mt-2 pl-12 text-xs text-muted-foreground" /> : null}
             {/* Color picker (expanded on click) */}
             <div className="mt-3 pl-12">
               <p className="text-sm text-muted-foreground mb-2">Couleur :</p>

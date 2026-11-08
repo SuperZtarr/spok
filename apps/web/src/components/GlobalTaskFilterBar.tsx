@@ -1,4 +1,4 @@
-/* Barre de filtres de la page Tâches globales : types, statuts, priorités, dates, mes tâches. */
+/* Barre de filtres de la page Tâches globales : types, statuts (sans les issues réservées aux questions), priorités, dates, mes tâches. */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Search, X, SlidersHorizontal } from 'lucide-react';
@@ -94,8 +94,9 @@ const typeOptions = [
   { id: 'DIAGRAM', label: TYPE_LABELS['DIAGRAM'] || 'Diagramme', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
 ];
 
+// Statuts sans réservation seulement : les issues d'une question ne concernent pas les tâches
 const statusOptions = DEFAULT_STATUSES
-  .filter(s => s.visible)
+  .filter(s => s.visible && !s.types?.length)
   .sort((a, b) => a.order - b.order)
   .map(s => ({
     id: s.id === 'undefined' ? 'none' : s.id,

@@ -13,6 +13,7 @@ export const ITEM_TYPES = [
   'BUG',
   'DIAGRAM',
   'ARTICLE',
+  'QUESTION',
 ] as const;
 
 export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;

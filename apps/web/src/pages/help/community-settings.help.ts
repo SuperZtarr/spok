@@ -88,6 +88,7 @@ export const help: HelpEntry = {
     spacesOrder:'Glissez un espace sur le haut ou le bas d\'une ligne pour le placer avant ou après (ordre vu par tous les membres), sur son milieu pour en faire un sous-espace, ou sur le bandeau du haut pour le remettre au premier niveau.',
     visibilityRequest: 'Rendre la communauté visible par tous nécessite la validation d\'un administrateur : une demande sera envoyée à l\'enregistrement.',
     context: 'Le contexte adapte automatiquement l\'interface (vues proposées, champs) pour tous les visiteurs de la communauté. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale.',
+    reservedStatus: 'Issue d’une question (Ouverte, Tranchée, Reportée, Sans conclusion) : proposée seulement pour les éléments Question, qui n’utilisent qu’elles. Libellé, couleur, ordre et visibilité se modifient ; elle ne se supprime pas.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',
   },
   tour: elementTourSteps('community-settings', elements),

@@ -398,6 +398,7 @@ export function LoupeView(props: LoupeViewProps) {
       onAbsorbChildren: hasChildItems(item) || index.children.has(id) ? menuCallbacks.onAbsorbChildren : undefined,
       onSplitDescription: hasHeadings(item.description) ? menuCallbacks.onSplitDescription : undefined,
     }, {
+      item,
       canEdit: canEditItem ? canEditItem(item) : canEdit,
       statusOptions,
       currentStatusId: item.status || undefined,

@@ -20,6 +20,7 @@
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
  * la barre d'outils ne connaît pas la logique des séances live.
+ * presentTypes (SpacePage) : filtre Statuts sans les statuts réservés d'un type absent de l'espace (statusesForItems).
  * Création (2026-10-28) : « Nouveau » (NewItemButton) et « Modèle » (InsertTemplateButton), bleus, en tête de
  * toolbar-actions pour TOUTES les vues — les vues n'ont plus leur propre « Nouveau » dans #view-header.
  * Aide : chaque commande est enveloppée d'un HelpHint (textes dans help/spaceToolbar.hints.ts) — jamais de `title`
@@ -46,8 +47,8 @@ import {
   ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
-import type { ItemType, MenuItemConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY } from '@spok/shared';
+import type { ItemType, MenuItemConfig, StatusConfig } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY, statusesForItems } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
@@ -174,6 +175,8 @@ export interface SpaceToolbarProps {
   searchMatchCount?: number;
   // Referentiels
   referentiels?: any;
+  /** Types présents dans l'espace : les statuts réservés (issues d'une question) ne sont proposés au filtre que si leur type est présent */
+  presentTypes?: string[];
   // View mode
   viewMode: ViewMode;
   onSetMode: (mode: ViewMode) => void;
@@ -207,6 +210,7 @@ export function SpaceToolbar({
   filteredItemCount,
   searchMatchCount,
   referentiels,
+  presentTypes,
   viewMode,
   onSetMode,
   spaceViews,
@@ -500,7 +504,7 @@ export function SpaceToolbar({
                               className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${filter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                               <span className="flex-1 text-left">Tous les types</span>
                             </button>
-                            {(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const).map((t) => {
+                            {(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'] as const).map((t) => {
                               const isActive = filter.includes(t);
                               const typeColor = getTypeColor(t, referentiels?.typeLabels);
                               return (
@@ -520,7 +524,7 @@ export function SpaceToolbar({
                         {(() => {
                           const statuses = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
                           const singleStatus = statusFilter.length === 1 ? statuses.find((s: any) => s.id === statusFilter[0]) : null;
-                          const visibleStatuses = statuses.filter((s: any) => s.visible);
+                          const visibleStatuses = statusesForItems(statuses as StatusConfig[], (presentTypes ?? []).map((type) => ({ type }))).filter((s: any) => s.visible);
                           return (
                             <>
                               <HelpHint text={highlightMode ? H.highlightStatus : H.filterStatus}>

@@ -14,6 +14,15 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-08
+- 3 lots poussés en 2 commits : instructions MCP, sens du type DOCUMENT (fix) ; compte-rendu de séance à la clôture et type Question avec votes (feat), regroupés car imbriqués (schéma, liveSession.ts, live-sessions.ts, liveReport.ts, useLiveSession.ts, api.ts, businessRules.ts). Annonces live-session-compte-rendu, live-question, question-type datées du 2026-11-08. Schéma : 3 tables, 1 valeur d'enum, 1 colonne unique facultative (db push au démarrage de l'API). build:packages, typecheck OK, TNR 2461/2461, en-têtes OK. Laissés hors MEP : .claude/skills/spok-start/SKILL.md (travail en cours), ImagesView.tsx (fins de ligne seulement). Base locale à mettre à jour par la session Start avant tout essai
+
+### Type Question et votes — 2026-11-08
+- Lot terminé, poussé par la MEP du 2026-11-08. Base locale à pousser par la session Start avant essai
+
+### Séances : compte-rendu — 2026-11-08
+- Lot terminé, poussé par la MEP du 2026-11-08. La session type-question ajoutera la section « Questions » dans `apps/api/src/utils/liveReport.ts` (buildReportHtml / loadReportData)
+
 ### MEP — 2026-11-07 (2)
 - 3 lots poussés : Loupe, allègement sur un grand espace (fix) ; mode dev dans les modales et la fiche (fix) ; aide restructurée, élément unique, nouveautés, tutoriel d'accueil, suivi par compte (feat). shellZones.ts et item-modal.help.ts entiers dans le lot Aide. Avant vérification : HELP_STATE_SINCE mis au 2026-11-07, annonce search-mots-presence datée. Schéma : 2 colonnes User (db push au démarrage de l'API). db:generate, build:packages, typecheck OK, TNR 2410/2410, en-têtes OK. db:generate local en EPERM (moteur verrouillé par l'API locale) : client TS déjà à jour, la session Start doit redémarrer l'API locale (db push + client)
 

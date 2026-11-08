@@ -69,6 +69,8 @@ model User {
   liveSessionInvitesBy        LiveSessionInvite[]     @relation("LiveSessionInviter")
   personalAccessTokens        PersonalAccessToken[]
   articleBlocksAdded          ArticleBlock[]     @relation("ArticleBlockAddedBy")
+  questionsDecided            Question[]         @relation("QuestionDecidedBy")
+  questionVotes               QuestionVote[]
 
   @@map("users")
 }
@@ -366,10 +368,13 @@ model Item {
   views         ItemView[]
   dayPlanEntries DayPlanEntry[]
   liveSessionEntries LiveSessionEntry[]
+  liveSessionReport  LiveSession?   @relation("LiveSessionReport")
   processNodes  ProcessNode[]
   processLanes  ProcessLane[]
   articleBlocks ArticleBlock[] @relation("ArticleBlocks")
   referencedIn  ArticleBlock[] @relation("ArticleReferences")
+  question        Question?
+  questionOptions QuestionOption[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -377,6 +382,57 @@ model Item {
   @@index([parentId])
   @@index([sourceItemId])
   @@map("items")
+}
+
+// Question (type QUESTION, 2026-11-08) : réglage et issue d'un élément Question (1-1, créé à la demande).
+// L'issue elle-même est le statut de l'item (statuts réservés question_open / _decided / _postponed / _no_conclusion) ;
+// cette ligne garde le détail d'une question tranchée : option retenue (chosenOptionId, sans clé étrangère — remis à
+// null si l'option est retirée) OU réponse écrite (answerText), une ligne de précision (note), qui et quand.
+// multiple : chaque votant peut cocher plusieurs options. Lu par le compte-rendu de séance (section « Questions »).
+model Question {
+  itemId         String    @id
+  item           Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  multiple       Boolean   @default(false)
+  chosenOptionId String?
+  answerText     String?
+  note           String?
+  decidedById    String?
+  decidedBy      User?     @relation("QuestionDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@map("questions")
+}
+
+// Option de réponse préparée d'une question : identifiant stable, pour que les votes restent attachés quand
+// l'option est corrigée ou réordonnée. Retirer une option retire ses votes.
+model QuestionOption {
+  id        String         @id @default(cuid())
+  itemId    String
+  item      Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  label     String
+  position  Int
+  createdAt DateTime       @default(now())
+  votes     QuestionVote[]
+
+  @@index([itemId, position])
+  @@map("question_options")
+}
+
+// Vote d'un utilisateur pour une option (une ligne par option cochée). itemId dupliqué pour lire tous les votes
+// d'une question d'un coup. Modifiable tant que la question est Ouverte, figé ensuite (contrôlé par l'API).
+model QuestionVote {
+  id        String         @id @default(cuid())
+  itemId    String
+  optionId  String
+  option    QuestionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([optionId, userId])
+  @@index([itemId])
+  @@map("question_votes")
 }
 
 // Bloc d'un article (type ARTICLE, 2026-10-23) : référence ordonnée vers un élément existant, qui reste où il est
@@ -458,6 +514,7 @@ enum ItemType {
   BUG
   DIAGRAM
   ARTICLE
+  QUESTION
 }
 
 // Relations entre éléments
@@ -754,8 +811,11 @@ model LiveSession {
   liveAt         DateTime?
   endedAt        DateTime?
   previousSessionId String? @unique
+  // Compte-rendu : Note générée à la clôture (apps/api/src/utils/liveReport.ts). null = pas encore généré ou Note supprimée
+  reportItemId String? @unique
 
   space       Space              @relation("LiveSessionSpace", fields: [spaceId], references: [id], onDelete: Cascade)
+  reportItem  Item?              @relation("LiveSessionReport", fields: [reportItemId], references: [id], onDelete: SetNull)
   parentSpace Space              @relation("LiveSessionParent", fields: [parentSpaceId], references: [id], onDelete: Cascade)
   host        User               @relation("LiveSessionHost", fields: [hostId], references: [id], onDelete: Cascade)
   roles       LiveSessionRole[]

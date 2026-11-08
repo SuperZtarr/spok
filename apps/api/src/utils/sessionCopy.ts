@@ -7,8 +7,12 @@
  * est réaffiché tel quel. Une nouvelle copie se range sous la copie de son parent d'origine s'il a déjà été
  * présenté. L'appelant a déjà vérifié que l'utilisateur a accès à l'espace source.
  * cloneSessionCopies : recopie les copies verrouillées d'une séance vers sa « suite ».
+ * Question (2026-11-08) : la copie reprend options, réglage et issue (pas les votes : ceux de la séance partent de
+ * zéro) ; une question Reportée qui est présentée de nouveau repart « Ouverte ». La suite recopie aussi les votes.
  */
+import { QUESTION_STATUS } from '@spok/shared';
 import { isR2Configured, isR2Url, copyR2Object } from './r2.js';
+import { copyQuestionData } from './question.js';
 
 export class SessionCopyError extends Error {
   constructor(public code: 'NOT_FOUND', message: string) { super(message); }
@@ -42,15 +46,17 @@ async function sessionTagIds(prisma: any, sessionSpaceId: string, tags: Array<{ 
 }
 
 async function createLockedCopy(prisma: any, src: any, params: CopyParams, parentId: string | null, lockedAt: Date) {
+  const reopened = src.type === 'QUESTION' && src.status === QUESTION_STATUS.POSTPONED;
   const created = await prisma.item.create({
     data: {
       type: src.type, title: src.title, description: src.description, content: src.content ?? undefined,
-      url: src.url, status: src.status, priority: src.priority, position: src.position,
+      url: src.url, status: reopened ? QUESTION_STATUS.OPEN : src.status, priority: src.priority, position: src.position,
       dueDate: src.dueDate, startDate: src.startDate, endDate: src.endDate,
       spaceId: params.sessionSpaceId, createdById: params.userId, parentId,
       lockedAt, sourceItemId: src.id, sourceSpaceId: src.spaceId ?? params.sourceSpaceId,
     },
   });
+  if (src.type === 'QUESTION') await copyQuestionData(prisma, src.id, created.id, { withVotes: false, keepOutcome: !reopened });
   const images = await copyImages(src, created.id);
   const tagIds = await sessionTagIds(prisma, params.sessionSpaceId, src.tags ?? []);
   if (tagIds.length > 0) await prisma.itemTag.createMany({ data: tagIds.map((tagId) => ({ itemId: created.id, tagId })) });
@@ -146,6 +152,7 @@ export async function cloneSessionCopies(prisma: any, params: CloneParams): Prom
         },
       });
       oldToNew.set(c.id, created.id);
+      if (c.type === 'QUESTION') await copyQuestionData(prisma, c.id, created.id, { withVotes: true, keepOutcome: true });
       const images = await copyImages(c, created.id);
       const tagIds = await sessionTagIds(prisma, params.toSpaceId, c.tags ?? []);
       if (tagIds.length > 0) await prisma.itemTag.createMany({ data: tagIds.map((tagId) => ({ itemId: created.id, tagId })) });

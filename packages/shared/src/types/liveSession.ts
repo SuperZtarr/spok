@@ -1,7 +1,8 @@
 /*
  * Types des séances de présentation en direct (étape 1 « Socle » + étape 2 « Préparation » : statut PREPARED,
  * préparation LiveAgendaItem, révélation progressive des sous-items — current.children = sous-items révélés ;
- * « suite » d'une séance terminée : previousSession / nextSession).
+ * « suite » d'une séance terminée : previousSession / nextSession ; compte-rendu : reportItemId, événements
+ * ended (porte le compte-rendu créé à la clôture) et report (compte-rendu créé ou régénéré après coup)).
  * LiveEvent = messages SSE de GET /live-sessions/:id/stream — le client les applique sur LiveSessionState.
  * Ne pas y mettre de données d'espaces sources : un participant ne reçoit que des copies de l'espace de séance.
  */
@@ -36,6 +37,8 @@ export interface LiveSession {
   /** Séance précédente (cette séance en est la suite) et séance suivante, si elles existent. */
   previousSession: LiveSessionLink | null;
   nextSession: LiveSessionLink | null;
+  /** Compte-rendu (Note de l'espace de séance générée à la clôture) ; null tant qu'il n'existe pas ou s'il a été supprimé. */
+  reportItemId: string | null;
 }
 
 export interface LiveSessionLink { id: string; spaceId: string; spaceName: string }
@@ -73,10 +76,13 @@ export type LiveEvent =
   | { type: 'join'; entry: LiveSessionEntry }
   | { type: 'presence'; presence: LiveUser[] }
   | { type: 'roles'; roles: LiveSessionState['roles'] }
-  | { type: 'ended'; endedAt: string }
+  | { type: 'ended'; endedAt: string; reportItemId?: string | null }
+  | { type: 'report'; reportItemId: string }
   | { type: 'started'; liveAt: string }
   | { type: 'agenda'; agenda: LiveAgendaItem[] }
-  | { type: 'reveal'; parentItemId: string; child: Item };
+  | { type: 'reveal'; parentItemId: string; child: Item }
+  /** Question de la séance modifiée (votes, issue, options) : le client relit GET …/items/:itemId/question */
+  | { type: 'question'; itemId: string };
 
 /** Sous-item de l'élément courant pas encore révélé (vu seulement par l'animateur/les présentateurs). */
 export interface LivePendingChild { sourceItemId: string; title: string }

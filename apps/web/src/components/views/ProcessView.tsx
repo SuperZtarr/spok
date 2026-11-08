@@ -97,7 +97,7 @@ function ProcessCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   useTrackpadPinchZoom(canvasRef, PROCESS_MIN_ZOOM, PROCESS_MAX_ZOOM);
   const statuses = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
-  const statusOptions = useMemo(() => statuses.map((s) => ({ id: s.id, label: s.label })), [statuses]);
+  const statusOptions = useMemo(() => statuses.map((s) => ({ id: s.id, label: s.label, types: s.types })), [statuses]);
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   // Couloirs dont l'item est bien dans l'espace, dans l'ordre d'empilement

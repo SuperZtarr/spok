@@ -42,6 +42,9 @@ import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
+import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
+import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
+import { statusAllowedForType } from '@spok/shared';
 
 // URL d'item : http(s) seulement. z.string().url() accepte javascript:â€¦ (lien piÃ©gÃ© exÃ©cutÃ© au clic cÃ´tÃ© web).
 const HTTP_URL = /^https?:\/\//i;
@@ -51,7 +54,7 @@ const itemUrlField = z.string().url().refine((u) => HTTP_URL.test(u), { message:
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
 
 const createItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION']),
   title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
@@ -68,7 +71,7 @@ const createItemSchema = z.object({
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE']).optional(),
+  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION']).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
@@ -87,7 +90,7 @@ const updateItemSchema = z.object({
   propagateToChildren: z.boolean().optional(),
 });
 
-const ITEM_TYPE_VALUES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'];
+const ITEM_TYPE_VALUES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'];
 
 const querySchema = z.object({
   // Une ou plusieurs valeurs séparées par des virgules (filtre à choix multiple de la barre d'espace)
@@ -338,10 +341,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemMergeRoutes);
     await authInstance.register(itemReactionRoutes);
     await authInstance.register(itemArticleWriteRoutes);
+    await authInstance.register(itemQuestionWriteRoutes);
   });
 
   // Lecture d'un article (authentification facultative : un article public se lit en anonyme)
   await fastify.register(itemArticleReadRoutes);
+  // Question : décompte lisible en anonyme (sans vote)
+  await fastify.register(itemQuestionReadRoutes);
 
   // List items
   fastify.get<{ Params: { spaceId: string }; Querystring: z.infer<typeof querySchema> }>(
@@ -479,6 +485,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = createItemSchema.parse(request.body);
       const { tagIds, ...itemData } = body;
+      // Statut réservé à un autre type → retiré ; une question démarre « Ouverte » (utils/question.ts)
+      itemData.status = statusForType(itemData.type, itemData.status);
 
       if (itemData.parentId) {
         const violation = await parentViolation(fastify.prisma, itemData.parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
@@ -689,6 +697,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const body = updateItemSchema.parse(request.body);
       const { tagIds, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
+      // Statut cohérent avec le type (changement de type ou de statut) : statut réservé à un autre type retiré,
+      // question remise à « Ouverte » si son statut n'est pas une issue (utils/question.ts)
+      const finalType = updateData.type ?? existingItem.type;
+      if (updateData.type !== undefined || updateData.status !== undefined) {
+        const current = updateData.status !== undefined ? updateData.status : existingItem.status;
+        const normalized = statusForType(finalType, current);
+        if (normalized !== current) updateData.status = normalized;
+      }
 
       if (updateData.parentId && updateData.parentId !== existingItem.parentId) {
         const violation = await parentViolation(fastify.prisma, updateData.parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
@@ -817,13 +833,18 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      // Propagate status to all descendants recursively
+      // Question : issue détaillée cohérente avec le nouveau statut (qui/quand, option retenue effacée hors « Tranchée »)
+      if (finalType === 'QUESTION' && item.status !== existingItem.status) {
+        await syncQuestionAfterStatus(fastify.prisma, item.id, item.status, request.user.userId);
+      }
+
+      // Propagate status to all descendants recursively (seulement ceux dont le type admet ce statut)
       if (propagateToChildren && updateData.status !== undefined) {
-        type Descendant = { id: string; startDate: Date | null; endDate: Date | null };
+        type Descendant = { id: string; type: string; startDate: Date | null; endDate: Date | null };
         const collectDescendants = async (parentId: string): Promise<Descendant[]> => {
           const children: Descendant[] = await fastify.prisma.item.findMany({
             where: { parentId, spaceId: request.params.spaceId, lockedAt: null },
-            select: { id: true, startDate: true, endDate: true },
+            select: { id: true, type: true, startDate: true, endDate: true },
           });
           const all = [...children];
           for (const child of children) {
@@ -831,7 +852,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           }
           return all;
         };
-        const descendants = await collectDescendants(request.params.id);
+        const descendants = (await collectDescendants(request.params.id))
+          .filter((d) => statusAllowedForType(updateData.status, d.type));
         if (descendants.length > 0) {
           await fastify.prisma.item.updateMany({
             where: { id: { in: descendants.map(d => d.id) } },

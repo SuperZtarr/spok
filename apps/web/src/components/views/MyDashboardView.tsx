@@ -267,7 +267,7 @@ export function MyDashboardView() {
   );
 
   const filters = useGlobalTaskFilters({
-    defaultTypes: ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'],
+    defaultTypes: ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'],
     defaultSortBy: 'priority',
     defaultSortDir: 'desc',
     pageSize: 2000,

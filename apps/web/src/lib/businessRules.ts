@@ -19,6 +19,38 @@ export interface PageBusinessRule {
 
 export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   {
+    id: 'status-reserved-for-type',
+    category: 'status',
+    appliesToValues: ['question_open', 'question_decided', 'question_postponed', 'question_no_conclusion'],
+    trigger: 'Choix ou changement du statut, ou du type, d’un élément',
+    effect: "Les issues d'une question (Ouverte, Tranchée, Reportée, Sans conclusion) sont réservées au type Question, qui n'utilise qu'elles. Elles ne sont proposées que pour une question ; les colonnes du Kanban et le filtre Statuts ne les montrent que si l'espace contient une question. Un statut non permis après un changement de type est retiré (une question repart « Ouverte »). Elles ne se suppriment pas des référentiels (décision Thomas 2026-11-08)",
+    location: 'packages/shared/src/constants/defaultReferentiels.ts (statusesForType, statusAllowedForType, withDefaultStatuses), apps/api/src/utils/question.ts (statusForType), apps/api/src/routes/items.ts',
+  },
+  {
+    id: 'question-votes-never-decide',
+    category: 'type',
+    appliesToValues: ['QUESTION'],
+    trigger: 'Vote sur une question',
+    effect: "Chaque membre pouvant contribuer (OWNER/MEMBER) choisit une option (plusieurs en choix multiple), modifiable tant que la question est Ouverte, figé dès qu'une issue est notée (409). Décompte nominatif ; l'option en tête est seulement mise en avant : les votes ne changent jamais l'issue. Un visiteur voit le décompte sans voter ; une réponse hors options se donne en commentaire",
+    location: 'apps/api/src/routes/item-question.ts (PUT …/question/vote), apps/web/src/components/question/QuestionPanel.tsx',
+  },
+  {
+    id: 'question-outcome',
+    category: 'type',
+    appliesToValues: ['QUESTION'],
+    trigger: 'Issue notée sur une question',
+    effect: "« Tranchée » exige une option retenue ou une autre réponse écrite ; une ligne de précision est possible pour toute issue ; qui et quand sont enregistrés ; « Rouvrir » efface l'issue. Hors séance : qui peut modifier la question. Copie de séance : l'animateur seul, et l'issue est reportée sur la question d'origine s'il peut la modifier. Une question Reportée en séance est reprise dans la préparation de la suite, et rouverte quand on la présente de nouveau",
+    location: 'apps/api/src/routes/item-question.ts (PUT …/question/outcome), apps/api/src/utils/question.ts, apps/api/src/utils/sessionCopy.ts, apps/api/src/routes/live-sessions.ts (suite)',
+  },
+  {
+    id: 'question-options-stable-id',
+    category: 'type',
+    appliesToValues: ['QUESTION'],
+    trigger: 'Modification des options d’une question',
+    effect: "Une option corrigée ou déplacée garde son identifiant, donc ses votes ; une option retirée perd ses votes ; passer en choix unique ne garde que le dernier vote de chacun. Les options d'une copie de séance ne se modifient pas. Une question dupliquée reprend ses options, repart Ouverte, sans votes",
+    location: 'apps/api/src/routes/item-question.ts (PUT …/question/options), apps/api/src/routes/item-bulk.ts',
+  },
+  {
     id: 'default-type-undefined',
     category: 'type',
     appliesToValues: ['UNDEFINED'],
@@ -438,6 +470,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "L'animateur invite des membres de la communauté",
     effect: "Seuls des membres de la communauté SANS accès à l'espace parent peuvent être invités (les autres rejoignent déjà). L'invité devient membre de l'espace de séance seulement : il voit la séance (éléments présentés, fil, commentaires, réorganisation) et la fenêtre en direct, jamais l'espace parent ; il est participant (ni préparation complète, ni présentation). Notification à l'invitation. Invitation à la création ou depuis le bandeau tant que la séance n'est pas terminée ; retrait possible à tout moment (retire l'accès). Les invités sont repris dans la suite s'ils restent invitables",
     location: 'apps/api/src/utils/liveInvites.ts, apps/api/src/routes/live-sessions.ts, apps/web/src/components/live/InviteesPanel.tsx',
+  },
+  {
+    id: 'live-session-report',
+    page: 'Espace de séance (bandeau : Compte-rendu, Régénérer, Créer le compte-rendu)',
+    trigger: "Fin d'une séance, ou action de l'animateur sur une séance terminée",
+    effect: "À la fin, une Note « Compte-rendu — <nom de la séance> » est créée dans l'espace de séance (un échec n'empêche pas la fin ; l'animateur peut alors la créer). Instantané figé : présents (animateur, présentateurs, personnes ayant rejoint), déroulé dans l'ordre des premiers affichages (réaffichages, sous-éléments révélés, relations des copies, commentaires écrits pendant la séance), nombre d'éléments de la préparation non présentés (jamais leurs titres : la Note est lue par les participants, qui ne voient que le déjà présenté) et suite éventuelle, éléments créés pendant la séance ; une relation vers un élément d'un autre espace s'écrit « un élément d'un autre espace » ; heures de Paris. Les décisions s'écrivent après coup sous le titre « Décisions ». « Régénérer » (animateur) réécrit tout ce qui précède ce titre et garde la section ; la Note se modifie avec les droits normaux de l'espace",
+    location: 'apps/api/src/utils/liveReport.ts, apps/api/src/routes/live-sessions.ts (/end, /:id/report), apps/web/src/components/live/LiveSessionBar.tsx',
   },
   {
     id: 'bulk-upload-images-documents',

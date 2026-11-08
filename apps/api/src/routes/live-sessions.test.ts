@@ -1,5 +1,6 @@
 /* TNR des routes /live-sessions : création (PREPARED, OWNER communauté), accès (membres du parent), démarrage,
- * préparation (ajout/retrait/ordre), affichage (direct ou depuis la préparation), révélation des sous-items, fin. */
+ * préparation (ajout/retrait/ordre), affichage (direct ou depuis la préparation), révélation des sous-items, fin,
+ * compte-rendu (/end le génère sans bloquer la clôture, /:id/report animateur + séance terminée ; liveReport mocké). */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -21,6 +22,9 @@ const invites = vi.hoisted(() => ({
   listInvitees: vi.fn(async () => []),
 }))
 vi.mock('../utils/liveInvites.js', () => invites)
+
+const report = vi.hoisted(() => ({ generateLiveReport: vi.fn(async () => 'note-1') }))
+vi.mock('../utils/liveReport.js', () => report)
 
 import { liveSessionsRoutes } from './live-sessions.js'
 
@@ -193,6 +197,36 @@ describe('/live-sessions', () => {
     prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other' })
     const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/end', headers: auth() })
     expect(res.statusCode).toBe(403)
+  })
+
+  it('end : génère le compte-rendu et renvoie son id', async () => {
+    prisma.liveSession.findUnique.mockResolvedValue(session)
+    report.generateLiveReport.mockResolvedValueOnce('note-1')
+    const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/end', headers: auth() })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.liveSession.update.mock.calls[0][0].data.status).toBe('ENDED')
+    expect(report.generateLiveReport).toHaveBeenCalledWith(prisma, 'ls-1', USER)
+    expect(res.json().reportItemId).toBe('note-1')
+  })
+
+  it('end : un échec du compte-rendu n\'empêche pas la clôture', async () => {
+    prisma.liveSession.findUnique.mockResolvedValue(session)
+    report.generateLiveReport.mockRejectedValueOnce(new Error('boom'))
+    const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/end', headers: auth() })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().reportItemId).toBeNull()
+  })
+
+  it('report : animateur seul, séance terminée seulement', async () => {
+    prisma.liveSession.findUnique.mockResolvedValue({ ...session, hostId: 'other', status: 'ENDED' })
+    expect((await app.inject({ method: 'POST', url: '/live-sessions/ls-1/report', headers: auth() })).statusCode).toBe(403)
+    prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'LIVE' })
+    expect((await app.inject({ method: 'POST', url: '/live-sessions/ls-1/report', headers: auth() })).statusCode).toBe(409)
+    prisma.liveSession.findUnique.mockResolvedValue({ ...session, status: 'ENDED' })
+    report.generateLiveReport.mockResolvedValueOnce('note-2')
+    const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/report', headers: auth() })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ reportItemId: 'note-2' })
   })
 
   it('presenters : refuse un utilisateur non membre du parent', async () => {
@@ -562,6 +596,20 @@ describe('/live-sessions', () => {
       expect(agenda).toEqual([{ sessionId: 'ls-2', presenterId: 'pres-1', sourceItemId: 'i2', sourceSpaceId: 'src', title: 'Reste', position: 0 }])
       expect(cloneSessionCopies).toHaveBeenCalledWith(expect.anything(), { fromSpaceId: 'sess-space', toSpaceId: 'sp-2' })
       expect(prisma.spaceMembership.create).toHaveBeenCalledWith({ data: { userId: 'pres-1', spaceId: 'sp-2', role: 'MEMBER' } })
+    })
+
+    it('suite : questions Reportées reprises dans la préparation (lien vers l’origine, sans doublon)', async () => {
+      prisma.item.findMany.mockImplementation(async ({ where }: any) => (where?.status === 'question_postponed'
+        ? [{ id: 'c1', sourceItemId: 'i1' }, { id: 'c2', sourceItemId: 'i2' }]
+        : []))
+      prisma.item.findUnique.mockImplementation(async ({ where }: any) => ({ id: where.id, spaceId: 'src', title: `Q ${where.id}` }))
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: { name: '2026-10-10' } })
+      expect(res.statusCode).toBe(201)
+      // i2 est déjà dans la préparation non présentée : seule i1 est ajoutée, avec son présentateur d'origine
+      expect(prisma.liveSessionAgendaItem.create).toHaveBeenCalledTimes(1)
+      expect(prisma.liveSessionAgendaItem.create.mock.calls[0][0].data).toEqual({
+        sessionId: 'ls-2', presenterId: USER, sourceItemId: 'i1', sourceSpaceId: 'src', title: 'Q i1', position: 1,
+      })
     })
 
     it('suite : invités repris s\'ils restent invitables', async () => {

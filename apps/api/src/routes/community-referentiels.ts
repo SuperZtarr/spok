@@ -1,11 +1,13 @@
 /*
  * Référentiels au niveau communauté (statuts, labels de types) : lecture, PUT (OWNER ou
  * admin en mode admin), reset (idem). Les espaces résolvent leurs référentiels ici (cf. routes/referentiels.ts).
- * Lecture : types absents d'un référentiel personnalisé complétés par withDefaultTypeLabels (utils/referentiels.ts).
+ * Lecture : types absents d'un référentiel personnalisé complétés par withDefaultTypeLabels (utils/referentiels.ts),
+ * qui rajoute aussi les statuts réservés (issues d'une question). Enregistrement : les statuts réservés par défaut
+ * ne peuvent être ni supprimés ni dé-réservés (withDefaultStatuses), seuls libellé, couleur, ordre et visibilité changent.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { DEFAULT_REFERENTIELS, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, withDefaultStatuses, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
 import { withDefaultTypeLabels } from '../utils/referentiels.js';
 
 const statusConfigSchema = z.object({
@@ -15,6 +17,7 @@ const statusConfigSchema = z.object({
   borderColor: z.string().min(1),
   order: z.number().int().min(0),
   visible: z.boolean(),
+  types: z.array(z.string()).optional(),
 });
 
 const typeLabelConfigSchema = z.object({
@@ -91,7 +94,7 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
     const current = parseReferentiels(community?.referentiels) || DEFAULT_REFERENTIELS;
 
     const updated: SpaceReferentiels = {
-      statuses: (body.statuses as StatusConfig[]) || current.statuses,
+      statuses: withDefaultStatuses((body.statuses as StatusConfig[]) || current.statuses),
       typeLabels: (body.typeLabels as Record<string, TypeLabelConfig>) || current.typeLabels,
     };
 

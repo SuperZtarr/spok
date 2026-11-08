@@ -1,10 +1,11 @@
 /* Types item : Item, ItemType, relations, inputs de création/déplacement, accusé de lecture à l'assignation,
- * champs de copie de séance live (lockedAt/sourceItemId/sourceSpaceId). */
+ * champs de copie de séance live (lockedAt/sourceItemId/sourceSpaceId).
+ * QUESTION (2026-11-08) : options, issue et votes dans types/question.ts. */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ReactionSummary } from './reaction.js';
 import type { HorizonBucket } from '../utils/horizon.js';
 
-export type ItemType = 'UNDEFINED' | 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM' | 'ARTICLE';
+export type ItemType = 'UNDEFINED' | 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM' | 'ARTICLE' | 'QUESTION';
 
 export interface Item {
   id: string;

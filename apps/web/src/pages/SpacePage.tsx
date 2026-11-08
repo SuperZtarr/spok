@@ -368,6 +368,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // All items for lookups (allItemsData preferred, fallback to itemsData)
   const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
+  // Types présents : le filtre Statuts n'offre les issues d'une question que si l'espace en contient (SpaceToolbar)
+  const presentTypes = useMemo(() => [...new Set(allItems.map((i: Item) => i.type))], [allItems]);
 
   // --- Deferred items (statut planifié + startDate > 30j) ---
   // --- Search ---
@@ -673,6 +675,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
           filteredItemCount={itemsData?.total ?? itemsData?.data?.length ?? (space?.itemCount || 0)}
           searchMatchCount={searchMatchIds?.size}
           referentiels={referentiels}
+          presentTypes={presentTypes}
           viewMode={viewMode}
           onSetMode={setMode}
           spaceViews={spaceViews}

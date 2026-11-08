@@ -3,6 +3,7 @@
  * édition/reset réservés au OWNER de la communauté, comptage d'usage d'un statut.
  * Registration identique à la prod : wrapper optionalAuthenticate posé par communities.ts.
  */
+import { withDefaultStatuses } from '@spok/shared'
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -130,11 +131,14 @@ describe('Community referentiels routes', () => {
       expect(res.statusCode).toBe(200)
       const body = res.json()
       expect(body.isDefault).toBe(false)
-      expect(body.referentiels.statuses).toEqual(newStatuses)
+      // Statuts envoyés + issues d'une question (réservées, non supprimables) rajoutées
+      const expected = withDefaultStatuses(newStatuses)
+      expect(body.referentiels.statuses.slice(0, 1)).toEqual(newStatuses)
+      expect(body.referentiels.statuses.filter((s: any) => s.types?.includes('QUESTION'))).toHaveLength(4)
       expect(body.referentiels.typeLabels).toEqual(customReferentiels.typeLabels) // conservé
       expect(prisma.community.update).toHaveBeenCalledWith(expect.objectContaining({
         where: { id: COM_ID },
-        data: expect.objectContaining({ referentiels: expect.objectContaining({ statuses: newStatuses }) }),
+        data: expect.objectContaining({ referentiels: expect.objectContaining({ statuses: expected }) }),
       }))
     })
 

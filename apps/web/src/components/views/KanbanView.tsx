@@ -2,6 +2,8 @@
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
  * Aide : repère unique data-help-zone sur la colonne et la carte, partagé par le mode Aide, le tutoriel et les
  * nouveautés (pilote « élément d'aide », kanban.help.ts). Infobulle du nom de colonne : `hints` de la fiche.
+ * Statuts réservés (2026-11-08) : les colonnes des issues d'une question n'apparaissent que si une question est
+ * affichée ; déposer une carte dans la colonne d'un statut non permis pour son type est ignoré.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -24,7 +26,7 @@ import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, statusAllowedForType, statusesForItems } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
@@ -391,11 +393,12 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     })
   );
 
-  // Use referentiels or defaults
+  // Use referentiels or defaults — colonnes des statuts réservés (issues d'une question) seulement si un élément
+  // de ce type est affiché (statusesForItems)
   const statuses = useMemo(() => {
     const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-    return statusList.filter((s) => s.visible).sort((a, b) => a.order - b.order);
-  }, [referentiels]);
+    return statusesForItems(statusList, items).filter((s) => s.visible).sort((a, b) => a.order - b.order);
+  }, [referentiels, items]);
 
 
   // Build space sections: main space + portal spaces
@@ -471,6 +474,8 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
 
     const newStatus = targetStatusId === 'undefined' ? '' : targetStatusId;
     const currentStatus = item.status || '';
+    // Colonne d'un statut non permis pour ce type (issue d'une question pour une tâche, ou l'inverse) : ignoré
+    if (!statusAllowedForType(newStatus, item.type)) return;
 
     // Cross-space move
     if (targetSpaceId && item.spaceId !== targetSpaceId && onMoveItemToSpace) {

@@ -8,6 +8,8 @@
  *   uniquement (400 sinon, rien n'est créé), sous-éléments directs juste après leur parent.
  * - Suite (/:id/suite, animateur, séance ENDED, une seule suite directe) : nouvelle séance PREPARED liée
  *   (previousSessionId) qui reprend les présentateurs, la préparation NON présentée et recopie les éléments présentés.
+ *   Les questions Reportées de la séance sont ajoutées à la préparation (lien vers la question d'origine, 2026-11-08) ;
+ *   une question de la séance (votes, issue) diffuse { type: 'question' } via routes/item-question.ts.
  *   Le nom (« Séance » + date locale) est envoyé par le client ; à défaut, « Séance » + date UTC du serveur (defaultSessionName).
  * - Invités (champ invitees à la création, /invite-candidates, /:id/invitees GET/POST/DELETE) : membres de la
  *   communauté SANS accès à l'espace parent, membres de l'espace de séance seulement (utils/liveInvites) ;
@@ -28,6 +30,8 @@
  * - Flux SSE /:id/stream : état poussé via liveHub (une instance API). Le client refetch l'état complet
  *   (by-space) à chaque (re)connexion — le flux ne rejoue pas l'historique.
  * - /by-space/:spaceId : 200 null si l'espace n'est pas une séance (appelé sur chaque espace), 403 si non membre.
+ * - Compte-rendu (utils/liveReport) : Note générée à la clôture (/end — un échec n'empêche pas la clôture) ;
+ *   /:id/report (animateur, séance ENDED) le crée ou le régénère en gardant la section « Décisions ».
  * Ne jamais envoyer de données d'espace source dans un événement : uniquement des copies. Exception maîtrisée :
  * la préparation (titres/espaces sources) n'est envoyée en entier qu'à l'animateur et aux présentateurs ;
  * les participants ne reçoivent que les lignes déjà présentées (visibleAgenda, broadcastEach), sans vignette.
@@ -36,11 +40,13 @@
  */
 import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { QUESTION_STATUS } from '@spok/shared';
 import type { LiveAgendaItem, LiveEvent, LiveSessionEntry, LiveSessionOngoing, LiveSessionState, LiveUser } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
 import { liveHub } from '../utils/liveHub.js';
 import { cloneSessionCopies, copyItemToSession, revealChildInSession, SessionCopyError } from '../utils/sessionCopy.js';
 import { addInvitees, assertInvitable, listInviteCandidates, listInvitees, removeInvitee } from '../utils/liveInvites.js';
+import { generateLiveReport } from '../utils/liveReport.js';
 
 const createSchema = z.object({
   parentSpaceId: z.string(),
@@ -193,6 +199,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         startedAt: new Date(s.startedAt).toISOString(), liveAt: s.liveAt ? new Date(s.liveAt).toISOString() : null,
         endedAt: s.endedAt ? new Date(s.endedAt).toISOString() : null,
         previousSession: link(s.previousSession), nextSession: link(s.nextSession),
+        reportItemId: s.reportItemId ?? null,
       },
       spaceName: s.space?.name ?? '',
       roles,
@@ -712,6 +719,28 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
+    // Questions Reportées (copies de cette séance) : reprises dans la préparation, liées à la question d'origine
+    // (présentateur de la ligne d'origine, sinon l'animateur), après les éléments non présentés, sans doublon
+    const postponed = (await prisma.item.findMany({
+      where: { spaceId: prev.spaceId, type: 'QUESTION', status: QUESTION_STATUS.POSTPONED, lockedAt: { not: null }, sourceItemId: { not: null } },
+      orderBy: { lockedAt: 'asc' },
+    })) ?? [];
+    const queued = new Set(remaining.map((a: any) => a.sourceItemId));
+    let nextPosition = remaining.length;
+    for (const q of postponed) {
+      if (queued.has(q.sourceItemId)) continue;
+      const source = await prisma.item.findUnique({ where: { id: q.sourceItemId }, select: { id: true, spaceId: true, title: true } });
+      if (!source) continue;
+      queued.add(source.id);
+      const line = (agenda ?? []).find((a: any) => a.sourceItemId === source.id);
+      await prisma.liveSessionAgendaItem.create({
+        data: {
+          sessionId: next.id, presenterId: line?.presenterId ?? userId, sourceItemId: source.id, sourceSpaceId: source.spaceId,
+          title: source.title, position: nextPosition++,
+        },
+      });
+    }
+
     // Éléments déjà présentés : recopiés dans le nouvel espace
     await cloneSessionCopies(prisma, { fromSpaceId: prev.spaceId, toSpaceId: space.id });
 
@@ -725,8 +754,23 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (s.hostId !== request.user.userId) return reply.forbidden('Réservé à l\'animateur');
     const endedAt = new Date();
     await prisma.liveSession.update({ where: { id: s.id }, data: { status: 'ENDED', endedAt } });
-    liveHub.broadcast(s.id, { type: 'ended', endedAt: endedAt.toISOString() });
-    return { endedAt: endedAt.toISOString() };
+    // Compte-rendu : un échec ne doit jamais empêcher la clôture (l'animateur peut le générer ensuite par /report)
+    let reportItemId: string | null = null;
+    try { reportItemId = await generateLiveReport(prisma, s.id, request.user.userId); }
+    catch (err) { request.log.error({ err, sessionId: s.id }, 'Compte-rendu de séance non généré'); }
+    liveHub.broadcast(s.id, { type: 'ended', endedAt: endedAt.toISOString(), reportItemId });
+    return { endedAt: endedAt.toISOString(), reportItemId };
+  });
+
+  // Compte-rendu : crée ou régénère la Note (animateur, séance terminée) — décisions conservées (utils/liveReport)
+  fastify.post<{ Params: { id: string } }>('/:id/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
+    if (!s) return reply.notFound('Séance introuvable');
+    if (s.hostId !== request.user.userId) return reply.forbidden('Réservé à l\'animateur');
+    if (s.status !== 'ENDED') return reply.conflict('Le compte-rendu se génère une fois la séance terminée');
+    const reportItemId = await generateLiveReport(prisma, s.id, request.user.userId);
+    liveHub.broadcast(s.id, { type: 'report', reportItemId });
+    return { reportItemId };
   });
 
   // Flux SSE (exempté du rate-limit global : une connexion longue par participant)

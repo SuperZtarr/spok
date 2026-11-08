@@ -4,7 +4,9 @@
    pageKey="live-session"), le tour et le mode Aide (data-help-zone="live-session:…") — registre help/pageHelp.ts.
    Texte court (`short`) des boutons : rappels lus par pageHint('live-session', …), affichés en tête des panneaux, dans la
    confirmation de « Terminer », en infobulle pour « Démarrer » seulement — vérifiés contre apps/api/src/routes/live-sessions.ts.
-   Ces clés (agenda, timeline, present, presenters, invitees, start, end) ne doivent pas changer.
+   Ces clés (agenda, timeline, present, presenters, invitees, start, end, report, reportnew, regenerate) ne doivent pas
+   changer. Compte-rendu (2026-11-08) : report et reportnew en infobulle (ils n'ouvrent pas de panneau), regenerate
+   dans sa confirmation — vérifiés contre apps/api/src/utils/liveReport.ts.
    « Créer la suite » s'explique dans sa fenêtre (live-window.help.ts, hints.suiteIntro).
    Décision Thomas 2026-10-28 : l'explication d'un bouton du bandeau est affichée DANS ce qu'il ouvre (panneau,
    confirmation, fenêtre), pas en infobulle au survol. Seul « Démarrer la séance », qui n'ouvre rien, a une infobulle. */
@@ -82,9 +84,39 @@ const elements: HelpElements = {
   },
   end: {
     title: 'Terminer',
-    short: 'Plus aucun élément ne pourra être présenté et la fenêtre en direct se fermera chez tous. L\'espace de séance, le fil et la préparation restent consultables. C\'est irréversible.',
-    text: 'Termine la séance pour tous ; l\'espace de séance reste consultable. C\'est irréversible.',
+    short: 'Plus aucun élément ne pourra être présenté et la fenêtre en direct se fermera chez tous. Un compte-rendu est créé dans l\'espace de séance. L\'espace de séance, le fil et la préparation restent consultables. C\'est irréversible.',
+    text: 'Termine la séance pour tous et crée son compte-rendu ; l\'espace de séance reste consultable. C\'est irréversible.',
     target: '[data-tour="live-end"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  report: {
+    title: 'Compte-rendu',
+    short: 'Ouvre le compte-rendu de la séance : une note de l\'espace de séance créée à la fin. Elle donne qui était là, ce qui a été présenté et quand, les commentaires et relations ajoutés pendant la séance, l’issue et les votes de chaque question, ce qui n\'a pas été présenté et ce qui a été créé. L\'animateur y écrit les décisions, sous le titre « Décisions ».',
+    text: 'Une note créée à la fin de la séance : présents, éléments présentés dans l\'ordre, commentaires et relations ajoutés, éléments non présentés. Les décisions s\'y écrivent après coup, sous le titre « Décisions ».',
+    target: '[data-tour="live-report"]',
+    noZone: true,
+    side: 'bottom',
+    changes: [{
+      id: 'live-session-compte-rendu',
+      kind: 'new',
+      text: 'À la fin d\'une séance, SPOK crée son compte-rendu : une note avec les présents, le déroulé, les commentaires et ce qui n\'a pas été présenté. L\'animateur y ajoute les décisions.',
+      date: '2026-11-08',
+    }],
+  },
+  reportnew: {
+    title: 'Créer le compte-rendu',
+    short: 'Crée le compte-rendu de cette séance terminée, dans l\'espace de séance, à partir du fil, de la préparation et des commentaires. Utile pour une séance terminée avant l\'arrivée de cette fonction ou si la note a été supprimée.',
+    text: 'Crée le compte-rendu d\'une séance terminée qui n\'en a pas.',
+    target: '[data-tour="live-report-create"]',
+    noZone: true,
+    side: 'bottom',
+  },
+  regenerate: {
+    title: 'Régénérer',
+    short: 'Le compte-rendu est recalculé à partir du fil, de la préparation et des commentaires. Tout ce qui précède le titre « Décisions » est remplacé, y compris vos retouches ; la section « Décisions » et ce qui la suit sont conservés.',
+    text: 'Recalcule le compte-rendu en gardant la section « Décisions ».',
+    target: '[data-tour="live-report-regenerate"]',
     noZone: true,
     side: 'bottom',
   },

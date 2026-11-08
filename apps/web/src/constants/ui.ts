@@ -21,6 +21,7 @@ import {
   Presentation,
   HelpCircle,
   Newspaper,
+  MessageCircleQuestion,
 } from 'lucide-react';
 import type { SVGProps } from 'react';
 import type { ItemType, TypeLabelConfig } from '@spok/shared';
@@ -74,6 +75,7 @@ export const TYPE_ICONS: Record<string, IconComponent> = {
   BUG: Bug,
   DIAGRAM: Workflow,
   ARTICLE: Newspaper,
+  QUESTION: MessageCircleQuestion,
   // Legacy fallback
   APPOINTMENT: Calendar,
 };
@@ -95,6 +97,7 @@ export const TYPE_LABELS: Record<string, string> = {
   BUG: 'Anomalie',
   DIAGRAM: 'Diagramme',
   ARTICLE: 'Article',
+  QUESTION: 'Question',
   // Legacy fallback
   APPOINTMENT: 'Rendez-vous',
 };
@@ -114,6 +117,7 @@ export const TYPE_LABELS_SHORT: Record<string, string> = {
   BUG: 'Anomalie',
   DIAGRAM: 'Diagramme',
   ARTICLE: 'Article',
+  QUESTION: 'Question',
   // Legacy fallback
   APPOINTMENT: 'Rendez-vous',
 };
@@ -133,19 +137,20 @@ export const TYPE_EMOJI: Record<ItemType, string> = {
   BUG: '🐞',
   DIAGRAM: '🔀',
   ARTICLE: '📰',
+  QUESTION: '❓',
 };
 
 // =============================================================================
 // TYPE GROUPS - Regroupement visuel des types (sélecteur de type de la modale)
 // =============================================================================
 /** Types proposés dans la fiche RÉDUITE (Forum, Loisirs) : ceux qui portent un contenu (texte, image, fichier, lien,
- *  schéma, article). Les types de pilotage (Projet, Tâche, Réunion, Période, Anomalie, Configuration), comme les
+ *  schéma, article) et la Question (sondage en Forum, 2026-11-08 : son issue se note dans son propre bloc). Les types de pilotage (Projet, Tâche, Réunion, Période, Anomalie, Configuration), comme les
  *  dates, la priorité et le statut, restent dans la fiche complète (décision Thomas 2026-10-29). */
-export const CONTENT_TYPES: ItemType[] = ['UNDEFINED', 'NOTE', 'LINK', 'DOCUMENT', 'IMAGE', 'DIAGRAM', 'ARTICLE'];
+export const CONTENT_TYPES: ItemType[] = ['UNDEFINED', 'NOTE', 'LINK', 'DOCUMENT', 'IMAGE', 'DIAGRAM', 'ARTICLE', 'QUESTION'];
 
 export const TYPE_GROUPS: { id: string; label: string; types: ItemType[] }[] = [
   { id: 'default', label: 'Défaut', types: ['UNDEFINED', 'NOTE'] },
-  { id: 'activities', label: 'Activités', types: ['PROJECT', 'TASK', 'MEETING', 'PERIOD', 'BUG'] },
+  { id: 'activities', label: 'Activités', types: ['PROJECT', 'TASK', 'MEETING', 'PERIOD', 'BUG', 'QUESTION'] },
   { id: 'deliverables', label: 'Livrables', types: ['LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'DIAGRAM', 'ARTICLE'] },
 ];
 
@@ -165,6 +170,7 @@ export const TYPE_COLUMNS: { id: ItemType; label: string; color: string; bgHover
   { id: 'BUG', label: 'Anomalies', color: 'border-red-400', bgHover: 'bg-red-50' },
   { id: 'DIAGRAM', label: 'Diagrammes', color: 'border-indigo-400', bgHover: 'bg-indigo-50' },
   { id: 'ARTICLE', label: 'Articles', color: 'border-fuchsia-400', bgHover: 'bg-fuchsia-50' },
+  { id: 'QUESTION', label: 'Questions', color: 'border-sky-400', bgHover: 'bg-sky-50' },
 ];
 
 // =============================================================================

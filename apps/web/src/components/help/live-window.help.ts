@@ -27,6 +27,13 @@ const elements: HelpElements = {
     target: '[data-tour="live-content"]',
     side: 'top',
   },
+  question: {
+    title: 'Question en direct',
+    short: 'Votez ; l’animateur note l’issue.',
+    text: 'Quand l’élément présenté est une question, chacun vote ici et le décompte se met à jour en direct. L’animateur note l’issue en un clic : une option, Reportée ou Sans conclusion. Une question Reportée revient dans la préparation de la suite.',
+    side: 'top',
+    changes: [{ id: 'live-question', kind: 'new', text: 'Une question présentée en séance se vote en direct, et l’animateur note son issue en un clic.', date: '2026-11-08' }],
+  },
 };
 
 const derived = helpFromElements(elements);

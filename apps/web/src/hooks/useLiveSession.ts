@@ -5,9 +5,12 @@
  * Les événements sont appliqués sur le cache (applyLiveEvent) ; à chaque reconnexion l'état complet est refetch.
  * Un display plus ancien que le courant (entry.createdAt) est ignoré — convergence si deux présentateurs.
  * Invalide ['items', spaceId] à chaque display/reveal : les copies apparaissent dans les vues de l'espace.
+ * Compte-rendu : session.reportItemId (posé par les événements ended/report) ; generateReport() le crée ou le régénère ;
+ * end() et ces événements invalident ['items', spaceId] pour que la Note apparaisse.
  * start()/end() refetch aussitôt ; les mutations de préparation (dont l'ajout groupé addToAgendaBulk) posent la
  * liste renvoyée dans le cache.
  * Préparation : complet pour l'animateur/les présentateurs, lignes déjà présentées pour les participants (filtré par l'API).
+ * Question (2026-11-08) : l'événement « question » relit la question concernée (invalidateQuestion) et les items.
  * Visiteur anonyme : aucune requête (séances réservées aux membres, route authentifiée) — state reste undefined.
  */
 import { useEffect } from 'react';
@@ -15,6 +18,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { LiveAgendaItem, LiveEvent, LiveSessionState } from '@spok/shared';
 import { liveSessionsApi } from '../lib/api';
 import { openLiveStream } from '../lib/liveStream';
+import { invalidateQuestion } from './useQuestion';
 import { useAuthStore } from '../stores/auth';
 
 export function applyLiveEvent(state: LiveSessionState, event: LiveEvent): LiveSessionState {
@@ -40,7 +44,13 @@ export function applyLiveEvent(state: LiveSessionState, event: LiveEvent): LiveS
     case 'roles': return { ...state, roles: event.roles };
     case 'agenda': return { ...state, agenda: event.agenda };
     case 'started': return { ...state, session: { ...state.session, status: 'LIVE', liveAt: event.liveAt } };
-    case 'ended': return { ...state, session: { ...state.session, status: 'ENDED', endedAt: event.endedAt } };
+    case 'ended': return {
+      ...state,
+      session: { ...state.session, status: 'ENDED', endedAt: event.endedAt, reportItemId: event.reportItemId ?? state.session.reportItemId },
+    };
+    case 'report': return { ...state, session: { ...state.session, reportItemId: event.reportItemId } };
+    // Question (votes, issue) : l'état de la séance ne change pas, la question est relue (onEvent)
+    case 'question': return state;
   }
 }
 
@@ -68,6 +78,13 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
         if (event.type === 'roles') refetch();
         // Démarrage / fin : le bouton « séances en cours » de l'en-tête se met à jour
         if (event.type === 'started' || event.type === 'ended') queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] });
+        // Compte-rendu créé (fin) ou régénéré : la Note apparaît / change dans les vues de l'espace
+        if (event.type === 'ended' || event.type === 'report') queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+        // Question de la séance : décompte et issue relus en direct (le statut change dans les vues)
+        if (event.type === 'question') {
+          invalidateQuestion(queryClient, event.itemId);
+          queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+        }
         if (event.type === 'display' || event.type === 'reveal') {
           queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
           queryClient.invalidateQueries({ queryKey: ['live-pending', sessionId] });
@@ -90,7 +107,19 @@ export function useLiveSession(spaceId: string | undefined, options: { stream?: 
     displayAgenda: async (agendaItemId: string) => { await liveSessionsApi.display(sessionId!, { agendaItemId }); },
     reveal: async (sourceItemId: string) => { await liveSessionsApi.reveal(sessionId!, sourceItemId); },
     start: async () => { await liveSessionsApi.start(sessionId!); await refetch(); queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); },
-    end: async () => { await liveSessionsApi.end(sessionId!); await refetch(); queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] }); },
+    end: async () => {
+      await liveSessionsApi.end(sessionId!); await refetch();
+      queryClient.invalidateQueries({ queryKey: ['live-sessions-ongoing'] });
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] }); // compte-rendu créé à la clôture
+    },
+    /** Crée ou régénère le compte-rendu (animateur, séance terminée) ; renvoie l'id de la Note. */
+    generateReport: async () => {
+      const { reportItemId } = await liveSessionsApi.report(sessionId!);
+      queryClient.setQueryData<LiveSessionState>(key, (prev) => (prev ? { ...prev, session: { ...prev.session, reportItemId } } : prev));
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['item', spaceId, reportItemId] });
+      return reportItemId;
+    },
     setPresenters: async (userIds: string[]) => { await liveSessionsApi.setPresenters(sessionId!, userIds); },
     addToAgenda: async (sourceItemId: string, sourceSpaceId?: string) => {
       setAgenda(await liveSessionsApi.addToAgenda(sessionId!, sourceItemId, sourceSpaceId));

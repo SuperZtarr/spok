@@ -1,4 +1,4 @@
-/* TNR des conventions SPOK : résolution de statut (id/libellé) et de tags (id/nom), types masqués, dates, ordre des dates. */
+/* TNR des conventions SPOK : résolution de statut (id/libellé, statuts réservés à un type) et de tags (id/nom), types masqués, dates, ordre des dates. */
 import { describe, it, expect, vi } from 'vitest'
 import { fetchConventions, resolveStatus, resolveTags, assertTypeAllowed, assertDateOrder } from './conventions.js'
 import { normalizeDate } from './dates.js'
@@ -73,5 +73,22 @@ describe('fetchConventions', () => {
     expect(res.statuses.map((s) => s.id)).toEqual(['todo', 'done'])
     expect(res.types).toEqual([{ id: 'TASK', label: 'Tâche' }])
     expect(res.tags).toEqual([{ id: 't1', name: 'urgent' }])
+  })
+})
+
+describe('statuts réservés à un type', () => {
+  const conv = {
+    statuses: [
+      { id: 'todo', label: 'À faire' },
+      { id: 'question_open', label: 'Ouverte', types: ['QUESTION'] },
+      { id: 'question_decided', label: 'Tranchée', types: ['QUESTION'] },
+    ],
+    types: [], tags: [],
+  }
+  it('une question n’accepte que ses statuts, une tâche jamais ceux d’une question', () => {
+    expect(resolveStatus('Tranchée', conv, 'QUESTION')).toBe('question_decided')
+    expect(() => resolveStatus('todo', conv, 'QUESTION')).toThrow(/non permis pour le type QUESTION/)
+    expect(() => resolveStatus('question_open', conv, 'TASK')).toThrow(/non permis/)
+    expect(resolveStatus('question_open', conv)).toBe('question_open') // type inconnu : l'API normalise
   })
 })

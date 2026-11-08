@@ -5,6 +5,7 @@
  * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
+ * questionsApi : question (type QUESTION) — via hooks/useQuestion, pas d'appel direct dans les composants.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
  */
 import type {
@@ -77,6 +78,9 @@ import type {
   ArticleBlockView,
   ArticleBlockWidth,
   ArticleBlockAlign,
+  QuestionView,
+  QuestionOptionsInput,
+  QuestionOutcomeInput,
 } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 
@@ -931,6 +935,18 @@ type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number
 
 // Article (type ARTICLE) : blocs = références vers des éléments existants (routes/item-article.ts côté API).
 // addBlock : ApiError code LESS_VISIBLE (409) → demander confirmation puis renvoyer confirmLessVisible ; DUPLICATE_REFERENCE (409).
+// Question (type QUESTION, 2026-11-08) : décompte, options, issue, vote — cf. apps/api/src/routes/item-question.ts
+export const questionsApi = {
+  get: (spaceId: string, itemId: string) =>
+    fetchApi<QuestionView>(`/spaces/${spaceId}/items/${itemId}/question`),
+  saveOptions: (spaceId: string, itemId: string, body: QuestionOptionsInput) =>
+    fetchApi<QuestionView>(`/spaces/${spaceId}/items/${itemId}/question/options`, { method: 'PUT', body: JSON.stringify(body) }),
+  setOutcome: (spaceId: string, itemId: string, body: QuestionOutcomeInput) =>
+    fetchApi<QuestionView>(`/spaces/${spaceId}/items/${itemId}/question/outcome`, { method: 'PUT', body: JSON.stringify(body) }),
+  vote: (spaceId: string, itemId: string, optionIds: string[]) =>
+    fetchApi<QuestionView>(`/spaces/${spaceId}/items/${itemId}/question/vote`, { method: 'PUT', body: JSON.stringify({ optionIds }) }),
+};
+
 export const articlesApi = {
   get: (spaceId: string, articleId: string) =>
     fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article`),
@@ -2209,7 +2225,10 @@ export const liveSessionsApi = {
     fetchApi<{ entry: LiveSessionEntry; displayed: LiveDisplayedItem }>(`/live-sessions/${id}/display`, {
       method: 'POST', body: JSON.stringify(body),
     }),
-  end: (id: string) => fetchApi<{ endedAt: string }>(`/live-sessions/${id}/end`, { method: 'POST' }),
+  /** Terminer : renvoie aussi le compte-rendu créé à la clôture (null si sa génération a échoué). */
+  end: (id: string) => fetchApi<{ endedAt: string; reportItemId: string | null }>(`/live-sessions/${id}/end`, { method: 'POST' }),
+  /** Compte-rendu d'une séance terminée (animateur) : crée la Note ou la régénère en gardant la section « Décisions ». */
+  report: (id: string) => fetchApi<{ reportItemId: string }>(`/live-sessions/${id}/report`, { method: 'POST' }),
   start: (id: string) => fetchApi<{ liveAt: string }>(`/live-sessions/${id}/start`, { method: 'POST' }),
   /** Suite d'une séance terminée : nouvelle séance préparée (préparation non présentée + éléments présentés recopiés). */
   createSuite: (id: string, name?: string) =>

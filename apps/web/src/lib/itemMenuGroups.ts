@@ -10,7 +10,10 @@
  * L'ancienne entrée « Modifier » (doublon d'Ouvrir) est retirée (décision Thomas 2026-10-23).
  * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
+ * Sous-menu « Statut » : seulement les statuts permis pour le type de l'item (statusesForType, @spok/shared) — une
+ * question ne propose que ses 4 issues, les autres types jamais celles-ci (statuts réservés, 2026-11-08).
  */
+import { statusesForType, type StatusConfig } from '@spok/shared';
 import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
 import { articlePageUrl, articleReturnState, type ItemOpenMode } from './itemOpenMode';
 import { appNavigate } from './appNavigate';
@@ -98,7 +101,8 @@ export function buildItemMenuGroups(
     onAbsorbChildren,
     onSplitDescription,
   } = callbacks;
-  const { statusOptions, currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true, item } = options;
+  const { currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true, item } = options;
+  const statusOptions = options.statusOptions ? statusesForType(options.statusOptions as StatusConfig[], item?.type ?? null) : options.statusOptions;
 
   // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
   const isLoggedIn = !!useAuthStore.getState().user;

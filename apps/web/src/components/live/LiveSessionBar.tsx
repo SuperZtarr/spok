@@ -14,6 +14,9 @@
  * (pageHint('live-session', <panneau>) — Préparation : par AgendaPanel), dans la confirmation de « Terminer », dans la
  * fenêtre de « Créer la suite » ; seul « Démarrer », qui n'ouvre rien, a une infobulle. Zones du mode Aide
  * live-session:bar / live-session:panel. Tout bouton ajouté = son texte dans la fiche.
+ * Compte-rendu (2026-11-08, séance terminée) : « Compte-rendu » ouvre la Note pour tous (infobulle) ; l'animateur a
+ * « Régénérer » (confirmation : tout ce qui précède « Décisions » est réécrit) ou, si la Note manque (séance close avant
+ * la fonction, échec, Note supprimée), « Créer le compte-rendu ». Les deux ouvrent la Note ensuite.
  * Mobile : le bandeau passe à la ligne (flex-wrap) pour que tous les boutons restent visibles ; panneaux bornés à
  * la largeur de l'écran.
  */
@@ -50,12 +53,13 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
   const [panel, setPanel] = useState<Panel>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [suiteOpen, setSuiteOpen] = useState(false);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setActive = useActiveLiveSessionStore((s) => s.setActive);
   const status = state.session.status;
-  const { previousSession, nextSession } = state.session;
+  const { previousSession, nextSession, reportItemId } = state.session;
   const isLive = status === 'LIVE';
   const isHost = state.myRole === 'HOST';
   const canPresent = state.myRole !== 'PARTICIPANT' && isLive;
@@ -118,6 +122,20 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
         </HelpHint>
       )}
       {isHost && isLive && <button className={LIVE_ACTION_CLASS} data-tour="live-end" onClick={() => setConfirmEnd(true)}>Terminer</button>}
+      {/* Compte-rendu (séance terminée) : ouvrir pour tous ; créer (s'il manque) ou régénérer pour l'animateur */}
+      {status === 'ENDED' && reportItemId && (
+        <HelpHint text={hint('report')} className="inline-flex">
+          <button className={LIVE_PANEL_CLASS} data-tour="live-report" onClick={() => onOpenItem(reportItemId)}>Compte-rendu</button>
+        </HelpHint>
+      )}
+      {isHost && status === 'ENDED' && !reportItemId && (
+        <HelpHint text={hint('reportnew')} className="inline-flex">
+          <button className={LIVE_ACTION_CLASS} data-tour="live-report-create" onClick={() => run(async () => onOpenItem(await live.generateReport()))}>Créer le compte-rendu</button>
+        </HelpHint>
+      )}
+      {isHost && status === 'ENDED' && reportItemId && (
+        <button className={LIVE_PANEL_CLASS} data-tour="live-report-regenerate" onClick={() => setConfirmRegenerate(true)}>Régénérer</button>
+      )}
       {isHost && status === 'ENDED' && !nextSession && (
         <button className={LIVE_ACTION_CLASS} data-tour="live-suite" onClick={() => { setError(null); setSuiteOpen(true); }}>Créer la suite</button>
       )}
@@ -158,6 +176,14 @@ export function LiveSessionBar({ state, live, members, onOpenItem }: Props) {
         message={hint('end') ?? ''}
         confirmLabel="Terminer"
         confirmVariant="destructive"
+      />
+      <ConfirmModal
+        isOpen={confirmRegenerate}
+        onClose={() => setConfirmRegenerate(false)}
+        onConfirm={() => { setConfirmRegenerate(false); run(async () => onOpenItem(await live.generateReport())); }}
+        title="Régénérer le compte-rendu"
+        message={hint('regenerate') ?? ''}
+        confirmLabel="Régénérer"
       />
     </div>
   );

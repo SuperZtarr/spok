@@ -18,6 +18,12 @@ export interface StatusConfig {
    * Ils redeviennent visibles normalement quand la date se rapproche.
    */
   deferredByDate?: boolean;
+  /**
+   * Statut réservé à certains types (ex. issues d'une question : ['QUESTION']). Absent = valable pour tous les
+   * types. Un statut réservé n'est proposé que pour ses types (statusesForType) ; les statuts réservés par défaut
+   * (RESERVED_STATUS_IDS) ne se suppriment pas et gardent leur réservation (withDefaultStatuses).
+   */
+  types?: string[];
 }
 
 /**

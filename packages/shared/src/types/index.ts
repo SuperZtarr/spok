@@ -15,3 +15,4 @@ export * from './reaction.js';
 export * from './menuItem.js';
 export * from './itemTemplate.js';
 export * from './liveSession.js';
+export * from './question.js';

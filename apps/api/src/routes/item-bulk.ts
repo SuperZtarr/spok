@@ -1,4 +1,7 @@
-/* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace. */
+/* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace.
+   Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue. */
+import { QUESTION_STATUS } from '@spok/shared';
+import { copyQuestionData } from '../utils/question.js';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
@@ -139,7 +142,8 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
             description: item.description,
             content: item.content as any,
             url: item.url,
-            status: item.status,
+            // Question dupliquée : repart « Ouverte », options et réglage repris, sans votes ni issue
+            status: item.type === 'QUESTION' ? QUESTION_STATUS.OPEN : item.status,
             priority: item.priority,
             position: item.position,
             dueDate: shiftedDates.dueDate,
@@ -153,6 +157,9 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
 
         oldIdToNewId.set(item.id, newItem.id);
         createdItems.push({ oldItem: item, newItem });
+        if (item.type === 'QUESTION') {
+          await copyQuestionData(fastify.prisma, item.id, newItem.id, { withVotes: false, keepOutcome: false });
+        }
 
         // Create tag associations
         if (item.tags.length > 0) {

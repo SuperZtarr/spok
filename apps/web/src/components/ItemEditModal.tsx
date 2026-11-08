@@ -56,6 +56,9 @@
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
+ * Type QUESTION (2026-11-08) : bloc QuestionPanel (options, votes, issue) dans les blocs media et en mode Afficher ; pas
+ * de sélecteur Statut (l'issue se note dans le bloc). Statuts proposés aux autres types : statusesForType (sans les
+ * issues réservées) ; un statut devenu non permis par un changement de type est remis à « Non défini ».
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -70,7 +73,7 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, statusAllowedForType, statusesForType } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -78,6 +81,7 @@ import { Button } from './ui/Button';
 import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
+import { QuestionPanel } from './question/QuestionPanel';
 import { ArticleEditor } from './article/ArticleEditor';
 import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
@@ -189,6 +193,12 @@ export function ItemEditModal({
   const [assignedToId, setAssignedToId] = useState('');
   const [assignedToName, setAssignedToName] = useState(''); // saisie libre : personne sans compte SPOK
   const [type, setType] = useState<ItemType>('NOTE');
+  // Statut non permis pour le nouveau type (issue d'une question sur un autre type, ou l'inverse) : remis à « Non
+  // défini » — une question enregistrée sans statut repart « Ouverte » (API, utils/question.ts)
+  useEffect(() => {
+    if (!statusAllowedForType(status, type)) setStatus('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -1014,6 +1024,10 @@ export function ItemEditModal({
       {type === 'ARTICLE' && (!itemId || item?.type !== 'ARTICLE') && (
         <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
       )}
+      {/* Question : options, votes, issue (QuestionPanel) — seulement une fois enregistrée comme Question */}
+      {type === 'QUESTION' && (itemId && item?.type === 'QUESTION'
+        ? <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
+        : <FieldHelp page="question" field="unsaved" />)}
       {/* URL — seulement pour le type LINK */}
       {type === 'LINK' && <div className="space-y-2" data-devzone="item-medias">
         <label className="text-sm font-medium">URL</label>
@@ -1242,6 +1256,8 @@ export function ItemEditModal({
                     <div ref={articlePrintRef}>
                       <ArticleReadBlocks spaceId={item.spaceId ?? spaceId} articleId={itemId} />
                     </div>
+                  ) : item?.type === 'QUESTION' && itemId ? (
+                    <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
                   ) : undefined}
                   toolbar={(
                     <>
@@ -1566,7 +1582,8 @@ export function ItemEditModal({
               </div>}
 
               {/* Statut */}
-              {showAll && <div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
+              {/* Question : son issue se note dans le bloc Question (QuestionPanel), pas ici */}
+              {showAll && type !== 'QUESTION' && <div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1584,12 +1601,12 @@ export function ItemEditModal({
                             if (!startDate) { const now = new Date(); const m = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(m)); }
                           }
                         }}
-                        options={(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => ({ value: s.id, label: s.label }))}
+                        options={statusesForType(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses, type).map((s) => ({ value: s.id, label: s.label }))}
                       />
                     </div>
                     {/* Desktop: buttons */}
                     <div className="hidden sm:flex flex-wrap gap-2">
-                      {(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses).map((s) => {
+                      {statusesForType(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses, type).map((s) => {
                         const isSelected = (s.id === 'undefined' && !status) || s.id === status;
                         return (
                           <button key={s.id} type="button"

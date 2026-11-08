@@ -3,12 +3,15 @@
  * (GET /spaces/:id/referentiels) : statuts et types visibles, tags de l'espace (GET /spaces/:id/tags). Fonctions de validation
  * utilisées par create_item/update_item (statut, type, tags, dates) : chaque refus lève ConventionError
  * avec les valeurs acceptées.
+ * Statuts réservés (2026-11-08) : un statut porteur de `types` n'est permis que pour ces types, et un type qui a des
+ * statuts réservés (QUESTION) n'utilise qu'eux — même règle que statusesForType (@spok/shared), recopiée ici
+ * (mcp-core ne dépend pas de @spok/shared). Sans type connu (update_item sans type), l'API normalise.
  */
 import type { SpokClient } from './client.js'
 import { ConventionError } from './errors.js'
 
 export interface SpaceConventions {
-  statuses: { id: string; label: string }[]
+  statuses: { id: string; label: string; types?: string[] }[]
   types: { id: string; label: string }[]
   tags: { id: string; name: string }[]
 }
@@ -23,7 +26,7 @@ export async function fetchConventions(client: SpokClient, spaceId: string): Pro
   const statuses = [...(ref.statuses ?? [])]
     .filter((s: any) => s.visible !== false)
     .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
-    .map((s: any) => ({ id: s.id, label: s.label }))
+    .map((s: any) => ({ id: s.id, label: s.label, ...(s.types?.length ? { types: s.types as string[] } : {}) }))
   const types = Object.entries(ref.typeLabels ?? {})
     .filter(([, t]: [string, any]) => t.visible !== false)
     .sort(([, a]: [string, any], [, b]: [string, any]) => (a.order ?? 0) - (b.order ?? 0))
@@ -36,14 +39,24 @@ function list(values: { id: string; label: string }[]): string {
   return values.map((v) => `${v.id} (${v.label})`).join(', ')
 }
 
-export function resolveStatus(input: string, conv: SpaceConventions): string {
+/** Statuts utilisables pour un type : ses statuts réservés s'il en a, sinon les statuts sans réservation. */
+export function statusesForType(conv: SpaceConventions, type?: string): SpaceConventions['statuses'] {
+  const reserved = type ? conv.statuses.filter((s) => s.types?.includes(type)) : []
+  return reserved.length ? reserved : conv.statuses.filter((s) => !s.types?.length)
+}
+
+export function resolveStatus(input: string, conv: SpaceConventions, type?: string): string {
   const raw = input.trim()
-  const byId = conv.statuses.find((s) => s.id === raw)
-  if (byId) return byId.id
   const norm = raw.toLowerCase()
-  const byLabel = conv.statuses.find((s) => s.label.trim().toLowerCase() === norm)
-  if (byLabel) return byLabel.id
-  throw new ConventionError(`Statut « ${input} » inconnu dans cet espace. Valeurs acceptées : ${list(conv.statuses)}.`)
+  const found = conv.statuses.find((s) => s.id === raw) ?? conv.statuses.find((s) => s.label.trim().toLowerCase() === norm)
+  if (!found) throw new ConventionError(`Statut « ${input} » inconnu dans cet espace. Valeurs acceptées : ${list(conv.statuses)}.`)
+  if (type) {
+    const allowed = statusesForType(conv, type)
+    if (!allowed.some((s) => s.id === found.id)) {
+      throw new ConventionError(`Statut « ${input} » non permis pour le type ${type}. Valeurs acceptées pour ce type : ${list(allowed)}.`)
+    }
+  }
+  return found.id
 }
 
 /** Tags donnés par id ou par nom (casse et espaces ignorés) → ids, dédoublonnés. Inconnu → ConventionError. */

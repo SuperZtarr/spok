@@ -25,7 +25,7 @@ const ALLOWED: Record<ToolProfile, Level[]> = {
   'public-read': ['read'],
 }
 
-const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE'] as const
+const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'] as const
 /** Miroir de RELATION_TYPES @spok/shared (l'API refuse tout autre type). */
 const RELATION_TYPE_VALUES = ['blocks', 'implements', 'drives', 'relates'] as const
 
@@ -88,7 +88,7 @@ async function prepareItemFields(
     assertTypeAllowed(input.type, conv)
     out.type = input.type
   }
-  if (input.status) out.status = resolveStatus(input.status, conv)
+  if (input.status) out.status = resolveStatus(input.status, conv, input.type)
   else if (input.status === null) out.status = null
   for (const f of ['startDate', 'endDate', 'dueDate'] as const) {
     const v = input[f]
@@ -165,7 +165,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       const conv = await fetchConventions(client, spaceId)
       conventionsCache.set(spaceId, conv)
       return ok([
-        `Statuts (utiliser l'id) : ${conv.statuses.map((s) => `${s.id} = ${s.label}`).join(' ; ')}`,
+        `Statuts (utiliser l'id) : ${conv.statuses.map((s) => `${s.id} = ${s.label}${s.types?.length ? ` [réservé : ${s.types.join(', ')}]` : ''}`).join(' ; ')}`,
         `Types (utiliser l'id) : ${conv.types.map((t) => `${t.id} = ${t.label}`).join(' ; ')}`,
         `Tags existants : ${conv.tags.length ? conv.tags.map((t) => `${t.name} [${t.id}]`).join(', ') : 'aucun'}`,
       ].join('\n'))
