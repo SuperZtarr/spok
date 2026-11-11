@@ -4,12 +4,14 @@
  * clic = ajout au plan du jour. Hérite du filtre global de la page via extraFilters
  * (espaces, statuts, priorités) ; la recherche locale prime sur celle du filtre.
  * Ne pas réimplémenter de filtres avancés ici : pour du tri fin, la page /tasks reste l'outil.
+ * Tâches fermées (isClosedStatus : catégorie terminé / annulé) écartées.
  */
 import { useState, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { userTasksApi, type AgendaFilters } from '@/lib/api';
+import { isClosedStatus } from '@spok/shared';
 import { DevModalBadge } from '../ui/DevModalBadge';
 
 export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFilters }: {
@@ -37,7 +39,7 @@ export function PickTasksModal({ open, onClose, plannedItemIds, onPick, extraFil
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(dialogRef, open);
   if (!open) return null;
-  const tasks = (data?.data ?? []).filter((t) => !plannedItemIds.has(t.id) && t.status !== 'done' && t.status !== 'cancelled');
+  const tasks = (data?.data ?? []).filter((t) => !plannedItemIds.has(t.id) && !isClosedStatus(t.status));
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div ref={dialogRef} className="outline-none w-full max-w-lg max-h-[70vh] flex flex-col rounded-lg border border-border bg-background p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>

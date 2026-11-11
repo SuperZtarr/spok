@@ -1,6 +1,8 @@
 /* Tâches globales (/tasks) : tableau multi-espaces sur /user/tasks, regroupé par horizon temporel (Maintenant/Aujourd'hui/Semaine/Mois/Plus tard/À trier), filtres et tri par colonne.
  * Colonne Assigné (triable, sortBy=assignedToName) avec l'accusé de lecture à l'assignation : œil barré à
- * côté du nom quand l'assigné n'a pas encore ouvert l'item (assignmentReceipt, 2026-09-29). */
+ * côté du nom quand l'assigné n'a pas encore ouvert l'item (assignmentReceipt, 2026-09-29).
+ * Types : couleurs et libellés du registre des types (TYPE_FILTER_OPTIONS), jamais de liste locale.
+ * En retard : échéance passée et statut qui ne ferme pas l'élément (isClosedStatus). */
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +18,8 @@ import { userTasksApi, itemsApi } from '../lib/api';
 import type { GlobalTask, GlobalTaskFilters } from '../lib/api';
 import type { Item } from '@spok/shared';
 import { ItemEditModal } from '../components/ItemEditModal';
-import { TYPE_LABELS } from '../constants/ui';
+import { TYPE_LABELS, TYPE_FILTER_OPTIONS } from '../constants/ui';
+import { isClosedStatus } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap, effectiveHorizon, HORIZON_LABELS, HORIZON_ORDER } from '@spok/shared';
 import { useGlobalTaskFilters, type GlobalTaskFilterState } from '../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../components/GlobalTaskFilterBar';
@@ -57,19 +60,8 @@ function isOverdue(dateStr: string | null): boolean {
   return new Date(dateStr) < new Date(new Date().toDateString());
 }
 
-const typeOptions = [
-  { id: 'UNDEFINED', label: TYPE_LABELS['UNDEFINED'] || 'Non défini', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  { id: 'TASK', label: TYPE_LABELS['TASK'] || 'Tâche', color: 'bg-green-100 text-green-800 border-green-300' },
-  { id: 'PROJECT', label: TYPE_LABELS['PROJECT'] || 'Projet', color: 'bg-purple-100 text-purple-800 border-purple-300' },
-  { id: 'NOTE', label: TYPE_LABELS['NOTE'] || 'Note', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { id: 'MEETING', label: TYPE_LABELS['MEETING'] || 'Réunion', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { id: 'BUG', label: TYPE_LABELS['BUG'] || 'Anomalie', color: 'bg-red-100 text-red-800 border-red-300' },
-  { id: 'DOCUMENT', label: TYPE_LABELS['DOCUMENT'] || 'Document', color: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
-  { id: 'PERIOD', label: TYPE_LABELS['PERIOD'] || 'Période', color: 'bg-teal-100 text-teal-800 border-teal-300' },
-  { id: 'LINK', label: TYPE_LABELS['LINK'] || 'Lien', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-  { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
-  { id: 'DIAGRAM', label: TYPE_LABELS['DIAGRAM'] || 'Diagramme', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-];
+// Types : registre (TYPE_FILTER_OPTIONS), jamais de liste locale
+const typeOptions = TYPE_FILTER_OPTIONS;
 
 type SortField = GlobalTaskFilters['sortBy'];
 
@@ -215,12 +207,12 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
         {task.dueDate ? (
           <span
             className={`inline-flex items-center gap-1 text-xs ${
-              isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
+              isOverdue(task.dueDate) && !isClosedStatus(task.status)
                 ? 'text-red-600 font-medium'
                 : 'text-muted-foreground'
             }`}
           >
-            {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
+            {isOverdue(task.dueDate) && !isClosedStatus(task.status) && (
               <AlertCircle className="w-3 h-3" />
             )}
             {formatDate(task.dueDate)}
@@ -366,10 +358,10 @@ export function GlobalTasksPage({ externalFilters }: { externalFilters?: GlobalT
                     )}
                     {task.dueDate && (
                       <span className={`inline-flex items-center gap-0.5 text-[11px] ${
-                        isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled'
+                        isOverdue(task.dueDate) && !isClosedStatus(task.status)
                           ? 'text-red-600 font-medium' : 'text-muted-foreground'
                       }`}>
-                        {isOverdue(task.dueDate) && task.status !== 'done' && task.status !== 'cancelled' && (
+                        {isOverdue(task.dueDate) && !isClosedStatus(task.status) && (
                           <AlertCircle className="w-3 h-3" />
                         )}
                         {formatDate(task.dueDate)}

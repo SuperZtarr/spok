@@ -1,6 +1,6 @@
 /*
  * Tests de GET /user/review-queue : bac à trier + items en horizon dépassé,
- * périmètre restreint aux espaces accessibles de l'utilisateur.
+ * périmètre restreint aux espaces accessibles de l'utilisateur ; éléments fermés exclus par catégorie de statut.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -117,7 +117,8 @@ describe('GET /user/review-queue', () => {
     })
 
     const where = prisma.item.findMany.mock.calls[0][0].where
-    expect(where.status).toEqual({ notIn: ['done', 'cancelled'] })
+    // Fermés = catégories terminé / annulé (statuts par défaut ici : questions tranchées et sans conclusion comprises)
+    expect([...where.status.notIn].sort()).toEqual(['cancelled', 'done', 'question_decided', 'question_no_conclusion'])
   })
 
   it('retourne vide si aucun espace accessible', async () => {

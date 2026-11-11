@@ -6,7 +6,8 @@
  * choisie par pastilles au-dessus de la grille, persistée en localStorage
  * (spok-today-visible-sources) — indépendante du `enabled` des feeds.
  * État local uniquement (date affichée, modales, visibilité colonnes) — pas de store Zustand.
- * Le marquage « fait » passe par itemsApi.update (status done) : une seule vérité, l'item.
+ * Le marquage « fait » passe par itemsApi.update (premier statut de catégorie terminé, firstStatusIn) : une seule
+ * vérité, l'item. Jamais de 'done' / 'todo' en dur.
  * Le placement (plannedStart/plannedDuration) vit sur DayPlanEntry, jamais sur l'item.
  * Section « À réviser » (spec 2026-07-19) : bac à trier + horizons dépassés, cf. ReviewQueueSection.
  * Menu des items : « Afficher » ouvre la modale en mode lecture (editingItem.mode → initialMode).
@@ -14,7 +15,7 @@
 import { useState } from 'react';
 import { AlertTriangle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { DEFAULT_REFERENTIELS, type HorizonBucket, type Item } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, firstStatusIn, isStatusIn, type HorizonBucket, type Item } from '@spok/shared';
 import { useAuthStore } from '@/stores/auth';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { buildItemMenuGroups } from '@/lib/itemMenuGroups';
@@ -102,11 +103,11 @@ export function TodayPage() {
   const invalidateReviewQueue = () => queryClient.invalidateQueries({ queryKey: ['review-queue'] });
 
   const handleReviewDone = async (item: ReviewQueueItem) => {
-    await itemsApi.update(item.spaceId, item.id, { status: 'done' });
+    await itemsApi.update(item.spaceId, item.id, { status: firstStatusIn('done') });
     invalidateReviewQueue();
   };
   const handleReviewDismiss = async (item: ReviewQueueItem) => {
-    await itemsApi.update(item.spaceId, item.id, { status: 'cancelled' });
+    await itemsApi.update(item.spaceId, item.id, { status: firstStatusIn('cancelled') });
     invalidateReviewQueue();
   };
   const handleReviewSetHorizon = async (item: ReviewQueueItem, horizon: HorizonBucket) => {
@@ -183,7 +184,7 @@ export function TodayPage() {
   };
 
   const toggleDone = async (item: DayPlanItemDto) => {
-    await itemsApi.update(item.spaceId, item.id, { status: item.status === 'done' ? 'todo' : 'done' });
+    await itemsApi.update(item.spaceId, item.id, { status: isStatusIn(item.status, ['done']) ? firstStatusIn('open') : firstStatusIn('done') });
     queryClient.invalidateQueries({ queryKey: ['agenda', date] });
     queryClient.invalidateQueries({ queryKey: ['items', item.spaceId] });
   };

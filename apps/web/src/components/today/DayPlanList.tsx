@@ -13,8 +13,10 @@
  * de quel projet vient une suggestion est plus important qu'un flux plat de titres.
  * Cible de drop pour un événement de l'agenda (dataTransfer JSON {kind:'event', title, start})
  * glissé depuis DayTimeGrid/le bandeau journée entière — onDropEvent crée la TASK associée.
+ * Case cochée : statut de catégorie terminé (isStatusIn), jamais une valeur en dur.
  */
 import { useState } from 'react';
+import { isStatusIn } from '@spok/shared';
 import { Check, ChevronDown, ChevronRight, Plus, X, ListTodo, CalendarClock } from 'lucide-react';
 import { ItemActionMenu } from '@/components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
@@ -87,7 +89,7 @@ export function DayPlanList({ plan, suggestions, onAccept, onRemove, onToggleDon
       )}
       <div className="flex flex-wrap gap-2">
         {unplaced.map((entry) => {
-          const done = entry.item.status === 'done';
+          const done = isStatusIn(entry.item.status, ['done']);
           return (
             <div
               key={entry.id}

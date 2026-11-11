@@ -1,11 +1,13 @@
 /* Vue Todo (« À faire ») : liste de tous les éléments ouverts de l'espace, quel que soit leur type, hors statuts
-   Terminé et Annulé (avant le 2026-11-04 : tâches seules). Le filtre Types de la barre d'espace permet de restreindre. */
+   qui les ferment (catégorie terminé / annulé du référentiel, isClosedStatus — avant le 2026-11-04 : tâches seules).
+   Le filtre Types de la barre d'espace permet de restreindre. */
 import { useMemo } from 'react';
 import { CheckSquare } from 'lucide-react';
 import { ListView } from './ListView';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, SpaceReferentiels } from '@spok/shared';
+import { isClosedStatus } from '@spok/shared';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface PortalGroup {
@@ -39,20 +41,20 @@ interface TodoViewProps {
   pulseHelp?: boolean;
 }
 
-const isOpen = (item: Item) => item.status !== 'done' && item.status !== 'cancelled';
-
 export function TodoView({ items, portalGroups, spaceName, viewContainerRef, onStartTour, pulseHelp, canEdit = true, ...rest }: TodoViewProps) {
+  const statuses = rest.referentiels?.statuses;
+  const isOpen = (item: Item) => !isClosedStatus(item.status, statuses);
   const todos = useMemo(() => {
     if (!items) return [];
     return items.filter(isOpen);
-  }, [items]);
+  }, [items, statuses]);
 
   const todoPortalGroups = useMemo(() => {
     if (!portalGroups?.length) return undefined;
     return portalGroups
       .map(g => ({ ...g, items: g.items.filter(isOpen) }))
       .filter(g => g.items.length > 0);
-  }, [portalGroups]);
+  }, [portalGroups, statuses]);
 
   const header = (
     <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">

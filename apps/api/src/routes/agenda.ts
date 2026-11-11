@@ -13,13 +13,16 @@
  * Un feed en erreur est signalé (feedErrors + lastError) mais ne bloque jamais la réponse.
  * Espaces : uniquement les espaces LISIBLES (accessibleSpaceIds → readableSpaceIdsForUser), pas tous ceux
  * des communautés de l'utilisateur.
+ * Types acceptés dans le filtre : ceux du registre des types (isItemType, @spok/shared), jamais de liste locale.
+ * Statuts : par catégorie (statusCategory, statuts des communautés des espaces suggérés) — terminé/annulé exclus,
+ * en retard puis en cours classés en tête ; jamais de 'done' / 'late' en dur.
  */
 import { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import type { ItemType } from '@spok/database'
+import { CLOSED_CATEGORIES, isItemType, statusCategory, statusIdsIn } from '@spok/shared'
+import { statusesOfSpaces } from '../utils/referentiels.js'
 import { IcsFeedSource } from '../utils/calendar-source.js'
 import { readableSpaceIdsForUser } from './items.js'
 
-const CLOSED_STATUSES = ['done', 'cancelled']
 
 /** Espaces lisibles (readableSpaceIdsForUser : jamais un espace privé dont on n'est pas membre). */
 export async function accessibleSpaceIds(fastify: FastifyInstance, userId: string, isAdminMode = false): Promise<string[]> {
@@ -145,8 +148,7 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
         suggestionSpaceIds = spaceIds.filter((id) => wanted.has(id))
       }
       // Types suggérés : tous par défaut — la barre de filtre peut restreindre
-      const VALID_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM']
-      const suggestionTypes = (typeFilter ?? '').split(',').filter((t) => VALID_TYPES.includes(t)) as ItemType[]
+      const suggestionTypes = (typeFilter ?? '').split(',').filter(isItemType)
       const extraAnd: Record<string, unknown>[] = []
       if (statusFilter) {
         const statuses = statusFilter.split(',').filter(Boolean)
@@ -165,6 +167,8 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
         })
       }
       if (suggestionSpaceIds.length > 0) {
+        const spaceStatuses = await statusesOfSpaces(fastify.prisma, suggestionSpaceIds)
+        const closedIds = statusIdsIn(CLOSED_CATEGORIES, spaceStatuses)
         const candidates = await fastify.prisma.item.findMany({
           where: {
             ...(suggestionTypes.length > 0
@@ -173,7 +177,7 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
             spaceId: { in: suggestionSpaceIds },
             AND: [
               { OR: [{ assignedToId: userId }, { assignedToId: null, createdById: userId }] },
-              { OR: [{ status: null }, { status: { notIn: CLOSED_STATUSES } }] },
+              { OR: [{ status: null }, { status: { notIn: closedIds } }] },
               ...extraAnd,
             ],
           },
@@ -185,9 +189,9 @@ export const agendaRoutes: FastifyPluginAsync = async (fastify) => {
           take: 500,
         })
         const rank = (c: Candidate): number => {
-          if (c.status === 'late' || (c.dueDate && c.dueDate < from)) return 0 // en retard (statut ou date)
+          if (statusCategory(c.status, spaceStatuses) === 'late' || (c.dueDate && c.dueDate < from)) return 0 // en retard (statut ou date)
           if (c.dueDate && c.dueDate < to) return 1 // échéance du jour
-          if (c.status === 'in_progress') return 2 // en cours
+          if (statusCategory(c.status, spaceStatuses) === 'active') return 2 // en cours
           return 3 // priorité haute
         }
         suggestions = (candidates as Candidate[])

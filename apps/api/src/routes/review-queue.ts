@@ -5,12 +5,13 @@
  * - overdue : horizon manuel assigné mais grâce dépassée (isOverdueForReview) — jamais LATER
  * Périmètre : mêmes espaces LISIBLES que /user/agenda et /user/tasks (readableSpaceIdsForUser — jamais un
  * espace privé de la communauté dont on n'est pas membre).
+ * Éléments fermés exclus par catégorie de statut (terminé / annulé, statuts des communautés) — jamais de liste en dur.
  */
 import { FastifyPluginAsync } from 'fastify'
-import { isOverdueForReview } from '@spok/shared'
+import { CLOSED_CATEGORIES, isOverdueForReview, statusIdsIn } from '@spok/shared'
+import { statusesOfSpaces } from '../utils/referentiels.js'
 import { accessibleSpaceIds } from './agenda.js'
 
-const CLOSED_STATUSES = ['done', 'cancelled']
 
 export const reviewQueueRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate)
@@ -25,7 +26,7 @@ export const reviewQueueRoutes: FastifyPluginAsync = async (fastify) => {
       where: {
         spaceId: { in: spaceIds },
         dueDate: null,
-        status: { notIn: CLOSED_STATUSES },
+        status: { notIn: statusIdsIn(CLOSED_CATEGORIES, await statusesOfSpaces(fastify.prisma, spaceIds)) },
       },
       select: {
         id: true, title: true, type: true, status: true, priority: true,

@@ -1,5 +1,8 @@
 /* Vue Échéances : items à échéance triés par urgence — embeddable dans le dashboard (prop filters).
- * Badges de priorité : toujours via PRIORITIES (constants/ui), jamais de table locale. */
+ * Badges de priorité : toujours via PRIORITIES (constants/ui), jamais de table locale.
+ * Types suivis par défaut : tous ceux du registre (ITEM_TYPES) ; seuls les éléments datés y apparaissent.
+ * Éléments fermés (isClosedStatus, statuts par défaut : page transverse à plusieurs communautés) : jamais en retard,
+ * masqués sauf « Afficher terminés ». */
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +16,7 @@ import { userTasksApi, itemsApi } from '../../lib/api';
 import type { GlobalTask } from '../../lib/api';
 import type { Item } from '@spok/shared';
 import { ItemEditModal } from '../ItemEditModal';
-import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap, isClosedStatus, ITEM_TYPES } from '@spok/shared';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import type { GlobalTaskFilterState } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
@@ -77,7 +80,7 @@ function groupByDeadline(tasks: GlobalTask[]): DeadlineGroup[] {
     if (!task.dueDate) continue;
     const due = new Date(task.dueDate);
 
-    if (due < now && task.status !== 'done' && task.status !== 'cancelled') {
+    if (due < now && !isClosedStatus(task.status)) {
       overdue.push(task);
     } else if (due <= todayEnd) {
       today.push(task);
@@ -108,7 +111,7 @@ export function DeadlinesView({ embedded, filters: externalFilters }: { embedded
   const [showDone, setShowDone] = useState(false);
 
   const internalFilters = useGlobalTaskFilters({
-    defaultTypes: ['UNDEFINED', 'NOTE', 'TASK', 'PROJECT', 'MEETING', 'PERIOD', 'LINK', 'DOCUMENT', 'IMAGE', 'BUG'],
+    defaultTypes: [...ITEM_TYPES],
     defaultSortBy: 'dueDate',
     defaultSortDir: 'asc',
     pageSize: 500,
@@ -130,7 +133,7 @@ export function DeadlinesView({ embedded, filters: externalFilters }: { embedded
   const tasksWithDeadline = useMemo(() => {
     if (!tasksData?.data) return [];
     return tasksData.data.filter(
-      (t) => t.dueDate && (showDone || (t.status !== 'done' && t.status !== 'cancelled'))
+      (t) => t.dueDate && (showDone || !isClosedStatus(t.status))
     );
   }, [tasksData, showDone]);
 

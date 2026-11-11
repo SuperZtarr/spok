@@ -1,15 +1,18 @@
-/* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage.
+/* Éditeur des statuts d'un référentiel : ajout, couleurs, ordre (DnD), visibilité, usage, catégorie.
+   Catégorie (2026-11-08, constants/statusCategory.ts) : sens du statut dans toutes les vues (Terminé / Annulé ferment
+   l'élément…) ; un nouveau statut part en « À faire » ; « Non défini » et les statuts réservés gardent la leur.
+   Aide en ligne : FieldHelp community-settings.statusCategory sous le titre (texte à lire avant de choisir).
    Statuts réservés à un type (status.types, ex. issues d'une question — RESERVED_STATUS_IDS) : badge « Réservé aux
    questions » (aide sous FieldHelp community-settings.reservedStatus), suppression impossible (l'API les rétablit). */
 import { useState, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import type { StatusConfig } from '@spok/shared';
+import type { StatusCategory, StatusConfig } from '@spok/shared';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { BadgeColorPicker } from './ColorPicker';
-import { BADGE_COLOR_OPTIONS, RESERVED_STATUS_IDS } from '@spok/shared';
+import { BADGE_COLOR_OPTIONS, RESERVED_STATUS_IDS, STATUS_CATEGORY_OPTIONS, statusCategory } from '@spok/shared';
 import { FieldHelp } from '../../help/FieldHelp';
 
 interface StatusManagerProps {
@@ -47,6 +50,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
       borderColor: defaultColor.borderColor,
       order: statuses.length,
       visible: true,
+      category: 'open',
     };
 
     onChange([...statuses, newStatus]);
@@ -105,6 +109,7 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
           Ajouter
         </Button>
       </div>
+      <FieldHelp page="community-settings" field="statusCategory" className="text-xs text-muted-foreground" />
 
       {/* Delete warning modal */}
       {deleteWarning && (
@@ -214,6 +219,18 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
               <span className={`px-2 py-1 rounded text-xs ${status.color}`}>
                 Aperçu
               </span>
+
+              {status.id !== 'undefined' && (
+                <select
+                  aria-label={`Catégorie du statut ${status.label}`}
+                  value={statusCategory(status.id, statuses)}
+                  onChange={(e) => handleUpdate(status.id, { category: e.target.value as StatusCategory })}
+                  disabled={RESERVED_STATUS_IDS.includes(status.id)}
+                  className="h-8 rounded border border-border bg-background px-2 text-sm disabled:opacity-60"
+                >
+                  {STATUS_CATEGORY_OPTIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              )}
 
               <label className="flex items-center gap-2 text-sm">
                 <input

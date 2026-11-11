@@ -10,9 +10,10 @@
  * eux-mêmes draggables vers la liste du jour (dataTransfer JSON {kind:'event', title,
  * start}) — DayPlanList/TodayPage gèrent le drop. Ligne rouge « maintenant » sur le jour
  * courant, rafraîchie chaque minute, traversant toutes les colonnes. Chevauchements
- * rendus côte à côte au sein de chaque colonne.
+ * rendus côte à côte au sein de chaque colonne. Bloc « fait » : statut de catégorie terminé (isStatusIn).
  */
 import { useEffect, useRef, useState } from 'react';
+import { isStatusIn } from '@spok/shared';
 import { X } from 'lucide-react';
 import { ItemActionMenu } from '@/components/ui/ItemActionMenu';
 import type { ItemActionGroup } from '@/components/ui/ItemActionMenu';
@@ -152,7 +153,7 @@ export function DayTimeGrid({ date, sources, events, entries, onMove, onResize, 
     .filter((p) => p.plannedStart)
     .map((p) => ({
       key: `pl-${p.id}`, title: p.item.title, entryId: p.id,
-      done: p.item.status === 'done',
+      done: isStatusIn(p.item.status, ['done']),
       startMin: drag?.entryId === p.id ? drag.startMin : toGridMin(p.plannedStart!),
       durMin: drag?.entryId === p.id ? drag.durMin : (p.plannedDuration ?? 30),
     }))

@@ -8,8 +8,11 @@
  * l'engage. Ne modifie jamais l'événement source (feed ICS en lecture seule, ou item MEETING).
  * Scope utilisateur strict ; l'item ajouté doit appartenir à un espace accessible
  * (membership direct ou via communauté). Le placement ne touche JAMAIS les dates de l'item.
+ * Tâche créée : premier statut « à faire » de son référentiel (firstStatusIn), jamais 'todo' en dur.
  */
 import { FastifyPluginAsync } from 'fastify'
+import { firstStatusIn } from '@spok/shared'
+import { statusesOfSpace } from '../utils/referentiels.js'
 
 async function resolvePersonalSpaceId(fastify: Parameters<FastifyPluginAsync>[0], userId: string): Promise<string | null> {
   const membership = await fastify.prisma.spaceMembership.findFirst({
@@ -93,7 +96,7 @@ export const dayPlanRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           type: 'TASK',
           title: title.trim(),
-          status: 'todo',
+          status: firstStatusIn('open', await statusesOfSpace(fastify.prisma, personalSpaceId)),
           dueDate: due,
           spaceId: personalSpaceId,
           createdById: userId,

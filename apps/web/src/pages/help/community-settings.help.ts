@@ -1,5 +1,6 @@
 /* Aide utilisateur des Paramètres de la communauté (/communities/:id/settings), écrite en éléments d'aide (help/elements.ts) : un texte par onglet,
    repris par le « ? » (HelpButton) et le tour (usePageTourPulse) ; un onglet n'a pas de zone du mode Aide. `fields` : aide sous les champs (FieldHelp).
+   statusCategory : sens d'une catégorie de statut (StatusManager, 2026-11-08), annonce status-category sur l'onglet Référentiels.
    Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
@@ -48,8 +49,9 @@ const elements: HelpElements = {
   referentiels: {
     title: 'Référentiels',
     short: 'Statuts et libellés de types.',
-    text: 'Les statuts et les libellés de types de la communauté : libellés, couleurs, ordre. Les espaces en héritent.',
+    text: 'Les statuts et les libellés de types de la communauté : libellés, couleurs, ordre. Les espaces en héritent. Chaque statut a une catégorie (À faire, En cours, À valider, En retard, Terminé, Annulé) qui dit ce qu’il veut dire : un statut Terminé ou Annulé ferme l’élément partout.',
     target: '[data-tour="community-tab-referentiels"]',
+    changes: [{ id: 'status-category', kind: 'new', text: 'Chaque statut a maintenant une catégorie : un statut que vous créez peut compter comme terminé, en cours ou en retard dans toutes les vues.', date: '2026-11-11' }],
     noZone: true,
     side: 'bottom',
   },
@@ -88,6 +90,7 @@ export const help: HelpEntry = {
     spacesOrder:'Glissez un espace sur le haut ou le bas d\'une ligne pour le placer avant ou après (ordre vu par tous les membres), sur son milieu pour en faire un sous-espace, ou sur le bandeau du haut pour le remettre au premier niveau.',
     visibilityRequest: 'Rendre la communauté visible par tous nécessite la validation d\'un administrateur : une demande sera envoyée à l\'enregistrement.',
     context: 'Le contexte adapte automatiquement l\'interface (vues proposées, champs) pour tous les visiteurs de la communauté. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale.',
+    statusCategory: 'La catégorie dit ce que veut dire le statut, dans toutes les vues et pour tous les membres : Terminé ou Annulé ferme l’élément (il sort des listes à faire et des retards, sa date de fin se remplit, il compte comme fait) ; En cours, À valider et En retard alimentent les indicateurs du tableau de bord. Un statut que vous créez commence en À faire.',
     reservedStatus: 'Issue d’une question (Ouverte, Tranchée, Reportée, Sans conclusion) : proposée seulement pour les éléments Question, qui n’utilisent qu’elles. Libellé, couleur, ordre et visibilité se modifient ; elle ne se supprime pas.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',
   },

@@ -1,6 +1,11 @@
-/* Vue Flux cumulatif (CFD) : évolution des statuts dans le temps. */
+/* Vue Flux cumulatif (CFD) : évolution des statuts dans le temps.
+   Statuts de la communauté (prop statuses) : ordre par catégorie, libellé du référentiel, couleur du badge
+   (getStatusHex) ; un élément fermé (isClosedStatus) est compté « à faire » avant sa dernière modification.
+   Jamais de table de statuts locale. */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
-import type { Item } from '@spok/shared';
+import type { Item, StatusCategory, StatusConfig } from '@spok/shared';
+import { DEFAULT_STATUSES, firstStatusIn, isClosedStatus, statusCategory } from '@spok/shared';
+import { getStatusHex } from '../../constants/ui';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 interface CfdViewProps {
@@ -11,32 +16,19 @@ interface CfdViewProps {
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;
+  /** Statuts de la communauté (référentiels) : ordre, libellés, couleurs et sens « terminé » */
+  statuses?: StatusConfig[];
 }
 
-// Status rendering order (bottom to top in the stacked chart)
-const STATUS_ORDER = ['done', 'cancelled', 'to_validate', 'in_progress', 'late', 'todo', 'undefined'];
+// Ordre d'empilement (bas → haut) : par catégorie de statut, puis ordre du référentiel (le plus avancé en bas)
+const CATEGORY_RANK: Record<StatusCategory, number> = { done: 0, cancelled: 1, review: 2, active: 3, late: 4, open: 5, none: 6 };
 
-const STATUS_LABELS: Record<string, string> = {
-  done: 'Terminé',
-  cancelled: 'Annulé',
-  to_validate: 'À valider',
-  in_progress: 'En cours',
-  late: 'En retard',
-  todo: 'À faire',
-  undefined: 'Non défini',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  done: '#22c55e',
-  cancelled: '#9ca3af',
-  to_validate: '#a855f7',
-  in_progress: '#f97316',
-  late: '#ef4444',
-  todo: '#eab308',
-  undefined: '#94a3b8',
-};
-
-const DONE_STATUSES = new Set(['done', 'cancelled']);
+function statusOrderOf(statuses: StatusConfig[]): string[] {
+  return [...statuses]
+    .filter((s) => !s.types?.length || s.id === 'undefined')
+    .sort((a, b) => CATEGORY_RANK[statusCategory(a.id, statuses)] - CATEGORY_RANK[statusCategory(b.id, statuses)] || b.order - a.order)
+    .map((s) => s.id);
+}
 
 interface DaySnapshot {
   date: Date;
@@ -45,7 +37,7 @@ interface DaySnapshot {
   total: number;
 }
 
-function buildCfdData(items: Item[]): DaySnapshot[] {
+function buildCfdData(items: Item[], statuses: StatusConfig[], order: string[]): DaySnapshot[] {
   if (items.length === 0) return [];
 
   // Sort items by createdAt
@@ -71,7 +63,7 @@ function buildCfdData(items: Item[]): DaySnapshot[] {
     dayEnd.setHours(23, 59, 59, 999);
 
     const counts: Record<string, number> = {};
-    for (const s of STATUS_ORDER) counts[s] = 0;
+    for (const s of order) counts[s] = 0;
 
     let total = 0;
 
@@ -91,11 +83,11 @@ function buildCfdData(items: Item[]): DaySnapshot[] {
         statusAtDate = item.status || 'undefined';
       } else {
         // Item was modified after this date — approximate as initial status
-        statusAtDate = item.status && DONE_STATUSES.has(item.status) ? 'todo' : (item.status || 'undefined');
+        statusAtDate = isClosedStatus(item.status, statuses) ? firstStatusIn('open', statuses) : (item.status || 'undefined');
       }
 
       // Normalize unknown statuses
-      if (!STATUS_COLORS[statusAtDate]) statusAtDate = 'undefined';
+      if (!order.includes(statusAtDate)) statusAtDate = 'undefined';
       counts[statusAtDate] = (counts[statusAtDate] || 0) + 1;
     }
 
@@ -121,7 +113,10 @@ function formatDate(d: Date, stepDays: number): string {
 
 const MARGIN = { top: 30, right: 20, bottom: 50, left: 55 };
 
-export function CfdView({ items }: CfdViewProps) {
+export function CfdView({ items, statuses: statusesProp }: CfdViewProps) {
+  const statuses = statusesProp ?? DEFAULT_STATUSES;
+  const statusOrder = useMemo(() => statusOrderOf(statuses), [statuses]);
+  const statusLabel = (id: string) => statuses.find((s) => s.id === id)?.label ?? id;
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
   const [tooltip, setTooltip] = useState<{ x: number; y: number; snapshot: DaySnapshot } | null>(null);
@@ -137,7 +132,7 @@ export function CfdView({ items }: CfdViewProps) {
     return () => observer.disconnect();
   }, []);
 
-  const snapshots = useMemo(() => buildCfdData(items), [items]);
+  const snapshots = useMemo(() => buildCfdData(items, statuses, statusOrder), [items, statuses, statusOrder]);
 
   const chartWidth = dimensions.width - MARGIN.left - MARGIN.right;
   const chartHeight = dimensions.height - MARGIN.top - MARGIN.bottom;
@@ -150,8 +145,8 @@ export function CfdView({ items }: CfdViewProps) {
         if (count > 0) seen.add(status);
       }
     }
-    return STATUS_ORDER.filter((s) => seen.has(s));
-  }, [snapshots]);
+    return statusOrder.filter((s) => seen.has(s));
+  }, [snapshots, statusOrder]);
 
   // Scales
   const { xScale, yScale, yTicks, xTicks } = useMemo(() => {
@@ -218,7 +213,7 @@ export function CfdView({ items }: CfdViewProps) {
       areas.push({
         status,
         path: `${topLine} ${bottomLine} Z`,
-        color: STATUS_COLORS[status] || '#94a3b8',
+        color: getStatusHex(status, statuses),
       });
     }
 
@@ -277,10 +272,10 @@ export function CfdView({ items }: CfdViewProps) {
             <div key={status} className="flex items-center gap-1">
               <span
                 className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: STATUS_COLORS[status] }}
+                style={{ backgroundColor: getStatusHex(status, statuses) }}
               />
               <span className="text-[10px] text-muted-foreground">
-                {STATUS_LABELS[status] || status}
+                {statusLabel(status)}
               </span>
             </div>
           ))}
@@ -385,9 +380,9 @@ export function CfdView({ items }: CfdViewProps) {
                   <div key={status} className="flex items-center gap-2">
                     <span
                       className="w-2 h-2 rounded-full inline-block"
-                      style={{ backgroundColor: STATUS_COLORS[status] }}
+                      style={{ backgroundColor: getStatusHex(status, statuses) }}
                     />
-                    {STATUS_LABELS[status]} : {count}
+                    {statusLabel(status)} : {count}
                   </div>
                 );
               })}

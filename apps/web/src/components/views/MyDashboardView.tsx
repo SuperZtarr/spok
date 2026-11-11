@@ -3,6 +3,9 @@
  * Deux requêtes (allData non terminés / doneData terminés) suivent toutes deux filters.queryParams.
  * Layout : ligne A = Échéances + colonne de listes (Priorités/En retard/Aujourd'hui/Assignés) ;
  * ligne B pleine largeur = répartitions (Par statut / Par type / Progression) en grille.
+ * Types (filtre par défaut, couleurs de la répartition) : tirés du registre des types, jamais recopiés.
+ * Statuts : par catégorie (ouverts, terminés, en cours, à valider, isClosedStatus) et couleur du badge (getStatusHex) —
+ * statuts par défaut, la page couvre plusieurs communautés. Jamais de valeur de statut en dur.
  */
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -30,9 +33,9 @@ import {
 } from 'lucide-react';
 import { userTasksApi, spacesApi } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
-import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS } from '@spok/shared';
+import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS, ITEM_TYPES, OPEN_CATEGORIES, isClosedStatus, isStatusIn, statusIdsIn } from '@spok/shared';
 import type { GlobalTask } from '../../lib/api';
-import { getPriorityConfig, TYPE_ICONS } from '../../constants/ui';
+import { getPriorityConfig, getStatusHex, getTypeHex, TYPE_ICONS } from '../../constants/ui';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
 import { ItemEditModal } from '../ItemEditModal';
@@ -77,8 +80,6 @@ function getDaysOfMonth(year: number, month: number) {
   return days;
 }
 
-const DONE_STATUSES = ['done', 'cancelled'];
-
 function localDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -106,16 +107,11 @@ function KpiBadge({ label, count, color, icon: Icon }: {
 // Distribution Bar
 // ---------------------------------------------------------------------------
 
-const STATUS_BAR_COLORS: Record<string, string> = {
-  undefined: '#6366f1', todo: '#eab308', in_progress: '#f97316', late: '#ef4444',
-  to_validate: '#a855f7', done: '#22c55e', cancelled: '#ec4899', scheduled: '#3b82f6',
-};
+// Couleur de chaque statut : celle de son badge (getStatusHex) — pas de table locale
+const STATUS_BAR_COLORS: Record<string, string> = Object.fromEntries(DEFAULT_STATUSES.map((st) => [st.id, getStatusHex(st.id)]));
 
-const TYPE_BAR_COLORS: Record<string, string> = {
-  UNDEFINED: '#94a3b8', NOTE: '#3b82f6', PROJECT: '#a855f7', TASK: '#22c55e', MEETING: '#f97316',
-  PERIOD: '#14b8a6', LINK: '#06b6d4', CONFIG: '#6b7280', DOCUMENT: '#f59e0b',
-  IMAGE: '#ec4899', BUG: '#ef4444', DIAGRAM: '#6366f1',
-};
+// Couleur de chaque type tirée du registre (getTypeHex) — pas de table locale
+const TYPE_BAR_COLORS: Record<string, string> = Object.fromEntries(ITEM_TYPES.map((t) => [t, getTypeHex(t)]));
 
 function DistributionBar({ counts, total, colorMap }: { counts: { id: string; label: string; count: number }[]; total: number; colorMap: Record<string, string> }) {
   if (total === 0) return <p className="text-sm text-muted-foreground text-center py-4">Aucun élément</p>;
@@ -189,7 +185,7 @@ function TaskRowContent({ task, isOverdue, showGrip }: { task: GlobalTask; isOve
 }
 
 function TaskRow({ task, onEdit }: { task: GlobalTask; onEdit: (id: string) => void }) {
-  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date() && !DONE_STATUSES.includes(task.status || ''));
+  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date() && !isClosedStatus(task.status));
 
   return (
     <div
@@ -203,7 +199,7 @@ function TaskRow({ task, onEdit }: { task: GlobalTask; onEdit: (id: string) => v
 
 function SortableTaskRow({ task, onEdit }: { task: GlobalTask; onEdit: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
-  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date() && !DONE_STATUSES.includes(task.status || ''));
+  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date() && !isClosedStatus(task.status));
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -267,7 +263,7 @@ export function MyDashboardView() {
   );
 
   const filters = useGlobalTaskFilters({
-    defaultTypes: ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'],
+    defaultTypes: [...ITEM_TYPES],
     defaultSortBy: 'priority',
     defaultSortDir: 'desc',
     pageSize: 2000,
@@ -282,14 +278,14 @@ export function MyDashboardView() {
     queryKey: ['my-organization', filters.queryParams],
     queryFn: () => userTasksApi.list({
       ...filters.queryParams,
-      status: filters.queryParams.status || 'none,todo,in_progress,to_validate,late',
+      status: filters.queryParams.status || statusIdsIn(OPEN_CATEGORIES).join(','),
       myTasks: true,
     }),
   });
 
   // Fetch done items for KPIs (created by or assigned to me).
   // Reprend filters.queryParams (type/espace/priorité/recherche/échéances/communauté) — comme allData —
-  // en forçant status:'done' : ces panneaux (répartitions, progression, KPI terminés) ne montrent
+  // en forçant les statuts « terminé » (catégorie done) : ces panneaux (répartitions, progression, KPI terminés) ne montrent
   // que les terminés, mais doivent suivre les autres filtres. Le filtre statut de la barre reste
   // volontairement sans effet ici.
   const weekStart = getMonday(addDays(today, weekOffset * 7));
@@ -297,7 +293,7 @@ export function MyDashboardView() {
     queryKey: ['my-organization-done', filters.queryParams, localDateKey(weekStart)],
     queryFn: () => userTasksApi.list({
       ...filters.queryParams,
-      status: 'done',
+      status: statusIdsIn(['done']).join(','),
       pageSize: 2000,
       myTasks: true,
     }),
@@ -363,7 +359,7 @@ export function MyDashboardView() {
   // --- Overdue ---
   const overdueTasks = useMemo(() =>
     allTasks.filter(t =>
-      t.dueDate && new Date(t.dueDate) < today && !DONE_STATUSES.includes(t.status || '')
+      t.dueDate && new Date(t.dueDate) < today && !isClosedStatus(t.status)
     ).sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
     [allTasks, today]
   );
@@ -386,13 +382,13 @@ export function MyDashboardView() {
 
   // --- KPI computed ---
   const inProgressTasks = useMemo(() =>
-    allTasks.filter(t => t.status === 'in_progress'),
+    allTasks.filter(t => isStatusIn(t.status, ['active'])),
     [allTasks]
   );
 
 
   const toValidateTasks = useMemo(() =>
-    allTasks.filter(t => t.status === 'to_validate'),
+    allTasks.filter(t => isStatusIn(t.status, ['review'])),
     [allTasks]
   );
 

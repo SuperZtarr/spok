@@ -1,11 +1,11 @@
-/* Vue Burndown : restant vs temps sur les tâches à échéance (graphique). */
+/* Vue Burndown : restant vs temps sur les tâches à échéance (graphique).
+   Élément compté « fait » : statut qui le ferme (catégorie terminé / annulé, isClosedStatus, statuts de la communauté). */
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
-import type { Item } from '@spok/shared';
+import type { Item, StatusConfig } from '@spok/shared';
+import { isClosedStatus } from '@spok/shared';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 type ChartMode = 'burndown' | 'burnup';
-
-const DONE_STATUSES = new Set(['done', 'cancelled']);
 
 interface BurndownViewProps {
   items: Item[];
@@ -15,6 +15,8 @@ interface BurndownViewProps {
   searchMatchIds?: Set<string>;
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;
+  /** Statuts de la communauté (sens terminé / annulé) */
+  statuses?: StatusConfig[];
 }
 
 interface DayPoint {
@@ -25,7 +27,7 @@ interface DayPoint {
   remaining: number;
 }
 
-function buildTimeSeries(items: Item[]): DayPoint[] {
+function buildTimeSeries(items: Item[], statuses?: StatusConfig[]): DayPoint[] {
   if (items.length === 0) return [];
 
   // Collect creation and completion events
@@ -34,7 +36,7 @@ function buildTimeSeries(items: Item[]): DayPoint[] {
 
   for (const item of items) {
     creations.push(new Date(item.createdAt));
-    if (item.status && DONE_STATUSES.has(item.status)) {
+    if (isClosedStatus(item.status, statuses)) {
       completions.push(new Date(item.updatedAt));
     }
   }
@@ -107,6 +109,7 @@ const MARGIN = { top: 30, right: 20, bottom: 50, left: 55 };
 
 export function BurndownView({
   items,
+  statuses,
 }: BurndownViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
@@ -125,7 +128,7 @@ export function BurndownView({
     return () => observer.disconnect();
   }, []);
 
-  const points = useMemo(() => buildTimeSeries(items), [items]);
+  const points = useMemo(() => buildTimeSeries(items, statuses), [items, statuses]);
 
   const chartWidth = dimensions.width - MARGIN.left - MARGIN.right;
   const chartHeight = dimensions.height - MARGIN.top - MARGIN.bottom;

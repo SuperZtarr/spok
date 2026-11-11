@@ -2,6 +2,7 @@
    favoris, communautés, fil d'activité. Écran FirstTimeSetup si aucune communauté/espace.
    Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
    ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden).
+   Statuts : par catégorie (ouverts, « à faire », fermés — isClosedStatus / statusIdsIn), jamais de valeur en dur.
    « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications.
    FirstTimeSetup (2026-10-16) : « Créer une communauté » ouvre directement la modale (/communities?new=community) ;
    « Créer un espace personnel » le crée (POST /spaces PERSONAL) et l'ouvre — l'écran n'apparaît que sans aucun
@@ -15,6 +16,7 @@ import { Users, FolderKanban, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, 
 import { communitiesApi, spacesApi, activityApi, userTasksApi, notificationsApi } from '../../lib/api';
 import type { GlobalTask } from '../../lib/api';
 import type { Notification } from '@spok/shared';
+import { OPEN_CATEGORIES, isClosedStatus, isStatusIn, statusIdsIn } from '@spok/shared';
 import { TYPE_LABELS } from '../../constants/ui';
 import { TYPE_ICONS } from '../../constants/ui';
 import { useAuthStore } from '../../stores/auth';
@@ -148,8 +150,6 @@ function FirstTimeSetup({ userName }: { userName: string }) {
   );
 }
 
-const DONE_STATUSES = ['done', 'cancelled'];
-
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
@@ -210,7 +210,7 @@ function DashboardPreviewCard({
 
 function TaskPreviewRow({ task }: { task: GlobalTask }) {
   const Icon = TYPE_ICONS[task.type as keyof typeof TYPE_ICONS] || TYPE_ICONS.NOTE;
-  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < startOfDay(new Date()) && !DONE_STATUSES.includes(task.status || ''));
+  const isOverdue = !!(task.dueDate && new Date(task.dueDate) < startOfDay(new Date()) && !isClosedStatus(task.status));
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
       <Icon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
@@ -272,7 +272,7 @@ export function HomeView() {
 
   const { data: myTasksData } = useQuery({
     queryKey: ['home-my-tasks'],
-    queryFn: () => userTasksApi.list({ status: 'none,todo,in_progress,to_validate,late', myTasks: true, pageSize: 200 }),
+    queryFn: () => userTasksApi.list({ status: statusIdsIn(OPEN_CATEGORIES).join(','), myTasks: true, pageSize: 200 }),
     enabled: !!user,
     staleTime: 60_000,
   });
@@ -312,13 +312,13 @@ export function HomeView() {
   );
 
   const overdueTasks = useMemo(() =>
-    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) < today && !DONE_STATUSES.includes(t.status || ''))
+    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) < today && !isClosedStatus(t.status))
       .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
     [allMyTasks]
   );
 
   const todoTasks = useMemo(() =>
-    allMyTasks.filter(t => t.status === 'todo'),
+    allMyTasks.filter(t => isStatusIn(t.status, ['open'])),
     [allMyTasks]
   );
 
