@@ -11,8 +11,8 @@ import { isLocked, LOCKED_MESSAGE } from '../../utils/itemLock.js';
 import { communityRestoreData, restoredCommunityVisibility, spaceRestoreData } from '../../utils/audit.js';
 
 const querySchema = z.object({
-  entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community']).optional(),
-  action: z.enum(['CREATE', 'UPDATE', 'DELETE', 'MOVE', 'BULK_MOVE', 'ADD_RELATION', 'DELETE_RELATION']).optional(),
+  entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community', 'Tag']).optional(),
+  action: z.enum(['CREATE', 'UPDATE', 'DELETE', 'MOVE', 'BULK_MOVE', 'ADD_RELATION', 'DELETE_RELATION', 'MERGE']).optional(),
   entityId: z.string().optional(),
   userId: z.string().optional(),
   spaceId: z.string().optional(),

@@ -1,4 +1,5 @@
-/* Types AuditLog : actions, entités, aperçu de suppression (delete preview). */
+/* Types AuditLog : actions, entités, aperçu de suppression (delete preview).
+ * Entité 'Tag' et action 'MERGE' (2026-11-11) : gestion des tags dans /admin/tags (routes/admin/tags.ts). */
 export type AuditAction =
   | 'CREATE'
   | 'UPDATE'
@@ -8,9 +9,10 @@ export type AuditAction =
   | 'ADD_RELATION'
   | 'UPDATE_RELATION'
   | 'DELETE_RELATION'
+  | 'MERGE'
   | 'BACKUP';
 
-export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community' | 'System';
+export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community' | 'Tag' | 'System';
 
 export interface AuditLogChanges {
   before?: Record<string, unknown>;

@@ -61,7 +61,7 @@ describe('createItemTree', () => {
     const prisma = createMockPrisma()
     prisma.item.create.mockImplementation(({ data }: any) => Promise.resolve({ id: 'item-1', ...data }))
     prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
-    prisma.tag.findFirst.mockResolvedValue(null)
+    prisma.tag.findMany.mockResolvedValue([])
     prisma.tag.create.mockResolvedValue({ id: 'tag-bug' })
 
     await createItemTree(prisma as any, [{ title: 'Crash', type: 'BUG' as any }], { spaceId: 'space-1', createdById: 'user-1', parentId: null })

@@ -4,6 +4,7 @@
  * Distinction volontaire/forcée : déconnexion forcée → `spok_session_expired` en sessionStorage
  * pour déclencher le bouton "Retourner à" dans GlobalNavBar après reconnexion.
  * LiveSessionHost (utilisateur connecté) : fenêtre de la séance live active, visible sur toutes les pages.
+ * /admin/tags : TagsPage (tags globaux et doublons de tags, 2026-11-11).
  */
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ import { SpacesPage } from './pages/admin/SpacesPage';
 import { CommunitiesPage } from './pages/admin/CommunitiesPage';
 import { AnomaliesPage } from './pages/admin/AnomaliesPage';
 import { DuplicatesPage } from './pages/admin/DuplicatesPage';
+import { TagsPage } from './pages/admin/TagsPage';
 import { ReferentielsPage } from './pages/admin/ReferentielsPage';
 import { StatsPage } from './pages/admin/StatsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
@@ -121,6 +123,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/admin\/communities$/, 'pages/admin/CommunitiesPage.tsx'],
   [/^\/admin\/anomalies$/, 'pages/admin/AnomaliesPage.tsx'],
   [/^\/admin\/duplicates$/, 'pages/admin/DuplicatesPage.tsx'],
+  [/^\/admin\/tags$/, 'pages/admin/TagsPage.tsx'],
   [/^\/admin\/referentiels$/, 'pages/admin/ReferentielsPage.tsx'],
   [/^\/admin\/stats$/, 'pages/admin/StatsPage.tsx'],
   [/^\/admin\/audit-logs$/, 'pages/admin/AuditLogsPage.tsx'],
@@ -227,6 +230,7 @@ export default function App() {
         <Route path="admin/communities" element={<AdminRoute><CommunitiesPage /></AdminRoute>} />
         <Route path="admin/anomalies" element={<AdminRoute><AnomaliesPage /></AdminRoute>} />
         <Route path="admin/duplicates" element={<AdminRoute><DuplicatesPage /></AdminRoute>} />
+        <Route path="admin/tags" element={<AdminRoute><TagsPage /></AdminRoute>} />
         <Route path="admin/referentiels" element={<AdminRoute><ReferentielsPage /></AdminRoute>} />
         <Route path="admin/stats" element={<AdminRoute><StatsPage /></AdminRoute>} />
         <Route path="admin/audit-logs" element={<AdminRoute><AuditLogsPage /></AdminRoute>} />

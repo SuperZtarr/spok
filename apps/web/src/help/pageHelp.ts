@@ -41,6 +41,7 @@ import { help as adminCommunitiesHelp } from '../pages/help/admin-communities.he
 import { help as adminSpacesHelp } from '../pages/help/admin-spaces.help';
 import { help as adminAnomaliesHelp } from '../pages/help/admin-anomalies.help';
 import { help as adminDuplicatesHelp } from '../pages/help/admin-duplicates.help';
+import { help as adminTagsHelp } from '../pages/help/admin-tags.help';
 import { help as adminReferentielsHelp } from '../pages/help/admin-referentiels.help';
 import { help as adminStatsHelp } from '../pages/help/admin-stats.help';
 import { help as adminAuditHelp } from '../pages/help/admin-audit.help';
@@ -85,6 +86,7 @@ export const PAGE_HELP = {
   'admin-spaces': adminSpacesHelp,
   'admin-anomalies': adminAnomaliesHelp,
   'admin-duplicates': adminDuplicatesHelp,
+  'admin-tags': adminTagsHelp,
   'admin-referentiels': adminReferentielsHelp,
   'admin-stats': adminStatsHelp,
   'admin-audit': adminAuditHelp,

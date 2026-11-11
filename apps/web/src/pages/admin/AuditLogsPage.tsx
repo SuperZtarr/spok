@@ -1,6 +1,8 @@
 /* Admin journaux d'audit (/admin/audit-logs) : tous espaces, filtres globaux, restauration, purges.
    Aide utilisateur : fiche pages/help/admin-audit.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint)
-   sur Restaurer / Restaurer le batch / Purger (irréversible). */
+   sur Restaurer / Restaurer le batch / Purger (irréversible).
+   Filtres : entité Tag et action Fusion (gestion des tags dans /admin/tags, 2026-11-11 — journal seulement, pas de
+   restauration d'un tag). */
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter, Copy, Check } from 'lucide-react';
@@ -43,6 +45,7 @@ const ENTITY_OPTIONS = [
   { value: 'ItemRelation', label: 'Relation' },
   { value: 'Space', label: 'Espace' },
   { value: 'Community', label: 'Communaute' },
+  { value: 'Tag', label: 'Tag' },
 ];
 
 const ACTION_OPTIONS = [
@@ -54,6 +57,7 @@ const ACTION_OPTIONS = [
   { value: 'BULK_MOVE', label: 'Deplacement groupe' },
   { value: 'ADD_RELATION', label: 'Ajout relation' },
   { value: 'DELETE_RELATION', label: 'Suppression relation' },
+  { value: 'MERGE', label: 'Fusion' },
 ];
 
 const ACTION_COLORS: Record<string, string> = {

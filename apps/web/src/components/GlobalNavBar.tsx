@@ -5,7 +5,8 @@
  * row 1 du header (Layout.tsx, 2026-08-31) — ce bandeau ne gère plus que la navigation.
  * Badge d'activité : GET /activity seulement si connecté — le bandeau s'affiche aussi aux visiteurs anonymes
  * (/communities, /search…) et un 401 y renvoyait vers /login (bug 2026-10-21).
- * NAV_ICONS doublée dans Layout.tsx (grille mobile) : toute icône ajoutée ici l'est aussi là-bas (Sparkles : Nouveautés).
+ * NAV_ICONS doublée dans Layout.tsx (grille mobile) : toute icône ajoutée ici l'est aussi là-bas (Sparkles : Nouveautés ;
+ * Tag : admin Tags).
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,7 @@ import {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Map as MapIconLucide, Copy, Search, Sparkles,
+  MessageSquare, Map as MapIconLucide, Copy, Search, Sparkles, Tag,
   type LucideIcon,
 } from 'lucide-react';
 import { activityApi } from '../lib/api';
@@ -27,7 +28,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, MapIcon: MapIconLucide, Copy, Search, Sparkles,
+  MessageSquare, MapIcon: MapIconLucide, Copy, Search, Sparkles, Tag,
 };
 
 const getIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;

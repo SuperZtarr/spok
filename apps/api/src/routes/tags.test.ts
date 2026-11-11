@@ -1,5 +1,6 @@
-/* TNR des tags d'espace : CRUD, validation couleur, droits par rôle. */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+/* TNR des tags d'un espace (portée communauté + global, 2026-11-11) : liste, création dans la communauté, refus sans
+   communauté, doublon contre communauté et global, droits de gestion (propriétaire de communauté / admin). */
+import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
 import { ZodError } from 'zod'
@@ -69,36 +70,42 @@ describe('Tags routes', () => {
     prisma.space.findUnique.mockResolvedValue(null)
   }
 
+  const inject = (method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, payload?: object) =>
+    app.inject({ method, url, headers: { authorization: `Bearer ${token}` }, ...(payload && { payload }) })
+
   // ─── LIST TAGS ────────────────────────────────────────────────
 
   describe('GET /spaces/:spaceId/tags', () => {
-    it('should list tags with item counts', async () => {
+    it('tags de la communauté + globaux, portée indiquée', async () => {
       allowAccess()
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
       prisma.tag.findMany.mockResolvedValue([
-        { id: 'tag-1', name: 'urgent', color: '#ff0000', spaceId: SPACE_ID, _count: { items: 3 } },
+        { id: 'tag-1', name: 'urgent', color: '#ff0000', communityId: 'com-1', spaceId: null, _count: { items: 3 } },
+        { id: 'tag-2', name: 'bug', color: null, communityId: null, spaceId: null, _count: { items: 1 } },
       ])
 
-      const res = await app.inject({
-        method: 'GET',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-      })
+      const res = await inject('GET', `/spaces/${SPACE_ID}/tags`)
 
       expect(res.statusCode).toBe(200)
       const body = res.json()
-      expect(body).toHaveLength(1)
-      expect(body[0].itemCount).toBe(3)
+      expect(body[0]).toMatchObject({ itemCount: 3, isCommunityTag: true, isGlobalTag: false })
+      expect(body[1]).toMatchObject({ itemCount: 1, isCommunityTag: false, isGlobalTag: true })
+      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({ OR: [{ communityId: 'com-1' }, { communityId: null, spaceId: null }] })
+    })
+
+    it('espace sans communauté : globaux seulement', async () => {
+      allowAccess()
+      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      prisma.tag.findMany.mockResolvedValue([])
+
+      await inject('GET', `/spaces/${SPACE_ID}/tags`)
+
+      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({ communityId: null, spaceId: null })
     })
 
     it('should return 404 when no access', async () => {
       denyAccess()
-
-      const res = await app.inject({
-        method: 'GET',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-      })
-
+      const res = await inject('GET', `/spaces/${SPACE_ID}/tags`)
       expect(res.statusCode).toBe(404)
     })
   })
@@ -106,189 +113,110 @@ describe('Tags routes', () => {
   // ─── CREATE TAG ───────────────────────────────────────────────
 
   describe('POST /spaces/:spaceId/tags', () => {
-    it('should create a tag', async () => {
-      allowAccess()
-      prisma.space.findUnique.mockResolvedValue({ communityId: null })
-      prisma.tag.findFirst.mockResolvedValue(null) // no duplicate
-      prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'feature', color: '#00ff00', spaceId: SPACE_ID })
-
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'feature', color: '#00ff00' },
-      })
-
-      expect(res.statusCode).toBe(201)
-      expect(res.json().name).toBe('feature')
-      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'feature', color: '#00ff00', spaceId: SPACE_ID } })
-    })
-
-    it('espace d\'une communauté : tag créé dans la communauté', async () => {
+    it('tag créé dans la communauté de l\'espace', async () => {
       allowAccess()
       prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
-      prisma.tag.findFirst.mockResolvedValue(null)
+      prisma.tag.findMany.mockResolvedValue([]) // pas de doublon
       prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'bug', communityId: 'com-1' })
 
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'bug' },
-      })
+      const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: ' bug ', color: '#00ff00' })
 
       expect(res.statusCode).toBe(201)
-      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'bug', color: undefined, communityId: 'com-1' } })
-      expect(prisma.tag.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({ OR: [{ spaceId: SPACE_ID }, { communityId: 'com-1' }] }),
-      }))
+      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'bug', color: '#00ff00', communityId: 'com-1' } })
     })
 
-    it('should reject duplicate tag name', async () => {
+    it('espace sans communauté : création refusée (400)', async () => {
       allowAccess()
       prisma.space.findUnique.mockResolvedValue({ communityId: null })
-      prisma.tag.findFirst.mockResolvedValue({ id: 'existing' })
 
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'feature' },
-      })
+      const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: 'perso' })
+
+      expect(res.statusCode).toBe(400)
+      expect(prisma.tag.create).not.toHaveBeenCalled()
+    })
+
+    it('nom déjà pris en global ou dans la communauté : 409', async () => {
+      allowAccess()
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      prisma.tag.findMany.mockResolvedValue([{ id: 'g', name: 'Bug', communityId: null, spaceId: null }])
+
+      const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: 'bug' })
 
       expect(res.statusCode).toBe(409)
+      expect(prisma.tag.findMany.mock.calls[0][0].where).toMatchObject({ name: { equals: 'bug', mode: 'insensitive' } })
     })
 
     it('should reject creation by VIEWER', async () => {
       allowAccess('VIEWER')
-
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'nope' },
-      })
-
+      const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: 'nope' })
       expect(res.statusCode).toBe(403)
     })
 
     it('should reject invalid color format', async () => {
       allowAccess()
-
-      const res = await app.inject({
-        method: 'POST',
-        url: `/spaces/${SPACE_ID}/tags`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'tag', color: 'red' },
-      })
-
+      const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: 'tag', color: 'red' })
       expect(res.statusCode).toBe(400)
     })
   })
 
-  // ─── UPDATE TAG ───────────────────────────────────────────────
+  // ─── UPDATE / DELETE ──────────────────────────────────────────
 
-  describe('PATCH /spaces/:spaceId/tags/:id', () => {
-    it('should update tag name', async () => {
+  describe('PATCH / DELETE /spaces/:spaceId/tags/:id', () => {
+    beforeEach(() => {
       allowAccess()
-      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'old', spaceId: SPACE_ID })
-      prisma.tag.findUnique.mockResolvedValue(null) // no name conflict
-      prisma.tag.update.mockResolvedValue({ id: 'tag-1', name: 'new', spaceId: SPACE_ID })
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+    })
 
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/spaces/${SPACE_ID}/tags/tag-1`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'new' },
-      })
+    it('tag de communauté : renommé par le propriétaire de la communauté', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'old', communityId: 'com-1', spaceId: null })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.tag.findMany.mockResolvedValue([])
+      prisma.tag.update.mockResolvedValue({ id: 'tag-1', name: 'new' })
+
+      const res = await inject('PATCH', `/spaces/${SPACE_ID}/tags/tag-1`, { name: 'new' })
 
       expect(res.statusCode).toBe(200)
+      expect(prisma.tag.update).toHaveBeenCalledWith({ where: { id: 'tag-1' }, data: { name: 'new' } })
     })
 
-    it('should reject duplicate name on update', async () => {
-      allowAccess()
-      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'old', spaceId: SPACE_ID })
-      prisma.tag.findUnique.mockResolvedValue({ id: 'tag-2', name: 'taken', spaceId: SPACE_ID })
+    it('tag de communauté : refusé à un simple membre de la communauté', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'old', communityId: 'com-1', spaceId: null })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
 
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/spaces/${SPACE_ID}/tags/tag-1`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'taken' },
-      })
-
-      expect(res.statusCode).toBe(409)
+      expect((await inject('PATCH', `/spaces/${SPACE_ID}/tags/tag-1`, { name: 'new' })).statusCode).toBe(403)
+      expect((await inject('DELETE', `/spaces/${SPACE_ID}/tags/tag-1`)).statusCode).toBe(403)
+      expect(prisma.tag.delete).not.toHaveBeenCalled()
     })
 
-    it('should return 404 for non-existent tag', async () => {
-      allowAccess()
-      prisma.tag.findFirst.mockResolvedValue(null)
+    it('tag global : refusé hors mode admin', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'g', name: 'bug', communityId: null, spaceId: null })
 
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/spaces/${SPACE_ID}/tags/non-existent`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'ghost' },
-      })
-
-      expect(res.statusCode).toBe(404)
+      expect((await inject('DELETE', `/spaces/${SPACE_ID}/tags/g`)).statusCode).toBe(403)
     })
 
-    it('should reject update by VIEWER', async () => {
-      allowAccess('VIEWER')
+    it('nom déjà pris : 409', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'old', communityId: 'com-1', spaceId: null })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
+      prisma.tag.findMany.mockResolvedValue([{ id: 'tag-2', name: 'taken', communityId: 'com-1', spaceId: null }])
 
-      const res = await app.inject({
-        method: 'PATCH',
-        url: `/spaces/${SPACE_ID}/tags/tag-1`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { name: 'nope' },
-      })
-
-      expect(res.statusCode).toBe(403)
+      expect((await inject('PATCH', `/spaces/${SPACE_ID}/tags/tag-1`, { name: 'taken' })).statusCode).toBe(409)
     })
-  })
 
-  // ─── DELETE TAG ───────────────────────────────────────────────
-
-  describe('DELETE /spaces/:spaceId/tags/:id', () => {
-    it('should delete tag as OWNER', async () => {
-      allowAccess('OWNER')
-      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'doomed', spaceId: SPACE_ID })
+    it('suppression par le propriétaire de la communauté', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'tag-1', name: 'doomed', communityId: 'com-1', spaceId: null })
+      prisma.communityMembership.findUnique.mockResolvedValue({ role: 'OWNER' })
       prisma.tag.delete.mockResolvedValue({})
 
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/spaces/${SPACE_ID}/tags/tag-1`,
-        headers: { authorization: `Bearer ${token}` },
-      })
+      const res = await inject('DELETE', `/spaces/${SPACE_ID}/tags/tag-1`)
 
       expect(res.statusCode).toBe(200)
-      expect(res.json().success).toBe(true)
+      expect(prisma.tag.delete).toHaveBeenCalledWith({ where: { id: 'tag-1' } })
     })
 
-    it('should reject delete by MEMBER', async () => {
-      allowAccess('MEMBER')
-
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/spaces/${SPACE_ID}/tags/tag-1`,
-        headers: { authorization: `Bearer ${token}` },
-      })
-
-      expect(res.statusCode).toBe(403)
-    })
-
-    it('should return 404 for non-existent tag', async () => {
-      allowAccess('OWNER')
+    it('tag absent ou hors de portée : 404', async () => {
       prisma.tag.findFirst.mockResolvedValue(null)
-
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/spaces/${SPACE_ID}/tags/non-existent`,
-        headers: { authorization: `Bearer ${token}` },
-      })
-
-      expect(res.statusCode).toBe(404)
+      expect((await inject('PATCH', `/spaces/${SPACE_ID}/tags/x`, { name: 'ghost' })).statusCode).toBe(404)
+      expect((await inject('DELETE', `/spaces/${SPACE_ID}/tags/x`)).statusCode).toBe(404)
     })
   })
 })

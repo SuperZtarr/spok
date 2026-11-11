@@ -10,6 +10,7 @@
  * Contenus (lot 4 contenus multiples) : plus de champ url ; le paramètre url de create_item / update_item AJOUTE un
  * contenu Lien (POST …/contents) ; get_item liste les contenus avec leur id. Lot 5 : add_item_content (lien, schéma),
  * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
+ * Tags (2026-11-11) : portée communauté ou global, plus de tag d'espace ; list_tags affiche la portée.
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z, type ZodRawShape } from 'zod'
@@ -283,12 +284,13 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       return ok(`[${c.id}] ${c.author?.name ?? '?'}\n${extractText(c.content)}`)
     })
 
-  define('read', 'list_tags', 'Liste les tags utilisables dans un espace (tags de l\'espace + tags de sa communauté).',
+  define('read', 'list_tags', 'Liste les tags utilisables dans un espace (tags de sa communauté + tags globaux).',
     { spaceId: zId().describe('ID de l\'espace') },
     async ({ spaceId }) => {
       const tags = asList(await client.get(`/spaces/${spaceId}/tags`), 'data')
+      const scope = (t: any) => (t.isGlobalTag ? 'global' : t.isCommunityTag ? 'communauté' : 'espace')
       const lines = tags.map((t: any) =>
-        `[${t.id}] ${t.name}${t.color ? ` (${t.color})` : ''} | ${t.isCommunityTag ? 'communauté' : 'espace'}${typeof t.itemCount === 'number' ? ` | ${t.itemCount} item(s)` : ''}`)
+        `[${t.id}] ${t.name}${t.color ? ` (${t.color})` : ''} | ${scope(t)}${typeof t.itemCount === 'number' ? ` | ${t.itemCount} item(s)` : ''}`)
       return ok(lines.length > 0 ? lines.join('\n') : 'Aucun tag.')
     })
 
@@ -619,13 +621,14 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       return ok(`Contribution ${contributionId} supprimée.`)
     })
 
-  // Tags d'espace (routes/tags.ts sur /spaces/:spaceId/tags). Les tags de communauté se gèrent dans l'UI.
+  // Tags utilisables dans un espace (routes/tags.ts sur /spaces/:spaceId/tags) : tags de sa communauté + globaux (plus
+  // de tag d'espace, 2026-11-11). Création = dans la communauté de l'espace ; tags globaux : /admin/tags (interface).
   // Toute modification invalide le cache des conventions de l'espace.
   const assertColor = (color?: string) => {
     if (color !== undefined && !HEX_COLOR.test(color)) throw new ConventionError(`Couleur « ${color} » invalide : format attendu #RRGGBB (ex. #3b82f6).`)
   }
 
-  define('admin', 'create_tag', 'Crée un tag dans un espace.',
+  define('admin', 'create_tag', 'Crée un tag dans la communauté de l\'espace (proposé dans tous ses espaces). Espace sans communauté : refusé (seuls les tags globaux, gérés par un admin dans l\'interface).',
     {
       spaceId: zId().describe('ID de l\'espace'),
       name: z.string().min(1),
@@ -638,7 +641,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       return ok(`Tag créé : [${t.id}] ${t.name}`)
     })
 
-  define('admin', 'update_tag', 'Met à jour un tag d\'espace (nom, couleur).',
+  define('admin', 'update_tag', 'Met à jour un tag visible dans l\'espace (nom, couleur) : tag de communauté → propriétaire de la communauté ; tag global → admin.',
     { spaceId: zId(), tagId: zId(), name: z.string().min(1).optional(), color: z.string().optional().describe('Couleur hex #RRGGBB') },
     async ({ spaceId, tagId, ...fields }) => {
       assertColor(fields.color)
@@ -647,7 +650,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       return ok(`Tag mis à jour : [${t.id ?? tagId}] ${t.name ?? ''}`.trim())
     })
 
-  define('admin', 'delete_tag', 'Supprime un tag d\'espace.',
+  define('admin', 'delete_tag', 'Supprime un tag visible dans l\'espace (retiré de tous ses éléments) : tag de communauté → propriétaire de la communauté ; tag global → admin.',
     { spaceId: zId(), tagId: zId() },
     async ({ spaceId, tagId }) => {
       await client.delete(`/spaces/${spaceId}/tags/${tagId}`)

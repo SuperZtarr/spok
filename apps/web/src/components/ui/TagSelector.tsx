@@ -1,4 +1,7 @@
-/* Sélecteur multi-tags d'un item : recherche, création à la volée. */
+/* Sélecteur multi-tags d'un item : recherche, création à la volée.
+ * Proposés : tags de la communauté de l'espace et tags globaux (badges « communauté » / « global », GET
+ * /spaces/:id/tags). Un tag créé ici l'est dans la communauté de l'espace ; espace sans communauté : création refusée
+ * par l'API (seuls les globaux, créés dans /admin/tags), message affiché sous le champ (2026-11-11). */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
@@ -190,7 +193,9 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
                 />
               )}
               <span className="truncate">{tag.name}</span>
-              {(tag as any).isCommunityTag && (
+              {(tag as any).isGlobalTag ? (
+                <span className="text-[10px] text-emerald-600 bg-emerald-500/10 px-1 rounded">global</span>
+              ) : (tag as any).isCommunityTag && (
                 <span className="text-[10px] text-blue-500 bg-blue-500/10 px-1 rounded">communauté</span>
               )}
               <span className="text-xs text-muted-foreground ml-auto">
@@ -213,6 +218,13 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
             </button>
           )}
         </div>
+      )}
+
+      {/* Création refusée (espace sans communauté, nom déjà pris…) : message de l'API, visible */}
+      {createTagMutation.isError && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+          {createTagMutation.error instanceof Error ? createTagMutation.error.message : 'Tag non créé'}
+        </p>
       )}
     </div>
   );

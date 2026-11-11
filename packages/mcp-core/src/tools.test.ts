@@ -18,7 +18,7 @@ function fakeClient(): SpokClient & { post: any; patch: any; put: any; get: any;
         typeLabels: { TASK: { label: 'Tâche', order: 0, visible: true }, PROJECT: { label: 'Projet', order: 1, visible: true } },
       } }
       if (path === '/spaces/s1/tags') return [
-        { id: 't1', name: 'Urgent', color: '#ff0000', spaceId: 's1', isCommunityTag: false, itemCount: 3 },
+        { id: 't1', name: 'Urgent', color: '#ff0000', communityId: null, isCommunityTag: false, isGlobalTag: true, itemCount: 3 },
         { id: 't2', name: 'UX', color: null, communityId: 'c1', isCommunityTag: true, itemCount: 0 },
       ]
       if (path === '/spaces/s1/items/p1') return { id: 'p1', spaceId: 's1', type: 'PROJECT', title: 'P' }
@@ -171,7 +171,7 @@ describe('tags', () => {
     const { mcp, client } = await connect('public')
     const r = await mcp.callTool({ name: 'list_tags', arguments: { spaceId: 's1' } })
     expect(client.get).toHaveBeenCalledWith('/spaces/s1/tags')
-    expect(text(r)).toMatch(/\[t1\] Urgent.*espace/)
+    expect(text(r)).toMatch(/\[t1\] Urgent.*global/)
     expect(text(r)).toMatch(/\[t2\] UX.*communauté/)
   })
 

@@ -8,6 +8,7 @@
  * questionsApi : question (type QUESTION) — via hooks/useQuestion, pas d'appel direct dans les composants.
  * itemContentsApi : contenus d'un élément (images, fichiers, liens, schémas) — via hooks/useItemContents.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
+ * adminApi.tags : tags globaux et doublons de tags (page /admin/tags, AdminTag).
  */
 import type {
   ItemContent,
@@ -466,6 +467,19 @@ export const userApi = {
 };
 
 // User Tasks (global across spaces)
+/** Tag vu de l'administration (/admin/tags) : portée global / communauté (space = ancien tag d'espace à migrer) */
+export interface AdminTag {
+  id: string;
+  name: string;
+  color: string | null;
+  scope: 'global' | 'community' | 'space';
+  communityId: string | null;
+  communityName: string | null;
+  spaceId: string | null;
+  spaceName: string | null;
+  itemCount: number;
+}
+
 export interface GlobalTaskFilters {
   type?: string;
   /** Éléments qui portent au moins un contenu de cette sorte (LINK, IMAGE, FILE, DIAGRAM), quel que soit leur type */
@@ -1857,6 +1871,22 @@ export const adminApi = {
         }>;
         total: number;
       }>('/admin/duplicates'),
+  },
+
+  // Tags globaux et doublons de tags (routes/admin/tags.ts, 2026-11-11)
+  tags: {
+    list: () => fetchApi<AdminTag[]>('/admin/tags'),
+    duplicates: () => fetchApi<Array<{ key: string; tags: Array<AdminTag & { communityIds: Array<string | null> }> }>>('/admin/tags/duplicates'),
+    create: (data: { name: string; color?: string }) =>
+      fetchApi<AdminTag>('/admin/tags', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { name?: string; color?: string | null }) =>
+      fetchApi<AdminTag>(`/admin/tags/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<{ success: boolean }>(`/admin/tags/${id}`, { method: 'DELETE' }),
+    promote: (id: string) => fetchApi<AdminTag>(`/admin/tags/${id}/promote`, { method: 'POST' }),
+    merge: (targetId: string, sourceIds: string[]) =>
+      fetchApi<{ tag: AdminTag; itemCount: number; removed: number }>('/admin/tags/merge', {
+        method: 'POST', body: JSON.stringify({ targetId, sourceIds }),
+      }),
   },
 
   auditLogs: {

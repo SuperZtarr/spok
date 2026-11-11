@@ -13,6 +13,8 @@
  * Suppression : utils/spaceDeletion.ts (deleteCommunityTree), en transaction — tout ou rien.
  * GET /:id/members (règle members-email-scope) : connecté avec accès → noms et rôles sans e-mail ; OWNER de la
  * communauté ou admin en mode admin → e-mails en plus.
+ * Tags de communauté : nom unique sans casse parmi ceux de la communauté ET les tags globaux (utils/tagScope.ts).
+ * isAdminModeActive / isOwnerOrAdmin exportés pour routes/tags.ts (même garde de gestion des tags).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -25,6 +27,7 @@ import { createNotification, sendInvitationEmail } from '../utils/notifications.
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 import { communityReferentielsRoutes } from './community-referentiels.js';
+import { findTagByName } from '../utils/tagScope.js';
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
@@ -51,7 +54,7 @@ const inviteSchema = z.object({
   message: z.string().optional(),
 });
 
-async function isAdminModeActive(prisma: PrismaClient, userId: string, isAdminMode: boolean): Promise<boolean> {
+export async function isAdminModeActive(prisma: PrismaClient, userId: string, isAdminMode: boolean): Promise<boolean> {
   if (!isAdminMode) return false;
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
   return user?.globalRole === 'ADMIN';
@@ -60,7 +63,7 @@ async function isAdminModeActive(prisma: PrismaClient, userId: string, isAdminMo
 // Garde des actions de gestion : OWNER de la communauté, ou admin global en mode admin
 // (règle : le mode admin voit et fait tout). Ne pas l'utiliser pour les actions personnelles
 // (join/leave/mute, transfert de sa propre propriété).
-async function isOwnerOrAdmin(prisma: PrismaClient, communityId: string, userId: string, isAdminMode: boolean): Promise<boolean> {
+export async function isOwnerOrAdmin(prisma: PrismaClient, communityId: string, userId: string, isAdminMode: boolean): Promise<boolean> {
   if (await isAdminModeActive(prisma, userId, isAdminMode)) return true;
   const membership = await prisma.communityMembership.findUnique({
     where: { userId_communityId: { userId, communityId } },
@@ -1108,9 +1111,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       const { name, color } = request.body;
       if (!name || name.trim().length === 0) return reply.badRequest('Tag name is required');
 
-      const existing = await fastify.prisma.tag.findUnique({
-        where: { communityId_name: { communityId: request.params.id, name: name.trim() } },
-      });
+      // Nom unique sans casse parmi les tags de la communauté et les tags globaux (utils/tagScope.ts)
+      const existing = await findTagByName(fastify.prisma, request.params.id, name);
       if (existing) return reply.conflict('Tag with this name already exists');
 
       const tag = await fastify.prisma.tag.create({
@@ -1137,10 +1139,8 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const { name, color } = request.body;
       if (name && name !== tag.name) {
-        const existing = await fastify.prisma.tag.findUnique({
-          where: { communityId_name: { communityId: request.params.id, name } },
-        });
-        if (existing) return reply.conflict('Tag with this name already exists');
+        const existing = await findTagByName(fastify.prisma, request.params.id, name);
+        if (existing && existing.id !== tag.id) return reply.conflict('Tag with this name already exists');
       }
 
       const updated = await fastify.prisma.tag.update({

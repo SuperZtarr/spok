@@ -145,6 +145,8 @@ function buildSitePages(viewNodes: SiteNode[], viewCount: number): SiteNode[] {
           description: 'Détection d\'anomalies par catégorie, contrôles d\'intégrité de la base' },
         { label: 'Doublons', path: '/admin/duplicates', component: 'DuplicatesPage', auth: 'admin',
           description: 'Éléments en double dans tout SPOK : même titre, même adresse ou même nom de fichier' },
+        { label: 'Tags', path: '/admin/tags', component: 'TagsPage', auth: 'admin',
+          description: 'Tags globaux (tous les espaces) et tags des communautés : créer, renommer, rendre global, fusionner les doublons' },
         { label: 'Vues', path: '/admin/views', component: 'ViewsConfigPage', auth: 'admin',
           description: 'Qui voit quelles pages globales et quelles vues d\'espace : masquer une entrée ou changer son accès' },
         { label: 'Référentiels', path: '/admin/referentiels', component: 'ReferentielsPage', auth: 'admin',

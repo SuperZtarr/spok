@@ -1,6 +1,7 @@
 /*
  * Copie d'un item affiché en séance vers l'espace de séance, verrouillée (lockedAt), avec trace d'origine
- * (sourceItemId/sourceSpaceId), tags recréés par nom dans l'espace de séance, images R2 de la description et
+ * (sourceItemId/sourceSpaceId), tags rendus visibles dans l'espace de séance (mapTagsToSpace, utils/tagScope.ts :
+ * global ou même communauté gardé, sinon tag de même nom de la communauté de séance), images R2 de la description et
  * contenus (fichiers dupliqués, utils/itemContentCopy.ts — lot 4) recopiés : une copie ne partage jamais un fichier
  * de la source. Les sous-items ne sont PAS copiés à l'affichage (« ne pas
  * spoiler ») : revealChildInSession les copie un par un sous la copie parente. Réaffichage / re-révélation :
@@ -15,6 +16,7 @@ import { QUESTION_STATUS } from '@spok/shared';
 import { isR2Configured, isR2Url, copyR2Object } from './r2.js';
 import { copyQuestionData } from './question.js';
 import { copyItemContents } from './itemContentCopy.js';
+import { mapTagsToSpace, type TagToMap } from './tagScope.js';
 
 export class SessionCopyError extends Error {
   constructor(public code: 'NOT_FOUND', message: string) { super(message); }
@@ -37,13 +39,9 @@ async function copyImages(item: { description: string | null }, newItemId: strin
   return { description };
 }
 
-async function sessionTagIds(prisma: any, sessionSpaceId: string, tags: Array<{ tag: { name: string; color: string | null } }>) {
-  const ids: string[] = [];
-  for (const { tag } of tags) {
-    const existing = await prisma.tag.findFirst({ where: { spaceId: sessionSpaceId, name: { equals: tag.name, mode: 'insensitive' } } });
-    ids.push(existing ? existing.id : (await prisma.tag.create({ data: { name: tag.name, color: tag.color, spaceId: sessionSpaceId } })).id);
-  }
-  return ids;
+// Tags de la copie : rendus visibles dans l'espace de séance (utils/tagScope.ts — plus de tag d'espace)
+async function sessionTagIds(prisma: any, sessionSpaceId: string, tags: Array<{ tag: TagToMap }>) {
+  return mapTagsToSpace(prisma, tags.map((t) => t.tag), sessionSpaceId);
 }
 
 async function createLockedCopy(prisma: any, src: any, params: CopyParams, parentId: string | null, lockedAt: Date) {

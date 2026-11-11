@@ -8,6 +8,8 @@
  * Règle de déplacement vers un autre espace (spec MoveToSpaceModal) : aucune branche coupée entre deux espaces. Un item
  * dont le parent ne part pas arrive à la racine ; un enfant qui ne part pas remonte à la racine de son espace.
  * /move : un parent qui change doit être dans le même espace (utils/itemParent.ts).
+ * Tags au bulk-move : tagMapping (utils/tagScope.ts, 2026-11-11) — tags de communauté et globaux suivent (avant :
+ * seuls les tags d'espace étaient repris, les autres étaient perdus).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -17,6 +19,7 @@ import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { moveProcessPlacement } from '../utils/processPlacement.js';
 import { parentViolation } from '../utils/itemParent.js';
+import { tagMapping } from '../utils/tagScope.js';
 
 const moveItemSchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -252,38 +255,13 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
       allItemIds = [...new Set([...allItemIds, ...descendantIds])];
     }
 
-    // Get tags from target space for mapping
-    const targetTags = await fastify.prisma.tag.findMany({
-      where: { spaceId: targetSpaceId },
+    // Tags : rendus visibles dans l'espace cible (utils/tagScope.ts — global ou même communauté gardé, sinon tag de même
+    // nom, créé dans la communauté cible s'il manque ; cible sans communauté : globaux seulement)
+    const movedTags = await fastify.prisma.itemTag.findMany({
+      where: { itemId: { in: allItemIds } },
+      select: { tag: true },
     });
-    const sourceTags = await fastify.prisma.tag.findMany({
-      where: { spaceId: request.params.spaceId },
-    });
-
-    // Create a mapping of source tag names to target tag IDs
-    const tagNameToTargetId = new Map<string, string>();
-    for (const tag of targetTags) {
-      tagNameToTargetId.set(tag.name.toLowerCase(), tag.id);
-    }
-
-    // Create missing tags in target space and build complete mapping
-    const sourceTagIdToTargetId = new Map<string, string>();
-    for (const sourceTag of sourceTags) {
-      const existingTargetId = tagNameToTargetId.get(sourceTag.name.toLowerCase());
-      if (existingTargetId) {
-        sourceTagIdToTargetId.set(sourceTag.id, existingTargetId);
-      } else {
-        // Create tag in target space
-        const newTag = await fastify.prisma.tag.create({
-          data: {
-            name: sourceTag.name,
-            color: sourceTag.color,
-            spaceId: targetSpaceId,
-          },
-        });
-        sourceTagIdToTargetId.set(sourceTag.id, newTag.id);
-      }
-    }
+    const sourceTagIdToTargetId = await tagMapping(fastify.prisma, movedTags.map((t) => t.tag), targetSpaceId);
 
     // Get items before move for audit
     const itemsBeforeMove = await fastify.prisma.item.findMany({

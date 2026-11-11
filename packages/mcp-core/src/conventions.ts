@@ -17,7 +17,7 @@ export interface SpaceConventions {
 }
 
 export async function fetchConventions(client: SpokClient, spaceId: string): Promise<SpaceConventions> {
-  // Les tags sont propres à l'espace (routes/tags.ts monté sur /spaces/:spaceId/tags) — pas de route /tags racine.
+  // Tags utilisables dans l'espace : ceux de sa communauté + globaux (routes/tags.ts monté sur /spaces/:spaceId/tags).
   const [refRes, tagsRes] = await Promise.all([
     client.get(`/spaces/${spaceId}/referentiels`),
     client.get(`/spaces/${spaceId}/tags`),

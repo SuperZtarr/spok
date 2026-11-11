@@ -119,7 +119,7 @@ export const elements = {
   tags: {
     title: 'Tags',
     short: 'Les étiquettes de l\'élément.',
-    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Les tags de l\'espace et de sa communauté sont proposés ; un tag créé en tapant rejoint la communauté de l\'espace (sinon l\'espace) et devient disponible dans tous ses espaces.',
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés les tags de la communauté de l\'espace et les tags globaux (badge « global », communs à tout SPOK) ; un tag créé en tapant rejoint la communauté de l\'espace et devient disponible dans tous ses espaces. Un espace sans communauté n\'a que les tags globaux, créés par un administrateur.',
     changes: [{ id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' }],
     target: '[data-tour="item-tags"]',
     noZone: true,

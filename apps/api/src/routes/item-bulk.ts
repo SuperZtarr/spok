@@ -1,5 +1,7 @@
 /* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace.
-   Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue. */
+   Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue.
+   Tags des copies : tagMapping (utils/tagScope.ts, 2026-11-11) — tous les tags (communauté, globaux) suivent, plus
+   seulement les anciens tags d'espace. */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
 import { copyItemContents } from '../utils/itemContentCopy.js';
@@ -8,6 +10,7 @@ import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { shiftItemDates } from '../utils/dateShift.js';
+import { tagMapping } from '../utils/tagScope.js';
 
 const bulkDuplicateSchema = z.object({
   itemIds: z.array(z.string()).min(1),
@@ -88,41 +91,12 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
     // Get all items to duplicate with their data
     const allItems = await fastify.prisma.item.findMany({
       where: { id: { in: allItemIds } },
-      include: { tags: true },
+      include: { tags: { include: { tag: true } } },
     });
 
-    // Get tags from target space for mapping
-    const targetTags = await fastify.prisma.tag.findMany({
-      where: { spaceId: targetSpaceId },
-    });
-    const sourceTags = await fastify.prisma.tag.findMany({
-      where: { spaceId: request.params.spaceId },
-    });
-
-    // Create a mapping of source tag names to target tag IDs
-    const tagNameToTargetId = new Map<string, string>();
-    for (const tag of targetTags) {
-      tagNameToTargetId.set(tag.name.toLowerCase(), tag.id);
-    }
-
-    // Create missing tags in target space and build complete mapping
-    const sourceTagIdToTargetId = new Map<string, string>();
-    for (const sourceTag of sourceTags) {
-      const existingTargetId = tagNameToTargetId.get(sourceTag.name.toLowerCase());
-      if (existingTargetId) {
-        sourceTagIdToTargetId.set(sourceTag.id, existingTargetId);
-      } else {
-        // Create tag in target space
-        const newTag = await fastify.prisma.tag.create({
-          data: {
-            name: sourceTag.name,
-            color: sourceTag.color,
-            spaceId: targetSpaceId,
-          },
-        });
-        sourceTagIdToTargetId.set(sourceTag.id, newTag.id);
-      }
-    }
+    // Tags des copies : visibles dans l'espace cible (utils/tagScope.ts — global ou même communauté gardé, sinon tag de
+    // même nom, créé dans la communauté cible s'il manque ; cible sans communauté : globaux seulement)
+    const sourceTagIdToTargetId = await tagMapping(fastify.prisma, allItems.flatMap((i) => i.tags.map((t) => t.tag)), targetSpaceId);
 
     const allCreatedItems: any[] = [];
 
