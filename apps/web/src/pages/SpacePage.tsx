@@ -21,6 +21,11 @@
  * vue — « Se connecter » pour un visiteur, « Accueil » sinon (2026-10-28).
  * Lecture seule (canEdit faux : VIEWER, visiteur) : toutes les vues restent proposées (décision Thomas 2026-11-06) ;
  * passer canEdit à chaque vue qui peut écrire — c'est elle qui masque ses actions.
+ * Filtre Tags de la barre (tagFilter, 2026-11-11) : appliqué ici seulement — en Filtre par filterBySearch (élément
+ * gardé s'il porte l'un des tags cochés), en Aperçu par searchMatchIds (correspond à la recherche ET aux tags) que
+ * toutes les vues estompent déjà ; aucune vue ne compare les tags elle-même. Tags proposés : ['tags', spaceId].
+ * Vue Tags (TagsView, 2026-11-11) : vue en Filtre (isFlatView), reçoit tagOptions et actions.handleSetTags.
+ * Vue Bugs retirée (2026-11-11) : une vue inconnue (?view=, vue mémorisée, vue de l'espace) ouvre la Liste (knownViewOr).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -44,11 +49,12 @@ import {
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
-import { spacesApi, itemsApi, communitiesApi, ApiError } from '../lib/api';
+import { spacesApi, itemsApi, communitiesApi, tagsApi, ApiError } from '../lib/api';
+import { matchesTags } from '../lib/itemHighlight';
 import { SpaceUnavailable } from '../components/SpaceUnavailable';
 import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
-import { useReferentiels, useUpdateCommunityReferentiels } from '../hooks/useReferentiels';
+import { useReferentiels } from '../hooks/useReferentiels';
 import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
@@ -90,7 +96,7 @@ import { ImagesView } from '../components/views/ImagesView';
 import { LinksView } from '../components/views/LinksView';
 import { ArticlesView } from '../components/views/ArticlesView';
 import { DocumentsView } from '../components/views/DocumentsView';
-import { BugsView } from '../components/views/BugsView';
+import { TagsView } from '../components/views/TagsView';
 import { TodoView } from '../components/views/TodoView';
 import { PertView } from '../components/views/PertView';
 import { ProcessView } from '../components/views/ProcessView';
@@ -121,7 +127,7 @@ import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { EmptyHelp } from '../help/EmptyHelp';
 import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
-import { resolveSpaceDefaultView } from '../lib/spaceDefaultView';
+import { knownViewOr, resolveSpaceDefaultView } from '../lib/spaceDefaultView';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -148,6 +154,7 @@ export function SpacePage() {
   // Choix multiple (2026-11-05) : liste vide = tous
   const [filter, setFilter] = useState<ItemType[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [treeSort, setTreeSort] = useState<TreeSort>(() => {
     const saved = spaceId ? sessionStorage.getItem(`space-treeSort-${spaceId}`) : null;
     return (saved as TreeSort | null) ?? 'manual';
@@ -221,8 +228,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     if (!space || space.id !== spaceId) return;
     if (spaceCommunityLoading) return; // contexte de la communauté pas encore connu : attendre plutôt qu'ouvrir en Liste
     const urlView = searchParams.get('view') as Parameters<typeof setMode>[0] | null;
-    const targetMode = urlView || viewMode
-      || (resolveSpaceDefaultView(space.defaultView, spaceCommunity?.context) as Parameters<typeof setMode>[0]);
+    // Vue retirée (ex. « bugs ») dans l'adresse, la vue mémorisée ou la vue de l'espace : la Liste (knownViewOr)
+    const targetMode = knownViewOr(urlView || viewMode
+      || resolveSpaceDefaultView(space.defaultView, spaceCommunity?.context)) as Parameters<typeof setMode>[0];
     setMode(targetMode);
     viewReadyRef.current = true;
     setSearchParams(prev => {
@@ -245,9 +253,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
-  // Tag suivi par la vue Bugs : réglé par le propriétaire de la communauté (ou un admin en mode admin), lot 4
-  const updateCommunityReferentiels = useUpdateCommunityReferentiels(space?.communityId ?? '');
-  const canSetBugsTag = !!space?.communityId && (spaceCommunity?.role === 'OWNER' || adminMode);
 
   const statusColorMap = useMemo(
     () => buildStatusColorMap(referentiels?.statuses),
@@ -278,7 +283,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert' || viewMode === 'process';
-  const isFlatView = viewMode === 'kanban' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'articles' || viewMode === 'bugs' || viewMode === 'todo';
+  const isFlatView = viewMode === 'kanban' || viewMode === 'tags' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'articles' || viewMode === 'todo';
   const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe';
   const activeTypeFilter = filter.length > 0 ? filter : undefined;
   const activeStatusFilter = statusFilter.length > 0 ? statusFilter : undefined;
@@ -376,31 +381,33 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // --- Deferred items (statut planifié + startDate > 30j) ---
   // --- Search ---
+  // Recherche texte ET tags cochés (filtre Tags, 2026-11-11) — les types et statuts passent par l'API ou highlightType/Status
+  const activeTagFilter = tagFilter.length > 0 ? tagFilter : undefined;
+  const matchesTextAndTags = useCallback((item: Item): boolean => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query && !(item.title.toLowerCase().includes(query) || stripMarkup(item.description || '').toLowerCase().includes(query))) return false;
+    return !activeTagFilter || matchesTags(activeTagFilter, item.tags);
+  }, [searchQuery, activeTagFilter]);
+
+  // Vues en Filtre : ne garde que les éléments qui correspondent au texte et aux tags (rien en Aperçu)
   const filterBySearch = useCallback((items: Item[] | undefined): Item[] => {
     if (!items) return [];
-    if (!searchQuery.trim() || isHighlightMode) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter((item) =>
-      item.title.toLowerCase().includes(query) ||
-      stripMarkup(item.description || '').toLowerCase().includes(query)
-    );
-  }, [searchQuery, isHighlightMode]);
+    if ((!searchQuery.trim() && !activeTagFilter) || isHighlightMode) return items;
+    return items.filter(matchesTextAndTags);
+  }, [searchQuery, activeTagFilter, isHighlightMode, matchesTextAndTags]);
 
-
+  // Vues en Aperçu : éléments mis en évidence (texte ET tags) ; les autres sont estompés par chaque vue
   const searchMatchIds = useMemo((): Set<string> | undefined => {
-    if (!searchQuery.trim()) return undefined;
-    const query = searchQuery.toLowerCase();
-    const matchIds = new Set<string>();
-    for (const item of allItems) {
-      if (
-        item.title.toLowerCase().includes(query) ||
-        stripMarkup(item.description || '').toLowerCase().includes(query)
-      ) {
-        matchIds.add(item.id);
-      }
-    }
-    return matchIds.size > 0 || searchQuery.trim() ? matchIds : undefined;
-  }, [searchQuery, allItems]);
+    if (!searchQuery.trim() && !activeTagFilter) return undefined;
+    return new Set(allItems.filter(matchesTextAndTags).map((item: Item) => item.id));
+  }, [searchQuery, activeTagFilter, allItems, matchesTextAndTags]);
+
+  // Tags proposés au filtre : ceux de la communauté de l'espace + globaux (même requête que le sélecteur de la fiche)
+  const { data: tagOptions } = useQuery({
+    queryKey: ['tags', spaceId],
+    queryFn: () => tagsApi.list(spaceId!),
+    enabled: !!spaceId,
+  });
 
   // --- Actions hook ---
   const actions = useSpaceActions({
@@ -664,14 +671,17 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   }
 
   return (
-    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full overflow-hidden' : ''}`}>
-      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full' : ''}`}>
+    <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'tags' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full overflow-hidden' : ''}`}>
+      <div className={`w-full flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'tags' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full' : ''}`}>
         {/* Toolbar */}
         <SpaceToolbar
           filter={filter}
           onFilterChange={setFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          tagFilter={tagFilter}
+          onTagFilterChange={setTagFilter}
+          tagOptions={tagOptions}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           highlightMode={isHighlightMode}
@@ -1477,12 +1487,11 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
             />
-          ) : viewMode === 'bugs' ? (
-              <BugsView
-              onChangeBugsTag={canSetBugsTag ? (name) => updateCommunityReferentiels.mutate({ bugsViewTag: name }) : undefined}
+          ) : viewMode === 'tags' ? (
+              <TagsView
               items={filterBySearch(itemsData?.data)}
-              currentSpaceId={spaceId}
-              portalGroups={portalGroups}
+              tagOptions={tagOptions}
+              onSetTags={actions.handleSetTags}
               onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
@@ -1498,6 +1507,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onOpenInNewTab={actions.handleOpenInNewTab}
               referentiels={referentiels}
               canEdit={canEdit}
+              canEditItem={canEditItem}
               spaceName={space?.name}
               viewContainerRef={viewContainerRef}
               onStartTour={() => startViewTour(viewMode)}

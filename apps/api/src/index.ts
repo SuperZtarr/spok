@@ -9,6 +9,7 @@
  * limite (120/min/jeton). requestContextPlugin : contexte d'audit (origine MCP) des sous-requêtes internes.
  * multipart : plafond = DOCUMENT_MAX_SIZE (@spok/shared, règles d'envoi partagées web/API).
  * /spaces/:id/process-nodes : positions des items sur le canevas de la vue Process (routes/process-nodes.ts).
+ * /admin/tags : tags globaux et doublons de tags (routes/admin/tags.ts).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -53,6 +54,7 @@ import { publicMenuRoutes, adminMenuRoutes } from './routes/admin/menu.js';
 import { adminBackupRoutes } from './routes/admin/backup.js';
 import { adminPerfRoutes } from './routes/admin/perf.js';
 import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
+import { adminTagsRoutes } from './routes/admin/tags.js';
 import { contactRoutes } from './routes/contact.js';
 import { searchRoutes } from './routes/search.js';
 import { localUploadsRoutes } from './routes/local-uploads.js';
@@ -327,6 +329,7 @@ async function buildApp() {
   await app.register(adminBackupRoutes, { prefix: '/admin/backup-log' });
   await app.register(adminPerfRoutes, { prefix: '/admin/perf' });
   await app.register(adminDuplicatesRoutes, { prefix: '/admin/duplicates' });
+  await app.register(adminTagsRoutes, { prefix: '/admin/tags' });
   await app.register(publicMenuRoutes, { prefix: '/menu' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });

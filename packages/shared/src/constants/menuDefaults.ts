@@ -1,12 +1,14 @@
 /* MENU_REGISTRY : items de menu par défaut (globaux, vues, admin) — overrides via AppConfig menu_overrides.
    Une icône nouvelle doit être ajoutée aux deux NAV_ICONS (GlobalNavBar.tsx et Layout.tsx), sinon le bouton s'affiche sans icône.
-   news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site. */
+   news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site.
+   admin-tags (2026-11-11) : tags globaux et doublons de tags (/admin/tags, icône Tag).
+   Section itemTypes libellée « Contenus » (2026-11-11 : ses vues montrent des contenus, la vue Bugs est retirée). */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY } from './viewRegistry.js';
 
 const SECTION_META: Record<string, { sectionLabel: string; sectionOrder: number }> = {
   basic:       { sectionLabel: 'Basique',        sectionOrder: 2 },
-  itemTypes:   { sectionLabel: 'Types',           sectionOrder: 3 },
+  itemTypes:   { sectionLabel: 'Contenus',        sectionOrder: 3 },
   planning:    { sectionLabel: 'Planification',   sectionOrder: 4 },
   exploration: { sectionLabel: 'Exploration',     sectionOrder: 5 },
 };
@@ -54,6 +56,7 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'admin-audit',       label: 'Audit',           icon: 'History',      section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/audit-logs',   viewMode: null, order: 4, visible: true, access: 'admin' },
   { id: '', key: 'admin-anomalies',   label: 'Diagnostics',     icon: 'AlertTriangle',section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/anomalies',    viewMode: null, order: 5, visible: true, access: 'admin' },
   { id: '', key: 'admin-duplicates',  label: 'Doublons',        icon: 'Copy',         section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/duplicates',   viewMode: null, order: 6, visible: true, access: 'admin' },
+  { id: '', key: 'admin-tags',        label: 'Tags',            icon: 'Tag',          section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/tags',         viewMode: null, order: 7, visible: true, access: 'admin' },
   { id: '', key: 'admin-referentiels',label: 'Référentiels',    icon: 'Settings',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/referentiels', viewMode: null, order: 8, visible: true, access: 'admin' },
   { id: '', key: 'admin-api-doc',     label: 'Documentation API',icon: 'FileText',    section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/api-doc',      viewMode: null, order: 9, visible: true, access: 'admin' },
   { id: '', key: 'admin-views',       label: 'Vues',            icon: 'LayoutDashboard', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/views',     viewMode: null, order: 10, visible: true, access: 'admin' },

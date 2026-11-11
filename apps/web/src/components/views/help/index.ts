@@ -1,5 +1,6 @@
 /* Registre de l'aide des vues : une fiche par ViewMode (Record strict — TS échoue si une vue manque).
-   Fiches dans ./<vue>.help.ts, à côté des vues. Couverture (tour non vide) contrôlée par help/coverage.test.ts. */
+   Fiches dans ./<vue>.help.ts, à côté des vues. Couverture (tour non vide) contrôlée par help/coverage.test.ts.
+   tags (2026-11-11) : vue Tags (TagsView) ; bugs retirée le même jour. */
 import type { ViewMode } from '../../../stores/viewMode';
 import type { HelpEntry } from '../../../help/types';
 import { help as overview } from './overview.help';
@@ -28,7 +29,6 @@ import { help as heatmap } from './heatmap.help';
 import { help as priority } from './priority.help';
 import { help as members } from './members.help';
 import { help as links } from './links.help';
-import { help as bugs } from './bugs.help';
 import { help as todo } from './todo.help';
 import { help as documents } from './documents.help';
 import { help as articles } from './articles.help';
@@ -37,6 +37,7 @@ import { help as images } from './images.help';
 import { help as recent } from './recent.help';
 import { help as pert } from './pert.help';
 import { help as processHelp } from './process.help';
+import { help as tagsHelp } from './tags.help';
 
 export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   overview: overview,
@@ -65,7 +66,6 @@ export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   priority: priority,
   members: members,
   links: links,
-  bugs: bugs,
   todo: todo,
   documents: documents,
   articles: articles,
@@ -74,4 +74,5 @@ export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
   recent: recent,
   pert: pert,
   process: processHelp,
+  tags: tagsHelp,
 };

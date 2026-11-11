@@ -26,13 +26,13 @@ describe('curatedPrimaryViews', () => {
 })
 
 describe('splitViewsForMode', () => {
-  const views = ['list', 'tree', 'thread', 'recent', 'text', 'types', 'links', 'images', 'documents', 'bugs', 'todo',
+  const views = ['list', 'tree', 'thread', 'recent', 'text', 'types', 'links', 'images', 'documents', 'todo', 'tags',
     'kanban', 'timeline', 'process', 'mindmap', 'graph'].map((viewMode) => ({ viewMode }))
   const ids = (vs: { viewMode: string }[]) => vs.map((v) => v.viewMode)
 
-  it('Projet : Pilotage sans Liste/Types/Images/Liens/Documents, plus la Carte mentale', () => {
+  it('Projet : Pilotage sans Liste/Types/Images/Liens/Documents, plus la Carte mentale (Tags à la place de l\'ancienne vue Bugs)', () => {
     const { primary } = splitViewsForMode(views, 'projet')
-    expect(ids(primary)).toEqual(['tree', 'bugs', 'todo', 'kanban', 'timeline', 'process', 'mindmap'])
+    expect(ids(primary)).toEqual(['tree', 'todo', 'tags', 'kanban', 'timeline', 'process', 'mindmap'])
   })
 
   it('Projet : les vues retirées restent dans « Autres vues » (Pilotage), la Carte mentale sort d\'Exploration', () => {
@@ -73,13 +73,13 @@ describe('Loupe en bouton direct', () => {
 })
 
 describe('menus « Autres vues » par catégorie', () => {
-  const views = ['list', 'tree', 'thread', 'recent', 'text', 'types', 'bugs', 'kanban', 'timeline', 'mindmap', 'graph']
+  const views = ['list', 'tree', 'thread', 'recent', 'text', 'types', 'tags', 'kanban', 'timeline', 'mindmap', 'graph']
     .map((viewMode) => ({ viewMode }))
-  it('Forum : Basique (sans les vues de discussion), Types, Planification, Exploration (sans Images ni Calendrier)', () => {
+  it('Forum : Basique (sans les vues de discussion), Contenus, Planification, Exploration (sans Images ni Calendrier)', () => {
     const { secondary } = splitViewsForMode(views, 'forum')
     expect(secondary.map((g) => [g.key, g.views.map((v) => v.viewMode)])).toEqual([
       ['basic', ['list', 'tree']],
-      ['itemTypes', ['types', 'bugs']],
+      ['itemTypes', ['types', 'tags']],
       ['planning', ['kanban', 'timeline']],
       ['exploration', ['mindmap', 'graph']],
     ])

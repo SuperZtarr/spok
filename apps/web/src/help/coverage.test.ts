@@ -198,8 +198,8 @@ describe('mode Aide — zones des vues', () => {
     const [v, z] = id.split(':')
     expect((viewHelp[v] ?? pageHelp[v])?.zones?.[z], `zones.${z} manquant dans la fiche ${v}`).toBeDefined()
   })
-  /** Vues qui affichent une autre vue (ses zones s'y trouvent aussi) : À faire et Bugs rendent ListView. */
-  const COMPOSED: Record<string, string> = { todo: 'list', bugs: 'list' }
+  /** Vues qui affichent une autre vue (ses zones s'y trouvent aussi) : À faire rend ListView (Bugs retirée le 2026-11-11). */
+  const COMPOSED: Record<string, string> = { todo: 'list' }
   /** Une seule zone possible : l'intérieur de FullCalendar (barre, grille) n'est pas annotable sans wrapper. */
   const ONE_ZONE = new Set(['calendar'])
   it.each(Object.keys(VIEW_HELP))('vue %s : au moins 2 zones visibles, aucun texte orphelin', (mode) => {

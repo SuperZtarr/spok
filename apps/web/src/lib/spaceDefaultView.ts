@@ -5,9 +5,11 @@
  *   SpaceCard et barre latérale (liens ?view=), SpaceSettingsPage (option « Selon la communauté »).
  * - contextDefaultView(context) : vue du contexte seul (libellé de l'option des paramètres).
  * Le contexte enregistré de la communauté fait foi, pas la bascule manuelle Forum / Projet / Tous de l'en-tête :
- * la vue d'ouverture est la même pour tous les membres. Règle businessRules « space-default-view-by-context ». */
+ * la vue d'ouverture est la même pour tous les membres. Règle businessRules « space-default-view-by-context ».
+ * knownViewOr(view) : vue retirée du registre (ex. « bugs ») → Liste ; appliquée par SpacePage à l'ouverture. */
 
 import type { CommunityContext } from '@spok/shared';
+import { VIEW_REGISTRY } from '@spok/shared';
 
 /** Vue d'ouverture par contexte de communauté — Forum : Discussions, Projet : Gantt, Loisirs (valeur JDR en base) : Carte mentale */
 export const CONTEXT_DEFAULT_VIEW: Record<CommunityContext, string> = {
@@ -21,6 +23,15 @@ export const FALLBACK_SPACE_VIEW = 'list';
 
 export function contextDefaultView(context: string | null | undefined): string {
   return (context && CONTEXT_DEFAULT_VIEW[context as CommunityContext]) || FALLBACK_SPACE_VIEW;
+}
+
+/** Vues hors registre acceptées à l'ouverture (présentation de l'espace) */
+const EXTRA_VIEWS = new Set(['overview']);
+
+/** La vue si elle existe encore (registre des vues), sinon la Liste — vue retirée (« bugs », 2026-11-11) dans une
+ *  adresse, la vue mémorisée ou Space.defaultView : pas de migration, on ouvre la Liste. */
+export function knownViewOr(view: string | null | undefined): string {
+  return view && (EXTRA_VIEWS.has(view) || VIEW_REGISTRY.some((v) => v.id === view)) ? view : FALLBACK_SPACE_VIEW;
 }
 
 export function resolveSpaceDefaultView(defaultView: string | null | undefined, communityContext: string | null | undefined): string {

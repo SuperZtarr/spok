@@ -1,6 +1,6 @@
 /* Aide utilisateur de la vue « Liste » (list), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
-   par le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. `elements` est exporté : À faire et Bugs,
-   qui affichent ListView, reprennent les mêmes en-têtes. */
+   par le « ? » (ViewHelpButton), le tour (useViewOnboarding) et le mode Aide. `elements` est exporté : À faire, qui
+   affiche ListView, reprend les mêmes en-têtes (Bugs retirée le 2026-11-11). */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';

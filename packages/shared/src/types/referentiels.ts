@@ -54,8 +54,7 @@ export interface TypeLabelConfig {
 export interface SpaceReferentiels {
   statuses: StatusConfig[];
   typeLabels: Record<string, TypeLabelConfig>;
-  /** Tag suivi par la vue Bugs (nom, sans casse) ; absent = DEFAULT_BUGS_VIEW_TAG (« bug ») — lot 4 contenus multiples */
-  bugsViewTag?: string;
+  // Plus de bugsViewTag : vue Bugs retirée le 2026-11-11 (filtre Tags et vue Tags à la place)
 }
 
 /**

@@ -6,7 +6,8 @@
  * ne peuvent être ni supprimés ni dé-réservés (withDefaultStatuses), seuls libellé, couleur, ordre et visibilité changent.
  * Catégorie d'un statut (category, sens terminé / en cours…) : enregistrée telle que choisie, sauf pour un statut
  * réservé, qui garde la sienne.
- * bugsViewTag : tag suivi par la vue Bugs (null ou vide = défaut « bug »), gardé si le PUT ne le cite pas.
+ * Plus de bugsViewTag (vue Bugs retirée le 2026-11-11, remplacée par le filtre Tags et la vue Tags) : un champ
+ * bugsViewTag envoyé est ignoré (zod), une valeur déjà en base n'est plus lue et disparaît au prochain enregistrement.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -36,8 +37,6 @@ const typeLabelConfigSchema = z.object({
 const updateReferentielsSchema = z.object({
   statuses: z.array(statusConfigSchema).optional(),
   typeLabels: z.record(z.string(), typeLabelConfigSchema).optional(),
-  // Tag suivi par la vue Bugs (lot 4 contenus multiples) : null ou vide = retour au défaut « bug »
-  bugsViewTag: z.string().trim().max(50).nullable().optional(),
 });
 
 function parseReferentiels(config: unknown): SpaceReferentiels | null {
@@ -103,8 +102,6 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
       statuses: withDefaultStatuses((body.statuses as StatusConfig[]) || current.statuses),
       typeLabels: (body.typeLabels as Record<string, TypeLabelConfig>) || current.typeLabels,
     };
-    const bugsViewTag = body.bugsViewTag !== undefined ? body.bugsViewTag || undefined : current.bugsViewTag;
-    if (bugsViewTag) updated.bugsViewTag = bugsViewTag;
 
     await fastify.prisma.community.update({
       where: { id: communityId },

@@ -4,19 +4,21 @@
  * Le droit de modifier ne limite pas les vues (décision Thomas 2026-11-06) : toutes sont proposées en lecture seule,
  * chaque vue masque ses actions d'écriture via canEdit. Ne pas réintroduire de liste de vues par rôle ;
  * l'accès à une vue se règle dans /admin/views (useMenuItems).
+ * ViewMode : union écrite à la main, à compléter pour chaque vue du registre (tags ajoutée, bugs retirée le 2026-11-11).
+ * Catégorie itemTypes libellée « Contenus » (2026-11-11).
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { VIEW_REGISTRY } from '@spok/shared';
 
-export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'loupe' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'articles' | 'bugs' | 'thread' | 'overview' | 'todo' | 'recent' | 'pert' | 'process';
+export type ViewMode = 'list' | 'tree' | 'mindmap' | 'kanban' | 'types' | 'timeline' | 'planning' | 'calendar' | 'graph' | 'text' | 'sunburst' | 'relations' | 'bubble' | 'radialTree' | 'treemap' | 'burndown' | 'cfd' | 'chord' | 'crossTable' | 'heatmap' | 'ego' | 'loupe' | 'members' | 'priority' | 'images' | 'links' | 'documents' | 'articles' | 'tags' | 'thread' | 'overview' | 'todo' | 'recent' | 'pert' | 'process';
 
 export type ViewCategory = 'dashboard' | 'basic' | 'itemTypes' | 'planning' | 'exploration';
 
 export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
   { value: 'dashboard', label: 'Tableau de bord' },
   { value: 'basic', label: 'Basique' },
-  { value: 'itemTypes', label: 'Types' },
+  { value: 'itemTypes', label: 'Contenus' },
   { value: 'planning', label: 'Planification' },
   { value: 'exploration', label: 'Exploration' },
 ];

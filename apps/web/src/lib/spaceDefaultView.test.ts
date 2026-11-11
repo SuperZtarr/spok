@@ -1,6 +1,17 @@
-/* TNR de spaceDefaultView : vue de l'espace d'abord, puis contexte de la communauté, puis Liste. */
+/* TNR de spaceDefaultView : vue de l'espace d'abord, puis contexte de la communauté, puis Liste ; vue retirée → Liste. */
 import { describe, it, expect } from 'vitest';
-import { resolveSpaceDefaultView, contextDefaultView, spaceHref } from './spaceDefaultView';
+import { resolveSpaceDefaultView, contextDefaultView, spaceHref, knownViewOr } from './spaceDefaultView';
+
+describe('knownViewOr', () => {
+  it('garde une vue du registre et la présentation de l\'espace', () => {
+    expect(knownViewOr('tags')).toBe('tags');
+    expect(knownViewOr('overview')).toBe('overview');
+  });
+  it('vue retirée (bugs) ou absente : la Liste', () => {
+    expect(knownViewOr('bugs')).toBe('list');
+    expect(knownViewOr(null)).toBe('list');
+  });
+});
 
 describe('resolveSpaceDefaultView', () => {
   it('la vue réglée sur l\'espace l\'emporte sur la communauté', () => {

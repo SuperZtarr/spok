@@ -7,6 +7,10 @@
  * Un visiteur non connecté a les mêmes vues qu'un connecté (décision Thomas 2026-11-06) : seul 'admin' reste réservé.
  * Surcharges possibles dans /admin/views (AppConfig menu_overrides), qui priment sur ce registre.
  * `mobileHidden` : bouton de vue masqué sous 640 px dans les barres de vues (SpaceToolbar, ViewSelectorBar).
+ * tags (2026-11-11) : tableau des tags — une colonne par tag, glisser une carte lui ajoute le tag (TagsView).
+ * bugs retirée le 2026-11-11 (remplacée par le filtre Tags et la vue Tags) : une vue absente du registre ouvre la
+ * Liste (apps/web/src/lib/spaceDefaultView.ts, knownViewOr).
+ * Catégorie `itemTypes` : libellé « Contenus » (Images, Liens, Documents montrent des contenus, plus des types).
  */
 export interface ViewDefinition {
   id: string;
@@ -35,8 +39,8 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
   { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'public' },
   { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'public'   },
   { id: 'articles',  label: 'Articles',   icon: 'Newspaper',    category: 'itemTypes', order: 4, visible: true, access: 'public'   },
-  { id: 'bugs',      label: 'Bugs',       icon: 'Bug',          category: 'itemTypes', order: 5, visible: true, access: 'public'   },
   { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 6, visible: true, access: 'public'   },
+  { id: 'tags',      label: 'Tags',       icon: 'Tags',         category: 'itemTypes', order: 7, visible: true, access: 'public', mobileHidden: true },
 
   // ── planning ──
   { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'public', mobileHidden: true },

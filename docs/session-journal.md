@@ -14,6 +14,14 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-11 — Aperçus fichiers, CAUSE TROUVÉE du 0 image : `--prod --check` (tunnel ouvert par Thomas, port 25500) → 10/14 images calculables (6 PDF sans texte, 4 pptx ; 3 xlsx + 1 pptx sans miniature intégrée). `--prod --apply` → R2 refuse chaque envoi « request signature … does not match … Check your secret access key » : **R2_SECRET_ACCESS_KEY du .env racine périmée** (rotation 2026-07-11 ?). Rien écrit. À faire : Thomas recopie R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY depuis Railway (service API → Variables) dans le .env racine, puis relancer `--prod --apply` (tunnel). L'API de prod n'est pas concernée (ses propres variables).
+- 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
+
+- 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-11 (2), 7 lots
+- 7 commits, un par lot : vignettes des contenus, diagnostic des aperçus (--check), tags globaux et communauté + /admin/tags, filtre Tags, health-check R2, vue Tags glisser-déposer, vue Bugs retirée. 3 annonces datées. build:packages, typecheck 5 paquets OK, TNR 2629/2629, en-têtes OK. Push SEULEMENT après `migrate-space-tags.ts --prod --apply` (accord de Thomas) ; après push : `backfill-file-previews.ts --prod --check`.
+
 ### MEP — 2026-11-11 (21 lots)
 - 21 commits, un par lot ; fichiers partagés entiers avec le dernier lot qui les touche (5 tests sans mention rattachés au lot 4). 19 annonces datées du 2026-11-11. install, build:packages, typecheck 5 paquets OK, TNR 2581/2581, en-têtes OK. Prod avant push : table item_contents recréée (script additif), types médias déjà convertis remis d'après leur adresse, migrate-item-types --prod --apply, App Sleeping de spok-api désactivé par Thomas (à réactiver). Après déploiement, sur demande de Thomas : backfill-file-previews.ts --prod. Laissé hors MEP : .claude/skills/spok-start/SKILL.md
 

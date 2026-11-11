@@ -2,8 +2,8 @@
    DEFAULT_TYPE_LABELS est dérivé du registre des types (typeRegistry.ts) : ne rien y écrire à la main.
    Chaque statut porte sa catégorie (category : sens terminé / en cours / en retard…, constants/statusCategory.ts).
    labelShort en toutes lettres (« Réunion », « Période »… — décision Thomas 2026-10-29, plus d'abréviations) ;
-   bugsViewTag : tag suivi par la vue Bugs (« bug » par défaut, DEFAULT_BUGS_VIEW_TAG) depuis que Bug n'est plus un type ;
-   une communauté aux référentiels personnalisés garde ses propres libellés.
+   une communauté aux référentiels personnalisés garde ses propres libellés. (DEFAULT_BUGS_VIEW_TAG retiré avec la vue
+   Bugs le 2026-11-11.)
    Statuts réservés à un type (StatusConfig.types) : les 4 issues d'une question (QUESTION_STATUS) ne sont proposées
    que pour une Question, qui n'utilise qu'elles — statusesForType / statusAllowedForType sont la source unique de ce tri (API, MCP, web) ;
    withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation. */
@@ -220,9 +220,6 @@ export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = Object.fromE
 // =============================================================================
 // DEFAULT REFERENTIELS - Configuration complète par défaut
 // =============================================================================
-
-/** Tag suivi par défaut par la vue Bugs (une anomalie = une Tâche taguée « bug », lot 4 contenus multiples) */
-export const DEFAULT_BUGS_VIEW_TAG = 'bug';
 
 export const DEFAULT_REFERENTIELS: SpaceReferentiels = {
   statuses: DEFAULT_STATUSES,

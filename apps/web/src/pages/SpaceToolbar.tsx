@@ -5,12 +5,15 @@
  * (filter, statusFilter, searchQuery) : un critère posé reste actif en changeant de vue, et change juste d'effet.
  * Types et Statuts à choix multiple (2026-11-05) : listes de valeurs cochées, liste vide = tous ; le menu reste ouvert
  * pendant qu'on coche. Bloc toujours déplié à partir de xl (1280 px) ; en dessous, le bouton Filtre/Aperçu le déplie.
- * Critère posé (type, statut ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à droite des
- * composants de filtre (2026-11-11), hors du bloc dépliable pour rester accessible, qui vide les trois critères.
+ * Critère posé (type, statut, tag ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à droite des
+ * composants de filtre (2026-11-11), hors du bloc dépliable pour rester accessible, qui vide les quatre critères.
+ * Tags (2026-11-11) : choix multiple parmi tagOptions (tags de la communauté + globaux, fournis par SpacePage) et
+ * « Sans tag » (NO_TAG) ; la comparaison est faite par SpacePage (lib/itemHighlight matchesTags), jamais ici.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
- * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées.
+ * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Contenus, Planification, Exploration), jamais masquées.
+ * Catégorie itemTypes libellée « Contenus » depuis le 2026-11-11 (Images, Liens, Documents montrent des contenus ; vue Bugs retirée).
  * Le rôle ne retire aucune vue, lecture seule comprise (décision Thomas 2026-11-06).
  * Listes de vues : toujours dérivées de VIEW_REGISTRY (catégorie, MOBILE_HIDDEN_VIEWS), jamais recopiées ici. Marge basse seulement hors registre (overview).
  * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
@@ -59,6 +62,7 @@ import { useInterfaceModeStore } from '../stores/interfaceMode';
 import type { TreeSort } from '../lib/treeSort';
 import { HelpHint } from '../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS as H } from '../help/spaceToolbar.hints';
+import { NO_TAG } from '../lib/itemHighlight';
 import { VIEW_HELP } from '../components/views/help';
 
 /**
@@ -89,7 +93,7 @@ const VIEW_CATEGORY_OF = new Map(VIEW_REGISTRY.map((v) => [v.id, v.category as O
 
 const OTHER_MENU_LABELS: Record<OtherMenuKey, string> = {
   basic: 'Basique',
-  itemTypes: 'Types',
+  itemTypes: 'Contenus',
   planning: 'Planification',
   exploration: 'Exploration',
 };
@@ -165,6 +169,11 @@ export interface SpaceToolbarProps {
   /** Statuts cochés ; liste vide = tous */
   statusFilter: string[];
   onStatusFilterChange: (statuses: string[]) => void;
+  /** Tags cochés (ids, NO_TAG = « Sans tag ») ; liste vide = tous */
+  tagFilter: string[];
+  onTagFilterChange: (tagIds: string[]) => void;
+  /** Tags proposés dans l'espace (communauté + globaux, GET /spaces/:id/tags) */
+  tagOptions?: Array<{ id: string; name: string; color?: string | null }>;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   /** true : la vue affichée met en évidence sans masquer — le bloc s'appelle « Aperçu » */
@@ -203,6 +212,9 @@ export function SpaceToolbar({
   onFilterChange,
   statusFilter,
   onStatusFilterChange,
+  tagFilter,
+  onTagFilterChange,
+  tagOptions,
   searchQuery,
   onSearchQueryChange,
   highlightMode,
@@ -229,12 +241,14 @@ export function SpaceToolbar({
   const adminMode = useAdminMode();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filtreOpen, setFiltreOpen] = useState(false);
   const [otherGroupOpen, setOtherGroupOpen] = useState<OtherMenuKey | null>(null);
   const [otherGroupPos, setOtherGroupPos] = useState<{ top: number; left: number } | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
   const otherGroupsRef = useRef<HTMLDivElement>(null);
   const otherGroupPanelRef = useRef<HTMLDivElement>(null);
   const otherGroupBtnRefs = useRef<Partial<Record<OtherMenuKey, HTMLButtonElement | null>>>({});
@@ -251,16 +265,18 @@ export function SpaceToolbar({
 
   const activeTypeFilter = filter.length > 0;
   const activeStatusFilter = statusFilter.length > 0;
+  const activeTagFilter = tagFilter.length > 0;
   const toggleValue = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const showFiltersForView = true;
 
   // Close all dropdowns on click outside or Escape
   useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen && !otherGroupOpen) return;
+    if (!typeDropdownOpen && !statusDropdownOpen && !tagDropdownOpen && !otherGroupOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) setTypeDropdownOpen(false);
       if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) setStatusDropdownOpen(false);
+      if (tagDropdownOpen && tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) setTagDropdownOpen(false);
       if (
         otherGroupOpen
         && otherGroupsRef.current && !otherGroupsRef.current.contains(e.target as Node)
@@ -268,12 +284,12 @@ export function SpaceToolbar({
       ) { setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setTagDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen, otherGroupOpen]);
+  }, [typeDropdownOpen, statusDropdownOpen, tagDropdownOpen, otherGroupOpen]);
 
 
   return (
@@ -455,7 +471,7 @@ export function SpaceToolbar({
           {showFiltersForView && <>
             {/* === FILTRE ou APERÇU, selon la vue === */}
             {(() => {
-              const hasActive = !!(activeTypeFilter || activeStatusFilter || searchQuery);
+              const hasActive = !!(activeTypeFilter || activeStatusFilter || activeTagFilter || searchQuery);
               const controls = (
                 <>
                   <HelpHint text={highlightMode ? H.highlight : H.filter}>
@@ -476,7 +492,7 @@ export function SpaceToolbar({
                       <div ref={typeDropdownRef} className="relative flex-shrink-0">
                         <HelpHint text={highlightMode ? H.highlightType : H.filterType}>
                         <button
-                          onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); }}
+                          onClick={() => { setTypeDropdownOpen(!typeDropdownOpen); setStatusDropdownOpen(false); setTagDropdownOpen(false); }}
                           className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${
                             activeTypeFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                           }`}
@@ -515,7 +531,7 @@ export function SpaceToolbar({
                           return (
                             <>
                               <HelpHint text={highlightMode ? H.highlightStatus : H.filterStatus}>
-                              <button onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); }}
+                              <button onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTypeDropdownOpen(false); setTagDropdownOpen(false); }}
                                 className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeStatusFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
                                 {singleStatus ? singleStatus.label : statusFilter.length > 1 ? `Statuts (${statusFilter.length})` : 'Statuts'}
                                 <ChevronDown className={`w-3 h-3 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
@@ -545,6 +561,46 @@ export function SpaceToolbar({
                           );
                         })()}
                       </div>
+                      {/* Tags (2026-11-11) : tags proposés dans l'espace + « Sans tag » ; liste vide = tous */}
+                      <div ref={tagDropdownRef} className="relative flex-shrink-0">
+                        {(() => {
+                          const options = tagOptions ?? [];
+                          const single = tagFilter.length === 1
+                            ? (tagFilter[0] === NO_TAG ? 'Sans tag' : options.find((t) => t.id === tagFilter[0])?.name)
+                            : null;
+                          return (
+                            <>
+                              <HelpHint text={highlightMode ? H.highlightTag : H.filterTag}>
+                              <button onClick={() => { setTagDropdownOpen(!tagDropdownOpen); setTypeDropdownOpen(false); setStatusDropdownOpen(false); }}
+                                className={`inline-flex items-center gap-1.5 h-7 rounded px-2 text-xs font-medium transition-all whitespace-nowrap ${activeTagFilter ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                                {single ?? (tagFilter.length > 1 ? `Tags (${tagFilter.length})` : 'Tags')}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${tagDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              </HelpHint>
+                              {tagDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 z-50 border border-border bg-card rounded-md shadow-md py-1 w-[200px] max-h-80 overflow-y-auto">
+                                  <button onClick={() => { onTagFilterChange([]); setTagDropdownOpen(false); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${tagFilter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                    <span className="flex-1 text-left">Tous les tags</span>
+                                  </button>
+                                  {[{ id: NO_TAG, name: 'Sans tag', color: null as string | null | undefined }, ...options].map((t) => {
+                                    const isActive = tagFilter.includes(t.id);
+                                    return (
+                                      <button key={t.id} aria-pressed={isActive} onClick={() => onTagFilterChange(toggleValue(tagFilter, t.id))}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
+                                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.color ? '' : 'bg-muted-foreground/40'}`} style={t.color ? { backgroundColor: t.color } : undefined} />
+                                        <span className={`flex-1 text-left truncate ${t.id === NO_TAG ? 'italic' : ''}`}>{t.name}</span>
+                                        {isActive && <span className="text-primary text-xs">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                  {options.length === 0 && <p className="px-3 py-1.5 text-xs text-muted-foreground">Aucun tag dans cet espace</p>}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
                       {/* Recherche */}
                       <div className="relative flex-shrink-0">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
@@ -563,7 +619,7 @@ export function SpaceToolbar({
                     <HelpHint text={highlightMode ? H.clearHighlight : H.clearFilters}>
                       <button
                         type="button"
-                        onClick={() => { onFilterChange([]); onStatusFilterChange([]); onSearchQueryChange(''); }}
+                        onClick={() => { onFilterChange([]); onStatusFilterChange([]); onTagFilterChange([]); onSearchQueryChange(''); }}
                         aria-label={highlightMode ? H.clearHighlight : H.clearFilters}
                         className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors whitespace-nowrap"
                       >
