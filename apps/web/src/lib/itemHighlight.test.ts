@@ -1,6 +1,6 @@
-/* Tests de la comparaison Types / Statuts à choix multiple des vues en Aperçu (lib/itemHighlight). */
+/* Tests de la comparaison Types / Statuts / Tags à choix multiple de la barre d'espace (lib/itemHighlight). */
 import { describe, expect, it } from 'vitest';
-import { matchesCriteria, matchesStatus, matchesType } from './itemHighlight';
+import { matchesCriteria, matchesStatus, matchesTags, matchesType, NO_TAG } from './itemHighlight';
 
 describe('matchesCriteria', () => {
   it('exige un type coché ET un statut coché', () => {
@@ -49,5 +49,24 @@ describe('matchesStatus', () => {
   it('ne correspond à rien sans critère', () => {
     expect(matchesStatus(undefined, 'todo')).toBe(false);
     expect(matchesStatus(undefined, null)).toBe(false);
+  });
+});
+
+describe('matchesTags', () => {
+  it('reconnaît l\'un des tags cochés', () => {
+    expect(matchesTags(['a', 'b'], [{ id: 'b' }, { id: 'c' }])).toBe(true);
+    expect(matchesTags(['a'], [{ id: 'c' }])).toBe(false);
+  });
+
+  it('« Sans tag » (NO_TAG) : élément sans aucun tag, combinable avec un tag', () => {
+    expect(matchesTags([NO_TAG], [])).toBe(true);
+    expect(matchesTags([NO_TAG], undefined)).toBe(true);
+    expect(matchesTags([NO_TAG], [{ id: 'a' }])).toBe(false);
+    expect(matchesTags([NO_TAG, 'a'], [{ id: 'a' }])).toBe(true);
+    expect(matchesTags(['a'], [])).toBe(false);
+  });
+
+  it('ne correspond à rien sans critère', () => {
+    expect(matchesTags(undefined, [{ id: 'a' }])).toBe(false);
   });
 });
