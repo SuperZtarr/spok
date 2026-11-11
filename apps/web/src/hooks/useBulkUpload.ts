@@ -1,13 +1,16 @@
 /*
- * Import en masse de fichiers dans un espace : un item IMAGE ou DOCUMENT par fichier (vues Images / Documents).
- * Branche runBulkUpload (lib/bulkUpload) sur itemsApi et expose l'état d'avancement au composant.
+ * Import en masse de fichiers dans un espace (vues Images / Documents) : un élément « Élément » (type UNDEFINED) par
+ * fichier, qui porte ce fichier comme contenu Image (kind 'image') ou Fichier (kind 'document') — contenus multiples,
+ * lot 3a, décision Thomas 2026-11-08 (règle bulk-upload-element-content). Le titre est le nom du fichier sans extension.
+ * Branche runBulkUpload (lib/bulkUpload) sur itemsApi (création, suppression si l'envoi échoue) et itemContentsApi
+ * (envoi du contenu), et expose l'état d'avancement au composant.
  * Params : spaceId (espace cible, items créés à la racine), kind ('image' | 'document').
  * Les images sont réduites dans le navigateur avant envoi (lib/imageResize). À la fin, invalide
  * ['items', spaceId] et ['space', spaceId] (compteur d'items) — une seule fois, pas à chaque fichier.
  */
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { itemsApi } from '../lib/api';
+import { itemsApi, itemContentsApi } from '../lib/api';
 import { runBulkUpload, type BulkUploadResult } from '../lib/bulkUpload';
 import { resizeImageFile } from '../lib/imageResize';
 import type { UploadKind } from '../lib/uploadRules';
@@ -29,10 +32,9 @@ export function useBulkUpload(spaceId: string | undefined, kind: UploadKind) {
     try {
       const res = await runBulkUpload(files, kind, {
         prepare: kind === 'image' ? resizeImageFile : async (f) => f,
-        createItem: async (title) => (await itemsApi.create(spaceId, { type: kind === 'image' ? 'IMAGE' : 'DOCUMENT', title })).id,
+        createItem: async (title) => (await itemsApi.create(spaceId, { type: 'UNDEFINED', title })).id,
         upload: async (itemId, file) => {
-          if (kind === 'image') await itemsApi.uploadImage(spaceId, itemId, file);
-          else await itemsApi.uploadDocument(spaceId, itemId, file);
+          await itemContentsApi.upload(spaceId, itemId, kind === 'image' ? 'image' : 'file', file);
         },
         deleteItem: async (itemId) => { await itemsApi.delete(spaceId, itemId); },
       }, {

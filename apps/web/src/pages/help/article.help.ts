@@ -1,7 +1,9 @@
 /* Aide utilisateur de la page « Article » (/spaces/:spaceId/articles/:itemId), la lecture, et du mode Composer de la fiche, écrite en éléments
    d'aide (help/elements.ts) : un texte par fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide. Les rappels (`hints`, via
    pageHint) détaillent les actions du mode Composer ; écrits d'après apps/api/src/routes/item-article.ts : à revoir si la route change.
-   La clé `compose` de l'élément est lue par pageHint : ne pas la renommer. Registre help/pageHelp.ts. */
+   La clé `compose` de l'élément est lue par pageHint : ne pas la renommer. Registre help/pageHelp.ts.
+   Contenus multiples (lot 3a, 2026-11-08) : un bloc se rend selon les contenus de l'élément (texte de `bloc`, rappel
+   `align`) ; annonce article-block-contents (sans date, datée à la MEP). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -16,9 +18,10 @@ const elements: HelpElements = {
   bloc: {
     title: 'Un bloc',
     short: 'Un élément existant affiché dans l\'article.',
-    text: 'Un élément existant affiché dans l\'article : le corriger le corrige partout où il apparaît. Le texte d\'une note se modifie directement ici ; les autres blocs s\'ouvrent dans leur fiche. Chaque bloc montre ce qui compte pour son type : le titre et le texte ; la légende sous une image ; l\'icône du site pour un lien ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Tags, assignation et contributions n\'y figurent pas. Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
+    text: 'Un élément existant affiché dans l\'article : le corriger le corrige partout où il apparaît. Le texte d\'une note se modifie directement ici ; les autres blocs s\'ouvrent dans leur fiche. Chaque bloc montre ce que porte l\'élément : son titre et son texte, puis ses contenus dans l\'ordre images, fichiers, liens, schémas ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Un élément qui ne porte que des images s\'affiche en grand avec sa légende ; un élément qui ne porte que des liens, en cartes avec l\'icône du site. Tags, assignation et contributions n\'y figurent pas. Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
     target: '[data-tour="article-block"]',
     side: 'top',
+    changes: [{ id: 'article-block-contents', kind: 'evolution', text: 'Un bloc d\'article montre tous les contenus de l\'élément (images, fichiers, liens, schémas), quel que soit son type.', date: '2026-11-11' }],
   },
   compose: {
     title: 'Composer',
@@ -47,12 +50,12 @@ export const help: HelpEntry = {
     remove: 'Retire ce bloc de l\'article. L\'élément d\'origine n\'est pas supprimé.',
     beside: 'À côté : place ce bloc à droite du bloc précédent. Des blocs « à côté » qui se suivent forment une rangée de colonnes de même largeur (3 au plus) ; sur mobile, ils s\'empilent. Le glisser-déposer change qui est à côté de qui.',
     width: 'Largeur du bloc : pleine, large ou moyenne (sur mobile, tout est en pleine largeur).',
-    align: 'Position de l\'image ou du schéma : centrée, ou à gauche / à droite avec le texte suivant autour.',
+    align: 'Position du bloc d\'images (élément qui ne porte que des images ou des schémas) : centrée, ou à gauche / à droite avec le texte suivant autour.',
     lessVisible: 'Cet élément est moins visible que l\'article (espace privé ou autre communauté) : tous les lecteurs de l\'article verront son contenu. Ils n\'auront pas accès à l\'élément lui-même.',
     duplicate: 'Cet élément figure déjà dans l\'article.',
     pickerEmpty: 'Aucun élément trouvé. Seuls les éléments que vous pouvez lire sont proposés, hors articles.',
     pickerScope: 'Cette communauté : éléments des espaces de la communauté de l\'article. Partout : tous les espaces que vous pouvez lire.',
-    noteReadOnly: 'Vous ne pouvez pas modifier cette note : ouvrez sa fiche pour la lire.',
+    noteReadOnly: 'Vous ne pouvez pas modifier ce texte : ouvrez sa fiche pour la lire.',
     addProcess: 'Ajoute à cet endroit les éléments d\'un processus (vue Process d\'un espace), entier ou un seul couloir, dans l\'ordre de lecture : couloir par couloir, de gauche à droite, puis les éléments hors couloir.',
     pickChildren: 'Ajoute aussi toute la descendance de l\'élément, chaque enfant juste après son parent.',
     pickChain: 'Ajoute aussi les éléments qui en découlent : liens « Entraîne », « Bloque » et « Permet » partant de l\'élément, de proche en proche (« Lié à » n\'est pas suivi).',

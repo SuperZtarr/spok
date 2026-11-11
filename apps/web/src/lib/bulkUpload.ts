@@ -1,5 +1,6 @@
 /*
  * Orchestration de l'import en masse de fichiers (vues Images et Documents), indépendante de React et de l'API.
+ * Un fichier = un élément créé (useBulkUpload : type « Élément », le fichier devient son contenu Image ou Fichier).
  * Pour chaque fichier : prepare (réduction d'image) → validateUploadFile → createItem (titre = nom sans
  * extension) → upload ; si l'envoi échoue, l'item créé est supprimé pour ne pas laisser d'item vide.
  * Parallélisme borné (concurrency, 3 par défaut) ; onProgress(done, total) après chaque fichier, réussi ou non.

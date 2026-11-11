@@ -4,30 +4,30 @@ import { blockClasses, moveBlock, depthIndentClasses, depthTitleClasses, groupRo
 
 describe('blockClasses', () => {
   it('pleine largeur centrée : pas de flottant', () => {
-    const c = blockClasses({ width: 'full', align: 'center' }, 'NOTE')
+    const c = blockClasses({ width: 'full', align: 'center' }, false)
     expect(c).toContain('w-full')
     expect(c).not.toContain('float')
   })
 
   it('image moyenne à gauche : flottant à gauche à partir de sm', () => {
-    const c = blockClasses({ width: 'medium', align: 'left' }, 'IMAGE')
+    const c = blockClasses({ width: 'medium', align: 'left' }, true)
     expect(c).toContain('sm:float-left')
     expect(c).toContain('sm:w-[45%]')
   })
 
   it('schéma à droite : flottant à droite', () => {
-    expect(blockClasses({ width: 'full', align: 'right' }, 'DIAGRAM')).toContain('sm:float-right')
+    expect(blockClasses({ width: 'full', align: 'right' }, true)).toContain('sm:float-right')
   })
 
   it('position gauche ignorée pour une note (centrée)', () => {
-    const c = blockClasses({ width: 'medium', align: 'left' }, 'NOTE')
+    const c = blockClasses({ width: 'medium', align: 'left' }, false)
     expect(c).not.toContain('float')
     expect(c).toContain('sm:w-[60%]')
     expect(c).toContain('sm:mx-auto')
   })
 
   it('repli mobile : pleine largeur sans flottant sous sm', () => {
-    for (const c of [blockClasses({ width: 'wide', align: 'center' }, 'NOTE'), blockClasses({ width: 'medium', align: 'left' }, 'IMAGE')]) {
+    for (const c of [blockClasses({ width: 'wide', align: 'center' }, false), blockClasses({ width: 'medium', align: 'left' }, true)]) {
       expect(c.split(' ')).toContain('w-full')
       expect(c.split(' ').filter((k) => k.includes('float')).every((k) => k.startsWith('sm:'))).toBe(true)
     }

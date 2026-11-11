@@ -1,8 +1,12 @@
 /*
- * Vue Images : galerie des items IMAGE (aperçu plein écran, zoom, regroupement par parent).
- * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item IMAGE
- * par fichier, créé à la racine, image réduite dans le navigateur avant envoi — réservé à canEdit et à
- * l'espace courant (currentSpaceId).
+ * Vue Images : galerie des contenus Image (et des schémas qui ont un aperçu) de TOUS les éléments, quel que soit
+ * leur type — une vignette par contenu (contentEntries, lib/itemContentEntries ; décision Thomas 2026-11-08, règle
+ * item-contents-views). Aperçu plein écran d'image en image, zoom, regroupement par parent de l'élément.
+ * Glisser une vignette déplace l'élément (id de glisser = id du contenu, retrouvé via images) ; menu ⋮ et
+ * double-clic agissent sur l'élément.
+ * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un élément « Élément »
+ * (UNDEFINED) portant un contenu Image par fichier, créé à la racine, image réduite dans le navigateur avant envoi —
+ * réservé à canEdit et à l'espace courant (currentSpaceId).
  * Zoom des vignettes sous HelpHint (textes : images.help.ts → hints), pas de `title` natif.
  */
 import { useMemo, useState, useCallback, useEffect } from 'react';
@@ -20,6 +24,7 @@ import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemM
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as imagesHelp } from './help/images.help';
+import { contentEntries } from '../../lib/itemContentEntries';
 
 /** Infobulles du zoom des vignettes — textes dans la fiche d'aide (images.help.ts, hints). */
 const IH = imagesHelp.hints!;
@@ -33,8 +38,11 @@ const ZOOM_LEVELS = [
   { cols: 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3', label: 'XXL' },
 ] as const;
 
+/** Une vignette = un contenu ; id = id de l'élément, key = id du contenu */
 interface ImageItem {
+  key: string;
   id: string;
+  item: Item;
   title: string;
   url: string;
   description: string | null;
@@ -42,6 +50,23 @@ interface ImageItem {
   parentId: string | null;
   createdById?: string;
 }
+
+/** Contenus Image et aperçus de schéma des éléments, une vignette par contenu */
+function toImageItems(items: Item[] | undefined): ImageItem[] {
+  return contentEntries(items, IMAGE_KINDS).map((e) => ({
+    key: e.key,
+    id: e.item.id,
+    item: e.item,
+    title: e.label,
+    url: e.url,
+    description: e.item.description || null,
+    status: e.item.status || null,
+    parentId: e.item.parentId || null,
+    createdById: e.item.createdById,
+  }));
+}
+
+const IMAGE_KINDS = ['IMAGE', 'DIAGRAM'] as const;
 
 interface ImageGroup {
   parentId: string | null;
@@ -186,20 +211,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
   const gridCols = ZOOM_LEVELS[zoomLevel].cols;
 
-  const images = useMemo<ImageItem[]>(() => {
-    if (!items) return [];
-    return items
-      .filter(item => item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url))
-      .map(item => ({
-        id: item.id,
-        title: item.title,
-        url: item.url!,
-        description: item.description || null,
-        status: item.status || null,
-        parentId: item.parentId || null,
-        createdById: item.createdById,
-      }));
-  }, [items]);
+  const images = useMemo<ImageItem[]>(() => toImageItems(items), [items]);
 
   // Group images by parent
   const groups = useMemo<ImageGroup[]>(() => {
@@ -240,14 +252,14 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || !onMove) return;
-    const itemId = active.id as string;
+    // id de glisser = id du contenu ; le déplacement porte sur l'élément qui le porte
+    const img = images.find(i => i.key === active.id);
     // Droppable IDs are "group:<parentId>" or "group:__root__"
     const dropId = over.id as string;
-    if (!dropId.startsWith('group:')) return;
+    if (!img || !dropId.startsWith('group:')) return;
+    const itemId = img.id;
     const newParentId = dropId === 'group:__root__' ? null : dropId.replace('group:', '');
-    // Find current parentId of the dragged item
-    const img = images.find(i => i.id === itemId);
-    if (!img || img.parentId === newParentId) return;
+    if (img.parentId === newParentId) return;
     // Position at end of target group
     const targetGroup = groups.find(g => g.parentId === newParentId);
     const position = targetGroup ? targetGroup.images.length : 0;
@@ -256,7 +268,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
   // Get flat index for lightbox from group image
   const getFlatIndex = useCallback((img: ImageItem) => {
-    return flatImages.findIndex(fi => fi.id === img.id);
+    return flatImages.findIndex(fi => fi.key === img.key);
   }, [flatImages]);
 
   const header = (
@@ -360,7 +372,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
             <div className={`grid ${gridCols} gap-3`}>
               {group.images.map((img) => {
                 return (
-                  <DraggableImage key={img.id} id={img.id} canDrag={canEdit && !!onMove}>
+                  <DraggableImage key={img.key} id={img.key} canDrag={canEdit && !!onMove}>
                   <div
                     className="group relative flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
                   >
@@ -386,7 +398,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ItemActionMenu
-                        groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(img) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpen,
+                        groups={buildItemMenuGroups(img.id, { onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren: hasChildItems(img.item) ? onAbsorbChildren : undefined, onSplitDescription: hasHeadings(img.description) ? onSplitDescription : undefined, onOpen,
             onOpenInNewTab }, { canEdit: canEditItem ? canEditItem(img) : canEdit, statusOptions, currentStatusId: img.status || undefined })}
                         triggerClassName="p-1 rounded bg-black/40 hover:bg-black/60 text-white transition-colors"
                       />
@@ -404,16 +416,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
 
       {/* Portal sections for child spaces */}
       {portalGroups?.map(group => {
-        const portalImages = group.items
-          .filter(item => item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url))
-          .map(item => ({
-            id: item.id,
-            title: item.title,
-            url: item.url!,
-            description: item.description || null,
-            status: item.status || null,
-            parentId: item.parentId || null,
-          }));
+        const portalImages = toImageItems(group.items);
         if (portalImages.length === 0) return null;
         // Group portal images by parent
         const portalParentNames: Record<string, string> = {};
@@ -452,7 +455,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
                   <div className={`grid ${gridCols} gap-3`}>
                     {pGroup.images.map((img) => (
                       <div
-                        key={img.id}
+                        key={img.key}
                         className="group relative flex flex-col rounded-lg overflow-hidden border bg-card hover:shadow-md hover:border-primary/30 transition-all"
                       >
                         <button

@@ -94,4 +94,15 @@ describe('buildWordsWhere', () => {
       { OR: [{ description: null }, { NOT: hit('description', 'budget') }] },
     ])
   })
+
+  it('contenus d’un élément : présent = au moins un contenu (some), exclu = aucun contenu (none)', () => {
+    const rel = { relation: 'contents', fields: ['name', 'url'] }
+    const inContents = (t: string) => ({ OR: [hit('name', t), hit('url', t)] })
+    const where = buildWordsWhere(resolveSearchWords('devis budget', [], ['budget']), [{ name: 'title' }, rel])
+    expect(where.AND).toEqual([
+      { OR: [hit('title', 'devis'), { contents: { some: inContents('devis') } }] },
+      { NOT: hit('title', 'budget') },
+      { contents: { none: inContents('budget') } },
+    ])
+  })
 })

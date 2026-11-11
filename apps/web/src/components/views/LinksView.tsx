@@ -1,5 +1,9 @@
-/* Vue Liens : items LINK en tableau avec métadonnées d'URL.
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+/* Vue Liens : contenus Lien de TOUS les éléments, quel que soit leur type — une étiquette par lien (contentEntries,
+ * lib/itemContentEntries ; décision Thomas 2026-11-08, règle item-contents-views), groupées par parent de l'élément,
+ * avec les métadonnées de l'adresse (/url-meta : icône du site, titre de repli, description en infobulle).
+ * Titre = titre de l'élément (+ nom du lien s'il en porte plusieurs). Clic : ouvre ce lien ; double-clic, menu ⋮ :
+ * l'élément ; glisser déplace l'élément (id de glisser = id du contenu).
+ * Adresses passées par safeHref (règle user-html-sanitized).
  */
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +17,9 @@ import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
+import { contentEntries, type ContentEntry } from '../../lib/itemContentEntries';
+
+const LINK_KINDS = ['LINK'] as const;
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -22,31 +29,33 @@ interface UrlMeta {
   favicon: string | null;
 }
 
-function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: {
-  item: Item;
+function LinkTag({ entry, onEdit, actions, canEdit, canEditItem, referentiels }: {
+  entry: ContentEntry;
   onEdit?: (id: string) => void;
   actions: LinkActions;
   canEdit: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: any;
 }) {
+  const item = entry.item;
+  const url = entry.url;
   const { data: meta } = useQuery<UrlMeta>({
-    queryKey: ['url-meta', item.url],
+    queryKey: ['url-meta', url],
     queryFn: async () => {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_URL}/url-meta?url=${encodeURIComponent(item.url!)}`, {
+      const res = await fetch(`${API_URL}/url-meta?url=${encodeURIComponent(url)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) return { title: null, description: null, favicon: null };
       return res.json();
     },
-    enabled: !!item.url,
+    enabled: !!url,
     staleTime: 24 * 60 * 60 * 1000,
     retry: false,
   });
 
-  const displayTitle = item.title || meta?.title || item.url;
-  const tooltip = [meta?.description || item.description, item.url].filter(Boolean).join('\n');
+  const displayTitle = entry.label || meta?.title || url;
+  const tooltip = [meta?.description || item.description, url].filter(Boolean).join('\n');
   const faviconUrl = meta?.favicon;
 
   const statusOptions = useMemo(() => {
@@ -57,7 +66,7 @@ function LinkTag({ item, onEdit, actions, canEdit, canEditItem, referentiels }: 
   return (
     <div className="inline-flex items-center group/link relative">
       <a
-        href={safeHref(item.url) ?? '#'}
+        href={safeHref(url) ?? '#'}
         target="_blank"
         rel="noopener noreferrer"
         data-tour="links-tag"
@@ -130,7 +139,7 @@ interface LinkActions {
 interface LinkGroup {
   parentId: string | null;
   parentTitle: string;
-  links: Item[];
+  links: ContentEntry[];
 }
 
 interface PortalGroup {
@@ -171,8 +180,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
             spaceName, viewContainerRef, onStartTour, pulseHelp }: LinksViewProps) {
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const links = useMemo(() => {
-    if (!items) return [];
-    return items.filter(item => item.type === 'LINK' && item.url);
+    return contentEntries(items, LINK_KINDS);
   }, [items]);
 
   const groups = useMemo<LinkGroup[]>(() => {
@@ -180,9 +188,9 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
     if (items) {
       for (const item of items) parentNames[item.id] = item.title;
     }
-    const groupMap = new Map<string | null, Item[]>();
+    const groupMap = new Map<string | null, ContentEntry[]>();
     for (const link of links) {
-      const key = link.parentId || null;
+      const key = link.item.parentId || null;
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(link);
     }
@@ -202,12 +210,13 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || !onMove) return;
-    const itemId = active.id as string;
+    // id de glisser = id du contenu ; le déplacement porte sur l'élément qui le porte
+    const link = links.find(l => l.key === active.id);
     const dropId = over.id as string;
-    if (!dropId.startsWith('group:')) return;
+    if (!link || !dropId.startsWith('group:')) return;
+    const itemId = link.item.id;
     const newParentId = dropId === 'group:__root__' ? null : dropId.replace('group:', '');
-    const link = links.find(l => l.id === itemId);
-    if (!link || (link.parentId || null) === newParentId) return;
+    if ((link.item.parentId || null) === newParentId) return;
     const targetGroup = groups.find(g => g.parentId === newParentId);
     const position = targetGroup ? targetGroup.links.length : 0;
     onMove(itemId, newParentId, position);
@@ -251,8 +260,8 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
           <div className="p-3">
             <div className="flex flex-wrap gap-2">
               {group.links.map(link => (
-                <DraggableLink key={link.id} id={link.id} canDrag={canEdit && !!onMove}>
-                  <LinkTag item={link} onEdit={onEdit} actions={actions} canEdit={canEdit} canEditItem={canEditItem} referentiels={referentiels} />
+                <DraggableLink key={link.key} id={link.key} canDrag={canEdit && !!onMove}>
+                  <LinkTag entry={link} onEdit={onEdit} actions={actions} canEdit={canEdit} canEditItem={canEditItem} referentiels={referentiels} />
                 </DraggableLink>
               ))}
             </div>
@@ -262,14 +271,14 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
 
       {/* Portal sections for child spaces */}
       {portalGroups?.map(group => {
-        const portalLinks = group.items.filter(item => item.type === 'LINK' && item.url);
+        const portalLinks = contentEntries(group.items, LINK_KINDS);
         if (portalLinks.length === 0) return null;
         // Group portal links by parent
         const portalParentNames: Record<string, string> = {};
         for (const item of group.items) portalParentNames[item.id] = item.title;
-        const portalGroupMap = new Map<string | null, Item[]>();
+        const portalGroupMap = new Map<string | null, ContentEntry[]>();
         for (const link of portalLinks) {
-          const key = link.parentId || null;
+          const key = link.item.parentId || null;
           if (!portalGroupMap.has(key)) portalGroupMap.set(key, []);
           portalGroupMap.get(key)!.push(link);
         }
@@ -300,7 +309,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
                 <div className="p-3">
                   <div className="flex flex-wrap gap-2">
                     {pGroup.links.map(link => (
-                      <LinkTag key={link.id} item={link} onEdit={onEdit} actions={actions} canEdit={false} referentiels={referentiels} />
+                      <LinkTag key={link.key} entry={link} onEdit={onEdit} actions={actions} canEdit={false} referentiels={referentiels} />
                     ))}
                   </div>
                 </div>

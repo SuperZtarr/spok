@@ -1,14 +1,14 @@
-/* Tests de la ligne d'infos et de l'icône du site des blocs d'article (articleBlockContent.ts). */
+/* Tests de la ligne d'infos, de l'icône du site et de la disposition selon les contenus des blocs d'article (articleBlockContent.ts). */
 import { describe, it, expect } from 'vitest';
 import type { ArticleBlockView } from '@spok/shared';
-import { blockMetaLine, siteIconUrl } from './articleBlockContent';
+import { blockContents, blockLayout, blockMetaLine, siteIconUrl } from './articleBlockContent';
 import { formatDate, formatDateTime } from '../../lib/utils';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
 const item = (over: Partial<BlockItem>): BlockItem => ({
   id: 'i', type: 'NOTE', title: 'T', description: null, url: null,
   status: null, statusLabel: null, priority: null, startDate: null, endDate: null, dueDate: null,
-  canOpen: false, canEdit: false, spaceId: null, ...over,
+  contents: [], canOpen: false, canEdit: false, spaceId: null, ...over,
 });
 
 describe('blockMetaLine', () => {
@@ -58,5 +58,22 @@ describe('siteIconUrl', () => {
     expect(siteIconUrl('https://www.youtube.com/watch?v=x')).toBe('https://www.youtube.com/favicon.ico');
     expect(siteIconUrl('file:///C:/a.pdf')).toBeNull();
     expect(siteIconUrl(null)).toBeNull();
+  });
+});
+
+describe('blockLayout (contenus multiples, lot 3a)', () => {
+  const c = (kind: 'IMAGE' | 'FILE' | 'LINK' | 'DIAGRAM', url: string | null = 'https://r2/x') =>
+    ({ id: kind + url, kind, url, name: null, mimeType: null });
+  it('figure si que des images / schémas avec aperçu', () => {
+    expect(blockLayout(item({ contents: [c('IMAGE'), c('DIAGRAM')] }))).toBe('figure');
+  });
+  it('links si que des liens', () => {
+    expect(blockLayout(item({ contents: [c('LINK'), c('LINK', 'https://b')] }))).toBe('links');
+  });
+  it('section si mêlés, vides, ou seulement des contenus non affichables', () => {
+    expect(blockLayout(item({ contents: [c('IMAGE'), c('FILE')] }))).toBe('section');
+    expect(blockLayout(item({ contents: [] }))).toBe('section');
+    expect(blockLayout(item({ contents: [c('DIAGRAM', null), c('LINK', 'javascript:x')] }))).toBe('section');
+    expect(blockContents(item({ contents: [c('DIAGRAM', null), c('FILE')] }))).toHaveLength(1);
   });
 });

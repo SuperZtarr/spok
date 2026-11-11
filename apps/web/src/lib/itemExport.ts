@@ -1,9 +1,14 @@
 /* Export d'un item seul (contenu + contributions) en texte/HTML — menu contextuel des items.
- * Impression : titre et libellés échappés, description / contributions passées par sanitizeHtml, image seulement si
- * son URL est sûre (règle user-html-sanitized) — la fenêtre d'impression est de la même origine que SPOK. */
+ * Impression : titre et libellés échappés, description / contributions passées par sanitizeHtml, contenus seulement si
+ * leur URL est sûre (règle user-html-sanitized) — la fenêtre d'impression est de la même origine que SPOK.
+ * Contenus (contenus multiples, lot 3a, 2026-11-08) : section « Contenus » après la description, regroupée dans l'ordre
+ * Images, Fichiers, Liens, Schémas (exportContents) — impression : images et aperçus de schéma affichés, fichiers et
+ * liens en liste (nom + adresse) ; PDF : une ligne par contenu (sorte, nom, adresse). Schéma sans aperçu : nom seul. */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Item, ItemWithRelations, ContributionWithAuthor } from '@spok/shared';
+import type { Item, ItemWithRelations, ContributionWithAuthor, ItemContentKind } from '@spok/shared';
+import { ITEM_CONTENT_KINDS, sortItemContents } from '@spok/shared';
+import { fileNameFromUrl } from './itemClipboard';
 import { htmlToText, sanitizeHtml, isSafeUrl } from './sanitizeHtml';
 import { assigneeLabel } from './assignee';
 
@@ -23,6 +28,27 @@ function formatDate(d?: string | null): string {
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
+}
+
+const KIND_LABELS: Record<ItemContentKind, string> = { IMAGE: 'Images', FILE: 'Fichiers', LINK: 'Liens', DIAGRAM: 'Schémas' };
+const KIND_SINGULAR: Record<ItemContentKind, string> = { IMAGE: 'Image', FILE: 'Fichier', LINK: 'Lien', DIAGRAM: 'Schéma' };
+
+export interface ExportContent {
+  kind: ItemContentKind;
+  name: string;
+  /** adresse sûre, ou null (schéma sans aperçu) */
+  url: string | null;
+}
+
+/** Contenus de l'élément à exporter, regroupés par sorte dans l'ordre fixe (contenus à adresse non sûre retirés) */
+export function exportContents(item: Pick<Item, 'contents'>): { kind: ItemContentKind; label: string; contents: ExportContent[] }[] {
+  const all = sortItemContents(item.contents ?? []).map((c) => {
+    const url = c.url && isSafeUrl(c.url) ? c.url : null;
+    return { kind: c.kind, url, name: c.name?.trim() || (url ? fileNameFromUrl(url) : KIND_SINGULAR[c.kind]) };
+  }).filter((c) => c.url || c.kind === 'DIAGRAM');
+  return ITEM_CONTENT_KINDS
+    .map((kind) => ({ kind, label: KIND_LABELS[kind], contents: all.filter((c) => c.kind === kind) }))
+    .filter((g) => g.contents.length > 0);
 }
 
 interface ItemExportData {
@@ -101,11 +127,15 @@ function buildPrintHtml(data: ItemExportData): string {
     </div>`;
   }
 
-  // Image / Diagram preview
-  if (item.url && isSafeUrl(item.url)) {
+  // Contenus (Images, Fichiers, Liens, Schémas)
+  const contentGroups = exportContents(item);
+  if (contentGroups.length > 0) {
     html += `<div class="section">
-      <div class="section-title">${item.type === 'DIAGRAM' ? 'Diagramme' : 'Image'}</div>
-      <img src="${escapeHtml(item.url)}" class="image-preview" />
+      <div class="section-title">Contenus</div>
+      ${contentGroups.map((g) => `<div class="field-label" style="margin-top:8px">${g.label}</div>
+      ${g.contents.map((c) => (g.kind === 'IMAGE' || g.kind === 'DIAGRAM') && c.url
+        ? `<div><img src="${escapeHtml(c.url)}" class="image-preview" alt="${escapeHtml(c.name)}" /></div>`
+        : `<div class="field">${c.url ? `<a href="${escapeHtml(c.url)}">${escapeHtml(c.name)}</a> — ${escapeHtml(c.url)}` : escapeHtml(c.name)}</div>`).join('')}`).join('')}
     </div>`;
   }
 
@@ -250,6 +280,30 @@ export function exportItemPDF(data: ItemExportData) {
     }
     doc.text(lines, 14, y);
     y += lines.length * 4 + 4;
+  }
+
+  // Contenus : une ligne par contenu
+  const contentGroups = exportContents(item);
+  if (contentGroups.length > 0) {
+    if (y > 250) { doc.addPage(); y = 15; }
+    doc.setDrawColor(200);
+    doc.line(14, y, 196, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont(undefined!, 'bold');
+    doc.text('Contenus', 14, y);
+    y += 5;
+    doc.setFont(undefined!, 'normal');
+    doc.setFontSize(9);
+    for (const g of contentGroups) {
+      for (const c of g.contents) {
+        const lines = doc.splitTextToSize(`${KIND_SINGULAR[c.kind]} : ${c.name}${c.url ? ` — ${c.url}` : ''}`, 180);
+        if (y + lines.length * 4 > 280) { doc.addPage(); y = 15; }
+        doc.text(lines, 14, y);
+        y += lines.length * 4 + 1;
+      }
+    }
+    y += 3;
   }
 
   // Children table

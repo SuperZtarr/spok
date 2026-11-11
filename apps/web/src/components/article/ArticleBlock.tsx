@@ -1,10 +1,12 @@
 /*
- * Rendu d'un bloc d'article (ArticleBlockView) en lecture, selon le type de l'élément référencé (décision Thomas
- * 2026-10-24, règle article-block-display-by-type) — contenu d'abord, jamais de champ vide ni de bloc vide :
- * NOTE → petit intertitre + texte (vide : intertitre seul) ; DOCUMENT → intertitre + texte + « 📎 fichier » ;
- * IMAGE / DIAGRAM avec adresse → image + légende (titre en gras + description) ; LINK → carte icône du site + titre +
- * adresse, description dessous ; MEETING / TASK / BUG / PROJECT / PERIOD → intertitre + ligne d'infos
- * (blockMetaLine) + texte ; autres → intertitre + texte. Jamais : tags, assigné, contributions, relations, enfants.
+ * Rendu d'un bloc d'article (ArticleBlockView) en lecture, selon les CONTENUS de l'élément référencé (contenus
+ * multiples, lot 3a, décision Thomas 2026-11-08, règle article-block-display-by-contents ; remplace le rendu par type
+ * du 2026-10-24) — contenu d'abord, jamais de champ vide ni de bloc vide. Disposition (blockLayout) :
+ * - 'figure' (que des images / schémas avec aperçu) → images pleine largeur + légende (titre en gras + description) ;
+ * - 'links' (que des liens) → une carte par lien (icône du site + titre + adresse), description dessous ;
+ * - 'section' (le reste) → intertitre + ligne d'infos selon le type (blockMetaLine : Réunion, Tâche, Projet, Période)
+ *   + texte, puis les contenus regroupés dans l'ordre Images, Fichiers (« 📎 nom »), Liens (cartes), Schémas (aperçu).
+ * Jamais : tags, assigné, contributions, relations, enfants.
  * Bloc indisponible → encart « contenu indisponible ».
  * Hiérarchie (block.depth, 0-3, décision Thomas 2026-10-30) : sous-niveau = décalage vers la droite avec filet à gauche
  * et intertitre plus petit (depthIndentClasses / depthTitleClasses de articleLayout.ts).
@@ -17,12 +19,12 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Lock } from 'lucide-react';
-import type { ArticleBlockView } from '@spok/shared';
+import type { ArticleBlockContent, ArticleBlockView } from '@spok/shared';
 import { sanitizeHtml, safeHref } from '../../lib/sanitizeHtml';
 import { fileNameFromUrl } from '../../lib/itemClipboard';
 import { pageHint } from '../../help/pageHint';
 import { blockClasses, depthIndentClasses, depthTitleClasses } from './articleLayout';
-import { blockMetaLine, siteIconUrl } from './articleBlockContent';
+import { blockContents, blockLayout, blockMetaLine, siteIconUrl } from './articleBlockContent';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
 
@@ -50,8 +52,43 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
     );
   }
   return (
-    <div className={inRow ? 'min-w-0' : `${blockClasses(block, item.type)} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block" data-help-zone="article:bloc">
+    <div className={inRow ? 'min-w-0' : `${blockClasses(block, blockLayout(item) === 'figure')} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block" data-help-zone="article:bloc">
       {renderBody(item, block.depth, children)}
+    </div>
+  );
+}
+
+/** Carte d'un lien : icône du site, titre, adresse */
+function LinkCard({ url, label }: { url: string; label: string }) {
+  return (
+    <a href={safeHref(url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md border border-border px-4 py-3 hover:bg-accent/50 transition-colors">
+      <SiteIcon url={url} />
+      <span className="min-w-0">
+        <span className="block font-medium truncate">{label}</span>
+        <span className="block text-xs text-muted-foreground truncate">{url}</span>
+      </span>
+    </a>
+  );
+}
+
+const contentName = (c: ArticleBlockContent) => c.name?.trim() || fileNameFromUrl(c.url!);
+
+/** Contenus d'un bloc « section », déjà dans l'ordre Images, Fichiers, Liens, Schémas (API) */
+function ContentList({ contents, title }: { contents: ArticleBlockContent[]; title: string }) {
+  if (contents.length === 0) return null;
+  return (
+    <div className="mt-2 space-y-2">
+      {contents.map((c) => {
+        if (c.kind === 'IMAGE' || c.kind === 'DIAGRAM') {
+          return <img key={c.id} src={safeHref(c.url)} alt={c.name || title} className="w-full h-auto rounded-md border border-border" />;
+        }
+        if (c.kind === 'LINK') return <LinkCard key={c.id} url={c.url!} label={c.name?.trim() || title} />;
+        return (
+          <p key={c.id} className="text-sm">
+            📎 <a href={safeHref(c.url)} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{contentName(c)}</a>
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -60,11 +97,17 @@ function renderBody(item: BlockItem, depth: number, children?: ReactNode): React
   const fiche = item.canOpen && item.spaceId ? `/spaces/${item.spaceId}?item=${item.id}` : null;
   const title = fiche ? <Link to={fiche} className="hover:underline">{item.title}</Link> : item.title;
   const text = children ?? (hasContent(item.description) ? <div className={PROSE} dangerouslySetInnerHTML={html(item.description)} /> : null);
+  const contents = blockContents(item);
+  const layout = blockLayout(item);
 
-  if ((item.type === 'IMAGE' || item.type === 'DIAGRAM') && item.url) {
+  if (layout === 'figure') {
     return (
       <figure>
-        <img src={safeHref(item.url)} alt={item.title} className="w-full h-auto rounded-md border border-border" />
+        <div className="space-y-2">
+          {contents.map((c) => (
+            <img key={c.id} src={safeHref(c.url)} alt={c.name || item.title} className="w-full h-auto rounded-md border border-border" />
+          ))}
+        </div>
         <figcaption className="mt-1 text-xs text-muted-foreground text-center">
           <strong className="font-semibold">{title}</strong>
           {hasContent(item.description) && <>{' '}<span className="[&_p]:inline" dangerouslySetInnerHTML={html(item.description)} /></>}
@@ -73,16 +116,14 @@ function renderBody(item: BlockItem, depth: number, children?: ReactNode): React
     );
   }
 
-  if (item.type === 'LINK' && item.url) {
+  if (layout === 'links') {
     return (
       <>
-        <a href={safeHref(item.url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md border border-border px-4 py-3 hover:bg-accent/50 transition-colors">
-          <SiteIcon url={item.url} />
-          <span className="min-w-0">
-            <span className="block font-medium truncate">{item.title}</span>
-            <span className="block text-xs text-muted-foreground truncate">{item.url}</span>
-          </span>
-        </a>
+        <div className="space-y-2">
+          {contents.map((c) => (
+            <LinkCard key={c.id} url={c.url!} label={contents.length > 1 ? (c.name?.trim() || item.title) : item.title} />
+          ))}
+        </div>
         {text && <div className="mt-2">{text}</div>}
       </>
     );
@@ -94,11 +135,7 @@ function renderBody(item: BlockItem, depth: number, children?: ReactNode): React
       <h3 className={`font-semibold mb-1 ${depthTitleClasses(depth)}`}>{title}</h3>
       {meta && <p className="text-xs text-muted-foreground mb-2">{meta}</p>}
       {text}
-      {item.type === 'DOCUMENT' && item.url && (
-        <p className="mt-2 text-sm">
-          📎 <a href={safeHref(item.url)} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{fileNameFromUrl(item.url)}</a>
-        </p>
-      )}
+      <ContentList contents={contents} title={item.title} />
     </section>
   );
 }

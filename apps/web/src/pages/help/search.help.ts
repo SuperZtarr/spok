@@ -1,6 +1,8 @@
 /* Aide utilisateur de la page « Recherche » (/search), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le
    « ? » (PageHelpButton), le tour et le mode Aide. `fields` : ligne d'aide sous le champ (FieldHelp, visible aussi sur téléphone,
-   contrairement aux hints). Registre help/pageHelp.ts. */
+   contrairement aux hints). Registre help/pageHelp.ts.
+   Contenus multiples (lot 3a, 2026-11-08) : un élément se trouve aussi par le nom de ses fichiers et l'adresse de ses liens
+   (texte de `terme`) ; annonce search-item-contents (sans date, datée à la MEP). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -8,9 +10,10 @@ const elements: HelpElements = {
   terme: {
     title: 'Le terme',
     short: 'Les résultats arrivent dès la première lettre.',
-    text: 'Tapez : les résultats arrivent dès la première lettre. Entre guillemets, "plan projet" cherche l\'expression exacte.',
+    text: 'Tapez : les résultats arrivent dès la première lettre. Un élément est trouvé par son titre, son texte, mais aussi par le nom de ses fichiers et l\'adresse de ses liens. Entre guillemets, "plan projet" cherche l\'expression exacte.',
     target: '[data-tour="search-input"]',
     side: 'bottom',
+    changes: [{ id: 'search-item-contents', kind: 'evolution', text: 'La recherche trouve aussi un élément par le nom de ses fichiers et l\'adresse de ses liens.', date: '2026-11-11' }],
   },
   mots: {
     title: 'Présence des mots',

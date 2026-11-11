@@ -1,5 +1,6 @@
 /*
- * Import en masse dans les vues Images et Documents : trois briques à partager l'état d'un même useBulkUpload.
+ * Import en masse dans les vues Images et Documents : trois briques à partager l'état d'un même useBulkUpload
+ * (un fichier = un élément « Élément » qui porte ce fichier comme contenu — lot 3a, 2026-11-08).
  * - BulkUploadButton : bouton de la barre de vue (#view-header), sélection de fichiers multiple.
  * - BulkUploadDropZone : enveloppe le contenu de la vue, accepte le glisser-déposer de fichiers depuis
  *   l'explorateur (ignore les glisser internes dnd-kit : seuls les DataTransfer de type 'Files' comptent).

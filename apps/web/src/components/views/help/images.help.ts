@@ -1,6 +1,8 @@
 /* Aide utilisateur de la vue « Images » (images), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris
    par le « ? » (ViewHelpButton), le tour (useViewOnboarding), le mode Aide et les infobulles : hints.bulkUpload lu par
-   BulkUploadButton (la clé de l'élément ne doit pas changer), détails du zoom lus par ImagesView. */
+   BulkUploadButton (la clé de l'élément ne doit pas changer), détails du zoom lus par ImagesView.
+   Contenus multiples (lot 3a, 2026-11-08) : une vignette par image portée, quel que soit le type de l'élément ;
+   l'import crée un « Élément » par fichier ; annonce contents-view-images (sans date, datée à la MEP). */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
@@ -8,8 +10,8 @@ import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSte
 const elements: HelpElements = {
   bulkUpload: {
     title: 'Importer des images',
-    short: 'Importer des images : choisissez plusieurs fichiers, chacun devient un élément Image (ou glissez-les dans la vue)',
-    text: 'Ajoutez plusieurs images d\'un coup — ou déposez-les directement sur la vue. Chaque image devient un élément Image (réduite automatiquement si elle est très grande).',
+    short: 'Importer des images : choisissez plusieurs fichiers, chacun devient un élément qui porte cette image (ou glissez-les dans la vue)',
+    text: 'Ajoutez plusieurs images d\'un coup — ou déposez-les directement sur la vue. Chaque image crée un nouvel élément, titré du nom du fichier, qui la porte comme contenu (réduite automatiquement si elle est très grande). Rien d\'autre n\'est modifié.',
     target: '[data-tour="bulk-upload"]',
     noZone: true,
     side: 'bottom',
@@ -24,9 +26,10 @@ const elements: HelpElements = {
   vignette: {
     title: 'Une image',
     short: 'Cliquez pour l\'ouvrir en grand.',
-    text: 'Un clic l\'ouvre en plein écran (flèches pour naviguer, Échap pour fermer). Un double-clic ouvre sa fiche. Glissez-la pour la ranger sous un autre élément.',
+    text: 'Une vignette par image portée par un élément, quel que soit son type : un élément qui porte trois images apparaît trois fois. Un clic l\'ouvre en plein écran (flèches pour passer d\'une image à l\'autre, Échap pour fermer). Un double-clic ouvre la fiche de l\'élément. Glisser une vignette range tout l\'élément sous un autre parent, avec ses autres images.',
     target: '[data-tour="images-tile"]',
     side: 'right',
+    changes: [{ id: 'contents-view-images', kind: 'evolution', text: 'La vue Images montre les images de tous les éléments, quel que soit leur type, une vignette par image.', date: '2026-11-11' }],
   },
 };
 
@@ -34,9 +37,9 @@ const derived = helpFromElements(elements);
 
 export const help: HelpEntry = {
   title: 'Images',
-  summary: 'La galerie d\'images de l\'espace, regroupées par élément parent.',
+  summary: 'Toutes les images portées par les éléments de l\'espace (et les schémas qui ont un aperçu), une vignette par image, regroupées par élément parent.',
   short: 'Galerie d\'images',
-  empty: 'Aucune image. Ajoutez une image à un élément pour la retrouver dans cette galerie.',
+  empty: 'Aucune image. Ajoutez une image à n\'importe quel élément (zone Contenus de sa fiche) pour la retrouver dans cette galerie.',
   ...derived,
   hints: {
     ...derived.hints,

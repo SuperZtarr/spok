@@ -1,13 +1,13 @@
 /*
  * Mise en page « flux de blocs » d'un article (spec Article 2026-10-23) — fonctions pures, testées.
  * blockClasses : largeur full (100 %) / wide (85 %) / medium (60 %), centrée ; align left/right seulement pour
- * IMAGE et DIAGRAM : flottant (45 % max) que le texte suivant habille. Sous 640 px (sm) : toujours pleine largeur,
+ * un bloc « figure » (élément qui ne porte que des images / schémas, blockLayout — lot 3a 2026-11-08) : flottant (45 % max) que le texte suivant habille. Sous 640 px (sm) : toujours pleine largeur,
  * sans flottant (lecture mobile). Le conteneur de l'article doit fermer les flottants (classe flow-root).
  * moveBlock : nouvel ordre des blocs après glisser-déposer (mode Composer).
  * groupRows : colonnes — blocs « à côté du précédent » regroupés en rangées de 3 au plus (empilées sous 640 px).
  * depthIndentClasses / depthTitleClasses : hiérarchie parent/enfant des éléments dans l'article (depth fourni par l'API).
  */
-import type { ArticleBlockAlign, ArticleBlockWidth, ItemType } from '@spok/shared';
+import type { ArticleBlockAlign, ArticleBlockWidth } from '@spok/shared';
 
 const WIDTH_CLASSES: Record<ArticleBlockWidth, string> = {
   full: '',
@@ -15,10 +15,10 @@ const WIDTH_CLASSES: Record<ArticleBlockWidth, string> = {
   medium: 'sm:w-[60%] sm:mx-auto',
 };
 
-const FLOATABLE: ItemType[] = ['IMAGE', 'DIAGRAM'];
 
-export function blockClasses(block: { width: ArticleBlockWidth; align: ArticleBlockAlign }, type: ItemType): string {
-  const floats = FLOATABLE.includes(type) && block.align !== 'center';
+/** floatable : le bloc est une figure (blockLayout === 'figure') — seul cas où align gauche/droite s'applique */
+export function blockClasses(block: { width: ArticleBlockWidth; align: ArticleBlockAlign }, floatable: boolean): string {
+  const floats = floatable && block.align !== 'center';
   if (floats) {
     return block.align === 'left'
       ? 'w-full sm:w-[45%] sm:float-left sm:mr-5 sm:mb-3'
