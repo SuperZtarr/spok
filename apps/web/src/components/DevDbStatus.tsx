@@ -24,7 +24,8 @@ const VISITOR_MODE_KEY = 'spok-visitor-mode';
 /**
  * Toggle du mode admin.
  * - `variant="full"` (défaut) : bouton pleine largeur, pour la modale profil.
- * - `variant="compact"` : bouton à hauteur h-7 aligné sur les boutons de la row 1 du header.
+ * - `variant="compact"` : bouton à hauteur h-7 aligné sur les boutons de la row 1 du header ;
+ *   libellé fixe « Administration », fond rouge plein quand actif.
  * Rend `null` si l'utilisateur n'est pas ADMIN global.
  */
 export function AdminModeToggle({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
@@ -52,12 +53,12 @@ export function AdminModeToggle({ variant = 'full' }: { variant?: 'full' | 'comp
         title={`Mode admin ${adminModeEnabled ? 'activé' : 'désactivé'}`}
         className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
           adminModeEnabled
-            ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/50'
+            ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600'
             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
         }`}
       >
         <Shield className="w-3.5 h-3.5 flex-shrink-0" />
-        <span className="hidden lg:inline">Admin {adminModeEnabled ? 'activé' : 'désactivé'}</span>
+        <span className="hidden lg:inline">Administration</span>
       </button>
     );
   }
@@ -149,6 +150,7 @@ export function useVisitorMode(): boolean {
 /**
  * Toggle du mode dev (affiche l'indicateur DevDbStatus). Même variantes que AdminModeToggle.
  * Rend `null` hors mode admin (gate useAdminMode).
+ * Compact : libellé fixe « Mode Dev », fond violet plein quand actif (état lisible par la couleur).
  */
 export function DevModeToggle({ variant = 'full' }: { variant?: 'full' | 'compact' }) {
   const [devModeEnabled, setDevModeEnabled] = useState(() => {
@@ -173,12 +175,12 @@ export function DevModeToggle({ variant = 'full' }: { variant?: 'full' | 'compac
         title={`Mode dev ${devModeEnabled ? 'activé' : 'désactivé'}`}
         className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
           devModeEnabled
-            ? 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900/50'
+            ? 'bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600'
             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
         }`}
       >
         <Bug className="w-3.5 h-3.5 flex-shrink-0" />
-        <span className="hidden lg:inline">Dev {devModeEnabled ? 'activé' : 'désactivé'}</span>
+        <span className="hidden lg:inline">Mode Dev</span>
       </button>
     );
   }
