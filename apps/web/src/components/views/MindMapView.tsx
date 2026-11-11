@@ -12,6 +12,8 @@
  * le seul nouvel élément sur une place libre, une suppression ne déplace rien (2026-11-04). Déplacement (2026-10-29) :
  * changer d'espace compte comme un changement de branche ; la branche cible est ré-éventaillée ; à la racine ou en cas
  * d'échec, l'élément est posé sur une place libre (placeMovedRef, freeSpotAround) — il ne reste jamais à l'endroit du lâcher.
+ * Espaces affichés (2026-11-11) : tous les sous-espaces descendants de l'espace courant, à toute profondeur (childSpaces),
+ * chacun relié au nœud de son parent.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -313,9 +315,22 @@ function MindMapViewInner({
     return communitySpaces.filter(s => s.id !== spaceId);
   }, [communitySpaces, spaceId]);
 
-  // Child spaces of the current space
+  // Tous les sous-espaces descendants de l'espace courant, à toute profondeur (2026-11-11) — chacun est
+  // rattaché au nœud de son parent par buildPortalNodesAndEdges (displayedParentOf)
   const childSpaces = useMemo(() => {
-    return communitySpaces.filter(s => s.parentId === spaceId);
+    const descendantIds = new Set<string>();
+    let frontier = new Set<string>(spaceId ? [spaceId] : []);
+    while (frontier.size > 0) {
+      const next = new Set<string>();
+      for (const s of communitySpaces) {
+        if (s.parentId && frontier.has(s.parentId) && !descendantIds.has(s.id) && s.id !== spaceId) {
+          descendantIds.add(s.id);
+          next.add(s.id);
+        }
+      }
+      frontier = next;
+    }
+    return communitySpaces.filter(s => descendantIds.has(s.id));
   }, [communitySpaces, spaceId]);
 
   const handleAddPortal = useCallback((parentItemId: string) => {
