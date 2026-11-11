@@ -1,4 +1,4 @@
-/* Tests de QuestionPanel : vote (appel de l'API avec l'option cochée), décompte nominatif, boutons d'issue réservés à
+/* Tests de QuestionPanel : vote (appel de l'API avec l'option cochée), décompte nominatif, badge « Unanimité », boutons d'issue réservés à
  * qui peut décider, vote figé une fois la question close, pas d'édition des options en séance (variant live). */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, waitFor } from '@testing-library/react'
@@ -12,7 +12,7 @@ const view = (over: Partial<QuestionView> = {}): QuestionView => ({
     { id: 'o2', label: 'Non', position: 1, voters: [] },
   ],
   outcome: { chosenOptionId: null, answerText: null, note: null, decidedBy: null, decidedAt: null },
-  voterCount: 2, leadingOptionIds: ['o1'], myOptionIds: [],
+  voterCount: 2, leadingOptionIds: ['o1'], unanimousOptionIds: ['o1'], myOptionIds: [],
   canVote: true, canDecide: false, canEditOptions: false, locked: false,
   ...over,
 })
@@ -44,6 +44,7 @@ describe('QuestionPanel', () => {
     api.vote.mockResolvedValue(view({ myOptionIds: ['o2'] }))
     const { findByText, getByLabelText } = renderPanel()
     expect(await findByText('Ana, Ben')).toBeTruthy()
+    expect(await findByText('Unanimité')).toBeTruthy()
     fireEvent.click(getByLabelText('Non'))
     await waitFor(() => expect(api.vote).toHaveBeenCalledWith('s1', 'q1', ['o2']))
   })

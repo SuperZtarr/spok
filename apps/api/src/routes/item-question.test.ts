@@ -79,7 +79,17 @@ describe('Routes question', () => {
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.options[0].voters.map((v: any) => v.name)).toEqual(['Ana', 'Ben'])
-    expect(body).toMatchObject({ voterCount: 3, leadingOptionIds: ['o1'], canVote: false, canDecide: false, myOptionIds: [] })
+    expect(body).toMatchObject({ voterCount: 3, leadingOptionIds: ['o1'], unanimousOptionIds: [], canVote: false, canDecide: false, myOptionIds: [] })
+  })
+
+  it('unanimité : au moins 2 votants, tous sur la même option', async () => {
+    prisma.questionOption.findMany.mockResolvedValue([{ id: 'o1', label: 'Oui', position: 0 }, { id: 'o2', label: 'Non', position: 1 }])
+    const v = (userId: string) => ({ optionId: 'o1', userId, user: { id: userId, name: userId } })
+    prisma.questionVote.findMany.mockResolvedValue([v('a'), v('b')])
+    const get = () => app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/q1/question`, headers: auth() })
+    expect((await get()).json().unanimousOptionIds).toEqual(['o1'])
+    prisma.questionVote.findMany.mockResolvedValue([v('a')])
+    expect((await get()).json().unanimousOptionIds).toEqual([])
   })
 
   it('options : identifiant gardé pour une option corrigée, absente retirée', async () => {

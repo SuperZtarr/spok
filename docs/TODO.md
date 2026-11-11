@@ -2,6 +2,9 @@
 
 ## À faire
 
+### Aide de « Absorber les enfants » et « Éclater en sous-items » (relevé lot 5 contenus multiples, 2026-11-11)
+- [ ] Un élément d'aide par action (fiche d'aide de l'élément) et un rappel de leur effet (HelpHint) sur le bouton de la fiche et dans le menu ⋯ : aujourd'hui seul un `title` natif. Fichiers : `ItemEditModal.tsx`, `itemMenuGroups.ts`, `item-modal.help.ts`. À faire après la MEP des lots contenus multiples (fichiers partagés)
+
 ### Vues d'exploration
 - [x] Vue Loupe : exploration de lien en lien (parent, enfants, relations), y compris vers d'autres espaces lisibles, zoom au survol, clic pour figer, chemin parcouru, menu ⋮ sur la vignette zoomée — 2026-11-06
 
@@ -184,6 +187,7 @@
 - [x] Mode dev : inspecteur arrêté à la modale, zones de la fiche d'un élément — 2026-11-07
 - [x] Aide restructurée : un élément par fonction, nouveautés annoncées, tutoriel d'accueil, suivi par compte — 2026-11-07
 - [x] Instructions MCP : NOTE pour le texte rédigé, DOCUMENT pour les pièces jointes — 2026-11-08
+- [x] Question - badge Unanimité — 2026-11-11
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)
