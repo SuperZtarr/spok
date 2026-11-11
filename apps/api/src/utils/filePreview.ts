@@ -10,7 +10,8 @@
  * storeFilePreview(…, itemId) : idem, image rangée sous items/<itemId>/ (stockage de l'élément) → { previewUrl, excerpt }.
  * image = webp large de PREVIEW_WIDTH au plus ; excerpt = au plus EXCERPT_MAX caractères, espaces resserrés.
  * Règle : ne jamais faire échouer l'envoi — toute erreur, format inconnu ou dépassement de PREVIEW_TIMEOUT_MS donne
- * { image: null, excerpt: null }. Règle businessRules « item-contents-file-preview ».
+ * { image: null, excerpt: null }. Erreur et délai dépassé (pas un format non couvert) : journalisés « [aperçu] » et
+ * renvoyés dans `error` (diagnostic du rattrapage en prod, 2026-11-11). Règle businessRules « item-contents-file-preview ».
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -114,26 +115,42 @@ async function compute(buffer: Buffer, mimeType: string | null | undefined, file
   return NONE;
 }
 
-/** Calcule l'aperçu et range l'image sous items/<itemId>/ ; ne lève jamais (stockage en échec → sans image) */
+const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 300);
+
+/** Calcule l'aperçu et range l'image sous items/<itemId>/ ; ne lève jamais (stockage en échec → sans image,
+ *  erreur journalisée et renvoyée dans `error`) */
 export async function storeFilePreview(
   buffer: Buffer, mimeType: string | null | undefined, fileName: string | null | undefined, itemId: string,
-): Promise<{ previewUrl: string | null; excerpt: string | null }> {
-  const { image, excerpt } = await buildFilePreview(buffer, mimeType, fileName);
-  const previewUrl = image ? await uploadImageToR2(image, itemId).catch(() => null) : null;
-  return { previewUrl, excerpt };
+): Promise<{ previewUrl: string | null; excerpt: string | null; error?: string }> {
+  const { image, excerpt, error } = await buildFilePreview(buffer, mimeType, fileName);
+  if (!image) return { previewUrl: null, excerpt, ...(error ? { error } : {}) };
+  try {
+    return { previewUrl: await uploadImageToR2(image, itemId), excerpt };
+  } catch (e) {
+    const uploadError = `envoi de l'image : ${messageOf(e)}`;
+    console.warn(`[aperçu] ${fileName ?? '?'} — ${uploadError}`);
+    return { previewUrl: null, excerpt, error: uploadError };
+  }
 }
 
-/** Aperçu d'un fichier ; ne lève jamais : format non couvert, fichier illisible ou trop lent → rien */
+/** Aperçu d'un fichier ; ne lève jamais : format non couvert → rien ; fichier illisible ou trop lent → rien, erreur
+ *  journalisée (console.warn « [aperçu] ») et renvoyée dans `error` (mode --check du script de rattrapage). */
 export async function buildFilePreview(
   buffer: Buffer,
   mimeType: string | null | undefined,
   fileName: string | null | undefined,
   timeoutMs = PREVIEW_TIMEOUT_MS,
-): Promise<FilePreview> {
+): Promise<FilePreview & { error?: string }> {
   let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<FilePreview>((resolve) => { timer = setTimeout(() => resolve(NONE), timeoutMs); });
+  const fail = (error: string) => {
+    console.warn(`[aperçu] ${fileName ?? '?'} — ${error}`);
+    return { ...NONE, error };
+  };
+  const timeout = new Promise<FilePreview & { error?: string }>((resolve) => {
+    timer = setTimeout(() => resolve(fail(`délai de ${timeoutMs} ms dépassé`)), timeoutMs);
+  });
   try {
-    return await Promise.race([compute(buffer, mimeType, fileName).catch(() => NONE), timeout]);
+    return await Promise.race([compute(buffer, mimeType, fileName).catch((e) => fail(messageOf(e))), timeout]);
   } finally {
     clearTimeout(timer);
   }

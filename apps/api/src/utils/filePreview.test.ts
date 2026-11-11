@@ -1,9 +1,14 @@
 /* TNR de buildFilePreview (aperçu d'un fichier joint) : PDF (page 1 + texte), docx avec et sans miniature intégrée,
- * texte brut, format non couvert et fichier corrompu (jamais d'erreur, rien). Fichiers d'essai fabriqués ici. */
-import { describe, it, expect } from 'vitest'
+ * texte brut, format non couvert et fichier corrompu (jamais levé, rien, cause dans `error`), délai dépassé,
+ * envoi de l'image en échec (storeFilePreview). Fichiers d'essai fabriqués ici. */
+import { describe, it, expect, vi } from 'vitest'
 import JSZip from 'jszip'
 import sharp from 'sharp'
-import { buildFilePreview, toExcerpt, EXCERPT_MAX, PREVIEW_WIDTH } from './filePreview.js'
+
+const r2 = vi.hoisted(() => ({ uploadImageToR2: vi.fn() }))
+vi.mock('./r2.js', () => ({ uploadImageToR2: r2.uploadImageToR2 }))
+
+import { buildFilePreview, storeFilePreview, toExcerpt, EXCERPT_MAX, PREVIEW_WIDTH } from './filePreview.js'
 
 /** PDF d'une page avec une ligne de texte en Helvetica (table xref calculée) */
 function tinyPdf(text: string): Buffer {
@@ -68,13 +73,38 @@ describe('buildFilePreview', () => {
     expect(await buildFilePreview(Buffer.from('xx'), 'application/zip', 'archive.zip')).toEqual({ image: null, excerpt: null })
   })
 
-  it('fichier corrompu : rien, sans erreur', async () => {
-    expect(await buildFilePreview(Buffer.from('pas un pdf'), 'application/pdf', 'casse.pdf')).toEqual({ image: null, excerpt: null })
-    expect(await buildFilePreview(Buffer.from('pas un zip'), null, 'casse.docx')).toEqual({ image: null, excerpt: null })
+  it('fichier corrompu : rien, sans lever, cause renvoyée dans error', async () => {
+    const pdf = await buildFilePreview(Buffer.from('pas un pdf'), 'application/pdf', 'casse.pdf')
+    expect(pdf).toMatchObject({ image: null, excerpt: null })
+    expect(pdf.error).toBeTruthy()
+    const docx = await buildFilePreview(Buffer.from('pas un zip'), null, 'casse.docx')
+    expect(docx).toMatchObject({ image: null, excerpt: null })
+    expect(docx.error).toBeTruthy()
   })
 
-  it('délai dépassé : rien', async () => {
-    expect(await buildFilePreview(tinyPdf('Lent'), 'application/pdf', 'lent.pdf', 0)).toEqual({ image: null, excerpt: null })
+  it('délai dépassé : rien, cause renvoyée', async () => {
+    const slow = await buildFilePreview(tinyPdf('Lent'), 'application/pdf', 'lent.pdf', 0)
+    expect(slow).toMatchObject({ image: null, excerpt: null })
+    expect(slow.error).toMatch(/délai/)
+  })
+
+  it('format non couvert : pas d\'erreur', async () => {
+    expect((await buildFilePreview(Buffer.from('xx'), 'application/zip', 'archive.zip')).error).toBeUndefined()
+  })
+})
+
+describe('storeFilePreview', () => {
+  it('image envoyée : adresse renvoyée', async () => {
+    r2.uploadImageToR2.mockResolvedValueOnce('https://r2.test/items/i1/p.webp')
+    const res = await storeFilePreview(await tinyDocx('Texte', true), null, 'a.docx', 'i1')
+    expect(res).toEqual({ previewUrl: 'https://r2.test/items/i1/p.webp', excerpt: 'Texte' })
+  })
+
+  it('envoi de l\'image en échec : extrait gardé, cause renvoyée, jamais levé', async () => {
+    r2.uploadImageToR2.mockRejectedValueOnce(new Error('Access Denied'))
+    const res = await storeFilePreview(await tinyDocx('Texte', true), null, 'a.docx', 'i1')
+    expect(res).toMatchObject({ previewUrl: null, excerpt: 'Texte' })
+    expect(res.error).toMatch(/envoi de l'image : Access Denied/)
   })
 })
 
