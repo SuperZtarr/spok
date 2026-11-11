@@ -3,9 +3,11 @@
  * MockPrisma : factory uniforme, findMany→[] par défaut, tous les modèles du schéma —
  * ajouter ici tout nouveau modèle Prisma sinon les routes qui l'utilisent renverront 500 en test.
  * $transaction(fn) appelle fn avec le même mock (écritures de transaction visibles dans le test).
+ * buildItemsTestApp enregistre @fastify/multipart (routes d'envoi de fichiers testables, ex. item-contents).
  */
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
+import multipart from '@fastify/multipart'
 import { ZodError } from 'zod'
 import { vi } from 'vitest'
 import { jwtPlugin } from '../plugins/jwt.js'
@@ -73,6 +75,7 @@ export function createMockPrisma() {
     question: mockModel(),
     questionOption: mockModel(),
     questionVote: mockModel(),
+    itemContent: mockModel(),
     liveSession: mockModel(),
     liveSessionRole: mockModel(),
     liveSessionEntry: mockModel(),
@@ -189,6 +192,7 @@ export async function buildItemsTestApp(options: { optionalAuth?: boolean } = {}
   })
 
   await app.register(sensible)
+  await app.register(multipart)
   app.decorate('prisma', mockPrisma as any)
   await app.register(jwtPlugin)
 

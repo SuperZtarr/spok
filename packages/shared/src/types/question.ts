@@ -2,7 +2,8 @@
  * Question (type d'item QUESTION, 2026-11-08) : vue renvoyée par GET /spaces/:spaceId/items/:id/question.
  * L'issue est le statut de l'item (statuts réservés QUESTION_STATUS) ; le détail d'une question tranchée (option
  * retenue OU réponse écrite, précision, qui, quand) vient de la table questions. Les votes sont nominatifs ;
- * ils ne tranchent jamais : leadingOptionIds sert seulement à mettre l'option majoritaire en avant.
+ * ils ne tranchent jamais : leadingOptionIds sert seulement à mettre l'option majoritaire en avant, unanimousOptionIds
+ * à afficher le badge « Unanimité » (au moins 2 votants, tous sur l'option) — indication, jamais une issue.
  * Droits calculés par l'API pour le lecteur : canVote (membre pouvant contribuer, question ouverte),
  * canDecide (responsable de l'élément ; sur une copie de séance, l'animateur seul), canEditOptions.
  */
@@ -44,6 +45,8 @@ export interface QuestionView {
   voterCount: number;
   /** Options ayant le plus de voix (vide s'il n'y a aucun vote) */
   leadingOptionIds: string[];
+  /** Options cochées par TOUS les votants, à partir de 2 votants (badge « Unanimité », indication seulement) */
+  unanimousOptionIds: string[];
   /** Options cochées par le lecteur */
   myOptionIds: string[];
   canVote: boolean;

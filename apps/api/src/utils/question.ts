@@ -7,7 +7,8 @@
  * - syncQuestionAfterStatus : après un changement de statut d'une question (fiche, menu, Kanban, MCP), garde la
  *   table questions cohérente — retour à « Ouverte » efface l'issue ; une issue autre que « Tranchée » efface
  *   l'option retenue / la réponse écrite ; toute issue note qui et quand.
- * - loadQuestionView : vue du lecteur (votes nominatifs, option majoritaire, droits canVote/canDecide/canEditOptions).
+ * - loadQuestionView : vue du lecteur (votes nominatifs, option majoritaire, unanimité — au moins 2 votants tous sur
+ *   l'option, indication seulement —, droits canVote/canDecide/canEditOptions).
  * - copyQuestionData : options, réglage, issue (et votes si withVotes) d'une question vers une autre — copie de
  *   séance (sans votes) et suite de séance (avec votes : trace fidèle).
  * - notifyLiveQuestion : si l'élément est dans un espace de séance, diffuse { type: 'question', itemId } (les
@@ -75,6 +76,7 @@ export async function loadQuestionView(prisma: any, item: any, viewer: ViewerRig
     voters: (votes ?? []).filter((v: any) => v.optionId === o.id).map((v: any) => ({ id: v.user.id, name: v.user.name })),
   }));
   const max = Math.max(0, ...optionViews.map((o: any) => o.voters.length));
+  const voterCount = new Set((votes ?? []).map((v: any) => v.userId)).size;
   const open = isQuestionOpen(item.status);
   const locked = !!item.lockedAt;
   const isWriter = viewer.role === 'OWNER' || viewer.role === 'MEMBER';
@@ -94,7 +96,8 @@ export async function loadQuestionView(prisma: any, item: any, viewer: ViewerRig
       decidedBy: question?.decidedBy ?? null,
       decidedAt: question?.decidedAt ? new Date(question.decidedAt).toISOString() : null,
     },
-    voterCount: new Set((votes ?? []).map((v: any) => v.userId)).size,
+    voterCount,
+    unanimousOptionIds: voterCount >= 2 ? optionViews.filter((o: any) => o.voters.length === voterCount).map((o: any) => o.id) : [],
     leadingOptionIds: max > 0 ? optionViews.filter((o: any) => o.voters.length === max).map((o: any) => o.id) : [],
     myOptionIds: viewer.userId ? (votes ?? []).filter((v: any) => v.userId === viewer.userId).map((v: any) => v.optionId) : [],
     canVote: !!viewer.userId && isWriter && open,

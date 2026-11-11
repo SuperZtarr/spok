@@ -2,6 +2,8 @@
  * Stockage des fichiers (images, documents, avatars, covers) : Cloudflare R2 (S3) en prod, redimensionnement (sharp).
  * isR2Configured() garde toutes les routes d'upload.
  * copyR2Object : duplique un objet pour les copies de séance — une copie ne partage jamais le fichier de la source.
+ * isItemStorageUrl(url, itemId) : l'objet est-il rangé sous items/<itemId>/ ? Garde obligatoire avant d'effacer un
+ * fichier dont l'adresse a pu être saisie par un utilisateur (ex. contenus d'élément) — jamais l'objet d'un autre.
  *
  * Mode LOCAL (dev uniquement, 2026-10-14) : si R2 n'est pas configuré ET NODE_ENV !== 'production', les fichiers
  * sont écrits dans apps/api/.local-uploads/<clé> (ignoré par git) et servis par GET /local-uploads/* (routes/
@@ -154,6 +156,12 @@ export async function deleteImageFromR2(url: string): Promise<void> {
 /** L'URL désigne-t-elle un fichier du stockage actif (R2, ou local en dev) ? */
 export function isR2Url(url: string | null | undefined): url is string {
   return !!url && keyFromUrl(url) !== null;
+}
+
+/** L'URL désigne-t-elle un objet du stockage actif rangé sous items/<itemId>/ (fichier de CET élément) ? */
+export function isItemStorageUrl(url: string | null | undefined, itemId: string): url is string {
+  const key = url ? keyFromUrl(url) : null;
+  return !!key && key.startsWith(`items/${itemId}/`) && !key.includes('..');
 }
 
 /** Duplique un objet sous items/<newItemId>/… et retourne sa nouvelle URL publique. */
