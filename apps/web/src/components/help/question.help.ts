@@ -1,8 +1,8 @@
 /* Aide utilisateur du bloc « Question » (QuestionPanel : fiche d'un élément Question et fenêtre en direct d'une séance),
    écrite en éléments d'aide (help/elements.ts) — registre help/pageHelp.ts, clé 'question'.
    Étapes numérotées (2026-11-11) : éléments « 1. Réponses possibles », « 2. Votes », « 3. Issue », comme le bloc.
-   hints : rappels fonctionnels de chaque action à effet (voter, retenir, noter une issue, rouvrir, enregistrer les
-   réponses ; statusDecided = bouton « Tranchée » du champ Statut, QuestionStatusField),
+   hints : rappels fonctionnels de chaque action à effet (voter, retenir, noter une issue, rouvrir, retirer une
+   réponse, choix multiple, lier / délier un élément, ouvrir l'élément lié — réponses enregistrées au fil de l'eau ; statusDecided = bouton « Tranchée » du champ Statut, QuestionStatusField),
    vérifiés dans apps/api/src/routes/item-question.ts ; fields : phrases à lire avant d'agir (en ligne visible). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
@@ -11,11 +11,12 @@ const elements: HelpElements = {
   options: {
     title: '1. Réponses possibles',
     short: 'Les réponses proposées, préparées à l\'avance.',
-    text: 'Le titre de l\'élément est la question ; ses réponses possibles se préparent en premier, dès que le type Question est choisi (la fiche s\'enregistre d\'elle-même). Qui peut modifier la question les ajoute, les corrige ou les réordonne, puis clique « Enregistrer les réponses » : une réponse corrigée garde ses votes. « Choix multiple » permet à chacun de cocher plusieurs réponses.',
+    text: 'Le titre de l\'élément est la question ; ses réponses possibles se préparent en premier, dès que le type Question est choisi (la fiche s\'enregistre d\'elle-même). Qui peut modifier la question les ajoute, les corrige ou les réordonne : chaque réponse est enregistrée dès qu\'on quitte son champ (Entrée passe à la suivante), sans bouton. Une réponse corrigée garde ses votes ; en retirer une qui a des votes demande une confirmation. Une réponse peut être liée à un élément existant (bouton lien) : son titre ouvre alors la fiche de l\'élément, pour qui y a accès ; supprimer l\'élément retire le lien, la réponse reste. « Choix multiple » permet à chacun de cocher plusieurs réponses.',
     side: 'top',
     changes: [
+      { id: 'question-option-item-ref', kind: 'new', text: 'Une réponse possible peut renvoyer à un élément existant (fournisseur, projet, document…) : son titre ouvre la fiche de l\'élément.', date: '2026-11-11' },
       { id: 'question-type', kind: 'new', text: 'Nouveau type Question : options préparées, votes des membres et issue notée en un clic, y compris en séance.', date: '2026-11-08' },
-      { id: 'question-steps', kind: 'evolution', text: 'Question plus simple : la fiche s\'enregistre dès le choix du type, le bloc suit trois étapes (réponses possibles, votes, issue), « Retenir » sur chaque réponse, et le statut se choisit aussi dans la fiche. La Question rejoint l\'Article dans le groupe « Compositions ».', date: '2026-11-11' },
+      { id: 'question-steps', kind: 'evolution', text: 'Question plus simple : la fiche s\'enregistre dès le choix du type, le bloc suit trois étapes (réponses possibles, enregistrées au fil de la saisie, votes, issue), « Retenir » sur chaque réponse, et le statut se choisit aussi dans la fiche. La Question rejoint l\'Article dans le groupe « Compositions ».', date: '2026-11-11' },
     ],
   },
   vote: {
@@ -50,7 +51,13 @@ export const help: HelpEntry = {
     noConclusion: 'Note la question « Sans conclusion » : une issue normale quand l\'échange n\'aboutit pas. Les votes sont figés.',
     reopen: 'Remet la question « Ouverte » : l\'issue et sa précision sont effacées, les votes redeviennent modifiables.',
     note: 'Enregistre la ligne de précision avec l\'issue actuelle.',
-    saveOptions: 'Enregistre la liste des réponses possibles. Une réponse retirée perd ses votes ; passer en choix unique ne garde que le dernier vote de chacun.',
+    removeOption: 'Retire cette réponse possible, tout de suite. Si elle a déjà des votes, une confirmation est demandée : ses votes sont perdus.',
+    removeVotes: 'Cette réponse a {n} vote(s) : ils seront perdus si vous la retirez.',
+    linkItem: 'Lie cette réponse à un élément existant (cet espace, la communauté ou tous vos espaces). Une réponse vide prend son titre. Enregistré tout de suite ; seuls ceux qui ont accès à l\'élément le voient.',
+    unlinkItem: 'Retire le lien vers l\'élément, tout de suite. La réponse garde son texte et ses votes.',
+    openRef: 'Ouvre la fiche de l\'élément lié à cette réponse.',
+    refHidden: 'Élément lié auquel vous n\'avez pas accès',
+    multiple: 'Enregistré tout de suite. Choix multiple : chacun peut cocher plusieurs réponses. Repasser en choix unique ne garde que le dernier vote de chacun.',
     liveCopy: 'En séance, l\'issue notée par l\'animateur est aussi reportée sur la question d\'origine s\'il peut la modifier.',
   },
   fields: {
@@ -59,6 +66,7 @@ export const help: HelpEntry = {
     frozen: 'Question close : les votes sont figés.',
     unsaved: 'Enregistrement de la question…',
     noOptions: 'Aucune réponse possible pour le moment.',
+    optionsAutosave: 'Chaque réponse est enregistrée dès que vous quittez son champ ; Entrée passe à la réponse suivante.',
   },
   tour: [
     {

@@ -3,7 +3,9 @@
  * Préfixe /spaces/:spaceId/items (comme item-article). Règles de gestion : apps/web/src/lib/businessRules.ts
  * (question-*), utilitaires : utils/question.ts.
  * - GET /:id/question (authentification facultative : un visiteur voit le décompte, sans voter) → QuestionView.
- * - PUT /:id/question/options { multiple?, options: [{ id?, label }] } : liste complète dans l'ordre ; garde les
+ * - PUT /:id/question/options { multiple?, options: [{ id?, label, refItemId? }] } : refItemId (2026-11-12) = élément
+ *   lié à la réponse (null = aucun, absent = inchangé) ; un lien nouveau ou changé doit viser un élément lisible par
+ *   l'auteur, autre que la question (400 sinon). Liste complète dans l'ordre ; garde les
  *   identifiants reçus (les votes restent attachés à une option corrigée ou déplacée), crée les nouvelles, retire
  *   les absentes (et leurs votes). Passer en choix unique ne garde que le dernier vote de chacun. Réservé à qui peut
  *   modifier l'élément ; refusé sur une copie de séance verrouillée.
@@ -14,6 +16,7 @@
  * - PUT /:id/question/vote { optionIds } : remplace les votes du lecteur (vide = retire son vote). Membre pouvant
  *   contribuer (OWNER/MEMBER), copie de séance comprise (comme les commentaires) ; 409 si la question n'est plus
  *   Ouverte (vote figé) ; 400 si plusieurs options en choix unique.
+ * Vue : un élément lié n'est montré (titre, type, espace) qu'au lecteur qui peut lire son espace (viewerOf).
  * Toute écriture diffuse { type: 'question' } si l'élément est dans un espace de séance (notifyLiveQuestion).
  * Les votes ne tranchent jamais : seule la route outcome change l'issue.
  */
@@ -31,7 +34,11 @@ type P = { spaceId: string; id: string };
 
 const optionsSchema = z.object({
   multiple: z.boolean().optional(),
-  options: z.array(z.object({ id: z.string().optional(), label: z.string().trim().min(1).max(200) })).max(30),
+  options: z.array(z.object({
+    id: z.string().optional(),
+    label: z.string().trim().min(1).max(200),
+    refItemId: z.string().max(64).nullable().optional(),
+  })).max(30),
 });
 const outcomeSchema = z.object({
   status: z.enum(QUESTION_OUTCOME_IDS as [string, ...string[]]),
@@ -49,6 +56,13 @@ async function findQuestion(prisma: any, spaceId: string, id: string) {
 const canManage = (membership: any, item: any, userId: string) =>
   membership.role === 'OWNER' || (membership.role === 'MEMBER' && canMemberManageItem(item, userId));
 
+/** Lecteur de la vue : rôle + accès aux autres espaces (éléments liés aux réponses, 2026-11-12) */
+const viewerOf = (prisma: any, userId: string | undefined, membership: any, isAdminMode: boolean) => ({
+  userId: userId || undefined,
+  role: userId ? membership.role : null,
+  canReadSpace: async (spaceId: string) => !!(await checkSpaceAccess(prisma, userId, spaceId, isAdminMode)),
+});
+
 /** Lecture (authentification facultative) */
 export const itemQuestionReadRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: P }>('/:id/question', async (request, reply) => {
@@ -57,7 +71,7 @@ export const itemQuestionReadRoutes: FastifyPluginAsync = async (fastify) => {
     if (!membership) return reply.notFound('Space not found');
     const item = await findQuestion(fastify.prisma, request.params.spaceId, request.params.id);
     if (!item) return reply.notFound('Question introuvable');
-    return loadQuestionView(fastify.prisma, item, { userId: userId || undefined, role: userId ? membership.role : null });
+    return loadQuestionView(fastify.prisma, item, viewerOf(fastify.prisma, userId, membership, request.isAdminMode));
   });
 };
 
@@ -78,11 +92,29 @@ export const itemQuestionWriteRoutes: FastifyPluginAsync = async (fastify) => {
     const existing = await prisma.questionOption.findMany({ where: { itemId: item.id } });
     const existingIds = new Set((existing ?? []).map((o: any) => o.id));
     const keptIds = new Set(body.options.filter((o) => o.id && existingIds.has(o.id)).map((o) => o.id!));
+
+    // Élément lié (2026-11-12) : un lien nouveau ou changé doit viser un élément que l'auteur peut lire, autre que la
+    // question ; un lien déjà enregistré se garde tel quel (même si l'auteur n'a plus accès à l'élément)
+    const previousRef = new Map((existing ?? []).map((o: any) => [o.id, o.refItemId ?? null]));
+    const refOf = (o: { id?: string; refItemId?: string | null }) =>
+      o.refItemId === undefined ? (o.id && keptIds.has(o.id) ? previousRef.get(o.id) ?? null : null) : o.refItemId;
+    const toCheck = [...new Set(body.options
+      .filter((o) => { const r = refOf(o); return r && r !== (o.id && keptIds.has(o.id) ? previousRef.get(o.id) : null); })
+      .map((o) => refOf(o)!))];
+    for (const refId of toCheck) {
+      if (refId === item.id) return reply.badRequest('Une réponse ne peut pas renvoyer à la question elle-même');
+      const ref = await prisma.item.findUnique({ where: { id: refId }, select: { id: true, spaceId: true } });
+      if (!ref || !(await checkSpaceAccess(prisma, userId, ref.spaceId, request.isAdminMode))) {
+        return reply.badRequest('Élément lié introuvable ou inaccessible');
+      }
+    }
+
     const removed = (existing ?? []).filter((o: any) => !keptIds.has(o.id)).map((o: any) => o.id);
     if (removed.length > 0) await prisma.questionOption.deleteMany({ where: { id: { in: removed } } });
     for (const [position, o] of body.options.entries()) {
-      if (o.id && keptIds.has(o.id)) await prisma.questionOption.update({ where: { id: o.id }, data: { label: o.label, position } });
-      else await prisma.questionOption.create({ data: { itemId: item.id, label: o.label, position } });
+      const refItemId = refOf(o);
+      if (o.id && keptIds.has(o.id)) await prisma.questionOption.update({ where: { id: o.id }, data: { label: o.label, position, refItemId } });
+      else await prisma.questionOption.create({ data: { itemId: item.id, label: o.label, position, refItemId } });
     }
 
     const question = await prisma.question.findUnique({ where: { itemId: item.id } });
@@ -102,7 +134,7 @@ export const itemQuestionWriteRoutes: FastifyPluginAsync = async (fastify) => {
     // Change updatedAt : une copie de séance antérieure n'est plus réutilisée à l'affichage
     await prisma.item.update({ where: { id: item.id }, data: { updatedById: userId } });
     await notifyLiveQuestion(prisma, item.spaceId, item.id);
-    return loadQuestionView(prisma, item, { userId, role: membership.role });
+    return loadQuestionView(prisma, item, viewerOf(prisma, userId, membership, request.isAdminMode));
   });
 
   fastify.put<{ Params: P }>('/:id/question/outcome', async (request, reply) => {
@@ -158,7 +190,7 @@ export const itemQuestionWriteRoutes: FastifyPluginAsync = async (fastify) => {
         await applyOutcome(source, srcOptionId, srcText);
       }
     }
-    return loadQuestionView(prisma, await prisma.item.findUnique({ where: { id: item.id } }), { userId, role: membership.role });
+    return loadQuestionView(prisma, await prisma.item.findUnique({ where: { id: item.id } }), viewerOf(prisma, userId, membership, request.isAdminMode));
   });
 
   fastify.put<{ Params: P }>('/:id/question/vote', async (request, reply) => {
@@ -181,6 +213,6 @@ export const itemQuestionWriteRoutes: FastifyPluginAsync = async (fastify) => {
       await prisma.questionVote.createMany({ data: unique.map((optionId) => ({ itemId: item.id, optionId, userId })) });
     }
     await notifyLiveQuestion(prisma, item.spaceId, item.id);
-    return loadQuestionView(prisma, item, { userId, role: membership.role });
+    return loadQuestionView(prisma, item, viewerOf(prisma, userId, membership, request.isAdminMode));
   });
 };

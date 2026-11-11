@@ -6,6 +6,7 @@
  * à afficher le badge « Unanimité » (au moins 2 votants, tous sur l'option) — indication, jamais une issue.
  * Droits calculés par l'API pour le lecteur : canVote (membre pouvant contribuer, question ouverte),
  * canDecide (responsable de l'élément ; sur une copie de séance, l'animateur seul), canEditOptions.
+ * Réponse liée à un élément (2026-11-12) : refItemId + refItem (titre, type, espace) si le lecteur peut le lire.
  */
 
 export interface QuestionVoter {
@@ -13,11 +14,23 @@ export interface QuestionVoter {
   name: string;
 }
 
+/** Élément existant auquel une réponse renvoie (2026-11-12) — renvoyé seulement si le lecteur a accès à son espace */
+export interface QuestionOptionRef {
+  id: string;
+  title: string;
+  type: string;
+  spaceId: string;
+}
+
 export interface QuestionOptionView {
   id: string;
   label: string;
   position: number;
   voters: QuestionVoter[];
+  /** Identifiant de l'élément lié (connu de qui peut modifier les réponses, même sans accès à l'élément) */
+  refItemId: string | null;
+  /** Élément lié lisible par le lecteur, sinon null (la réponse s'affiche alors par son seul libellé) */
+  refItem: QuestionOptionRef | null;
 }
 
 export interface QuestionOutcome {
@@ -67,5 +80,6 @@ export interface QuestionOutcomeInput {
 /** Corps de PUT …/question/options : liste complète, dans l'ordre (id absent = nouvelle option) */
 export interface QuestionOptionsInput {
   multiple?: boolean;
-  options: Array<{ id?: string; label: string }>;
+  /** refItemId : élément lié (null ou absent = aucun) */
+  options: Array<{ id?: string; label: string; refItemId?: string | null }>;
 }

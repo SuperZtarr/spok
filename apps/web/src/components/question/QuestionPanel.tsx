@@ -2,8 +2,10 @@
  * QuestionPanel — bloc d'un élément Question (type QUESTION, 2026-11-08) : options et votes nominatifs, issue,
  * préparation des options. Monté dans la fiche (ItemEditModal : formulaire et mode Afficher) et dans la fenêtre en
  * direct d'une séance (LiveWindow, variant="live" : gros boutons d'issue pour l'animateur, pas d'édition des options).
- * Fiche (2026-11-11) : trois étapes nommées dans l'ordre d'usage — 1. Réponses possibles (éditeur, deux lignes vides au
- * départ, bouton « Enregistrer les réponses » gardé : retirer une réponse efface ses votes), 2. Votes (une seule liste,
+ * Fiche (2026-11-11) : trois étapes nommées dans l'ordre d'usage — 1. Réponses possibles (deux lignes vides au départ,
+ * enregistrées au fil de l'eau par OptionsEditor ; retirer une réponse qui a des votes demande confirmation ; chaque
+ * réponse peut être liée à un élément existant — ItemSearchPicker, 2026-11-12 —, dont le titre ouvre la fiche
+ * (OptionLabel, sans navigation en séance ; élément non lisible par le lecteur : libellé seul, l'API ne l'envoie pas)), 2. Votes (une seule liste,
  * « Retenir » sur chaque ligne pour qui peut trancher), 3. Issue (Reportée, Sans conclusion, autre réponse, précision,
  * Rouvrir). En séance, pas d'étapes : gros boutons de réponse dans l'issue.
  * Props : spaceId / itemId (la question — en séance, la copie verrouillée), variant ('sheet' | 'live').
@@ -14,9 +16,12 @@
  * Posé dans un <form> (fiche) : tous les boutons sont type="button" et Entrée dans un champ ne soumet pas la fiche.
  * Données : hooks/useQuestion (queryKey ['question', spaceId, itemId]) ; en séance, relu à chaque événement SSE.
  */
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
-import { ArrowDown, ArrowUp, Check, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { DEFAULT_STATUSES, QUESTION_STATUS, type QuestionView } from '@spok/shared';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { ArrowDown, ArrowUp, Check, Link2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { DEFAULT_STATUSES, QUESTION_STATUS, type QuestionOptionRef, type QuestionOptionView, type QuestionView } from '@spok/shared';
+import { getTypeIcon } from '../../constants/ui';
+import { ItemSearchPicker, type ItemSearchHit } from '../ItemSearchPicker';
 import { useQuestion } from '../../hooks/useQuestion';
 import { useReferentiels } from '../../hooks/useReferentiels';
 import { HelpHint } from '../../help/HelpHint';
@@ -63,7 +68,7 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
       {editOptions && (
         <div className="space-y-1.5">
           {step(1, 'Réponses possibles')}
-          <OptionsEditor question={question} pending={saveOptions.isPending} onSave={(body) => saveOptions.mutate(body)} />
+          <OptionsEditor key={itemId} spaceId={spaceId} question={question} onSave={(body) => saveOptions.mutateAsync(body)} />
         </div>
       )}
 
@@ -86,6 +91,35 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
 
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
+  );
+}
+
+/** Pastille de l'élément lié dans l'éditeur ; élément non lisible par l'auteur : mention neutre */
+function RefChip({ row }: { row: OptionRow }) {
+  if (!row.refItem) return <span>{pageHint('question', 'refHidden')}</span>;
+  const Icon = getTypeIcon(row.refItem.type);
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1">
+      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      <Link to={`/spaces/${row.refItem.spaceId}?item=${row.refItem.id}`} className="truncate hover:underline">{row.refItem.title}</Link>
+    </span>
+  );
+}
+
+/**
+ * Libellé d'une réponse ; liée à un élément lisible (refItem) : icône de son type, et dans la fiche un lien qui ouvre
+ * sa fiche (?item=). En séance, pas de navigation (l'animateur ne quitte pas la fenêtre en direct).
+ */
+function OptionLabel({ option, live }: { option: QuestionOptionView; live: boolean }) {
+  const ref = option.refItem;
+  if (!ref) return <>{option.label}</>;
+  const Icon = getTypeIcon(ref.type);
+  const inner = <><Icon className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-muted-foreground" />{option.label}</>;
+  if (live) return inner;
+  return (
+    <HelpHint text={pageHint('question', 'openRef')}>
+      <Link to={`/spaces/${ref.spaceId}?item=${ref.id}`} className="hover:underline">{inner}</Link>
+    </HelpHint>
   );
 }
 
@@ -117,7 +151,9 @@ function Votes({ question, onVote, onDecide, pending, live }: {
             ) : <span className="mt-0.5 h-5 w-5 flex-shrink-0" />}
             <div className="min-w-0 flex-1">
               <div className={`flex items-baseline gap-2 ${live ? 'text-base' : 'text-sm'}`}>
-                <span className={`flex-1 break-words ${leading ? 'font-semibold' : ''}`}>{o.label}</span>
+                <span className={`flex-1 break-words ${leading ? 'font-semibold' : ''}`}>
+                  <OptionLabel option={o} live={live} />
+                </span>
                 {question.unanimousOptionIds.includes(o.id) && (
                   <HelpHint text={pageHint('question', 'unanimous')}>
                     <span className="rounded-full border border-emerald-400 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">Unanimité</span>
@@ -164,7 +200,7 @@ function Outcome({ question, live, statusLabel, pending, onOutcome }: {
       {!question.open && (
         <div className="text-sm">
           <span className="font-medium">{statusLabel(status)}</span>
-          {chosen && <> : {chosen.label}</>}
+          {chosen && <> : <OptionLabel option={chosen} live={live} /></>}
           {!chosen && outcome.answerText && <> : {outcome.answerText}</>}
           {outcome.note && <span className="text-muted-foreground"> — {outcome.note}</span>}
           {outcome.decidedBy && (
@@ -243,53 +279,175 @@ function Outcome({ question, live, statusLabel, pending, onOutcome }: {
   );
 }
 
-function OptionsEditor({ question, pending, onSave }: {
-  question: QuestionView; pending: boolean; onSave: (body: { multiple: boolean; options: Array<{ id?: string; label: string }> }) => void;
+type OptionRow = { key: string; id?: string; label: string; refItemId: string | null; refItem: QuestionOptionRef | null };
+type OptionsBody = { multiple: boolean; options: Array<{ id?: string; label: string; refItemId: string | null }> };
+let rowSeq = 0;
+const newRow = (o?: QuestionOptionView): OptionRow => ({
+  key: o?.id ?? `new-${++rowSeq}`, id: o?.id, label: o?.label ?? '', refItemId: o?.refItemId ?? null, refItem: o?.refItem ?? null,
+});
+
+/**
+ * Réponses possibles, enregistrées au fil de l'eau (2026-11-11, plus de bouton) : en quittant un champ, sur Entrée
+ * (qui passe à la ligne suivante, ou en ouvre une), au déplacement, au retrait, sur « Choix multiple ».
+ * Les envois passent en file (un seul à la fois, lu sur l'état le plus récent) : une nouvelle réponse n'est jamais
+ * créée deux fois. Retirer une réponse qui a des votes demande une confirmation en ligne (ses votes sont perdus).
+ */
+function OptionsEditor({ spaceId, question, onSave }: {
+  spaceId: string; question: QuestionView; onSave: (body: OptionsBody) => Promise<QuestionView>;
 }) {
-  const initial = useMemo(() => question.options.map((o) => ({ id: o.id as string | undefined, label: o.label })), [question.options]);
-  // Aucune réponse encore : deux lignes vides prêtes à remplir (une question se prépare avec au moins deux réponses)
-  const startRows = () => (initial.length ? initial : [{ id: undefined, label: '' }, { id: undefined, label: '' }]);
-  const [rows, setRows] = useState(startRows);
-  const [multiple, setMultiple] = useState(question.multiple);
-  useEffect(() => { setRows(startRows()); setMultiple(question.multiple); }, [initial, question.multiple]); // eslint-disable-line react-hooks/exhaustive-deps
-  const dirty = multiple !== question.multiple
-    || JSON.stringify(rows.filter((r) => r.id || r.label.trim())) !== JSON.stringify(initial);
-  const move = (i: number, d: number) => setRows((r) => {
-    const next = [...r];
+  // Aucune réponse encore : deux lignes vides prêtes à remplir
+  const fromServer = () => (question.options.length ? question.options.map((o) => newRow(o)) : [newRow(), newRow()]);
+  const [rows, setRowsState] = useState<OptionRow[]>(fromServer);
+  const [multiple, setMultipleState] = useState(question.multiple);
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const [pickKey, setPickKey] = useState<string | null>(null); // ligne dont on choisit l'élément lié
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const rowsRef = useRef(rows);
+  const multipleRef = useRef(multiple);
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingRef = useRef(0);
+  const signatureOf = (view: QuestionView) =>
+    JSON.stringify({ multiple: view.multiple, options: view.options.map((o) => ({ id: o.id, label: o.label, refItemId: o.refItemId ?? null })) });
+  const lastSentRef = useRef(signatureOf(question));
+  const inputs = useRef(new Map<string, HTMLInputElement>());
+
+  const setRows = (next: OptionRow[]) => { rowsRef.current = next; setRowsState(next); };
+  const setMultiple = (v: boolean) => { multipleRef.current = v; setMultipleState(v); };
+
+  // Changement venu d'ailleurs (autre membre, séance) : repris seulement si rien n'est en cours ici
+  useEffect(() => {
+    if (signatureOf(question) === lastSentRef.current) return; // rien de neuf (montage, retour de notre propre envoi)
+    const local = rowsRef.current.filter((r) => r.label.trim());
+    const inSync = local.every((r) => r.id && question.options.some((o) => o.id === r.id && o.label === r.label.trim() && (o.refItemId ?? null) === r.refItemId));
+    if (pendingRef.current === 0 && inSync && local.length === question.options.length) {
+      setRows(fromServer());
+      setMultiple(question.multiple);
+      lastSentRef.current = signatureOf(question);
+    }
+  }, [question.options, question.multiple]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (focusKey) { inputs.current.get(focusKey)?.focus(); setFocusKey(null); }
+  }, [focusKey]);
+
+  // Envoi de l'état le plus récent, après le précédent ; les nouvelles réponses reçoivent leur identifiant
+  const persist = () => {
+    pendingRef.current += 1;
+    queueRef.current = queueRef.current.then(async () => {
+      const sent = rowsRef.current.filter((r) => r.label.trim());
+      const body: OptionsBody = { multiple: multipleRef.current, options: sent.map((r) => ({ id: r.id, label: r.label.trim(), refItemId: r.refItemId })) };
+      if (JSON.stringify(body) === lastSentRef.current) return;
+      try {
+        const view = await onSave(body);
+        lastSentRef.current = signatureOf(view);
+        // Les lignes envoyées reçoivent leur identifiant et l'élément lié tel que l'API le montre
+        const savedByKey = new Map(sent.map((r, i) => [r.key, view.options[i]]));
+        setRows(rowsRef.current.map((r) => {
+          const saved = savedByKey.get(r.key);
+          if (!saved) return r;
+          return { ...r, id: r.id ?? saved.id, refItem: r.refItemId === (saved.refItemId ?? null) ? saved.refItem : r.refItem };
+        }));
+      } catch { /* erreur affichée par le bloc (saveOptions.error) */ }
+    }).finally(() => { pendingRef.current -= 1; });
+  };
+
+  const votesOf = (r: OptionRow) => question.options.find((o) => o.id === r.id)?.voters.length ?? 0;
+  const update = (key: string, label: string) => setRows(rowsRef.current.map((r) => (r.key === key ? { ...r, label } : r)));
+  const move = (i: number, d: number) => {
+    const next = [...rowsRef.current];
     [next[i], next[i + d]] = [next[i + d], next[i]];
-    return next;
-  });
-  const save = () => onSave({ multiple, options: rows.map((r) => ({ ...r, label: r.label.trim() })).filter((r) => r.label) });
+    setRows(next);
+    persist();
+  };
+  const remove = (key: string) => {
+    setConfirmKey(null);
+    setRows(rowsRef.current.filter((r) => r.key !== key));
+    persist();
+  };
+  const askRemove = (r: OptionRow) => { if (votesOf(r) > 0) setConfirmKey(r.key); else remove(r.key); };
+  // Lien vers un élément : la réponse vide prend son titre ; retirer le lien garde le texte
+  const link = (key: string, hit: ItemSearchHit, type: string) => {
+    setPickKey(null);
+    setRows(rowsRef.current.map((r) => (r.key === key ? {
+      ...r,
+      label: r.label.trim() ? r.label : (hit.title ?? '').slice(0, 200),
+      refItemId: hit.id,
+      refItem: { id: hit.id, title: hit.title ?? '', type, spaceId: hit.spaceId },
+    } : r)));
+    persist();
+  };
+  const unlink = (key: string) => {
+    setRows(rowsRef.current.map((r) => (r.key === key ? { ...r, refItemId: null, refItem: null } : r)));
+    persist();
+  };
+  const add = () => {
+    const row = newRow();
+    setRows([...rowsRef.current, row]);
+    setFocusKey(row.key);
+  };
+  const onEnter = (i: number) => {
+    persist();
+    const next = rowsRef.current[i + 1];
+    if (next) setFocusKey(next.key);
+    else if (rowsRef.current[i]?.label.trim()) add();
+  };
 
   return (
     <div data-help-zone="question:options" className="space-y-1.5">
       {rows.map((r, i) => (
-        <div key={r.id ?? `new-${i}`} className="flex items-center gap-1">
-          <input value={r.label} maxLength={200} aria-label={`Réponse ${i + 1}`} placeholder={`Réponse ${i + 1}`}
-            onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-            onKeyDown={(e) => noSubmit(e)}
-            className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm" />
-          <button type="button" aria-label="Monter" disabled={i === 0} onClick={() => move(i, -1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
-          <button type="button" aria-label="Descendre" disabled={i === rows.length - 1} onClick={() => move(i, 1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
-          <button type="button" aria-label="Retirer" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+        <div key={r.key} className="space-y-1">
+          <div className="flex items-center gap-1">
+            <input value={r.label} maxLength={200} aria-label={`Réponse ${i + 1}`} placeholder={`Réponse ${i + 1}`}
+              ref={(el) => { if (el) inputs.current.set(r.key, el); else inputs.current.delete(r.key); }}
+              onChange={(e) => update(r.key, e.target.value)}
+              onBlur={persist}
+              onKeyDown={(e) => noSubmit(e, () => onEnter(i))}
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm" />
+            <button type="button" aria-label="Monter" disabled={i === 0} onClick={() => move(i, -1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
+            <button type="button" aria-label="Descendre" disabled={i === rows.length - 1} onClick={() => move(i, 1)} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
+            <HelpHint text={pageHint('question', 'linkItem')}>
+              <button type="button" aria-label="Lier un élément" aria-pressed={pickKey === r.key}
+                onClick={() => setPickKey(pickKey === r.key ? null : r.key)}
+                className={`p-1 hover:text-foreground ${pickKey === r.key ? 'text-primary' : 'text-muted-foreground'}`}><Link2 className="h-4 w-4" /></button>
+            </HelpHint>
+            <HelpHint text={pageHint('question', 'removeOption')}>
+              <button type="button" aria-label="Retirer" onClick={() => askRemove(r)} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+            </HelpHint>
+          </div>
+          {r.refItemId && (
+            <div className="flex items-center gap-1 pl-2 text-xs text-muted-foreground">
+              <RefChip row={r} />
+              <HelpHint text={pageHint('question', 'unlinkItem')}>
+                <button type="button" aria-label="Retirer le lien" onClick={() => unlink(r.key)} className="p-0.5 hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+              </HelpHint>
+            </div>
+          )}
+          {pickKey === r.key && (
+            <div className="rounded-md border bg-background p-2">
+              <ItemSearchPicker spaceId={spaceId} excludeIds={new Set([question.itemId])} actionLabel="Lier" autoFocus
+                onPick={(hit) => link(r.key, hit, (hit as ItemSearchHit & { type?: string }).type ?? 'UNDEFINED')} />
+            </div>
+          )}
+          {confirmKey === r.key && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1 text-xs">
+              <span className="flex-1">{pageHint('question', 'removeVotes')?.replace('{n}', String(votesOf(r)))}</span>
+              <button type="button" onClick={() => remove(r.key)} className="rounded border border-destructive px-2 py-0.5 text-destructive hover:bg-destructive/10">Retirer</button>
+              <button type="button" onClick={() => setConfirmKey(null)} className="rounded border px-2 py-0.5 hover:bg-accent">Annuler</button>
+            </div>
+          )}
         </div>
       ))}
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setRows((rs) => [...rs, { id: undefined, label: '' }])}
-          className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+        <button type="button" onClick={add} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
           <Plus className="h-4 w-4" /> Réponse
         </button>
-        <label className="inline-flex items-center gap-1.5 text-sm">
-          <input type="checkbox" checked={multiple} onChange={(e) => setMultiple(e.target.checked)} /> Choix multiple
-        </label>
-        <span className="flex-1" />
-        <HelpHint text={pageHint('question', 'saveOptions')}>
-          <button type="button" disabled={!dirty || pending} onClick={save}
-            className="h-8 rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50">
-            Enregistrer les réponses
-          </button>
+        <HelpHint text={pageHint('question', 'multiple')}>
+          <label className="inline-flex items-center gap-1.5 text-sm">
+            <input type="checkbox" checked={multiple} onChange={(e) => { setMultiple(e.target.checked); persist(); }} /> Choix multiple
+          </label>
         </HelpHint>
       </div>
+      <FieldHelp page="question" field="optionsAutosave" />
     </div>
   );
 }

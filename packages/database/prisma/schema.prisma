@@ -375,7 +375,9 @@ model Item {
   articleBlocks ArticleBlock[] @relation("ArticleBlocks")
   referencedIn  ArticleBlock[] @relation("ArticleReferences")
   question        Question?
-  questionOptions QuestionOption[]
+  questionOptions QuestionOption[] @relation("QuestionOptionItem")
+  // Réponses possibles d'autres questions qui renvoient à cet élément (2026-11-12)
+  questionOptionRefs QuestionOption[] @relation("QuestionOptionRef")
   contents        ItemContent[]
 
   @@index([spaceId])
@@ -408,16 +410,21 @@ model Question {
 
 // Option de réponse préparée d'une question : identifiant stable, pour que les votes restent attachés quand
 // l'option est corrigée ou réordonnée. Retirer une option retire ses votes.
+// refItemId (2026-11-12) : élément existant auquel la réponse renvoie (facultatif) ; l'élément supprimé, le lien tombe
+// et la réponse garde son libellé. Montré au lecteur seulement s'il a accès à l'espace de l'élément.
 model QuestionOption {
   id        String         @id @default(cuid())
   itemId    String
-  item      Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item      Item           @relation("QuestionOptionItem", fields: [itemId], references: [id], onDelete: Cascade)
   label     String
   position  Int
+  refItemId String?
+  refItem   Item?          @relation("QuestionOptionRef", fields: [refItemId], references: [id], onDelete: SetNull)
   createdAt DateTime       @default(now())
   votes     QuestionVote[]
 
   @@index([itemId, position])
+  @@index([refItemId])
   @@map("question_options")
 }
 

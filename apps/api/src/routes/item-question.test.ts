@@ -1,7 +1,8 @@
 /*
  * TNR du type Question (2026-11-08) : statuts réservés (statusForType, statusesForType, withDefaultStatuses),
  * routes …/question (lecture sans vote pour un lecteur, options à identifiant stable, issue, vote figé après décision,
- * issue d'une copie de séance réservée à l'animateur et reportée sur la question d'origine).
+ * issue d'une copie de séance réservée à l'animateur et reportée sur la question d'origine, réponse liée à un élément :
+ * accès vérifié à l'enregistrement, élément montré seulement au lecteur qui peut le lire).
  * Les rôles sont pilotés par l'adhésion simulée (spaceMembership.findUnique) que lit checkSpaceAccess.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -97,8 +98,51 @@ describe('Routes question', () => {
     const res = await put('options', { options: [{ id: 'o2', label: 'Non merci' }, { label: 'Peut-être' }] })
     expect(res.statusCode).toBe(200)
     expect(prisma.questionOption.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['o1'] } } })
-    expect(prisma.questionOption.update).toHaveBeenCalledWith({ where: { id: 'o2' }, data: { label: 'Non merci', position: 0 } })
-    expect(prisma.questionOption.create).toHaveBeenCalledWith({ data: { itemId: 'q1', label: 'Peut-être', position: 1 } })
+    expect(prisma.questionOption.update).toHaveBeenCalledWith({ where: { id: 'o2' }, data: { label: 'Non merci', position: 0, refItemId: null } })
+    expect(prisma.questionOption.create).toHaveBeenCalledWith({ data: { itemId: 'q1', label: 'Peut-être', position: 1, refItemId: null } })
+  })
+
+  describe('réponse liée à un élément (2026-11-12)', () => {
+    const membership = { id: 'm', userId: USER, spaceId: SPACE, role: 'MEMBER', joinedAt: new Date() }
+    beforeEach(() => {
+      // Accès à SPACE seulement
+      prisma.spaceMembership.findUnique.mockImplementation(async ({ where }: any) =>
+        (JSON.stringify(where).includes(SPACE) ? membership : null))
+      prisma.item.findUnique.mockImplementation(async ({ where }: any) => {
+        if (where.id === 'ref-ok') return { id: 'ref-ok', spaceId: SPACE }
+        if (where.id === 'ref-other') return { id: 'ref-other', spaceId: 'space-2' }
+        return where.id === 'q1' ? Q : null
+      })
+    })
+
+    it('lien enregistré vers un élément accessible ; lien gardé quand il n’est pas renvoyé', async () => {
+      prisma.questionOption.findMany.mockResolvedValueOnce([{ id: 'o1', refItemId: 'ref-other' }])
+      const res = await put('options', { options: [{ id: 'o1', label: 'A' }, { label: 'B', refItemId: 'ref-ok' }] })
+      expect(res.statusCode).toBe(200)
+      expect(prisma.questionOption.update).toHaveBeenCalledWith({ where: { id: 'o1' }, data: { label: 'A', position: 0, refItemId: 'ref-other' } })
+      expect(prisma.questionOption.create).toHaveBeenCalledWith({ data: { itemId: 'q1', label: 'B', position: 1, refItemId: 'ref-ok' } })
+    })
+
+    it('lien refusé vers un élément inaccessible, inconnu, ou la question elle-même', async () => {
+      expect((await put('options', { options: [{ label: 'B', refItemId: 'ref-other' }] })).statusCode).toBe(400)
+      expect((await put('options', { options: [{ label: 'B', refItemId: 'nope' }] })).statusCode).toBe(400)
+      expect((await put('options', { options: [{ label: 'B', refItemId: 'q1' }] })).statusCode).toBe(400)
+      expect(prisma.questionOption.create).not.toHaveBeenCalled()
+    })
+
+    it('vue : élément lié montré seulement si le lecteur peut lire son espace', async () => {
+      prisma.questionOption.findMany.mockResolvedValue([
+        { id: 'o1', label: 'A', position: 0, refItemId: 'ref-ok' },
+        { id: 'o2', label: 'B', position: 1, refItemId: 'ref-other' },
+      ])
+      prisma.item.findMany.mockResolvedValue([
+        { id: 'ref-ok', title: 'Fournisseur A', type: 'PROJECT', spaceId: SPACE },
+        { id: 'ref-other', title: 'Secret', type: 'TASK', spaceId: 'space-2' },
+      ])
+      const body = (await app.inject({ method: 'GET', url: `/spaces/${SPACE}/items/q1/question`, headers: auth() })).json()
+      expect(body.options[0]).toMatchObject({ refItemId: 'ref-ok', refItem: { id: 'ref-ok', title: 'Fournisseur A', type: 'PROJECT', spaceId: SPACE } })
+      expect(body.options[1]).toMatchObject({ refItemId: 'ref-other', refItem: null })
+    })
   })
 
   it('options refusées sur une copie de séance', async () => {
