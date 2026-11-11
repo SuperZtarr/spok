@@ -1,6 +1,6 @@
 /*
  * NewsCards — section « Nouveautés » de la page d'accueil (2026-11-07) : une carte par annonce non traitée, les trois plus
- * récentes, avec Ignorer et Montrer, et le lien vers l'historique (/news). Sans annonce à traiter, seul ce lien reste.
+ * récentes, avec « C'est noté » (NEWS_TEXTS.ignore, anciennement Ignorer) et Montrer, et le lien vers l'historique (/news). Sans annonce à traiter, seul ce lien reste.
  * Montrer ouvre la page, ou la vue dans le dernier espace visité encore accessible, sinon le premier espace ;
  * NewFeatureOverlay y allume la zone. Rien à ouvrir : pas de bouton Montrer. L'annonce reste à traiter tant que
  * l'utilisateur n'a pas répondu.

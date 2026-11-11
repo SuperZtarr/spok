@@ -1,11 +1,11 @@
 /*
  * NewFeatureOverlay — zone allumée d'une nouveauté (pilote Kanban, 2026-11-07). Monté une fois dans Layout.
  * Dès qu'une annonce non traitée (usePendingAnnouncements) a sa zone à l'écran : cadre, badge clignotant en haut à droite
- * et carte avec Ignorer et Expliquez-moi. Une annonce à la fois, avec « 1 sur 2 » s'il y en a plusieurs sur l'écran.
+ * et carte avec « C'est noté » (NEWS_TEXTS.ignore) et Expliquez-moi. Une annonce à la fois, avec « 1 sur 2 » s'il y en a plusieurs sur l'écran.
  * NON BLOQUANT, contrairement au mode Aide : le cadre laisse passer les clics et l'écran reste utilisable. S'efface
  * pendant le mode Aide et un tutoriel. z-40 : sous les modales (z-50), pour ne pas allumer une zone recouverte ; une zone
  * située DANS une modale passe au-dessus (z-[60]).
- * L'annonce compte comme traitée sur Ignorer ou Compris, pas sur Expliquez-moi : quitter l'écran sans répondre ne la
+ * L'annonce compte comme traitée sur « C'est noté » ou Compris, pas sur Expliquez-moi : quitter l'écran sans répondre ne la
  * perd pas. Textes : help/newsTexts.ts, fiche home (hints), éléments d'aide. Aucune prop.
  */
 import { useEffect, useState } from 'react';

@@ -1,4 +1,6 @@
-/* MENU_REGISTRY : items de menu par défaut (globaux, vues, admin) — overrides via AppConfig menu_overrides. */
+/* MENU_REGISTRY : items de menu par défaut (globaux, vues, admin) — overrides via AppConfig menu_overrides.
+   Une icône nouvelle doit être ajoutée aux deux NAV_ICONS (GlobalNavBar.tsx et Layout.tsx), sinon le bouton s'affiche sans icône.
+   news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site. */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY } from './viewRegistry.js';
 
@@ -61,5 +63,6 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'search',  label: 'Recherche',    icon: 'Search',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/search',  viewMode: null, order: 0, visible: true, access: 'user'   },
   { id: '', key: 'contact', label: 'Contact',      icon: 'MessageSquare',section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/contact', viewMode: null, order: 1, visible: true, access: 'public' },
   { id: '', key: 'sitemap', label: 'Plan du site', icon: 'MapIcon',     section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/sitemap', viewMode: null, order: 2, visible: true, access: 'public' },
-  { id: '', key: 'logout',  label: 'Déconnexion',  icon: 'LogOut',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: null,       viewMode: null, order: 3, visible: true, access: 'user'   },
+  { id: '', key: 'news',    label: 'Nouveautés',   icon: 'Sparkles',    section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/news',    viewMode: null, order: 3, visible: true, access: 'public' },
+  { id: '', key: 'logout',  label: 'Déconnexion',  icon: 'LogOut',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: null,       viewMode: null, order: 4, visible: true, access: 'user'   },
 ];

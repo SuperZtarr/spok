@@ -1,5 +1,6 @@
-/* Tests des nouveautés : zone allumée (Ignorer, Expliquez-moi puis Compris, effacement en mode Aide), cartes d'accueil (Montrer
-   vers le dernier espace, Ignorer, lien vers l'historique), page Toutes les nouveautés (Montrer rallume l'annonce) et choix
+/* Tests des nouveautés : zone allumée (« C'est noté », Expliquez-moi puis Compris, effacement en mode Aide), cartes d'accueil
+   (Montrer vers le dernier espace, « C'est noté », lien vers l'historique), page Toutes les nouveautés (Montrer rallume
+   l'annonce, « C'est noté » et mention Vue pour un compte connecté) et choix
    de l'espace à ouvrir. Sources d'annonces fictives (vi.mock) : les tests ne dépendent pas des vraies annonces du moment. */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
@@ -61,7 +62,7 @@ describe('NewFeatureOverlay', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('allume la zone avec son badge ; Ignorer traite l\'annonce', () => {
+  it('allume la zone avec son badge ; C\'est noté traite l\'annonce', () => {
     render(<>{zone}<NewFeatureOverlay /></>);
     expect(screen.getByText(NEWS_TEXTS.kind.evolution)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: NEWS_TEXTS.ignore }));
@@ -106,7 +107,7 @@ describe('NewsCards', () => {
     expect(screen.queryByRole('link', { name: NEWS_TEXTS.show })).toBeNull();
   });
 
-  it('Ignorer retire la carte ; seul le lien vers l\'historique reste', () => {
+  it('C\'est noté retire la carte ; seul le lien vers l\'historique reste', () => {
     const { container } = cards([{ id: 's1' }]);
     fireEvent.click(screen.getByRole('button', { name: NEWS_TEXTS.ignore }));
     expect(container.querySelector('[data-tour="home-news"]')).toBeNull();
@@ -139,6 +140,24 @@ describe('NewsPage', () => {
     fireEvent.click(await screen.findByRole('link', { name: NEWS_TEXTS.show }));
     expect(useHelpAnnouncementsStore.getState().handled).not.toContain(DEMO);
     act(() => useAuthStore.setState({ user: null } as never));
+  });
+
+  it('C\'est noté marque l\'annonce comme vue et affiche la mention Vue', () => {
+    vi.spyOn(spacesApi, 'list').mockResolvedValue([] as never);
+    act(() => useAuthStore.setState({ user: { id: 'u1' } } as never));
+    page();
+    expect(screen.queryByText(NEWS_TEXTS.seen)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: NEWS_TEXTS.ignore }));
+    expect(useHelpAnnouncementsStore.getState().handled).toContain(DEMO);
+    expect(screen.getByText(NEWS_TEXTS.seen)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: NEWS_TEXTS.ignore })).toBeNull();
+    act(() => useAuthStore.setState({ user: null } as never));
+  });
+
+  it('sans connexion : ni C\'est noté ni mention Vue', () => {
+    page();
+    expect(screen.queryByRole('button', { name: NEWS_TEXTS.ignore })).toBeNull();
+    expect(screen.queryByText(NEWS_TEXTS.seen)).toBeNull();
   });
 });
 

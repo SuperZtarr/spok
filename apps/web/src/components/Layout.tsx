@@ -27,7 +27,7 @@ import {
   HelpCircle, Clock, Star, Plus, ArrowLeft,
   Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow,
+  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow, Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
@@ -84,7 +84,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Search, MapIcon: MapIconLucide, Copy,
+  MessageSquare, Search, MapIcon: MapIconLucide, Copy, Sparkles,
 };
 const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 

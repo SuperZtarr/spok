@@ -14,7 +14,10 @@ export const NEWS_TEXTS = {
   sectionTitle: 'Nouveautés',
   all: 'Toutes les nouveautés',
   unreleased: 'Pas encore livrée',
-  ignore: 'Ignorer',
+  /** Marque l'annonce comme prise en compte (carte d'accueil, zone allumée, tutoriel, page /news). Anciennement « Ignorer ». */
+  ignore: 'C\'est noté',
+  /** Mention d'une annonce déjà prise en compte, sur la page /news. */
+  seen: 'Vue',
   show: 'Montrer',
   explain: 'Expliquez-moi',
   done: 'Compris',

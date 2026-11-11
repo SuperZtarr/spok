@@ -14,7 +14,7 @@ const elements: HelpElements = {
   nouveautes: {
     title: 'Nouveautés',
     short: 'Ce qui a changé dans SPOK.',
-    text: 'Les changements de SPOK que vous n\'avez pas encore traités. Montrer vous emmène à l\'écran concerné ; une carte disparaît quand vous l\'ignorez ou quand vous avez lu son explication.',
+    text: 'Les changements de SPOK que vous n\'avez pas encore traités. Montrer vous emmène à l\'écran concerné ; une carte disparaît quand vous répondez « C\'est noté » ou quand vous avez lu son explication.',
     target: '[data-tour="home-news"]',
     side: 'bottom',
   },
@@ -64,7 +64,7 @@ export const help: HelpEntry = {
   hints: {
     ...derived.hints,
     newsIntro: 'Ce qui a changé dans SPOK depuis votre dernière lecture. Montrer vous emmène à l\'écran concerné.',
-    newsIgnore: 'Ne plus annoncer ce changement sur votre compte. Il reste dans « Toutes les nouveautés ». Rien d\'autre n\'est modifié.',
+    newsIgnore: 'Vous avez pris en compte ce changement : il n\'est plus annoncé sur votre compte et reste dans « Toutes les nouveautés ». Rien d\'autre n\'est modifié.',
     newsShow: 'Ouvre l\'écran concerné et y allume la zone (une vue s\'ouvre dans votre dernier espace visité). Le changement reste annoncé tant que vous n\'avez pas répondu.',
   },
   tour: elementTourSteps('home', elements),
