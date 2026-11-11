@@ -1,5 +1,5 @@
 /*
- * Section « Accès Claude (MCP) » de la modale profil : création, liste et révocation des jetons personnels
+ * Section « Accès Claude (MCP) » de la modale profil (contenu de l'onglet « Accès Claude », sans séparateur propre) : création, liste et révocation des jetons personnels
  * permettant à un Claude externe d'accéder à SPOK via le serveur MCP distant (getMcpServerUrl). Le jeton en
  * clair n'est affiché qu'une fois, juste après création, avec la commande de connexion prête à copier.
  * Accès accordé par un admin : sans accord, la section propose « Demander l'accès » (puis « demande en attente »)
@@ -79,7 +79,7 @@ export function PersonalTokensSection() {
   const active = tokens.filter((t: PersonalToken) => !t.revokedAt);
 
   return (
-    <div className="pt-4 border-t border-border space-y-3">
+    <div className="space-y-3">
       <div className="flex items-center gap-2">
         <KeyRound className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium">Accès Claude (MCP)</span>

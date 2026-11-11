@@ -1,4 +1,8 @@
 /* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe, jetons d'accès Claude (PersonalTokensSection, profil propre uniquement).
+   Profil propre (2026-11-11) : modale `large` à hauteur fixe ; en-tête (avatar, nom, rôle, Déconnexion) toujours visible,
+   puis onglets Compte / Préférences / Notifications / Accès Claude / Administration (admin seulement). Chaque ouverture
+   repart sur Compte. Le tour d'aide vise les boutons d'onglet (data-tour profile-tab-<id>) : ne pas viser un contenu
+   d'onglet non affiché.
    Mode admin (AdminUserProfileModal, ouvert depuis la liste des utilisateurs) : accès aux communautés et espaces par
    UserAccessManager — colonnes Sans accès → Membre → Propriétaire (2026-10-29), partagé avec UserDetailModal. */
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -179,6 +183,18 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
 // Mode self — profil de l'utilisateur courant
 // =============================================================================
 
+type ProfileTabId = 'account' | 'preferences' | 'notifications' | 'claude' | 'admin';
+
+/** Onglets du profil, dans l'ordre d'affichage. `adminOnly` : visible seulement pour un administrateur
+    (les bascules admin/dev ne rendent rien pour les autres). Les ids servent au tour d'aide (data-tour profile-tab-<id>). */
+const PROFILE_TABS: { id: ProfileTabId; label: string; adminOnly?: boolean }[] = [
+  { id: 'account', label: 'Compte' },
+  { id: 'preferences', label: 'Préférences' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'claude', label: 'Accès Claude' },
+  { id: 'admin', label: 'Administration', adminOnly: true },
+];
+
 export function UserProfileModal({ isOpen, onClose, user, targetUserId }: UserProfileModalProps) {
   if (targetUserId) {
     return <AdminUserProfileModal isOpen={isOpen} onClose={onClose} userId={targetUserId} />;
@@ -211,6 +227,12 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<ProfileTabId>('account');
+
+  // Chaque ouverture repart sur l'onglet Compte (l'onglet n'est pas mémorisé)
+  useEffect(() => {
+    if (isOpen) setActiveTab('account');
+  }, [isOpen]);
 
   useEffect(() => {
     if (user) {
@@ -319,12 +341,14 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
   ];
 
   const avatarSrc = user.avatarUrl || null;
+  const isAdmin = user.globalRole === 'ADMIN';
+  const tabs = PROFILE_TABS.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" devName="UserProfileModal">
-      <div className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Profil utilisateur" size="large" devName="UserProfileModal">
+      <div className="flex flex-col flex-1 min-h-0 gap-4">
         <div className="flex justify-end -mt-2"><PageHelpButton pageKey="profile" /></div>
-        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg flex-shrink-0">
           <div className="relative group">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
               {avatarSrc ? (
@@ -371,13 +395,34 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
               </button>
             )}
           </div>
+          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors flex-shrink-0">
+            <LogOut className="w-4 h-4" />Déconnexion
+          </button>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">
-          <LogOut className="w-4 h-4" />Déconnexion
-        </button>
 
-        {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</div>}
+        {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md flex-shrink-0">{error}</div>}
 
+        <div className="flex gap-1 border-b border-border overflow-x-auto flex-shrink-0" role="tablist">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              data-tour={`profile-tab-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pr-1" role="tabpanel">
+        {activeTab === 'account' && (<>
         <div className="space-y-3" data-tour="profile-identity" data-help-zone="profile:identite">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -446,7 +491,28 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
           </div>
         </div>
 
-        <div className="pt-4 border-t border-border">
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Communautés</span>
+          </div>
+          {communities && communities.length > 0 ? (
+            <div className="space-y-2">
+              {communities.map((community) => (
+                <div key={community.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                  <span>{community.name}</span>
+                  <span className="text-xs text-muted-foreground">{community.role ? (COMMUNITY_ROLE_LABELS[community.role] || community.role) : ''}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucune communauté</p>
+          )}
+        </div>
+        </>)}
+
+        {activeTab === 'preferences' && (<>
+        <div>
           <span className="text-sm font-medium" data-tour="profile-theme">Thème</span>
           <div className="flex gap-2 mt-2">
             {themeOptions.map(({ value, label, icon: Icon }) => (
@@ -456,10 +522,6 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             ))}
           </div>
         </div>
-
-        <div data-tour="profile-notifications" data-help-zone="profile:notifications"><NotificationPreferencesSection /></div>
-
-        <div data-tour="profile-claude" data-help-zone="profile:claude"><PersonalTokensSection /></div>
 
         <div className="pt-4 border-t border-border">
           <div className="flex items-center justify-between">
@@ -482,30 +544,23 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             </button>
           </div>
         </div>
+        </>)}
 
-        <div className="pt-4 border-t border-border space-y-2">
-          <AdminModeToggle />
-          <DevModeToggle />
-          <DevDbStatus />
-        </div>
+        {activeTab === 'notifications' && (
+          <div data-help-zone="profile:notifications"><NotificationPreferencesSection /></div>
+        )}
 
-        <div className="pt-4 border-t border-border">
-          <div className="flex items-center gap-2 mb-3">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Communautés</span>
+        {activeTab === 'claude' && (
+          <div data-help-zone="profile:claude"><PersonalTokensSection /></div>
+        )}
+
+        {activeTab === 'admin' && isAdmin && (
+          <div className="space-y-2">
+            <AdminModeToggle />
+            <DevModeToggle />
+            <DevDbStatus />
           </div>
-          {communities && communities.length > 0 ? (
-            <div className="space-y-2">
-              {communities.map((community) => (
-                <div key={community.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
-                  <span>{community.name}</span>
-                  <span className="text-xs text-muted-foreground">{community.role ? (COMMUNITY_ROLE_LABELS[community.role] || community.role) : ''}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aucune communauté</p>
-          )}
+        )}
         </div>
       </div>
     </Modal>
@@ -550,7 +605,7 @@ function NotificationPreferencesSection() {
   if (!prefs) return null;
 
   return (
-    <div className="pt-4 border-t border-border">
+    <div>
       <div className="flex items-center gap-2 mb-3">
         <Bell className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium">Notifications</span>
