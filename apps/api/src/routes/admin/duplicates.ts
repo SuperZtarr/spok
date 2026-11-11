@@ -1,4 +1,8 @@
-// apps/api/src/routes/admin/duplicates.ts
+/*
+ * Doublons (admin) : éléments au même titre, contenus Lien à la même adresse, contenus Image/Fichier au même nom de
+ * fichier. Depuis le lot 4 « contenus multiples » (2026-11-11), adresses et fichiers se lisent dans item_contents
+ * (plus d'Item.url ni de types Lien / Image / Document) ; un élément n'apparaît qu'une fois par groupe.
+ */
 import { FastifyPluginAsync } from 'fastify';
 
 interface RawItem {
@@ -49,7 +53,7 @@ interface DuplicateGroup {
 
 // Two levels of parent JOINs for breadcrumb + space owner
 const ITEM_SELECT = `
-  i.id, i.title, i.type, i.url, i.status, i.priority,
+  i.id, i.title, i.type, NULL::text as url, i.status, i.priority,
   i."createdAt"::text as "createdAt", i."spaceId",
   s.name as "spaceName", s."communityId",
   c.name as "communityName",
@@ -64,6 +68,13 @@ LEFT JOIN users ou ON ou.id = sm."userId"
 LEFT JOIN items p ON p.id = i."parentId"
 LEFT JOIN items gp ON gp.id = p."parentId"
 `;
+
+// Même sélection pour un élément trouvé par l'un de ses contenus (ic) : url = adresse de ce contenu
+const CONTENT_ITEM_SELECT = ITEM_SELECT
+  .replace('NULL::text as url', 'ic.url as url')
+  .replace('FROM items i', 'FROM item_contents ic\nJOIN items i ON i.id = ic."itemId"');
+
+const FILE_NAME_SQL = `COALESCE(NULLIF(ic.name, ''), REGEXP_REPLACE(ic.url, '^.+/', ''))`;
 
 function toItem(r: RawItem): DuplicateItem {
   const ancestors: Ancestor[] = [];
@@ -135,14 +146,14 @@ export const adminDuplicatesRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // ── 2. Duplicate URLs (LINK type) ─────────────────────────────────
+    // ── 2. Contenus Lien à la même adresse (éléments distincts) ─────────
     const urlKeys = await prisma.$queryRawUnsafe<{ key: string }[]>(`
-      SELECT url as key
-      FROM items
-      WHERE type = 'LINK' AND url IS NOT NULL AND url <> ''
-      GROUP BY url
-      HAVING COUNT(*) > 1
-      ORDER BY COUNT(*) DESC
+      SELECT ic.url as key
+      FROM item_contents ic
+      WHERE ic.kind = 'LINK' AND ic.url IS NOT NULL AND ic.url <> ''
+      GROUP BY ic.url
+      HAVING COUNT(DISTINCT ic."itemId") > 1
+      ORDER BY COUNT(DISTINCT ic."itemId") DESC
       LIMIT 200
     `);
 
@@ -150,9 +161,9 @@ export const adminDuplicatesRoutes: FastifyPluginAsync = async (fastify) => {
       const placeholders = urlKeys.map((_, i) => `$${i + 1}`).join(', ');
       const keys = urlKeys.map((r) => r.key);
       const items = await prisma.$queryRawUnsafe<RawItem[]>(
-        `SELECT ${ITEM_SELECT}
-         WHERE i.type = 'LINK' AND i.url IN (${placeholders})
-         ORDER BY i.url, i."createdAt"`,
+        `SELECT DISTINCT ON (ic.url, i.id) ${CONTENT_ITEM_SELECT}
+         WHERE ic.kind = 'LINK' AND ic.url IN (${placeholders})
+         ORDER BY ic.url, i.id`,
         ...keys
       );
       const grouped = groupBy(items, (r) => r.url ?? '');
@@ -161,30 +172,27 @@ export const adminDuplicatesRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // ── 3. Duplicate filenames (IMAGE / DOCUMENT) ─────────────────────
+    // ── 3. Contenus Image / Fichier au même nom de fichier ────────────────
     const fileKeys = await prisma.$queryRawUnsafe<{ key: string }[]>(`
-      SELECT REGEXP_REPLACE(url, '^.+/', '') as key
-      FROM items
-      WHERE type IN ('IMAGE', 'DOCUMENT') AND url IS NOT NULL AND url <> ''
+      SELECT ${FILE_NAME_SQL} as key
+      FROM item_contents ic
+      WHERE ic.kind IN ('IMAGE', 'FILE') AND ic.url IS NOT NULL AND ic.url <> ''
       GROUP BY key
-      HAVING COUNT(*) > 1
-      ORDER BY COUNT(*) DESC
+      HAVING COUNT(DISTINCT ic."itemId") > 1
+      ORDER BY COUNT(DISTINCT ic."itemId") DESC
       LIMIT 200
     `);
 
     if (fileKeys.length > 0) {
       const placeholders = fileKeys.map((_, i) => `$${i + 1}`).join(', ');
       const keys = fileKeys.map((r) => r.key);
-      const items = await prisma.$queryRawUnsafe<RawItem[]>(
-        `SELECT ${ITEM_SELECT}
-         WHERE i.type IN ('IMAGE', 'DOCUMENT')
-           AND REGEXP_REPLACE(i.url, '^.+/', '') IN (${placeholders})
-         ORDER BY REGEXP_REPLACE(i.url, '^.+/', ''), i."createdAt"`,
+      const items = await prisma.$queryRawUnsafe<(RawItem & { fileName: string })[]>(
+        `SELECT DISTINCT ON (${FILE_NAME_SQL}, i.id) ${CONTENT_ITEM_SELECT.replace('ic.url as url', `ic.url as url, ${FILE_NAME_SQL} as "fileName"`)}
+         WHERE ic.kind IN ('IMAGE', 'FILE') AND ${FILE_NAME_SQL} IN (${placeholders})
+         ORDER BY ${FILE_NAME_SQL}, i.id`,
         ...keys
       );
-      const grouped = groupBy(items, (r) =>
-        (r.url ?? '').replace(/^.+\//, '')
-      );
+      const grouped = groupBy(items, (r) => r.fileName);
       for (const [key, groupItems] of grouped) {
         groups.push({ key, reason: 'filename', items: groupItems.map(toItem) });
       }

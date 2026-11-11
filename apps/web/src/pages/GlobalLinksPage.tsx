@@ -1,5 +1,7 @@
 /*
- * Liens globaux (/links) : items LINK des espaces lisibles, groupés Communauté › Espace › sous-espace.
+ * Liens globaux (/links) : UN LIEN PAR CONTENU Lien des éléments des espaces lisibles, quel que soit leur type (lot 4
+ * contenus multiples : plus de type Lien ; API ?contentKind=LINK), groupés Communauté › Espace › sous-espace.
+ * Titre d'un lien : nom du contenu, sinon titre de l'élément, sinon titre de la page.
  * Périmètre : sélecteur Communauté / Espace (un espace inclut ses sous-espaces), filtré côté API (GET /user/tasks,
  * communityId / spaceId, toujours intersecté avec les espaces lisibles). Chargement par pages de PAGE_SIZE avec
  * « Charger plus » et total affiché — jamais de coupe silencieuse. La recherche texte (titre, URL, espace) porte sur
@@ -128,12 +130,16 @@ export function GlobalLinksPage() {
 
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['global-links', scopeFilter],
-    queryFn: ({ pageParam }) => userTasksApi.list({ type: 'LINK', ...scopeFilter, page: pageParam, pageSize: PAGE_SIZE }),
+    queryFn: ({ pageParam }) => userTasksApi.list({ contentKind: 'LINK', ...scopeFilter, page: pageParam, pageSize: PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   });
 
-  const links = useMemo(() => data?.pages.flatMap(p => p.data) || [], [data]);
+  // Une entrée par contenu Lien (un élément à 3 liens = 3 liens), titre = nom du contenu, sinon titre de l'élément
+  const links = useMemo(() => (data?.pages.flatMap(p => p.data) || []).flatMap((item: any) =>
+    (item.contents ?? [])
+      .filter((c: any) => c.kind === 'LINK' && c.url)
+      .map((c: any) => ({ ...item, id: `${item.id}:${c.id}`, url: c.url, title: c.name || item.title }))), [data]);
   const grandTotal = data?.pages[0]?.total ?? 0;
 
   // Filter by search
@@ -228,9 +234,11 @@ export function GlobalLinksPage() {
   }, [filtered]);
 
   const totalLinks = filtered.length;
-  const remaining = Math.max(0, grandTotal - links.length);
-  // Compteur : liens affichés, et sur combien quand tout n'est pas chargé ou qu'une recherche filtre
-  const countLabel = search.trim() || remaining > 0 ? `${totalLinks} sur ${grandTotal}` : `${grandTotal}`;
+  // Le total de l'API compte des ÉLÉMENTS (porteurs d'au moins un lien) : « restant » = éléments pas encore chargés
+  const loadedItems = data?.pages.reduce((n, p) => n + p.data.length, 0) ?? 0;
+  const remaining = Math.max(0, grandTotal - loadedItems);
+  // Compteur : liens affichés, sur combien quand une recherche filtre, « + » quand des éléments restent à charger
+  const countLabel = `${search.trim() ? `${totalLinks} sur ${links.length}` : links.length}${remaining > 0 ? ' +' : ''}`;
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -274,7 +282,7 @@ export function GlobalLinksPage() {
 
         {search.trim() && remaining > 0 && (
           <p className="mb-4 text-xs text-amber-700 dark:text-amber-400">
-            La recherche porte sur les {links.length} liens chargés ; {remaining} restent à charger (bas de page).
+            La recherche porte sur les {links.length} liens chargés ; {remaining} élément{remaining > 1 ? 's' : ''} reste{remaining > 1 ? 'nt' : ''} à charger (bas de page).
           </p>
         )}
 
@@ -322,7 +330,7 @@ export function GlobalLinksPage() {
               disabled={isFetchingNextPage}
               className="px-4 py-2 text-sm font-medium border border-border rounded-md bg-card hover:bg-accent disabled:opacity-50"
             >
-              {isFetchingNextPage ? 'Chargement…' : `Charger plus (${remaining} restant${remaining > 1 ? 's' : ''})`}
+              {isFetchingNextPage ? 'Chargement…' : `Charger plus (${remaining} élément${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''})`}
             </button>
           </div>
         )}

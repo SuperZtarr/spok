@@ -853,7 +853,7 @@ export function PertView({
               const x = nodeX(item.id);
               const y = nodeY(item.id);
               const isDragTarget = dragTargetId === item.id;
-              const Icon = getTypeIcon(item.type as ItemType, item.url);
+              const Icon = getTypeIcon(item.type as ItemType);
               const showHandle = canEdit && onCreateRelation && (hoveredNodeId === item.id) && !relationDrag;
               const nodeIsDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
               const nodeIsSearchMatch = !!(searchMatchIds && searchMatchIds.has(item.id));

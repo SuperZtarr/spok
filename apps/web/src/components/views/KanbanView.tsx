@@ -1,5 +1,7 @@
 /* Vue Kanban : colonnes par statut (référentiels), DnD des cartes, création rapide.
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Carte = vignette d'élément commune, format carte (components/item/ItemVignette, règle lib/itemFace.ts, décision
+ * Thomas 2026-11-08) : miniature, titre, infos du type, extrait, tags, pastilles de contenus. KanbanCard n'en garde
+ * que le cadre : poignées, clignotement (urgent, non vu), menu ⋮ au survol. Ne pas y remettre de rendu par type.
  * Aide : repère unique data-help-zone sur la colonne et la carte, partagé par le mode Aide, le tutoriel et les
  * nouveautés (pilote « élément d'aide », kanban.help.ts). Infobulle du nom de colonne : `hints` de la fiche.
  * Statuts réservés (2026-11-08) : les colonnes des issues d'une question n'apparaissent que si une question est
@@ -20,34 +22,21 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { ExternalLink, GripVertical, Calendar, FolderKanban, GripHorizontal, Printer, FileDown } from 'lucide-react';
+import { GripVertical, FolderKanban, GripHorizontal, Printer, FileDown } from 'lucide-react';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import { DEFAULT_REFERENTIELS, statusAllowedForType, statusesForItems } from '@spok/shared';
-import { getTypeIcon, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
-import { stripMarkup } from '../../lib/bbcode';
+import { getTypeIcon, getTypeTextColor } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
-import { TagBadge } from '../ui/TagBadge';
+import { itemFace } from '../../lib/itemFace';
+import { ItemVignette } from '../item/ItemVignette';
 import { RoleGuard } from '../RoleGuard';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as kanbanHelp } from './help/kanban.help';
-import { safeHref } from '../../lib/sanitizeHtml';
-
-// Format date for display
-function formatDate(dateString: string | null | undefined): string | null {
-  if (!dateString) return null;
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 interface PortalGroup {
   spaceId: string;
@@ -133,7 +122,6 @@ const DEFAULT_BOARD_HEIGHT = 400;
 
 function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusOptions, canEdit = true, canEditItem, referentiels }: KanbanCardProps) {
   const hasHeadings = (desc?: string | null) => !!desc && /<h[1-3][^>]*>/i.test(desc);
-  const Icon = getTypeIcon(item.type, item.url);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item, columnId },
@@ -171,68 +159,35 @@ function KanbanCard({ item, columnId, onEdit, onDelete, onUpdateStatus, onAddChi
           <GripVertical className="w-3 h-3 text-white" />
         </span>
       )}
-      <div className="flex items-start gap-2">
-        {canEdit && (
-          <RoleGuard role="MEMBER">
-          <div
-            {...listeners}
-            {...attributes}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
-            onClick={(e) => e.stopPropagation()}
-            title="Glisser pour réorganiser"
-          >
-            <GripVertical className="w-4 h-4" />
-          </div>
-          </RoleGuard>
+      {/* Vignette commune, format carte (lib/itemFace.ts) ; la carte Kanban n'en est que le cadre */}
+      <ItemVignette
+        format="carte"
+        title={item.title}
+        Icon={getTypeIcon(item.type)}
+        iconClass={getTypeTextColor(item.type, referentiels?.typeLabels)}
+        tags={item.tags}
+        face={itemFace(
+          item,
+          'carte',
+          {
+            type: (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[item.type as ItemType]?.labelShort ?? item.type,
+            status: item.status && item.status !== 'undefined' ? statusOptions?.find((s) => s.id === item.status)?.label ?? null : null,
+          },
         )}
-        <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(item.type, referentiels?.typeLabels)}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
-            {(() => {
-              const pConfig = getPriorityConfig(item.priority);
-              return pConfig ? (
-                <span className={`text-[10px] font-bold ${pConfig.textColor} flex-shrink-0`} title={pConfig.label}>
-                  {pConfig.shortLabel}
-                </span>
-              ) : null;
-            })()}
-            {item.url && (
-              <a
-                href={safeHref(item.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-                onClick={(e) => e.stopPropagation()}
-                title="Ouvrir le lien"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-          {item.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-              {stripMarkup(item.description)}
-            </p>
-          )}
-          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
-            <img src={item.url} alt="" className="w-full max-h-32 object-cover rounded border border-border mt-1.5" />
-          )}
-          {item.tags && item.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {item.tags.map((tag) => (
-                <TagBadge key={tag.id} tag={tag} size="sm" />
-              ))}
+        leading={canEdit ? (
+          <RoleGuard role="MEMBER">
+            <div
+              {...listeners}
+              {...attributes}
+              className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground mt-0.5"
+              onClick={(e) => e.stopPropagation()}
+              title="Glisser pour réorganiser"
+            >
+              <GripVertical className="w-4 h-4" />
             </div>
-          )}
-          {item.type === 'MEETING' && item.startDate && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              <Calendar className="w-3 h-3" />
-              {formatDate(item.startDate)}
-            </div>
-          )}
-        </div>
-      </div>
+          </RoleGuard>
+        ) : undefined}
+      />
 
       {/* Action menu */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -588,7 +543,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = getTypeIcon(activeItem.type, activeItem.url);
+                const Icon = getTypeIcon(activeItem.type);
                 return <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${getTypeTextColor(activeItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <div className="flex-1 min-w-0">

@@ -436,7 +436,7 @@ describe('Search routes', () => {
       const itemAnd = prisma.item.findMany.mock.calls[0][0].where.AND
       expect(itemAnd[0].OR).toContainEqual({ title: contains('plan') })
       expect(itemAnd[1].OR).toContainEqual({ title: contains('projet') })
-      expect(itemAnd[1].OR).toContainEqual({ url: contains('budget') })
+      expect(itemAnd[1].OR).not.toContainEqual({ url: contains('budget') }) // plus de champ url (lot 4)
       expect(itemAnd).toContainEqual({ NOT: { title: contains('taxe') } })
       expect(itemAnd).toContainEqual({ OR: [{ description: null }, { NOT: { description: contains('taxe') } }] })
 

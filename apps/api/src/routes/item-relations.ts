@@ -25,24 +25,28 @@ const updateRelationSchema = z.object({
   label: z.string().nullable().optional(),
 });
 
-/** Champs d'un item lié renvoyés à la vue Loupe, pour ses vignettes (sans description : elle arrive quand l'item est à son tour zoomé). */
+/** Champs d'un item lié renvoyés à la vue Loupe, pour ses vignettes (sans description : elle arrive quand l'item est à son tour zoomé).
+ * contents : sorte, adresse et nom seulement (jamais le xml d'un schéma) — miniature et pastilles de la vignette. */
 const LINKED_ITEM_SELECT = {
   id: true, title: true, type: true, status: true, spaceId: true, space: { select: { name: true } },
-  url: true, priority: true, dueDate: true, startDate: true, endDate: true,
+  priority: true, dueDate: true, startDate: true, endDate: true,
   assignedToName: true, assignedTo: { select: { name: true } }, _count: { select: { children: true } },
+  contents: { select: { kind: true, url: true, name: true }, orderBy: { position: 'asc' } },
 } as const;
 
 type LinkedItemRow = {
   id: string; title: string; type: string; status: string | null; spaceId: string; space: { name: string };
-  url: string | null; priority: number | null; dueDate: Date | null; startDate: Date | null; endDate: Date | null;
+  priority: number | null; dueDate: Date | null; startDate: Date | null; endDate: Date | null;
   assignedToName: string | null; assignedTo: { name: string | null } | null; _count: { children: number };
+  contents?: { kind: string; url: string | null; name: string | null }[];
 };
 
 /** Liste explicite des champs : l'item racine porte aussi ses relations brutes, qui ne doivent jamais sortir telles quelles. */
 const toLinkedItem = (row: LinkedItemRow) => ({
   id: row.id, title: row.title, type: row.type, status: row.status, spaceId: row.spaceId, spaceName: row.space.name,
-  url: row.url, priority: row.priority, dueDate: row.dueDate, startDate: row.startDate, endDate: row.endDate,
+  priority: row.priority, dueDate: row.dueDate, startDate: row.startDate, endDate: row.endDate,
   assigneeName: row.assignedTo?.name ?? row.assignedToName, childCount: row._count.children,
+  contents: row.contents ?? [],
 });
 
 export const itemRelationsRoutes: FastifyPluginAsync = async (fastify) => {

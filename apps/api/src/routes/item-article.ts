@@ -32,13 +32,15 @@
  * 100 tronquerait à tort une source dont la plupart des éléments sont déjà dans l'article.
  * Chaque bloc disponible porte aussi statut (libellé résolu dans les référentiels de la communauté de l'espace
  * d'origine, sinon DEFAULT_STATUSES ; 'undefined' → null), priorité et dates ISO : ligne d'infos du rendu par type.
+ * Contenus (contenus multiples, lot 3a, 2026-11-08) : chaque bloc disponible porte les contenus de l'élément
+ * (images, fichiers, liens, schémas — sans xml, ordre fixe des sortes puis position) : le web rend le bloc selon eux.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { DEFAULT_STATUSES } from '@spok/shared';
 import type {
   ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate,
-  ArticleBrowseItem, ArticleBrowseSpace, ArticleView, ItemType, StatusConfig,
+  ArticleBrowseItem, ArticleBrowseSpace, ArticleView, ItemContentKind, ItemType, StatusConfig,
 } from '@spok/shared';
 import { orderChain, orderCluster, orderDescendants, orderProcess } from '../utils/articleBatch.js';
 import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities, allReadableSpaceIds } from '../utils/articleAccess.js';
@@ -49,10 +51,11 @@ import { blockDepths, loadParentChain } from '../utils/articleHierarchy.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 
 type RefItem = {
-  id: string; type: string; title: string; description: string | null; url: string | null; spaceId: string;
+  id: string; type: string; title: string; description: string | null; spaceId: string;
   createdById: string | null; assignedToId: string | null; lockedAt: Date | string | null;
   status?: string | null; priority?: number | null;
   startDate?: Date | string | null; endDate?: Date | string | null; dueDate?: Date | string | null;
+  contents?: { id: string; kind: string; url: string | null; name: string | null; mimeType: string | null }[];
 };
 
 const isoOrNull = (d: Date | string | null | undefined): string | null => {
@@ -74,9 +77,14 @@ async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<Map<str
 type BlockRow = { id: string; position: number; width: string; align: string; beside?: boolean; addedById: string | null; item: RefItem };
 
 export const REF_ITEM_SELECT = {
-  id: true, type: true, title: true, description: true, url: true, spaceId: true,
+  id: true, type: true, title: true, description: true, spaceId: true,
   createdById: true, assignedToId: true, lockedAt: true,
   status: true, priority: true, startDate: true, endDate: true, dueDate: true,
+  // Contenus sans xml (poids des schémas) ; ordre d'affichage : enum déclaré IMAGE, FILE, LINK, DIAGRAM
+  contents: {
+    select: { id: true, kind: true, url: true, name: true, mimeType: true },
+    orderBy: [{ kind: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }] as { kind?: 'asc'; position?: 'asc'; createdAt?: 'asc' }[],
+  },
 } as const;
 
 /** Droit de modifier un élément d'un espace donné, pour un rôle déjà résolu (OWNER libre, MEMBER auteur/assigné). */
@@ -119,13 +127,15 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
         type: r.item.type as ItemType,
         title: r.item.title,
         description: r.item.description,
-        url: r.item.url,
         status,
         statusLabel: status ? (statusList.find((s) => s.id === status)?.label ?? status) : null,
         priority: r.item.priority ?? null,
         startDate: isoOrNull(r.item.startDate),
         endDate: isoOrNull(r.item.endDate),
         dueDate: isoOrNull(r.item.dueDate),
+        contents: (r.item.contents ?? []).map((c) => ({
+          id: c.id, kind: c.kind as ItemContentKind, url: c.url, name: c.name, mimeType: c.mimeType,
+        })),
         canOpen,
         canEdit: canOpen && canEditWithRole(readerRole.get(r.item.spaceId), r.item, readerId),
         spaceId: canOpen ? r.item.spaceId : null,
@@ -370,7 +380,8 @@ async function resolveBatch(prisma: any, article: { id: string; spaceId: string 
 }
 
 const CANDIDATE_SELECT = {
-  id: true, type: true, title: true, description: true, url: true, spaceId: true, updatedAt: true,
+  id: true, type: true, title: true, description: true, spaceId: true, updatedAt: true,
+  contents: { select: { url: true, name: true } },
   space: { select: { name: true, communityId: true, community: { select: { name: true } } } },
 } as const;
 
@@ -504,7 +515,10 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
       where: {
         ...base, ...inSpaces,
         id: { notIn: [...excluded, ...titleRows.map((r) => r.id)] },
-        OR: [{ description: { contains: term, mode: 'insensitive' } }, { url: { contains: term, mode: 'insensitive' } }],
+        OR: [
+          { description: { contains: term, mode: 'insensitive' } },
+          { contents: { some: { OR: [{ url: { contains: term, mode: 'insensitive' } }, { name: { contains: term, mode: 'insensitive' } }] } } },
+        ],
       },
       orderBy: { updatedAt: 'desc' },
       take: 300,
@@ -548,7 +562,7 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     const { position } = addTextSchema.parse(request.body ?? {});
     const row = await fastify.prisma.$transaction(async (tx: any) => {
       const note = await tx.item.create({
-        data: { title: 'Texte', description: '', type: 'NOTE', spaceId: ctx.article.spaceId, createdById: ctx.userId },
+        data: { title: 'Texte', description: '', type: 'UNDEFINED', spaceId: ctx.article.spaceId, createdById: ctx.userId },
       });
       await createAuditLog(tx, {
         action: 'CREATE', entity: 'Item', entityId: note.id, userId: ctx.userId, spaceId: ctx.article.spaceId,

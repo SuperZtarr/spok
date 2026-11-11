@@ -1,4 +1,5 @@
-/* TNR de createItemTree : création récursive d'items depuis une structure { title, type, children }. */
+/* TNR de createItemTree : création récursive d'items depuis une structure { title, type, children }, tags de classement
+ * et ancien type d'un modèle enregistré avant le lot 4 (remplacé, jamais en échec). */
 import { describe, it, expect } from 'vitest'
 import { createMockPrisma } from '../test/helpers.js'
 import { createItemTree } from './itemTree.js'
@@ -54,5 +55,19 @@ describe('createItemTree', () => {
     expect(prisma.item.create).toHaveBeenNthCalledWith(2, {
       data: { title: 'Rédiger l\'ODJ', type: 'TASK', spaceId: 'space-1', createdById: 'user-1', parentId: 'item-1', position: 0 },
     })
+  })
+
+  it('remplace un type retiré (modèle enregistré avant le lot 4) et pose le tag de classement de la communauté', async () => {
+    const prisma = createMockPrisma()
+    prisma.item.create.mockImplementation(({ data }: any) => Promise.resolve({ id: 'item-1', ...data }))
+    prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+    prisma.tag.findFirst.mockResolvedValue(null)
+    prisma.tag.create.mockResolvedValue({ id: 'tag-bug' })
+
+    await createItemTree(prisma as any, [{ title: 'Crash', type: 'BUG' as any }], { spaceId: 'space-1', createdById: 'user-1', parentId: null })
+
+    expect(prisma.item.create.mock.calls[0][0].data.type).toBe('TASK')
+    expect(prisma.tag.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ communityId: 'com-1', name: 'bug' }) }))
+    expect(prisma.itemTag.create).toHaveBeenCalledWith({ data: { itemId: 'item-1', tagId: 'tag-bug' } })
   })
 })

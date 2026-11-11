@@ -4,19 +4,22 @@
  * toujours visible, statut, menu d'actions, indicateurs avant/après/imbrication drag & drop), layout
  * différent selon le contexte (ligne pleine largeur vs colonne fixe sticky à gauche d'un planning).
  * RootDropZone est co-localisée ici pour être réutilisée par toutes les arborescences (retour à la racine).
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Visage de l'élément = vignette commune, format ligne (components/item/ItemVignette, lib/itemFace.ts, décision Thomas
+ * 2026-11-08) : miniature, titre, info principale, pastilles de contenus. La ligne n'en est que le cadre (poignée,
+ * dépli, numéro, assigné, badge de statut coloré en Liste — qui remplace alors l'info principale —, menu ⋮).
  * stickyWidth (variante sticky) : largeur de la colonne en px, à garder égale à celle de la vue (Gantt 400, PERT 288).
  * showAssignee : badge de l'assigné après le titre (Gantt uniquement, demande Thomas 2026-11-05).
  */
-import { ChevronDown, ChevronRight, GripVertical, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import type { Item } from '@spok/shared';
 import { AssigneeBadge } from '../ui/AssigneeBadge';
 import { Badge } from '../ui/Badge';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
-import { getTypeIcon } from '../../constants/ui';
-import { safeHref } from '../../lib/sanitizeHtml';
+import { getTypeIcon, getTypeTextColor } from '../../constants/ui';
+import { itemFace } from '../../lib/itemFace';
+import { ItemVignette } from '../item/ItemVignette';
 
 // Zone de dépôt pour remonter un item à la racine de l'espace (drag & drop)
 export function RootDropZone({ isOver }: { isOver: boolean }) {
@@ -120,8 +123,6 @@ export function TreeItemRow({
   const editable = canEdit !== false;
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: item.id, disabled: !editable || !onMove });
   const { setNodeRef: setDropRef } = useDroppable({ id: item.id, disabled: !onMove });
-  const Icon = getTypeIcon(item.type, item.url);
-
   const indent = isInline ? 12 + depth * 24 : 8 + depth * 20;
   const nestHighlight = isOver && dropPosition === 'nest';
   const showActionMenu = isInline ? editable : !isPortal;
@@ -182,34 +183,22 @@ export function TreeItemRow({
           <span className="text-xs text-muted-foreground font-mono min-w-[1.5rem]">{orderNumber}</span>
         )}
 
-        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-        <span
-          className="truncate text-sm flex-1"
-          onClick={isInline ? undefined : () => onEdit(item.id)}
-          title={item.title}
-        >
-          {item.title}
-        </span>
+        {/* Vignette commune, format ligne (lib/itemFace.ts) ; en Liste, le badge de statut ci-dessous tient lieu d'info */}
+        <div className="flex min-w-0 flex-1" onClick={isInline ? undefined : () => onEdit(item.id)}>
+          <ItemVignette
+            format="ligne"
+            title={item.title}
+            Icon={getTypeIcon(item.type)}
+            iconClass={getTypeTextColor(item.type)}
+            face={itemFace(item, 'ligne', {
+              type: item.type,
+              status: item.status && item.status !== 'undefined' ? statusOptions.find((s) => s.id === item.status)?.label ?? null : null,
+            })}
+            showMeta={!(isInline && statusColorMap && statusLabelMap)}
+          />
+        </div>
 
         {showAssignee && <AssigneeBadge item={item} />}
-
-        {isInline && item.url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url) && (
-          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
-        )}
-
-        {isInline && item.url && (
-          <a
-            href={safeHref(item.url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            title="Ouvrir le lien"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
 
         {isInline && statusColorMap && statusLabelMap && (
           <Badge

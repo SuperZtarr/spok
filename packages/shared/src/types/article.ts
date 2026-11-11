@@ -4,8 +4,18 @@
  * item.spaceId n'est renseigné que si canOpen ; available=false → item null (rien du contenu n'est envoyé).
  * Statut, priorité et dates servent la ligne d'infos des blocs (rendu par type, 2026-10-24) : statusLabel est résolu
  * par l'API dans les référentiels de l'espace d'origine (le lecteur peut ne pas y avoir accès) ; dates en ISO.
+ * contents (contenus multiples, lot 3a, 2026-11-08) : contenus de l'élément sans xml, dans l'ordre d'affichage
+ * (Images, Fichiers, Liens, Schémas) — le bloc se rend selon eux ; url d'un schéma = son aperçu.
  */
 import type { ItemType } from './item.js';
+import type { ItemContent } from './itemContent.js';
+
+/** Contenu d'un élément tel que le reçoit un bloc d'article */
+export type ArticleBlockContent = Pick<ItemContent, 'id' | 'kind'> & {
+  url: string | null;
+  name: string | null;
+  mimeType: string | null;
+};
 
 export type ArticleBlockWidth = 'full' | 'wide' | 'medium';
 export type ArticleBlockAlign = 'center' | 'left' | 'right';
@@ -25,13 +35,13 @@ export type ArticleBlockView = {
     type: ItemType;
     title: string;
     description: string | null;
-    url: string | null;
     status: string | null;
     statusLabel: string | null;
     priority: number | null;
     startDate: string | null;
     endDate: string | null;
     dueDate: string | null;
+    contents: ArticleBlockContent[];
     canOpen: boolean;
     canEdit: boolean;
     spaceId: string | null;

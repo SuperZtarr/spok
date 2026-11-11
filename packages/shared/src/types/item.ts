@@ -1,11 +1,17 @@
 /* Types item : Item, ItemType, relations, inputs de création/déplacement, accusé de lecture à l'assignation,
  * champs de copie de séance live (lockedAt/sourceItemId/sourceSpaceId).
- * QUESTION (2026-11-08) : options, issue et votes dans types/question.ts. */
+ * QUESTION (2026-11-08) : options, issue et votes dans types/question.ts.
+ * contents (2026-11-08, contenus multiples) : contenus de l'élément, triés ; xml absent dans les listes (types/itemContent.ts).
+ * Plus de champ url (lot 4, 2026-11-11) : images, fichiers, liens et schémas sont TOUS des contenus. La colonne
+ * items.url reste en base, inutilisée (sauvegarde), jusqu'à son retrait.
+ * ItemType : tiré du registre des types (constants/typeRegistry.ts), jamais réécrit ici. */
 import type { ContributionWithAuthor } from './contribution.js';
+import type { ItemType } from '../constants/typeRegistry.js';
 import type { ReactionSummary } from './reaction.js';
 import type { HorizonBucket } from '../utils/horizon.js';
+import type { ItemContent } from './itemContent.js';
 
-export type ItemType = 'UNDEFINED' | 'NOTE' | 'PROJECT' | 'TASK' | 'MEETING' | 'PERIOD' | 'LINK' | 'CONFIG' | 'DOCUMENT' | 'IMAGE' | 'BUG' | 'DIAGRAM' | 'ARTICLE' | 'QUESTION';
+export type { ItemType };
 
 export interface Item {
   id: string;
@@ -13,7 +19,8 @@ export interface Item {
   title: string;
   description?: string | null;
   content?: Record<string, unknown> | null;
-  url?: string | null;
+  /** Contenus de l'élément (images, fichiers, liens, schémas), dans l'ordre d'affichage */
+  contents?: ItemContent[];
   status?: string | null;
   priority?: number | null;
   position: number;
@@ -78,7 +85,6 @@ export interface CreateItemInput {
   title: string;
   description?: string;
   content?: Record<string, unknown>;
-  url?: string;
   status?: string;
   priority?: number;
   dueDate?: string;
@@ -95,7 +101,6 @@ export interface UpdateItemInput {
   title?: string;
   description?: string | null;
   content?: Record<string, unknown>;
-  url?: string | null;
   status?: string | null;
   priority?: number;
   dueDate?: string | null;

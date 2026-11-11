@@ -8,10 +8,16 @@
  * Les appelants qui veulent uniquement les tâches passent `type=TASK` explicitement
  * (ex. useGlobalTaskFilters avec defaultTypes:['TASK'] pour la page /tasks).
  * Chaque tâche porte assignmentReceipt (accusé de lecture à l'assignation, utils/assignment.ts).
+ * Types acceptés dans le filtre : ceux du registre des types (isItemType, @spok/shared), jamais de liste locale.
+ * `contentKind=LINK|IMAGE|FILE|DIAGRAM` (lot 4 contenus multiples) : éléments qui portent au moins un contenu de cette
+ * sorte, quel que soit leur type (page Liens globale) ; chaque élément renvoie ses contenus (sans xml).
  */
 import { FastifyPluginAsync } from 'fastify';
+import { isItemType } from '@spok/shared';
 import { computeAssignmentReceipts } from '../utils/assignment.js';
 import { readableSpaceIdsForUser } from './items.js';
+
+const CONTENT_KINDS = new Set(['IMAGE', 'FILE', 'LINK', 'DIAGRAM']);
 
 export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
@@ -25,6 +31,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{
     Querystring: {
       type?: string;
+      contentKind?: string;
       status?: string;
       priority?: string;
       spaceId?: string;
@@ -44,6 +51,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/tasks', async (request) => {
     const {
       type: typeFilter,
+      contentKind,
       status,
       priority: priorityStr,
       spaceId: filterSpaceId,
@@ -97,13 +105,17 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
     // Type filter (supports multiple comma-separated values).
     // Absent ou aucune valeur valide → pas de filtre : tous les types remontent.
     if (typeFilter) {
-      const validTypes = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM'];
-      const typeList = typeFilter.split(',').filter((t) => validTypes.includes(t));
+      const typeList = typeFilter.split(',').filter(isItemType);
       if (typeList.length === 1) {
         where.type = typeList[0];
       } else if (typeList.length > 1) {
         where.type = { in: typeList };
       }
+    }
+
+    // Sorte de contenu portée (lot 4 : remplace les anciens types Lien / Image / Document / Diagramme)
+    if (contentKind && CONTENT_KINDS.has(contentKind)) {
+      where.contents = { some: { kind: contentKind } };
     }
 
     // Space access filter (déjà restreint aux communautés sélectionnées le cas échéant)
@@ -246,7 +258,7 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
           assignedById: true,
           parentId: true,
           description: true,
-          url: true,
+          contents: { select: { id: true, kind: true, url: true, name: true, mimeType: true, position: true }, orderBy: { position: 'asc' } },
           space: { select: { id: true, name: true, parentId: true, communityId: true, community: { select: { id: true, name: true } } } },
           createdBy: { select: { id: true, name: true } },
           assignedTo: { select: { id: true, name: true } },

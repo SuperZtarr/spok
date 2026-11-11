@@ -16,6 +16,7 @@ import { getTypeIcon, getTypeColor } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
+import { coverOf } from '../../lib/itemFace';
 
 interface Contribution {
   id: string;
@@ -366,13 +367,14 @@ function TextItem({
   searchMatchIds?: Set<string>;
 }) {
   const depth = (item as any)._depth || 0;
-  const Icon = getTypeIcon(item.type, item.url);
+  const Icon = getTypeIcon(item.type);
   const statusLabel = statusLabels[item.status || ''] || 'Non défini';
   const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
   const typeColor = getTypeColor(item.type, referentiels?.typeLabels);
   const hasDescription = !!item.description?.trim();
   const contributions = item.contributions || [];
-  const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
+  const cover = coverOf(item); // miniature commune (lib/itemFace) : première image, sinon aperçu de schéma
+  const hasImage = !!cover.url;
   const hasContent = hasDescription || contributions.length > 0 || hasImage;
   const hasHighlight = !!(highlightType || highlightStatus || searchMatchIds);
   const isDimmed = (highlightType && !matchesType(highlightType, item.type)) || (highlightStatus && !matchesStatus(highlightStatus, item.status)) || (searchMatchIds && !searchMatchIds.has(item.id));
@@ -443,8 +445,8 @@ function TextItem({
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
             />
           )}
-          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
-            <img src={item.url} alt="" className="max-w-sm max-h-48 object-contain rounded border border-border mt-2" />
+          {cover.url && (
+            <img src={cover.url} alt="" className="max-w-sm max-h-48 object-contain rounded border border-border mt-2" />
           )}
 
           {/* Contributions */}

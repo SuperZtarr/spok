@@ -1,5 +1,8 @@
 /* Vue Planning : agenda par périodes (jour/semaine) des items datés.
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Visage de l'élément = vignette commune au format ligne (components/item/ItemVignette, lib/itemFace.ts, décision
+ * Thomas 2026-11-08), posée sur les colonnes icône et titre, sans ses infos : type, date et statut restent les colonnes
+ * alignées propres au Planning (cadre), comme la pastille d'espace d'un portail et le menu ⋮.
+ * Éléments fermés (terminés ou annulés, isClosedStatus) masqués — avant le 2026-11-08 seul « Terminé » l'était.
  */
 import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useMemo } from 'react';
@@ -7,7 +10,6 @@ import { Link } from 'react-router-dom';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import {
-  ExternalLink,
   AlertTriangle,
   Calendar,
   CalendarDays,
@@ -20,11 +22,12 @@ import {
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { Item, SpaceReferentiels, StatusConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, isClosedStatus } from '@spok/shared';
 import { Badge } from '../ui/Badge';
-import { getTypeIcon, getTypeColor } from '../../constants/ui';
+import { getTypeIcon, getTypeColor, getTypeTextColor } from '../../constants/ui';
 import { EmptyHelp } from '../../help/EmptyHelp';
-import { safeHref } from '../../lib/sanitizeHtml';
+import { itemFace } from '../../lib/itemFace';
+import { ItemVignette } from '../item/ItemVignette';
 
 // Get start of today (midnight)
 function getStartOfToday(): Date {
@@ -189,7 +192,6 @@ interface PlanningItemProps {
 }
 
 function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statuses, referentiels, isHighlighted, isDimmed, isSearchMatch, highlightColor, canEdit = true, canEditItem }: PlanningItemProps) {
-  const Icon = getTypeIcon(item.type, item.url);
   const statusConfig = statuses.find((s) => s.id === item.status) || statuses.find((s) => s.id === 'undefined');
   const effectiveDate = item.dueDate || item.endDate;
   const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
@@ -203,12 +205,16 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
       } ${isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-950/30' : ''} ${isDimmed ? 'opacity-40' : ''} ${isPortal ? 'border-dashed border-primary/30' : ''}`}
       onClick={() => onEdit(item.id)}
     >
-      {/* Type icon */}
-      <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-      {/* Title */}
-      <div className="min-w-0 flex items-center gap-2">
-        <span className="truncate">{item.title}</span>
+      {/* Vignette commune, format ligne, sur les colonnes icône et titre ; type, date et statut sont en colonnes */}
+      <div className="col-span-2 min-w-0 flex items-center gap-2">
+        <ItemVignette
+          format="ligne"
+          title={item.title}
+          Icon={getTypeIcon(item.type)}
+          iconClass={getTypeTextColor(item.type, referentiels?.typeLabels)}
+          face={itemFace(item, 'ligne', { type: typeLabel, status: statusConfig?.label ?? null })}
+          showMeta={false}
+        />
         {isPortal && (
           <Link
             to={`/spaces/${item.spaceId}`}
@@ -219,21 +225,6 @@ function PlanningItem({ item, portalSpaceName, onEdit, onDelete, onUpdateStatus,
             <FolderKanban className="w-3 h-3" />
             <span className="truncate max-w-[80px]">{portalSpaceName}</span>
           </Link>
-        )}
-        {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
-          <img src={item.url} alt="" className="w-6 h-6 object-cover rounded border border-border flex-shrink-0" />
-        )}
-        {item.url && (
-          <a
-            href={safeHref(item.url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            title="Ouvrir le lien"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
         )}
       </div>
 
@@ -390,8 +381,8 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
 
   // Filter out completed items and group by period
   const groupedItems = useMemo(() => {
-    // Filter: exclude done items
-    const activeItems = items.filter((item) => item.status !== 'done');
+    // Filtre : sans les éléments fermés (catégorie terminé / annulé du référentiel)
+    const activeItems = items.filter((item) => !isClosedStatus(item.status, statuses));
 
     // Group by period
     const groups: Record<PeriodGroup, Item[]> = {
@@ -422,7 +413,7 @@ export function PlanningView({ items, currentSpaceId: _currentSpaceId, portalGro
     });
 
     return groups;
-  }, [items]);
+  }, [items, statuses]);
 
   // Count total active items
   const totalActiveItems = useMemo(() => {

@@ -1,11 +1,15 @@
 /* Nœuds React Flow de la MindMap : item, espace, portail — rendu et poignées.
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Intérieur d'un nœud d'item = vignette commune au format ligne (components/item/ItemVignette, lib/itemFace.ts, décision
+ * Thomas 2026-11-08), dans la couleur du nœud : miniature ou icône, titre sur une ligne, info principale, pastilles.
+ * Le nœud n'en est que le cadre (zone fragile, ne pas y toucher sans vérifier les arêtes) : fond = statut, bordure =
+ * priorité, poignées, dépli, épingle, menu ⋮, largeur 90-260 px.
  */
-import { useState, useRef, useCallback, useContext } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useContext } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import type { SpaceWithRole } from '@spok/shared';
 import { getTypeIcon, getPriorityConfig } from '../../constants/ui';
+import { itemFace } from '../../lib/itemFace';
+import { ItemVignette } from '../item/ItemVignette';
 
 // Border thickness + color based on priority (higher priority = thicker)
 function getPriorityBorder(priority: number | null | undefined): string {
@@ -21,150 +25,6 @@ import { SidebarDropContext } from '../Layout';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import type { TreeItem } from './mindmap-utils';
-import { safeHref } from '../../lib/sanitizeHtml';
-
-function FaviconImg({ src, domain, fallbackColor }: { src: string; domain: string; fallbackColor: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    const initial = domain.replace(/^www\./, '')[0]?.toUpperCase() ?? '?';
-    return (
-      <span
-        className="w-4 h-4 rounded-sm flex items-center justify-center text-[9px] font-bold leading-none"
-        style={{ backgroundColor: `${fallbackColor}33`, color: fallbackColor }}
-      >
-        {initial}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt=""
-      className="w-4 h-4 rounded-sm object-contain"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function ItemIllustration({ item, textColor }: { item: TreeItem; textColor: string }) {
-  const url = item.url;
-  if (!url) return null;
-
-  // Image : type IMAGE/DIAGRAM ou extension image
-  if (item.type === 'IMAGE' || item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)) {
-    return <ImageThumbnail url={url} />;
-  }
-
-  // Lien : favicon du site
-  if (item.type === 'LINK') {
-    let domain = '';
-    try { domain = new URL(url).hostname; } catch { /* url invalide */ }
-    const faviconUrl = domain ? `https://icons.duckduckgo.com/ip3/${domain}.ico` : '';
-    return (
-      <a
-        href={safeHref(url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 nodrag nopan"
-        title={url}
-      >
-        {faviconUrl ? (
-          <FaviconImg src={faviconUrl} domain={domain} fallbackColor={textColor} />
-        ) : (
-          <ExternalLink className="w-4 h-4" style={{ color: textColor }} />
-        )}
-      </a>
-    );
-  }
-
-  // Réunion : date de la réunion
-  if (item.type === 'MEETING' && item.startDate) {
-    const d = new Date(item.startDate);
-    const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-    return (
-      <span className="flex-shrink-0 text-xs font-medium px-1 py-0.5 rounded" style={{ backgroundColor: `${textColor}22`, color: textColor }}>
-        {label}
-      </span>
-    );
-  }
-
-  // Document : icône du type de fichier (PDF, Word, Excel…) avec lien vers le doc
-  if (item.type === 'DOCUMENT') {
-    const DocIcon = getTypeIcon(item.type, url);
-    return (
-      <a
-        href={safeHref(url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 p-0.5 hover:bg-black/10 rounded nodrag nopan"
-        title={url}
-      >
-        <DocIcon className="w-3.5 h-3.5" style={{ color: textColor }} />
-      </a>
-    );
-  }
-
-  return null;
-}
-
-function ImageThumbnail({ url }: { url: string }) {
-  const [hover, setHover] = useState(false);
-  const thumbRef = useRef<HTMLDivElement>(null);
-
-  const positionPopup = useCallback((popup: HTMLDivElement | null) => {
-    if (!popup || !thumbRef.current) return;
-    // Wait for image to have dimensions
-    const img = popup.querySelector('img');
-    const doPosition = () => {
-      const thumb = thumbRef.current!.getBoundingClientRect();
-      const pw = popup.offsetWidth;
-      const ph = popup.offsetHeight;
-      const margin = 8;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-
-      let x = thumb.left + thumb.width / 2 - pw / 2;
-      let y = thumb.top - ph - margin;
-
-      if (y < margin) y = thumb.bottom + margin;
-      if (y + ph > vh - margin) y = vh - margin - ph;
-      if (x + pw > vw - margin) x = vw - margin - pw;
-      if (x < margin) x = margin;
-
-      popup.style.left = `${x}px`;
-      popup.style.top = `${y}px`;
-      popup.style.visibility = 'visible';
-    };
-    if (img && img.complete) {
-      doPosition();
-    } else if (img) {
-      img.onload = doPosition;
-    }
-  }, []);
-
-  return (
-    <div
-      ref={thumbRef}
-      className="flex-shrink-0 nodrag nopan"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <img src={url} alt="" className="w-6 h-6 object-cover rounded border border-border cursor-zoom-in" />
-      {hover && createPortal(
-        <div
-          ref={positionPopup}
-          className="fixed z-[9999] p-1 bg-white rounded-lg shadow-2xl border border-border pointer-events-none"
-          style={{ visibility: 'hidden' }}
-        >
-          <img src={url} alt="" className="max-w-[500px] max-h-[500px] object-contain rounded" />
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
 
 // Custom node component for radial layout
 export interface MindMapNodeProps {
@@ -211,7 +71,6 @@ export interface MindMapNodeProps {
 
 export function MindMapNode({ data }: MindMapNodeProps) {
   const { item, hexColor, textColor, onEdit, onDelete, onUpdateStatus, onAddChild, onAddPortal, onToggleCollapse, onReorganizeChildren, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, statusOptions, isRoot, hasChildren, isCollapsed, childCount, hasPortalSupport, isHighlighted, isDimmed, isSearchMatch, isDropTarget, canEdit, isPinned, onTogglePin, onSavePosition, isPortal, portalSpaceName: _portalSpaceName } = data;
-  const Icon = getTypeIcon(item.type, item.url);
   const { dropTargetId: _dt } = useContext(SidebarDropContext); void _dt; // abonnement context (déclenche re-render sur highlight sidebar)
   const { setNodes, screenToFlowPosition, getNode } = useReactFlow();
   const dragStartRef = useRef<{ screenX: number; screenY: number; nodeX: number; nodeY: number } | null>(null);
@@ -317,10 +176,7 @@ export function MindMapNode({ data }: MindMapNodeProps) {
           </button>
         ) : null}
 
-        {/* 2. Type icon */}
-        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: textColor }} />
-
-        {/* 3. Pin button */}
+        {/* 2. Pin button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -336,11 +192,18 @@ export function MindMapNode({ data }: MindMapNodeProps) {
           )}
         </button>
 
-        {/* 4. Title */}
-        <span className="text-sm font-medium line-clamp-2 break-words" title={item.title}>{item.title}</span>
-
-        {/* 5. Illustration */}
-        <ItemIllustration item={item} textColor={textColor} />
+        {/* 3. Vignette commune, format ligne : miniature ou icône, titre, info principale, pastilles (couleur du nœud) */}
+        <ItemVignette
+          format="ligne"
+          title={item.title}
+          Icon={getTypeIcon(item.type)}
+          color={textColor}
+          face={itemFace(item, 'ligne', {
+            type: item.type,
+            status: item.status && item.status !== 'undefined' ? statusOptions.find((s) => s.id === item.status)?.label ?? null : null,
+          })}
+          titleClassName="font-medium"
+        />
 
         {/* 6. Action menu */}
         <div className="ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity nodrag nopan">

@@ -1,5 +1,5 @@
 /* Tests de copyItemToSession / revealChildInSession / cloneSessionCopies : copie verrouillée sans sous-items (révélés
- * un par un), réutilisation, images, recopie des éléments présentés vers la séance « suite ». */
+ * un par un), réutilisation, images (description et contenus, fichiers dupliqués — lot 4), recopie vers la « suite ». */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createMockPrisma, MockPrisma } from '../test/helpers.js'
 
@@ -14,7 +14,7 @@ import { copyItemToSession, revealChildInSession, cloneSessionCopies } from './s
 const source = {
   id: 'src-1', spaceId: 'src-space', type: 'NOTE', title: 'Budget', status: 'todo', priority: null,
   description: '<p>x</p><img src="https://cdn.test/items/src-1/a.webp">', content: null,
-  url: 'https://cdn.test/items/src-1/main.webp', dueDate: null, startDate: null, endDate: null,
+  dueDate: null, startDate: null, endDate: null,
   position: 3, updatedAt: new Date('2026-10-10T09:00:00Z'), tags: [],
 }
 
@@ -81,10 +81,18 @@ describe('copyItemToSession', () => {
     expect(prisma.item.create).not.toHaveBeenCalled()
   })
 
-  it('duplique les images R2 (url + description)', async () => {
+  it('duplique les images R2 de la description et les fichiers des contenus', async () => {
+    prisma.itemContent.findMany.mockResolvedValue([
+      { kind: 'IMAGE', url: 'https://cdn.test/items/src-1/main.webp', name: 'main.webp', mimeType: 'image/webp', size: 10, xml: null, position: 0 },
+      { kind: 'LINK', url: 'https://site.fr', name: null, mimeType: null, size: null, xml: null, position: 0 },
+    ])
     const res = await copyItemToSession(prisma as any, { sourceItemId: 'src-1', sourceSpaceId: 'src-space', sessionSpaceId: 'sess', userId: 'u1' })
-    expect(res.item.url).toMatch(/^https:\/\/cdn\.test\/items\/copy-1\//)
     expect(res.item.description).not.toContain('items/src-1/')
+    const copied = prisma.itemContent.create.mock.calls.map((c: any[]) => c[0].data)
+    expect(copied).toEqual([
+      expect.objectContaining({ itemId: 'copy-1', kind: 'IMAGE', url: expect.stringMatching(/^https:\/\/cdn\.test\/items\/copy-1\//) }),
+      expect.objectContaining({ itemId: 'copy-1', kind: 'LINK', url: 'https://site.fr' }),
+    ])
   })
 
   it('réutilise la dernière copie si la source n\'a pas changé', async () => {

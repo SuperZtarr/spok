@@ -181,7 +181,6 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
           if ('title' in before) restoreData.title = before.title;
           if ('description' in before) restoreData.description = before.description;
           if ('content' in before) restoreData.content = before.content;
-          if ('url' in before) restoreData.url = before.url;
           if ('status' in before) restoreData.status = before.status;
           if ('priority' in before) restoreData.priority = before.priority;
           if ('dueDate' in before) restoreData.dueDate = before.dueDate ? new Date(before.dueDate as string) : null;
@@ -317,7 +316,6 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             title: before.title as string,
             description: before.description as string | null,
             content: before.content as any,
-            url: before.url as string | null,
             status: before.status as string | null,
             priority: before.priority as number | null,
             position: before.position as number,

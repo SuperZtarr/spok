@@ -1,10 +1,11 @@
 /* Vue Liste : arborescence d'items (TreeItemRow inline), tri, DnD, RootDropZone — vue par défaut.
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
- * Badge de l'assigné (AssigneeBadge) après le titre et les tags de chaque ligne (2026-11-05).
+ * Liste à plat (tri par colonne) : visage de l'élément = vignette commune au format ligne (components/item/ItemVignette,
+ * lib/itemFace.ts, décision Thomas 2026-11-08), posée sur les colonnes icône et titre, sans ses infos (déjà en
+ * colonnes). Badge de l'assigné (AssigneeBadge) après la vignette (2026-11-05).
  */
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
+import { FileText, Calendar, MessageSquare, ArrowUp, ArrowDown, FolderKanban, Printer, FileDown, Info } from 'lucide-react';
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -14,11 +15,11 @@ import type { Item, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { AssigneeBadge } from '../ui/AssigneeBadge';
-import { TagBadge } from '../ui/TagBadge';
-import { getTypeIcon, getTypeColor, getPriorityConfig } from '../../constants/ui';
+import { getTypeIcon, getTypeColor, getTypeTextColor, getPriorityConfig } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
+import { itemFace } from '../../lib/itemFace';
+import { ItemVignette } from '../item/ItemVignette';
 import { EmptyHelp } from '../../help/EmptyHelp';
-import { safeHref } from '../../lib/sanitizeHtml';
 
 // Extended Item type with contribution count
 interface ItemWithContributions extends Item {
@@ -73,47 +74,6 @@ function formatDate(dateString: string | null | undefined): string | null {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function ImageThumbnail({ url }: { url: string }) {
-  const [showPreview, setShowPreview] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handleMouseEnter = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setPosition({ top: rect.bottom + 8, left: rect.left });
-    }
-    setShowPreview(true);
-  };
-
-  return (
-    <div
-      ref={ref}
-      className="relative flex-shrink-0"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setShowPreview(false)}
-    >
-      <img
-        src={url}
-        alt=""
-        className="w-6 h-6 object-cover rounded border border-border"
-      />
-      {showPreview && (
-        <div
-          className="fixed z-50 p-1 bg-background border border-border rounded-lg shadow-xl"
-          style={{ top: position.top, left: position.left }}
-        >
-          <img
-            src={url}
-            alt=""
-            className="max-w-xs max-h-48 object-contain rounded"
-          />
-        </div>
-      )}
-    </div>
-  );
 }
 
 type SortField = 'title' | 'type' | 'status' | 'priority' | 'parent' | 'date' | 'contributions';
@@ -282,11 +242,9 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
           <div className="flex-1 overflow-auto">
           <div className="divide-y divide-border">
             {sortedItems.map((item, index) => {
-              const Icon = getTypeIcon(item.type, item.url);
               const statusLabel = statusLabels[item.status || ''] || 'Non défini';
               const statusColor = statusColors[item.status || 'none'] || statusColors['none'];
               const typeLabel = typeLabelsShort[item.type] || item.type;
-              const hasImage = item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url));
               const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
               const portalSpaceName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
               const isUrgent = item.priority === 4;
@@ -309,23 +267,16 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                   className={`grid ${gridColsClass} items-center gap-3 px-4 py-2.5 hover:bg-accent cursor-pointer group ${isPortal ? 'bg-muted/10' : ''} ${isUrgent ? 'animate-urgent-blink' : isUnseen ? 'animate-unseen-blink' : ''}`}
                   onClick={() => onEdit(item.id)}
                 >
-                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate">{item.title}</span>
-                    {hasImage && (
-                      <ImageThumbnail url={item.url!} />
-                    )}
-                    {item.tags && item.tags.length > 0 && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {item.tags.slice(0, 3).map((tag) => (
-                          <TagBadge key={tag.id} tag={tag} size="sm" />
-                        ))}
-                        {item.tags.length > 3 && (
-                          <span className="text-[10px] text-muted-foreground">+{item.tags.length - 3}</span>
-                        )}
-                      </div>
-                    )}
+                  {/* Vignette commune, format ligne, sur les colonnes icône et titre ; ses infos sont déjà en colonnes */}
+                  <div className="col-span-2 flex items-center gap-2 min-w-0">
+                    <ItemVignette
+                      format="ligne"
+                      title={item.title}
+                      Icon={getTypeIcon(item.type)}
+                      iconClass={getTypeTextColor(item.type, referentiels?.typeLabels)}
+                      face={itemFace(item, 'ligne', { type: typeLabel, status: statusLabel })}
+                      showMeta={false}
+                    />
                     <AssigneeBadge item={item} />
                     <button
                       className={`sm:hidden flex-shrink-0 p-0.5 rounded transition-colors ${infoOpen ? 'text-primary' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
@@ -389,18 +340,6 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                       <span className="text-xs text-muted-foreground" title={formatDate(item.startDate) || ''}>
                         <Calendar className="w-3 h-3" />
                       </span>
-                    )}
-                    {item.url && (
-                      <a
-                        href={safeHref(item.url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-700"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Ouvrir le lien"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
                     )}
                     {item.contributionCount !== undefined && item.contributionCount > 0 && (
                       <span

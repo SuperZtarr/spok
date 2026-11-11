@@ -1,7 +1,8 @@
 /*
  * Copie d'un item affiché en séance vers l'espace de séance, verrouillée (lockedAt), avec trace d'origine
- * (sourceItemId/sourceSpaceId), tags recréés par nom dans l'espace de séance, images R2 dupliquées (une copie
- * ne partage jamais un fichier de la source). Les sous-items ne sont PAS copiés à l'affichage (« ne pas
+ * (sourceItemId/sourceSpaceId), tags recréés par nom dans l'espace de séance, images R2 de la description et
+ * contenus (fichiers dupliqués, utils/itemContentCopy.ts — lot 4) recopiés : une copie ne partage jamais un fichier
+ * de la source. Les sous-items ne sont PAS copiés à l'affichage (« ne pas
  * spoiler ») : revealChildInSession les copie un par un sous la copie parente. Réaffichage / re-révélation :
  * si la source n'a pas changé depuis la dernière copie, on la réutilise. Un item déjà dans l'espace de séance
  * est réaffiché tel quel. Une nouvelle copie se range sous la copie de son parent d'origine s'il a déjà été
@@ -13,6 +14,7 @@
 import { QUESTION_STATUS } from '@spok/shared';
 import { isR2Configured, isR2Url, copyR2Object } from './r2.js';
 import { copyQuestionData } from './question.js';
+import { copyItemContents } from './itemContentCopy.js';
 
 export class SessionCopyError extends Error {
   constructor(public code: 'NOT_FOUND', message: string) { super(message); }
@@ -23,9 +25,8 @@ interface CopyParams { sourceItemId: string; sourceSpaceId: string; sessionSpace
 const IMG_SRC = /<img[^>]+src="([^"]+)"/g;
 const TAGS_INCLUDE = { tags: { include: { tag: true } } } as const;
 
-async function copyImages(item: { url: string | null; description: string | null }, newItemId: string) {
-  if (!isR2Configured()) return { url: item.url, description: item.description };
-  const url = isR2Url(item.url) ? await copyR2Object(item.url, newItemId) : item.url;
+async function copyImages(item: { description: string | null }, newItemId: string) {
+  if (!isR2Configured()) return { description: item.description };
   let description = item.description;
   if (description) {
     const sources = [...description.matchAll(IMG_SRC)].map((m) => m[1]).filter((s) => isR2Url(s));
@@ -33,7 +34,7 @@ async function copyImages(item: { url: string | null; description: string | null
       description = description.split(src).join(await copyR2Object(src, newItemId));
     }
   }
-  return { url, description };
+  return { description };
 }
 
 async function sessionTagIds(prisma: any, sessionSpaceId: string, tags: Array<{ tag: { name: string; color: string | null } }>) {
@@ -50,17 +51,18 @@ async function createLockedCopy(prisma: any, src: any, params: CopyParams, paren
   const created = await prisma.item.create({
     data: {
       type: src.type, title: src.title, description: src.description, content: src.content ?? undefined,
-      url: src.url, status: reopened ? QUESTION_STATUS.OPEN : src.status, priority: src.priority, position: src.position,
+      status: reopened ? QUESTION_STATUS.OPEN : src.status, priority: src.priority, position: src.position,
       dueDate: src.dueDate, startDate: src.startDate, endDate: src.endDate,
       spaceId: params.sessionSpaceId, createdById: params.userId, parentId,
       lockedAt, sourceItemId: src.id, sourceSpaceId: src.spaceId ?? params.sourceSpaceId,
     },
   });
   if (src.type === 'QUESTION') await copyQuestionData(prisma, src.id, created.id, { withVotes: false, keepOutcome: !reopened });
+  await copyItemContents(prisma, src.id, created.id, { userId: params.userId, copyFiles: true });
   const images = await copyImages(src, created.id);
   const tagIds = await sessionTagIds(prisma, params.sessionSpaceId, src.tags ?? []);
   if (tagIds.length > 0) await prisma.itemTag.createMany({ data: tagIds.map((tagId) => ({ itemId: created.id, tagId })) });
-  if (tagIds.length === 0 && images.url === src.url && images.description === src.description) return { ...created, tags: [] };
+  if (tagIds.length === 0 && images.description === src.description) return { ...created, tags: [] };
   return prisma.item.update({ where: { id: created.id }, data: images, include: TAGS_INCLUDE });
 }
 
@@ -144,7 +146,7 @@ export async function cloneSessionCopies(prisma: any, params: CloneParams): Prom
       const created = await prisma.item.create({
         data: {
           type: c.type, title: c.title, description: c.description, content: c.content ?? undefined,
-          url: c.url, status: c.status, priority: c.priority, position: c.position,
+          status: c.status, priority: c.priority, position: c.position,
           dueDate: c.dueDate, startDate: c.startDate, endDate: c.endDate,
           spaceId: params.toSpaceId, createdById: c.createdById,
           parentId: c.parentId ? oldToNew.get(c.parentId) ?? null : null,
@@ -153,10 +155,11 @@ export async function cloneSessionCopies(prisma: any, params: CloneParams): Prom
       });
       oldToNew.set(c.id, created.id);
       if (c.type === 'QUESTION') await copyQuestionData(prisma, c.id, created.id, { withVotes: true, keepOutcome: true });
+      await copyItemContents(prisma, c.id, created.id, { userId: c.createdById, copyFiles: true });
       const images = await copyImages(c, created.id);
       const tagIds = await sessionTagIds(prisma, params.toSpaceId, c.tags ?? []);
       if (tagIds.length > 0) await prisma.itemTag.createMany({ data: tagIds.map((tagId) => ({ itemId: created.id, tagId })) });
-      if (images.url !== c.url || images.description !== c.description) {
+      if (images.description !== c.description) {
         await prisma.item.update({ where: { id: created.id }, data: images });
       }
     }

@@ -2,8 +2,9 @@
  * Élément vide tout juste créé (« Nouveau », création de l'en-tête, sous-élément, double-clic Process…) : la création
  * écrit l'élément en base AVANT d'ouvrir sa fiche — refermer la fiche sans rien saisir laissait un élément vide.
  * ItemEditModal le supprime à la fermeture sans enregistrement quand shouldDiscardOnClose est vrai (2026-10-28).
- * - isItemEmpty : aucun contenu (titre, description, adresse, contenu/schéma, dates, priorité, assignation, étiquettes,
- *   sous-éléments, relations, contributions). Type, statut et parent ne comptent pas.
+ * - isItemEmpty : aucun contenu (titre, description, adresse, contenu/schéma, contenus joints — images, fichiers, liens,
+ *   schémas, lot 2 des contenus multiples —, dates, priorité, assignation, étiquettes, sous-éléments, relations,
+ *   contributions). Type, statut et parent ne comptent pas.
  * - isFreshDraft : créé par l'utilisateur au plus FRESH_DRAFT_MAX_AGE_MS avant l'ouverture de la fiche — un ancien
  *   élément vide qu'on rouvre n'est jamais supprimé.
  * Règle de gestion : empty-new-item-discarded (lib/businessRules.ts).
@@ -12,7 +13,7 @@ import type { Item } from '@spok/shared';
 
 export const FRESH_DRAFT_MAX_AGE_MS = 5 * 60 * 1000;
 
-type ItemLike = Pick<Item, 'title' | 'description' | 'url' | 'content' | 'dueDate' | 'startDate' | 'endDate' | 'priority' | 'assignedToId' | 'assignedToName' | 'tags'> & {
+type ItemLike = Pick<Item, 'title' | 'description' | 'content' | 'contents' | 'dueDate' | 'startDate' | 'endDate' | 'priority' | 'assignedToId' | 'assignedToName' | 'tags'> & {
   contributions?: unknown[] | null;
   relationsFrom?: unknown[] | null;
   relationsTo?: unknown[] | null;
@@ -25,8 +26,8 @@ const hasDescription = (html: string | null | undefined) =>
 export function isItemEmpty(item: ItemLike, childCount: number): boolean {
   return !item.title?.trim()
     && !hasDescription(item.description)
-    && !item.url?.trim()
     && !(item.content && Object.keys(item.content).length > 0)
+    && !(item.contents?.length)
     && !item.dueDate && !item.startDate && !item.endDate
     && item.priority == null
     && !item.assignedToId && !item.assignedToName

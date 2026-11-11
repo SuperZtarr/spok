@@ -649,9 +649,13 @@ describe('/live-sessions', () => {
       expect(res.json().agenda).toHaveLength(2)
     })
 
-    // Vignettes (2026-10-12) : URL d'un fichier de l'espace source → animateur (toutes), présentateur (ses lignes)
+    // Vignettes (2026-10-12) : URL d'un fichier de l'espace source → animateur (toutes), présentateur (ses lignes) ;
+    // tirées des contenus depuis le lot 4 (première image, sinon aperçu du premier schéma)
     const sourceItems = async ({ where }: any) => (where?.id?.in
-      ? [{ id: 'i1', type: 'IMAGE', url: 'https://cdn/i1.webp' }, { id: 'i2', type: 'DIAGRAM', url: 'https://cdn/i2.png' }]
+      ? [
+          { id: 'i1', contents: [{ kind: 'LINK', url: 'https://site.fr' }, { kind: 'IMAGE', url: 'https://cdn/i1.webp' }] },
+          { id: 'i2', contents: [{ kind: 'DIAGRAM', url: 'https://cdn/i2.png' }] },
+        ]
       : [])
 
     it('animateur : vignette de l\'image ou du schéma source', async () => {

@@ -35,7 +35,7 @@ function mockItem(overrides: Record<string, unknown> = {}) {
   return {
     id: 'item-1',
     title: 'Test Item',
-    type: 'NOTE',
+    type: 'UNDEFINED',
     description: null,
     content: null,
     url: null,
@@ -165,7 +165,7 @@ describe('Items routes', () => {
       }
 
       it('accepte plusieurs types', async () => {
-        expect((await whereFor('type=TASK,BUG')).type).toEqual({ in: ['TASK', 'BUG'] })
+        expect((await whereFor('type=TASK,PERIOD')).type).toEqual({ in: ['TASK', 'PERIOD'] })
       })
 
       it('refuse un type inconnu dans la liste', async () => {
@@ -235,7 +235,7 @@ describe('Items routes', () => {
   // ─── CREATE ITEM ──────────────────────────────────────────────
 
   describe('POST /spaces/:spaceId/items', () => {
-    it('should create a NOTE item', async () => {
+    it('crée un Élément (type par défaut)', async () => {
       allowSpaceAccess()
       const created = mockItem({ id: 'new-item', tags: [] })
       prisma.item.create.mockResolvedValue(created)
@@ -244,7 +244,7 @@ describe('Items routes', () => {
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { type: 'NOTE', title: 'My Note' },
+        payload: { type: 'UNDEFINED', title: 'Mon élément' },
       })
 
       expect(res.statusCode).toBe(201)
@@ -254,38 +254,25 @@ describe('Items routes', () => {
       expect(createArg.data.createdById).toBe(USER_ID)
     })
 
-    it('refuse une URL javascript: (création et modification)', async () => {
+    it('ignore un champ url (lot 4 : un média est un contenu) et refuse un type retiré', async () => {
       allowSpaceAccess()
-      const post = await app.inject({
+      prisma.item.create.mockResolvedValue(mockItem({ id: 'l', type: 'UNDEFINED', tags: [] }))
+      const res = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { type: 'LINK', title: 'Piège', url: 'javascript:alert(1)' },
+        payload: { type: 'UNDEFINED', title: 'Lien', url: 'javascript:alert(1)' },
       })
-      expect(post.statusCode).toBe(400)
-      expect(prisma.item.create).not.toHaveBeenCalled()
+      expect(res.statusCode).toBe(201)
+      expect(prisma.item.create.mock.calls[0][0].data).not.toHaveProperty('url')
 
-      prisma.item.findFirst.mockResolvedValue(mockItem())
-      const patch = await app.inject({
-        method: 'PATCH',
-        url: `/spaces/${SPACE_ID}/items/item-1`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { url: 'JavaScript:alert(1)' },
-      })
-      expect(patch.statusCode).toBe(400)
-      expect(prisma.item.update).not.toHaveBeenCalled()
-    })
-
-    it('accepte une URL https', async () => {
-      allowSpaceAccess()
-      prisma.item.create.mockResolvedValue(mockItem({ id: 'l', type: 'LINK', url: 'https://x.fr', tags: [] }))
-      const res = await app.inject({
+      const retired = await app.inject({
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items`,
         headers: { authorization: `Bearer ${token}` },
         payload: { type: 'LINK', title: 'Lien', url: 'https://x.fr' },
       })
-      expect(res.statusCode).toBe(201)
+      expect(retired.statusCode).toBe(400)
     })
 
     it('should create item with tags', async () => {
@@ -312,7 +299,7 @@ describe('Items routes', () => {
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { type: 'NOTE', title: 'Should fail' },
+        payload: { type: 'UNDEFINED', title: 'Should fail' },
       })
 
       expect(res.statusCode).toBe(403)
@@ -340,7 +327,7 @@ describe('Items routes', () => {
         method: 'POST',
         url: `/spaces/${SPACE_ID}/items`,
         headers: { authorization: `Bearer ${token}` },
-        payload: { type: 'NOTE' },
+        payload: { type: 'UNDEFINED' },
       })
 
       expect(res.statusCode).toBe(201)
@@ -704,7 +691,7 @@ describe('Items routes', () => {
       prisma.item.findMany
         .mockResolvedValueOnce([{ id: 'child-1' }]) // children
         .mockResolvedValueOnce([]) // grandchildren
-        .mockResolvedValueOnce([{ id: 'child-1', title: 'Child', type: 'NOTE' }]) // descendants for audit
+        .mockResolvedValueOnce([{ id: 'child-1', title: 'Child', type: 'UNDEFINED' }]) // descendants for audit
       prisma.item.deleteMany.mockResolvedValue({ count: 1 })
       prisma.item.delete.mockResolvedValue(mockItem())
 
@@ -979,7 +966,7 @@ describe('parent dans le même espace (règle item-parent-same-space)', () => {
   const NOT_FOUND = 'Parent introuvable dans cet espace'
 
   const send: Record<string, (parentId: string | null) => Promise<any>> = {
-    'POST /': (parentId) => app.inject({ method: 'POST', url: '/spaces/space-1/items', headers: headers(), payload: { type: 'NOTE', title: 'T', ...(parentId ? { parentId } : {}) } }),
+    'POST /': (parentId) => app.inject({ method: 'POST', url: '/spaces/space-1/items', headers: headers(), payload: { type: 'UNDEFINED', title: 'T', ...(parentId ? { parentId } : {}) } }),
     'POST /from-template': (parentId) => app.inject({ method: 'POST', url: '/spaces/space-1/items/from-template', headers: headers(), payload: { templateId: 'tpl-1', ...(parentId ? { parentId } : {}) } }),
     'PATCH /:id': (parentId) => app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1', headers: headers(), payload: { parentId } }),
     'PATCH /:id/move': (parentId) => app.inject({ method: 'PATCH', url: '/spaces/space-1/items/item-1/move', headers: headers(), payload: { parentId, position: 0 } }),
@@ -994,7 +981,7 @@ describe('parent dans le même espace (règle item-parent-same-space)', () => {
     prisma.item.findFirst.mockResolvedValue(mockItem())
     prisma.item.create.mockResolvedValue(mockItem({ id: 'new' }))
     prisma.item.update.mockResolvedValue(mockItem())
-    prisma.itemTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', structure: { title: 'R', type: 'NOTE', children: [] } })
+    prisma.itemTemplate.findUnique.mockResolvedValue({ id: 'tpl-1', structure: { title: 'R', type: 'UNDEFINED', children: [] } })
     prisma.$transaction.mockResolvedValue([])
   })
 
@@ -1070,7 +1057,7 @@ describe('verrou de séance', () => {
   let prisma: MockPrisma
   const token = () => getTestToken(app)
   const lockedItem = {
-    id: 'copy-1', spaceId: 'sess-space', type: 'NOTE', title: 'Copie', status: 'todo',
+    id: 'copy-1', spaceId: 'sess-space', type: 'UNDEFINED', title: 'Copie', status: 'todo',
     createdById: 'presenter-id', lockedAt: new Date('2026-10-10T10:00:00Z'), parentId: null,
     updatedAt: new Date('2026-10-10T10:00:00Z'), position: 0,
   }

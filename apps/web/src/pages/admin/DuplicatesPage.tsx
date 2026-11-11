@@ -175,7 +175,7 @@ export function DuplicatesPage() {
                 {/* Cards row */}
                 <div className="flex gap-3 p-4 overflow-x-auto">
                   {group.items.map((item) => {
-                    const Icon = getTypeIcon(item.type, item.url ?? undefined);
+                    const Icon = getTypeIcon(item.type);
                     const isConfirming = confirmId === item.id;
                     const isDeleting = deleteMutation.isPending && confirmId === item.id;
                     return (

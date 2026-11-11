@@ -52,7 +52,6 @@ export function buildItemRows(items: Item[]) {
     'Type': item.type,
     'Statut': item.status || '',
     'Priorité': item.priority ?? '',
-    'URL': item.url || '',
     'Parent': item.parentId ? (titleMap.get(item.parentId) || item.parentId) : '',
     'Assigné à': (item as any).assignedTo?.name || item.assignedToName || '',
     'Tags': item.tags?.map(t => t.name).join(', ') || '',
@@ -95,7 +94,7 @@ export function exportJSON(items: Item[], filename: string, spaceName: string) {
     exportedAt: new Date().toISOString(),
     items: items.map(item => ({
       id: item.id, type: item.type, title: item.title,
-      description: item.description || null, url: item.url || null,
+      description: item.description || null,
       status: item.status || null, priority: item.priority ?? null,
       parentId: item.parentId || null, assignedToId: item.assignedToId || null,
       tags: item.tags?.map(t => t.name) || [],

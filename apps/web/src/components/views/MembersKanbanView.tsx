@@ -126,7 +126,7 @@ function MemberKanbanCard({
   canEditItem?: (item: { createdById?: string }) => boolean;
   referentiels?: SpaceReferentiels;
 }) {
-  const Icon = getTypeIcon(item.type, item.url);
+  const Icon = getTypeIcon(item.type);
   const pConfig = getPriorityConfig(item.priority);
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
@@ -588,7 +588,7 @@ export function MembersKanbanView({
           <div className="bg-card border rounded-lg p-3 shadow-lg max-w-[250px] opacity-90">
             <div className="flex items-center gap-2">
               {(() => {
-                const Icon = getTypeIcon(draggedItem.type, draggedItem.url);
+                const Icon = getTypeIcon(draggedItem.type);
                 return <Icon className={`w-4 h-4 flex-shrink-0 ${getTypeTextColor(draggedItem.type, referentiels?.typeLabels)}`} />;
               })()}
               <span className="text-sm font-medium truncate">{draggedItem.title}</span>

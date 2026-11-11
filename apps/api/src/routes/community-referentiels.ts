@@ -4,10 +4,13 @@
  * Lecture : types absents d'un référentiel personnalisé complétés par withDefaultTypeLabels (utils/referentiels.ts),
  * qui rajoute aussi les statuts réservés (issues d'une question). Enregistrement : les statuts réservés par défaut
  * ne peuvent être ni supprimés ni dé-réservés (withDefaultStatuses), seuls libellé, couleur, ordre et visibilité changent.
+ * Catégorie d'un statut (category, sens terminé / en cours…) : enregistrée telle que choisie, sauf pour un statut
+ * réservé, qui garde la sienne.
+ * bugsViewTag : tag suivi par la vue Bugs (null ou vide = défaut « bug »), gardé si le PUT ne le cite pas.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { DEFAULT_REFERENTIELS, withDefaultStatuses, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, STATUS_CATEGORIES, withDefaultStatuses, type SpaceReferentiels, type StatusConfig, type TypeLabelConfig } from '@spok/shared';
 import { withDefaultTypeLabels } from '../utils/referentiels.js';
 
 const statusConfigSchema = z.object({
@@ -18,6 +21,7 @@ const statusConfigSchema = z.object({
   order: z.number().int().min(0),
   visible: z.boolean(),
   types: z.array(z.string()).optional(),
+  category: z.enum(STATUS_CATEGORIES).optional(),
 });
 
 const typeLabelConfigSchema = z.object({
@@ -32,6 +36,8 @@ const typeLabelConfigSchema = z.object({
 const updateReferentielsSchema = z.object({
   statuses: z.array(statusConfigSchema).optional(),
   typeLabels: z.record(z.string(), typeLabelConfigSchema).optional(),
+  // Tag suivi par la vue Bugs (lot 4 contenus multiples) : null ou vide = retour au défaut « bug »
+  bugsViewTag: z.string().trim().max(50).nullable().optional(),
 });
 
 function parseReferentiels(config: unknown): SpaceReferentiels | null {
@@ -97,6 +103,8 @@ export const communityReferentielsRoutes: FastifyPluginAsync = async (fastify) =
       statuses: withDefaultStatuses((body.statuses as StatusConfig[]) || current.statuses),
       typeLabels: (body.typeLabels as Record<string, TypeLabelConfig>) || current.typeLabels,
     };
+    const bugsViewTag = body.bugsViewTag !== undefined ? body.bugsViewTag || undefined : current.bugsViewTag;
+    if (bugsViewTag) updated.bugsViewTag = bugsViewTag;
 
     await fastify.prisma.community.update({
       where: { id: communityId },

@@ -187,7 +187,7 @@ export function ThreadView({
     const isExpanded = expandedThreadId === node.id;
     const contribCount = getContributionCount(node);
     const lastActivity = getLastActivity(node);
-    const TypeIcon = getTypeIcon(node.type, node.url);
+    const TypeIcon = getTypeIcon(node.type);
     const typeColor = getTypeColor(node.type, referentiels?.typeLabels);
     const typeLabel = referentiels?.typeLabels?.[node.type]?.labelShort || node.type;
     const isMatch = !searchMatchIds || searchMatchIds.has(node.id);

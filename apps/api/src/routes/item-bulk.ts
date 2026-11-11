@@ -2,6 +2,7 @@
    Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue. */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
+import { copyItemContents } from '../utils/itemContentCopy.js';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
@@ -141,7 +142,6 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
             title: item.title,
             description: item.description,
             content: item.content as any,
-            url: item.url,
             // Question dupliquée : repart « Ouverte », options et réglage repris, sans votes ni issue
             status: item.type === 'QUESTION' ? QUESTION_STATUS.OPEN : item.status,
             priority: item.priority,
@@ -157,6 +157,8 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
 
         oldIdToNewId.set(item.id, newItem.id);
         createdItems.push({ oldItem: item, newItem });
+        // Contenus (lot 4 : remplacent l'ancien champ url) ; fichiers partagés avec l'original, comme avant
+        await copyItemContents(fastify.prisma, item.id, newItem.id, { userId: request.user.userId, copyFiles: false });
         if (item.type === 'QUESTION') {
           await copyQuestionData(fastify.prisma, item.id, newItem.id, { withVotes: false, keepOutcome: false });
         }

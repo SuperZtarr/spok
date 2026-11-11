@@ -92,7 +92,7 @@ export function ProcessUnplacedPanel({ items, canEdit, onMakeLane }: ProcessUnpl
           <li className="px-3 py-2 text-xs text-muted-foreground">Tous les items sont placés</li>
         )}
         {rows.map(({ item, depth, hasChildren }) => {
-          const Icon = getTypeIcon(item.type, item.url);
+          const Icon = getTypeIcon(item.type);
           const isCollapsed = collapsedIds.has(item.id);
           return (
             <li

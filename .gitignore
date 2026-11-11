@@ -70,3 +70,6 @@ docs/CONFIG.md
 
 # Stockage local des fichiers en dev (utils/r2.ts, mode local sans R2)
 apps/api/.local-uploads/
+
+# Sauvegardes des scripts de migration de données (scripts/migrate-item-types.ts)
+backups/

@@ -130,7 +130,7 @@ describe('generateLiveReport', () => {
     const id = await generateLiveReport(prisma, 'ls-1', 'h')
     expect(id).toBe('note-1')
     const data = prisma.item.create.mock.calls[0][0].data
-    expect(data).toMatchObject({ type: 'NOTE', title: 'Compte-rendu — Séance 2026-11-08', spaceId: 'sp', createdById: 'h' })
+    expect(data).toMatchObject({ type: 'UNDEFINED', title: 'Compte-rendu — Séance 2026-11-08', spaceId: 'sp', createdById: 'h' })
     expect(data.description).toContain('réaffiché à 15:05')
     expect(data.description).toContain('Relations : bloque « Plan » ; lié à un élément d\'un autre espace')
     expect(data.description).not.toContain('Secret')

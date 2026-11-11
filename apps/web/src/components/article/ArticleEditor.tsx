@@ -2,12 +2,12 @@
  * Mode « Composer » d'un article (fiche ItemEditModal, seulement si article.canEditArticle) :
  * - blocs réordonnables par glisser-déposer (@dnd-kit/sortable, poignée) → reorder optimiste (useArticle) ;
  * - barre de chaque bloc : « À côté » (sauf le 1er : à droite du bloc précédent, rangée de 3 colonnes max — largeur et
- *   position alors masquées), largeur (pleine / large / moyenne), position (centrée / gauche / droite, IMAGE et DIAGRAM
- *   seulement), « Ouvrir la fiche » si le lecteur a accès à l'élément, « Retirer » (l'élément n'est pas supprimé) ;
- * - note modifiable sur place (RichTextEditor) si item.canEdit, enregistrée par itemsApi.update après une pause de
+ *   position alors masquées), largeur (pleine / large / moyenne), position (centrée / gauche / droite, bloc « figure »
+ *   seulement : élément qui ne porte que des images / schémas, blockLayout), « Ouvrir la fiche » si le lecteur a accès à l'élément, « Retirer » (l'élément n'est pas supprimé) ;
+ * - texte modifiable sur place (RichTextEditor) : bloc d'un Élément (UNDEFINED, ex-Note fusionnée le 2026-11-11) si item.canEdit, enregistrée par itemsApi.update après une pause de
  *   frappe ; sinon lecture seule ;
  * - insertion entre deux blocs et en fin : « Élément » (ArticleBrowser : parcourir, cocher, ou prendre un processus)
- *   ou « Texte » (nouvelle note) ; un élément sans option = ajout unitaire ; plusieurs éléments, options enfants /
+ *   ou « Texte » (nouvel Élément de texte) ; un élément sans option = ajout unitaire ; plusieurs éléments, options enfants /
  *   chaîne, ou processus = ajout groupé : aperçu (articlesApi.previewBatch)
  *   → ArticleBatchConfirm → state.addBatch (confirmLessVisible = aperçu.lessVisible) ;
  * - 409 LESS_VISIBLE → ConfirmModal (texte de la fiche) puis renvoi avec confirmLessVisible ; 409 DUPLICATE_REFERENCE → message ;
@@ -28,6 +28,7 @@ import { RichTextEditor } from '../ui/RichTextEditor';
 import { ConfirmModal } from '../ConfirmModal';
 import { HelpHint } from '../../help/HelpHint';
 import { pageHint } from '../../help/pageHint';
+import { blockLayout } from './articleBlockContent';
 import { ArticleBlock } from './ArticleBlock';
 import { ArticleBrowser } from './ArticleBrowser';
 import { ArticleBatchConfirm } from './ArticleBatchConfirm';
@@ -79,8 +80,8 @@ function NoteEditor({ spaceId, articleId, block }: { spaceId: string; articleId:
 function SortableBlock({ spaceId, articleId, block, state, isFirst }: { spaceId: string; articleId: string; block: ArticleBlockView; state: ArticleState; isFirst: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const item = block.item;
-  const floatable = item?.type === 'IMAGE' || item?.type === 'DIAGRAM';
-  const editableNote = item?.type === 'NOTE' && item.canEdit;
+  const floatable = !!item && blockLayout(item) === 'figure';
+  const editableNote = item?.type === 'UNDEFINED' && item.canEdit;
 
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
@@ -135,7 +136,7 @@ function SortableBlock({ spaceId, articleId, block, state, isFirst }: { spaceId:
           {editableNote ? <NoteEditor spaceId={spaceId} articleId={articleId} block={block} /> : undefined}
         </ArticleBlock>
       </div>
-      {item?.type === 'NOTE' && !item.canEdit && <p className="text-xs text-muted-foreground">{pageHint('article', 'noteReadOnly')}</p>}
+      {item?.type === 'UNDEFINED' && !item.canEdit && <p className="text-xs text-muted-foreground">{pageHint('article', 'noteReadOnly')}</p>}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import type { Item } from '@spok/shared'
 
 function mockItem(overrides: Partial<Item> & { id: string }): Item {
   return {
-    title: 'Item', type: 'NOTE', parentId: null, spaceId: 's1',
+    title: 'Item', type: 'UNDEFINED', parentId: null, spaceId: 's1',
     ...overrides,
   } as Item
 }
@@ -30,7 +30,7 @@ describe('buildItemTemplateStructure', () => {
   it('ignores items outside the captured subtree', () => {
     const items = [
       mockItem({ id: '1', title: 'Réunion', type: 'MEETING', parentId: null }),
-      mockItem({ id: '2', title: 'Autre chose', type: 'NOTE', parentId: null }),
+      mockItem({ id: '2', title: 'Autre chose', type: 'UNDEFINED', parentId: null }),
     ]
     const structure = buildItemTemplateStructure('1', items)
     expect(structure.children).toHaveLength(0)
@@ -80,7 +80,7 @@ describe('buildForumSummary', () => {
   }
 
   it('Note vierge : aucun résumé', () => {
-    expect(buildForumSummary({ type: 'NOTE' }, labels)).toEqual([])
+    expect(buildForumSummary({ type: 'UNDEFINED' }, labels)).toEqual([])
     expect(buildForumSummary({ type: 'UNDEFINED', status: 'undefined' }, labels)).toEqual([])
   })
 
@@ -98,7 +98,7 @@ describe('buildForumSummary', () => {
   })
 
   it('début seul, 1 lien', () => {
-    expect(buildForumSummary({ type: 'NOTE', startDate: '2026-10-01T10:00:00Z', relationsFrom: [{}] }, labels))
+    expect(buildForumSummary({ type: 'UNDEFINED', startDate: '2026-10-01T10:00:00Z', relationsFrom: [{}] }, labels))
       .toEqual(['dès 2026-10-01', '1 lien'])
   })
 })

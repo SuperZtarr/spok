@@ -1,7 +1,9 @@
 /* Vue Relations : carte des relations entre items (sans hiérarchie).
  * Types de relation : source unique constants/relationTypes.ts — les 4 types officiels sont visibles par
- * défaut (Bloque, Permet, Entraîne, Lié à) ; un type hors liste n'est jamais affiché. */
+ * défaut (Bloque, Permet, Entraîne, Lié à) ; un type hors liste n'est jamais affiché.
+ * Couleur d'un élément : getTypeHex (registre des types), jamais de table locale. */
 import { matchesCriteria } from '../../lib/itemHighlight';
+import { getTypeHex } from '../../constants/ui';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { Maximize2 } from 'lucide-react';
@@ -10,19 +12,6 @@ import type { Item } from '@spok/shared';
 import { RelationTooltip } from '../RelationTooltip';
 import { RELATION_TYPE_LIST, RELATION_TYPE_ORDER, getRelationMeta } from '../../constants/relationTypes';
 import { EmptyHelp } from '../../help/EmptyHelp';
-
-const NODE_COLORS: Record<string, string> = {
-  PROJECT: '#3b82f6',
-  NOTE: '#22c55e',
-  TASK: '#f97316',
-  MEETING: '#a855f7',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#64748b',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
-  BUG: '#ef4444',
-};
 
 
 interface GraphNode {
@@ -136,7 +125,7 @@ export function RelationsMapView({
         id: item.id,
         title: item.title,
         type: item.type,
-        color: NODE_COLORS[item.type] || '#64748b',
+        color: getTypeHex(item.type),
         hasRelations,
       });
     }
@@ -150,7 +139,7 @@ export function RelationsMapView({
           nodes.push({
             id,
             title: '(autre espace)',
-            type: 'LINK',
+            type: 'UNDEFINED',
             color: '#94a3b8',
             hasRelations: true,
           });

@@ -125,8 +125,8 @@ describe('GET /user/agenda', () => {
 
   it('honore le filtre de types (tous par défaut, restreint via ?type=)', async () => {
     prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])
-    await app.inject({ method: 'GET', url: `${URL_OK}&type=TASK,BUG`, headers: { authorization: `Bearer ${token}` } })
-    expect(prisma.item.findMany.mock.calls[1][0].where.type).toEqual({ in: ['TASK', 'BUG'] })
+    await app.inject({ method: 'GET', url: `${URL_OK}&type=TASK,PERIOD`, headers: { authorization: `Bearer ${token}` } })
+    expect(prisma.item.findMany.mock.calls[1][0].where.type).toEqual({ in: ['TASK', 'PERIOD'] })
 
     prisma.item.findMany.mockClear()
     prisma.item.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([])

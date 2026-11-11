@@ -1,10 +1,14 @@
 /* Référentiels par défaut : statuts (couleurs, ordre) et labels de types — base des personnalisations.
-   labelShort en toutes lettres (« Document », « Diagramme »… — décision Thomas 2026-10-29, plus d'abréviations) ;
+   DEFAULT_TYPE_LABELS est dérivé du registre des types (typeRegistry.ts) : ne rien y écrire à la main.
+   Chaque statut porte sa catégorie (category : sens terminé / en cours / en retard…, constants/statusCategory.ts).
+   labelShort en toutes lettres (« Réunion », « Période »… — décision Thomas 2026-10-29, plus d'abréviations) ;
+   bugsViewTag : tag suivi par la vue Bugs (« bug » par défaut, DEFAULT_BUGS_VIEW_TAG) depuis que Bug n'est plus un type ;
    une communauté aux référentiels personnalisés garde ses propres libellés.
    Statuts réservés à un type (StatusConfig.types) : les 4 issues d'une question (QUESTION_STATUS) ne sont proposées
    que pour une Question, qui n'utilise qu'elles — statusesForType / statusAllowedForType sont la source unique de ce tri (API, MCP, web) ;
    withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation. */
 import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
+import { ITEM_TYPE_REGISTRY } from './typeRegistry.js';
 
 // =============================================================================
 // DEFAULT STATUS CONFIGS - Configuration par défaut des statuts
@@ -18,6 +22,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-indigo-300 bg-indigo-50',
     order: 0,
     visible: true,
+    category: 'none',
   },
   {
     id: 'todo',
@@ -26,6 +31,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-yellow-300 bg-yellow-50',
     order: 1,
     visible: true,
+    category: 'open',
   },
   {
     id: 'scheduled',
@@ -34,6 +40,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-blue-300 bg-blue-50',
     order: 2,
     visible: true,
+    category: 'open',
     deferredByDate: true,
   },
   {
@@ -43,6 +50,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-orange-300 bg-orange-50',
     order: 3,
     visible: true,
+    category: 'active',
   },
   {
     id: 'late',
@@ -51,6 +59,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-red-300 bg-red-50',
     order: 4,
     visible: true,
+    category: 'late',
   },
   {
     id: 'to_validate',
@@ -59,6 +68,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-purple-300 bg-purple-50',
     order: 5,
     visible: true,
+    category: 'review',
   },
   {
     id: 'done',
@@ -67,6 +77,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-green-300 bg-green-50',
     order: 6,
     visible: true,
+    category: 'done',
   },
   {
     id: 'cancelled',
@@ -75,6 +86,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-pink-300 bg-pink-50',
     order: 7,
     visible: true,
+    category: 'cancelled',
   },
   // Issues d'une question (type QUESTION, 2026-11-08) — réservées à ce type
   {
@@ -84,6 +96,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-sky-300 bg-sky-50',
     order: 8,
     visible: true,
+    category: 'open',
     types: ['QUESTION'],
   },
   {
@@ -93,6 +106,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-emerald-300 bg-emerald-50',
     order: 9,
     visible: true,
+    category: 'done',
     types: ['QUESTION'],
   },
   {
@@ -102,6 +116,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-amber-300 bg-amber-50',
     order: 10,
     visible: true,
+    category: 'open',
     types: ['QUESTION'],
   },
   {
@@ -111,6 +126,7 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     borderColor: 'border-slate-300 bg-slate-50',
     order: 11,
     visible: true,
+    category: 'cancelled',
     types: ['QUESTION'],
   },
 ];
@@ -169,12 +185,12 @@ export function statusesForItems<T extends StatusConfig>(statuses: T[], items: I
 
 /**
  * Statuts réservés absents d'un référentiel personnalisé (enregistré avant leur création) : ajoutés ; présents :
- * leur réservation est rétablie (libellé, couleur, ordre, visibilité personnalisés conservés).
+ * leur réservation et leur catégorie sont rétablies (libellé, couleur, ordre, visibilité personnalisés conservés).
  */
 export function withDefaultStatuses(statuses: StatusConfig[]): StatusConfig[] {
   const out = statuses.map((s) => {
     const def = DEFAULT_STATUSES.find((d) => d.id === s.id && d.types?.length);
-    return def ? { ...s, types: def.types } : s;
+    return def ? { ...s, types: def.types, category: def.category } : s;
   });
   for (const def of DEFAULT_STATUSES) {
     if (def.types?.length && !out.some((s) => s.id === def.id)) out.push({ ...def });
@@ -186,126 +202,27 @@ export function withDefaultStatuses(statuses: StatusConfig[]): StatusConfig[] {
 // DEFAULT TYPE LABELS - Configuration par défaut des labels de types
 // =============================================================================
 
-export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = {
-  UNDEFINED: {
-    label: 'Non défini',
-    labelShort: 'Non défini',
-    color: 'border-slate-400',
-    bgHover: 'bg-slate-50',
-    visible: true,
-    order: -1,
-  },
-  NOTE: {
-    label: 'Notes',
-    labelShort: 'Note',
-    color: 'border-blue-400',
-    bgHover: 'bg-blue-50',
-    visible: true,
-    order: 0,
-  },
-  PROJECT: {
-    label: 'Projets',
-    labelShort: 'Projet',
-    color: 'border-purple-400',
-    bgHover: 'bg-purple-50',
-    visible: true,
-    order: 1,
-  },
-  TASK: {
-    label: 'Tâches',
-    labelShort: 'Tâche',
-    color: 'border-green-400',
-    bgHover: 'bg-green-50',
-    visible: true,
-    order: 2,
-  },
-  MEETING: {
-    label: 'Réunions',
-    labelShort: 'Réunion',
-    color: 'border-orange-400',
-    bgHover: 'bg-orange-50',
-    visible: true,
-    order: 3,
-  },
-  PERIOD: {
-    label: 'Périodes',
-    labelShort: 'Période',
-    color: 'border-teal-400',
-    bgHover: 'bg-teal-50',
-    visible: true,
-    order: 4,
-  },
-  LINK: {
-    label: 'Liens',
-    labelShort: 'Lien',
-    color: 'border-cyan-400',
-    bgHover: 'bg-cyan-50',
-    visible: true,
-    order: 5,
-  },
-  CONFIG: {
-    label: 'Configuration',
-    labelShort: 'Configuration',
-    color: 'border-gray-400',
-    bgHover: 'bg-gray-50',
-    visible: true,
-    order: 6,
-  },
-  DOCUMENT: {
-    label: 'Documents',
-    labelShort: 'Document',
-    color: 'border-amber-400',
-    bgHover: 'bg-amber-50',
-    visible: true,
-    order: 7,
-  },
-  IMAGE: {
-    label: 'Images',
-    labelShort: 'Image',
-    color: 'border-pink-400',
-    bgHover: 'bg-pink-50',
-    visible: true,
-    order: 8,
-  },
-  BUG: {
-    label: 'Anomalies',
-    labelShort: 'Anomalie',
-    color: 'border-red-400',
-    bgHover: 'bg-red-50',
-    visible: true,
-    order: 9,
-  },
-  DIAGRAM: {
-    label: 'Diagrammes',
-    labelShort: 'Diagramme',
-    color: 'border-indigo-400',
-    bgHover: 'bg-indigo-50',
-    visible: true,
-    order: 10,
-  },
-  // Article : page qui assemble des éléments existants (blocs = table article_blocks)
-  ARTICLE: {
-    label: 'Articles',
-    labelShort: 'Article',
-    color: 'border-fuchsia-400',
-    bgHover: 'bg-fuchsia-50',
-    visible: true,
-    order: 11,
-  },
-  // Question : préparée à l'avance (options), issue notée par les statuts réservés, votes des membres
-  QUESTION: {
-    label: 'Questions',
-    labelShort: 'Question',
-    color: 'border-sky-400',
-    bgHover: 'bg-sky-50',
-    visible: true,
-    order: 12,
-  },
-};
+// Dérivé du registre des types (typeRegistry.ts) : libellé pluriel, libellé court, teinte, ordre (Non défini en tête)
+export const DEFAULT_TYPE_LABELS: Record<string, TypeLabelConfig> = Object.fromEntries(
+  ITEM_TYPE_REGISTRY.map((t, i): [string, TypeLabelConfig] => [
+    t.id,
+    {
+      label: t.plural,
+      labelShort: t.label,
+      color: `border-${t.hue}-400`,
+      bgHover: `bg-${t.hue}-50`,
+      visible: true,
+      order: i - 1,
+    },
+  ]),
+);
 
 // =============================================================================
 // DEFAULT REFERENTIELS - Configuration complète par défaut
 // =============================================================================
+
+/** Tag suivi par défaut par la vue Bugs (une anomalie = une Tâche taguée « bug », lot 4 contenus multiples) */
+export const DEFAULT_BUGS_VIEW_TAG = 'bug';
 
 export const DEFAULT_REFERENTIELS: SpaceReferentiels = {
   statuses: DEFAULT_STATUSES,

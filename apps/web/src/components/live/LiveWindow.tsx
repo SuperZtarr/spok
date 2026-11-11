@@ -25,6 +25,7 @@ import { PendingChildren } from './PendingChildren';
 import { QuestionPanel } from '../question/QuestionPanel';
 import { PageHelpButton } from '../../help/PageHelpButton';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
+import { coverOf } from '../../lib/itemFace';
 
 interface Props {
   state: LiveSessionState;
@@ -91,6 +92,8 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
   const onPointerUp = () => { drag.current = null; };
 
   const current = state.current;
+  // Image de l'élément présenté : sa première image (contenus, lot 4), adresse sûre (lib/itemFace)
+  const liveCover = current ? coverOf(current.item).url : undefined;
 
   // Mobile, espace visible : barre compacte en bas d'écran
   if (narrow && mobileView === 'space') {
@@ -175,8 +178,8 @@ export function LiveWindow({ state, live, onOpenItem, onGoToSession, onLeave }: 
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(current.item.description) }}
                 />
               )}
-              {current.item.url && current.item.type === 'IMAGE' && (
-                <img src={current.item.url} alt="" className="mt-3 max-w-full rounded" />
+              {liveCover && (
+                <img src={liveCover} alt="" className="mt-3 max-w-full rounded" />
               )}
               {current.children.length > 0 && (
                 <ul className="mt-3 space-y-1 text-sm list-disc pl-5">

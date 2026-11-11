@@ -9,15 +9,19 @@
  * (droit de lecture vérifié côté serveur, GET /:id/links). Son menu se limite aux actions d'ouverture et sa fiche s'ouvre
  * dans un nouvel onglet, pour garder le chemin : les actions de SpacePage sont liées à l'espace courant.
  * Props : items = TOUS les items de l'espace (la vue estompe sans masquer) ; callbacks du menu comme les autres vues.
- * Calculs (positions, liens, chemin) : loupe-scene.ts. Contenu des vignettes par type et taille : loupe-vignette.ts. Textes : help/loupe.help.ts. Zones fragiles : aucune modification
+ * Vignettes : vignette d'élément commune (components/item/ItemVignette, règle lib/itemFace.ts) — minimale = format ligne,
+ * intermédiaire = carte, zoomée = grande ; cadre de taille fixe (loupe-scene.ts), le contenu s'y tronque. Élément à
+ * miniature (image ou schéma) : vignette agrandie plus haute (tallIds).
+ * Calculs (positions, liens, chemin) : loupe-scene.ts. Textes : help/loupe.help.ts. Zones fragiles : aucune modification
  * de la carte mentale ici, radialLayout est seulement importé.
+ * Couleur de bord d'une vignette : getTypeHex (registre des types), jamais de table locale.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Maximize2, RotateCcw, Unlock } from 'lucide-react';
 import { DEFAULT_REFERENTIELS, type SpaceReferentiels } from '@spok/shared';
 import type { LinkedItem } from '../../lib/api';
 import { getRelationMeta } from '../../constants/relationTypes';
-import { getTypeIcon, getTypeTextColor } from '../../constants/ui';
+import { getTypeHex, getTypeIcon, getTypeTextColor } from '../../constants/ui';
 import { useItemLinks } from '../../hooks/useItemLinks';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
@@ -26,8 +30,8 @@ import { buildItemMenuGroups, hasChildItems, hasHeadings, type ItemMenuCallbacks
 import { itemUrl, type ItemOpenMode } from '../../lib/itemOpenMode';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
 import { help } from './help/loupe.help';
-import { LoupeVignette } from './LoupeVignette';
-import { hasImage, vignetteContent, type VignetteSource } from './loupe-vignette';
+import { ItemVignette } from '../item/ItemVignette';
+import { coverOf, itemFace, type FaceSource, type VignetteFormat } from '../../lib/itemFace';
 import {
   VIGNETTE_SIZES, advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene, edgesFromLinks,
   externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, settlePositions, worldPositions,
@@ -39,11 +43,6 @@ const TRANSITION_MS = 200;
 const DRAG_THRESHOLD_PX = 4;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 2;
-
-const TYPE_COLORS: Record<string, string> = {
-  NOTE: '#22c55e', TASK: '#f97316', PROJECT: '#3b82f6', MEETING: '#a855f7', PERIOD: '#06b6d4', LINK: '#6366f1',
-  CONFIG: '#64748b', DOCUMENT: '#78716c', IMAGE: '#ec4899', BUG: '#ef4444',
-};
 
 interface ExternalNode { item: LinkedItem; pos: Point }
 
@@ -169,8 +168,8 @@ export function LoupeView(props: LoupeViewProps) {
 
   const tallIds = useMemo(() => {
     const ids = new Set<string>();
-    items.forEach((item) => { if (hasImage(item.type, item.url)) ids.add(item.id); });
-    externals.forEach(({ item }) => { if (hasImage(item.type, item.url)) ids.add(item.id); });
+    items.forEach((item) => { if (coverOf(item).kind !== 'icon') ids.add(item.id); });
+    externals.forEach(({ item }) => { if (coverOf(item).kind !== 'icon') ids.add(item.id); });
     return ids;
   }, [items, externals]);
 
@@ -423,7 +422,8 @@ export function LoupeView(props: LoupeViewProps) {
     const statusLabel = data.status && data.status !== 'undefined' ? statuses.find((s) => s.id === data.status)?.label ?? data.status : null;
     const matches = hasCriteria && matchesActiveCriteria(id, data.type, data.status);
     const fadedByCriteria = hasCriteria && !matches && node.state !== 'focus' && node.state !== 'preview';
-    const source: VignetteSource = local
+    const format: VignetteFormat = level === 'small' ? 'ligne' : level === 'mid' ? 'carte' : 'grande';
+    const source: FaceSource = local
       ? {
           ...local,
           assigneeName: local.assignedTo?.name ?? local.assignedToName,
@@ -469,7 +469,7 @@ export function LoupeView(props: LoupeViewProps) {
           width: w,
           height: h,
           transform: `translate(${node.cx - w / 2}px, ${node.cy - h / 2}px)`,
-          borderLeftColor: TYPE_COLORS[data.type] ?? '#6b7280',
+          borderLeftColor: getTypeHex(data.type),
           opacity: node.state === 'dim' ? 0.2 : fadedByCriteria ? 0.35 : 1,
           zIndex: node.state === 'preview' ? 40 : node.state === 'focus' ? 30 : level === 'mid' ? 20 : node.state === 'linked' ? 15 : 10,
         }}
@@ -483,13 +483,14 @@ export function LoupeView(props: LoupeViewProps) {
           matches ? 'ring-2 ring-amber-400' : '',
         ].join(' ')}
       >
-        <LoupeVignette
-          level={level}
+        <ItemVignette
+          format={format}
           title={data.title}
-          Icon={getTypeIcon(data.type, data.url)}
+          Icon={getTypeIcon(data.type)}
           iconClass={getTypeTextColor(data.type, referentiels?.typeLabels)}
           spaceName={external?.spaceName}
-          content={vignetteContent(source, level, { type: typeLabel, status: statusLabel })}
+          tags={local?.tags}
+          face={itemFace(source, format, { type: typeLabel, status: statusLabel })}
           openHint={help.hints?.openLink}
           menu={level === 'big' ? <ItemActionMenu groups={menuGroups(id)} onOpenChange={handleMenuOpenChange} /> : undefined}
         />

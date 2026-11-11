@@ -30,7 +30,7 @@ export function buildItemTemplateStructure(id: string, allItems: Item[]): ItemTe
     .filter((i) => i.parentId === id)
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
     .map((child) => buildItemTemplateStructure(child.id, allItems));
-  return { title: item?.title ?? '', type: (item?.type ?? 'NOTE') as ItemTemplateNode['type'], children };
+  return { title: item?.title ?? '', type: (item?.type ?? 'UNDEFINED') as ItemTemplateNode['type'], children };
 }
 
 /** Compte le nombre total de nœuds (racine incluse) d'une structure de modèle. */
@@ -98,7 +98,7 @@ export function buildForumSummary(
   },
 ): string[] {
   const parts: string[] = [];
-  if (item.type && item.type !== 'NOTE' && item.type !== 'UNDEFINED') parts.push(labels.typeLabel(item.type) ?? item.type);
+  if (item.type && item.type !== 'UNDEFINED') parts.push(labels.typeLabel(item.type) ?? item.type);
   if (item.status && item.status !== 'undefined') parts.push(labels.statusLabel(item.status) ?? item.status);
   if (item.priority != null) parts.push(labels.priorityLabel(item.priority) ?? `P${item.priority}`);
   if (item.startDate && item.endDate) {

@@ -5,10 +5,10 @@ import { withDefaultTypeLabels } from './referentiels'
 
 describe('withDefaultTypeLabels', () => {
   it('custom referentiels get ARTICLE from defaults', () => {
-    const custom = { statuses: DEFAULT_STATUSES, typeLabels: { NOTE: { ...DEFAULT_TYPE_LABELS.NOTE, label: 'Idées' } } }
+    const custom = { statuses: DEFAULT_STATUSES, typeLabels: { TASK: { ...DEFAULT_TYPE_LABELS.TASK, label: 'Idées' } } }
     const r = withDefaultTypeLabels(custom as never)
     expect(r.typeLabels.ARTICLE).toEqual(DEFAULT_TYPE_LABELS.ARTICLE)
-    expect(r.typeLabels.NOTE.label).toBe('Idées')
+    expect(r.typeLabels.TASK.label).toBe('Idées')
   })
 
   it('ne remplace jamais un type déjà présent', () => {

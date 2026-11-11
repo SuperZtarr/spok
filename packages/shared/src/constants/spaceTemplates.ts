@@ -1,11 +1,14 @@
 /* Templates de création d'espace : arborescence d'items de départ par cas d'usage.
  * Pas de statuts ici : les statuts (référentiels) appartiennent à la communauté
- * (Community.referentiels) — un modèle d'espace ne peut pas les définir (décision 2026-10-16). */
+ * (Community.referentiels) — un modèle d'espace ne peut pas les définir (décision 2026-10-16).
+ * `tags` : tags de classement posés à la création (tag de la communauté, créé s'il manque) — une anomalie est une
+ * Tâche taguée « bug » depuis le lot 4 « contenus multiples » (2026-11-11) ; un texte rédigé est un Élément (UNDEFINED). */
 import type { ItemType } from '../types/item.js';
 
 export interface SpaceTemplateItem {
   title: string;
   type: ItemType;
+  tags?: string[];
   children?: SpaceTemplateItem[];
 }
 
@@ -37,7 +40,7 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
           { title: 'Définir les objectifs et livrables', type: 'TASK' },
           { title: 'Identifier les parties prenantes', type: 'TASK' },
           { title: 'Établir le calendrier prévisionnel', type: 'TASK' },
-          { title: 'Rédiger la note de cadrage', type: 'DOCUMENT' },
+          { title: 'Rédiger la note de cadrage', type: 'UNDEFINED' },
           { title: 'Réunion de lancement', type: 'MEETING' },
         ],
       },
@@ -45,9 +48,9 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Phase 2 — Conception',
         type: 'PROJECT',
         children: [
-          { title: 'Spécifications fonctionnelles', type: 'DOCUMENT' },
+          { title: 'Spécifications fonctionnelles', type: 'UNDEFINED' },
           { title: 'Maquettes / wireframes', type: 'TASK' },
-          { title: 'Architecture technique', type: 'DOCUMENT' },
+          { title: 'Architecture technique', type: 'UNDEFINED' },
           { title: 'Revue de conception', type: 'MEETING' },
         ],
       },
@@ -58,7 +61,7 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
           { title: 'Développement', type: 'TASK' },
           { title: 'Tests unitaires', type: 'TASK' },
           { title: 'Tests d\'intégration', type: 'TASK' },
-          { title: 'Documentation technique', type: 'DOCUMENT' },
+          { title: 'Documentation technique', type: 'UNDEFINED' },
         ],
       },
       {
@@ -73,10 +76,10 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
       },
       {
         title: 'Risques et décisions',
-        type: 'NOTE',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Registre des risques', type: 'NOTE' },
-          { title: 'Journal des décisions', type: 'NOTE' },
+          { title: 'Registre des risques', type: 'UNDEFINED' },
+          { title: 'Journal des décisions', type: 'UNDEFINED' },
         ],
       },
     ],
@@ -92,7 +95,7 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
       { title: 'Mettre à jour la FAQ', type: 'TASK' },
       { title: 'Relire les conditions générales', type: 'TASK' },
       { title: 'Planifier la newsletter', type: 'TASK' },
-      { title: 'Corriger le formulaire de contact', type: 'BUG' },
+      { title: 'Corriger le formulaire de contact', type: 'TASK', tags: ['bug'] },
       { title: 'Optimiser le temps de chargement', type: 'TASK' },
       { title: 'Traduire la page d\'accueil', type: 'TASK' },
     ],
@@ -107,10 +110,10 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Réunion d\'équipe hebdomadaire',
         type: 'MEETING',
         children: [
-          { title: 'Ordre du jour', type: 'NOTE' },
-          { title: 'Tour de table — avancement', type: 'NOTE' },
-          { title: 'Points de blocage', type: 'NOTE' },
-          { title: 'Décisions prises', type: 'DOCUMENT' },
+          { title: 'Ordre du jour', type: 'UNDEFINED' },
+          { title: 'Tour de table — avancement', type: 'UNDEFINED' },
+          { title: 'Points de blocage', type: 'UNDEFINED' },
+          { title: 'Décisions prises', type: 'UNDEFINED' },
           { title: 'Actions à suivre', type: 'TASK' },
         ],
       },
@@ -118,9 +121,9 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Comité de pilotage',
         type: 'MEETING',
         children: [
-          { title: 'Tableau de bord projet', type: 'DOCUMENT' },
-          { title: 'Risques et alertes', type: 'NOTE' },
-          { title: 'Arbitrages demandés', type: 'NOTE' },
+          { title: 'Tableau de bord projet', type: 'UNDEFINED' },
+          { title: 'Risques et alertes', type: 'UNDEFINED' },
+          { title: 'Arbitrages demandés', type: 'UNDEFINED' },
           { title: 'Prochaines étapes', type: 'TASK' },
         ],
       },
@@ -128,8 +131,8 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Rétrospective',
         type: 'MEETING',
         children: [
-          { title: 'Ce qui a bien marché', type: 'NOTE' },
-          { title: 'Ce qui peut être amélioré', type: 'NOTE' },
+          { title: 'Ce qui a bien marché', type: 'UNDEFINED' },
+          { title: 'Ce qui peut être amélioré', type: 'UNDEFINED' },
           { title: 'Actions d\'amélioration', type: 'TASK' },
         ],
       },
@@ -137,8 +140,8 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Atelier de travail',
         type: 'MEETING',
         children: [
-          { title: 'Objectif de l\'atelier', type: 'NOTE' },
-          { title: 'Résultats et livrables', type: 'DOCUMENT' },
+          { title: 'Objectif de l\'atelier', type: 'UNDEFINED' },
+          { title: 'Résultats et livrables', type: 'UNDEFINED' },
         ],
       },
     ],
@@ -151,40 +154,40 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     items: [
       {
         title: 'Guide de démarrage',
-        type: 'DOCUMENT',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Installation et configuration', type: 'NOTE' },
-          { title: 'Premiers pas', type: 'NOTE' },
-          { title: 'FAQ', type: 'NOTE' },
+          { title: 'Installation et configuration', type: 'UNDEFINED' },
+          { title: 'Premiers pas', type: 'UNDEFINED' },
+          { title: 'FAQ', type: 'UNDEFINED' },
         ],
       },
       {
         title: 'Processus et procédures',
-        type: 'DOCUMENT',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Workflow de validation', type: 'NOTE' },
-          { title: 'Gestion des accès', type: 'NOTE' },
-          { title: 'Politique de nommage', type: 'NOTE' },
-          { title: 'Checklist de mise en production', type: 'NOTE' },
+          { title: 'Workflow de validation', type: 'UNDEFINED' },
+          { title: 'Gestion des accès', type: 'UNDEFINED' },
+          { title: 'Politique de nommage', type: 'UNDEFINED' },
+          { title: 'Checklist de mise en production', type: 'UNDEFINED' },
         ],
       },
       {
         title: 'Architecture technique',
-        type: 'DOCUMENT',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Vue d\'ensemble', type: 'NOTE' },
-          { title: 'Modèle de données', type: 'NOTE' },
-          { title: 'API et intégrations', type: 'NOTE' },
-          { title: 'Infrastructure', type: 'NOTE' },
+          { title: 'Vue d\'ensemble', type: 'UNDEFINED' },
+          { title: 'Modèle de données', type: 'UNDEFINED' },
+          { title: 'API et intégrations', type: 'UNDEFINED' },
+          { title: 'Infrastructure', type: 'UNDEFINED' },
         ],
       },
       {
         title: 'Ressources',
-        type: 'DOCUMENT',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Liens utiles', type: 'LINK' },
-          { title: 'Glossaire', type: 'NOTE' },
-          { title: 'Contacts clés', type: 'NOTE' },
+          { title: 'Liens utiles', type: 'UNDEFINED' },
+          { title: 'Glossaire', type: 'UNDEFINED' },
+          { title: 'Contacts clés', type: 'UNDEFINED' },
         ],
       },
     ],
@@ -199,26 +202,26 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
         title: 'Bugs critiques',
         type: 'PROJECT',
         children: [
-          { title: 'Crash au démarrage sur Android 12', type: 'BUG' },
-          { title: 'Perte de données lors de la sauvegarde', type: 'BUG' },
+          { title: 'Crash au démarrage sur Android 12', type: 'TASK', tags: ['bug'] },
+          { title: 'Perte de données lors de la sauvegarde', type: 'TASK', tags: ['bug'] },
         ],
       },
       {
         title: 'Bugs majeurs',
         type: 'PROJECT',
         children: [
-          { title: 'Le filtre par date ne fonctionne pas', type: 'BUG' },
-          { title: 'Erreur 500 à l\'upload de fichiers volumineux', type: 'BUG' },
-          { title: 'Notifications non reçues par email', type: 'BUG' },
+          { title: 'Le filtre par date ne fonctionne pas', type: 'TASK', tags: ['bug'] },
+          { title: 'Erreur 500 à l\'upload de fichiers volumineux', type: 'TASK', tags: ['bug'] },
+          { title: 'Notifications non reçues par email', type: 'TASK', tags: ['bug'] },
         ],
       },
       {
         title: 'Bugs mineurs',
         type: 'PROJECT',
         children: [
-          { title: 'Faute d\'orthographe page d\'accueil', type: 'BUG' },
-          { title: 'Icône manquante en mode sombre', type: 'BUG' },
-          { title: 'Alignement cassé sur petit écran', type: 'BUG' },
+          { title: 'Faute d\'orthographe page d\'accueil', type: 'TASK', tags: ['bug'] },
+          { title: 'Icône manquante en mode sombre', type: 'TASK', tags: ['bug'] },
+          { title: 'Alignement cassé sur petit écran', type: 'TASK', tags: ['bug'] },
         ],
       },
       {
@@ -239,35 +242,35 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
     items: [
       {
         title: 'Nouvelles fonctionnalités',
-        type: 'NOTE',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Mode hors ligne', type: 'NOTE' },
-          { title: 'Intégration calendrier', type: 'NOTE' },
-          { title: 'Export PDF personnalisé', type: 'NOTE' },
-          { title: 'Tableau de bord personnalisable', type: 'NOTE' },
+          { title: 'Mode hors ligne', type: 'UNDEFINED' },
+          { title: 'Intégration calendrier', type: 'UNDEFINED' },
+          { title: 'Export PDF personnalisé', type: 'UNDEFINED' },
+          { title: 'Tableau de bord personnalisable', type: 'UNDEFINED' },
         ],
       },
       {
         title: 'Expérience utilisateur',
-        type: 'NOTE',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Simplifier l\'onboarding', type: 'NOTE' },
-          { title: 'Raccourcis clavier', type: 'NOTE' },
-          { title: 'Thèmes de couleurs', type: 'NOTE' },
+          { title: 'Simplifier l\'onboarding', type: 'UNDEFINED' },
+          { title: 'Raccourcis clavier', type: 'UNDEFINED' },
+          { title: 'Thèmes de couleurs', type: 'UNDEFINED' },
         ],
       },
       {
         title: 'Stratégie',
-        type: 'NOTE',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Partenariats potentiels', type: 'NOTE' },
-          { title: 'Modèle de tarification', type: 'NOTE' },
-          { title: 'Marchés cibles', type: 'NOTE' },
+          { title: 'Partenariats potentiels', type: 'UNDEFINED' },
+          { title: 'Modèle de tarification', type: 'UNDEFINED' },
+          { title: 'Marchés cibles', type: 'UNDEFINED' },
         ],
       },
-      { title: 'Idée en vrac 1', type: 'NOTE' },
-      { title: 'Idée en vrac 2', type: 'NOTE' },
-      { title: 'Idée en vrac 3', type: 'NOTE' },
+      { title: 'Idée en vrac 1', type: 'UNDEFINED' },
+      { title: 'Idée en vrac 2', type: 'UNDEFINED' },
+      { title: 'Idée en vrac 3', type: 'UNDEFINED' },
     ],
   },
   {
@@ -309,11 +312,11 @@ export const SPACE_TEMPLATES: SpaceTemplate[] = [
       },
       {
         title: 'Définition of Done',
-        type: 'DOCUMENT',
+        type: 'UNDEFINED',
         children: [
-          { title: 'Tests unitaires passent', type: 'NOTE' },
-          { title: 'Code review approuvée', type: 'NOTE' },
-          { title: 'Documentation mise à jour', type: 'NOTE' },
+          { title: 'Tests unitaires passent', type: 'UNDEFINED' },
+          { title: 'Code review approuvée', type: 'UNDEFINED' },
+          { title: 'Documentation mise à jour', type: 'UNDEFINED' },
         ],
       },
     ],

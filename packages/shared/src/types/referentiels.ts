@@ -1,6 +1,11 @@
 // =============================================================================
 // REFERENTIELS TYPES - Types pour la configuration des référentiels par espace
+// Statut : StatusConfig (category = son sens, 2026-11-08). Type d'élément : TypeLabelConfig (surcharge de communauté
+// sur le registre des types).
 // =============================================================================
+
+/** Sens d'un statut (constants/statusCategory.ts) : seul repère des règles « terminé », « en cours »… */
+export type StatusCategory = 'none' | 'open' | 'active' | 'review' | 'late' | 'done' | 'cancelled';
 
 /**
  * Configuration d'un statut personnalisable
@@ -24,6 +29,11 @@ export interface StatusConfig {
    * (RESERVED_STATUS_IDS) ne se suppriment pas et gardent leur réservation (withDefaultStatuses).
    */
   types?: string[];
+  /**
+   * Sens du statut (terminé, en cours…). Absent (statut personnalisé avant 2026-11-08) : celui du statut par défaut de
+   * même id, sinon « à faire » — lire via statusCategory(), jamais directement.
+   */
+  category?: StatusCategory;
 }
 
 /**
@@ -44,6 +54,8 @@ export interface TypeLabelConfig {
 export interface SpaceReferentiels {
   statuses: StatusConfig[];
   typeLabels: Record<string, TypeLabelConfig>;
+  /** Tag suivi par la vue Bugs (nom, sans casse) ; absent = DEFAULT_BUGS_VIEW_TAG (« bug ») — lot 4 contenus multiples */
+  bugsViewTag?: string;
 }
 
 /**

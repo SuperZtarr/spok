@@ -48,7 +48,7 @@ import { spacesApi, itemsApi, communitiesApi, ApiError } from '../lib/api';
 import { SpaceUnavailable } from '../components/SpaceUnavailable';
 import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
-import { useReferentiels } from '../hooks/useReferentiels';
+import { useReferentiels, useUpdateCommunityReferentiels } from '../hooks/useReferentiels';
 import { useViewOnboarding } from '../hooks/useOnboarding';
 import { useSpaces } from '../hooks/useSpaces';
 import { Button } from '../components/ui/Button';
@@ -245,6 +245,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   const { data: referentielsData } = useReferentiels(spaceId!);
   const referentiels = referentielsData?.referentiels;
+  // Tag suivi par la vue Bugs : réglé par le propriétaire de la communauté (ou un admin en mode admin), lot 4
+  const updateCommunityReferentiels = useUpdateCommunityReferentiels(space?.communityId ?? '');
+  const canSetBugsTag = !!space?.communityId && (spaceCommunity?.role === 'OWNER' || adminMode);
 
   const statusColorMap = useMemo(
     () => buildStatusColorMap(referentiels?.statuses),
@@ -405,6 +408,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     allItems,
     communityId: space?.communityId,
     communitySpaces: communitySpaces || undefined,
+    statuses: referentiels?.statuses,
   });
 
   // Create item mutation
@@ -999,7 +1003,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onCreateRelation={actions.handleCreateRelation}
               onUpdateRelation={actions.handleUpdateRelation}
               onDeleteRelation={actions.handleDeleteRelation}
-              onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'NOTE', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
+              onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'UNDEFINED', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
               onStartTour={() => startViewTour(viewMode)}
               pulseHelp={pulseHelp}
             />
@@ -1221,6 +1225,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               <div className="flex-1 overflow-hidden">
                 <BurndownView
                 items={(allItemsData?.data || []) as Item[]}
+                statuses={referentiels?.statuses}
                 portalGroups={portalGroups}
                 currentSpaceId={spaceId}
                 onItemClick={openItemFromView}
@@ -1242,6 +1247,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               <div className="flex-1 overflow-hidden">
                 <CfdView
                 items={(allItemsData?.data || []) as Item[]}
+                statuses={referentiels?.statuses}
                 portalGroups={portalGroups}
                 currentSpaceId={spaceId}
                 onItemClick={openItemFromView}
@@ -1473,6 +1479,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             />
           ) : viewMode === 'bugs' ? (
               <BugsView
+              onChangeBugsTag={canSetBugsTag ? (name) => updateCommunityReferentiels.mutate({ bugsViewTag: name }) : undefined}
               items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
@@ -1772,7 +1779,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         onClose={() => actions.setDeletingItem(null)}
         onConfirm={actions.confirmDelete}
         itemTitle={actions.deletingItem?.title || ''}
-        itemType={actions.deletingItem?.type || 'NOTE'}
+        itemType={actions.deletingItem?.type || 'UNDEFINED'}
         childCount={actions.deletingItem?.childCount || 0}
         contributionCount={actions.deletingItem?.contributionCount || 0}
         description={actions.deletingItem?.description}

@@ -87,6 +87,16 @@ describe('User Tasks routes', () => {
       expect(body.data[0].spaceName).toBe('Space 1')
     })
 
+    it('contentKind=LINK : éléments porteurs d\'un contenu Lien, quel que soit leur type (lot 4) ; sorte inconnue ignorée', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+      await app.inject({ method: 'GET', url: '/user/tasks?contentKind=LINK', headers: { authorization: `Bearer ${token}` } })
+      expect(prisma.item.findMany.mock.calls.at(-1)[0].where.contents).toEqual({ some: { kind: 'LINK' } })
+      await app.inject({ method: 'GET', url: '/user/tasks?contentKind=AUTRE', headers: { authorization: `Bearer ${token}` } })
+      expect(prisma.item.findMany.mock.calls.at(-1)[0].where.contents).toBeUndefined()
+    })
+
     it('should filter by accessible spaces for regular user', async () => {
       prisma.user.findUnique.mockResolvedValue({ globalRole: 'USER' })
       prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 's1' }])

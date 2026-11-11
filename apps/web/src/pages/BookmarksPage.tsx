@@ -1,4 +1,5 @@
-/* Favoris (/bookmarks) : espaces et items épinglés par l'utilisateur. */
+/* Favoris (/bookmarks) : espaces et items épinglés par l'utilisateur.
+ * Item épinglé = vignette d'élément commune, format ligne (components/item/ItemVignette, décision Thomas 2026-11-08). */
 import { useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Star, Bookmark, Clock, FolderOpen, Loader2, Trash2 } from 'lucide-react';
@@ -6,8 +7,12 @@ import { Link } from 'react-router-dom';
 import { spacesApi, bookmarksApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { PageHelpButton } from '../help/PageHelpButton';
-import { TYPE_LABELS, getTypeIcon } from '../constants/ui';
-import type { SpaceWithRole } from '@spok/shared';
+import { TYPE_LABELS, getTypeIcon, getTypeTextColor } from '../constants/ui';
+import { buildStatusLabelMap, type SpaceWithRole } from '@spok/shared';
+import { itemFace } from '../lib/itemFace';
+import { ItemVignette } from '../components/item/ItemVignette';
+
+const STATUS_LABEL_MAP = buildStatusLabelMap();
 
 function SpaceCard({ space, isFavorite, onToggleFavorite }: {
   space: SpaceWithRole;
@@ -36,12 +41,16 @@ function SpaceCard({ space, isFavorite, onToggleFavorite }: {
   );
 }
 
+/** Élément épinglé : vignette d'élément commune au format ligne (lib/itemFace.ts), espace en pastille ; le lien vers
+ * l'espace et le bouton de retrait sont le cadre propre aux Favoris. */
 function BookmarkedItemCard({ item, onRemove }: {
   item: any;
   onRemove: (id: string) => void;
 }) {
-  const TypeIcon = getTypeIcon(item.type, item.url);
-  const typeLabel = TYPE_LABELS[item.type] || item.type;
+  const labels = {
+    type: TYPE_LABELS[item.type] || item.type,
+    status: item.status && item.status !== 'undefined' ? STATUS_LABEL_MAP[item.status] ?? item.status : null,
+  };
 
   return (
     <div className="group flex items-center gap-3 p-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-accent/50 transition-colors">
@@ -49,15 +58,15 @@ function BookmarkedItemCard({ item, onRemove }: {
         to={`/spaces/${item.spaceId || item.space?.id}`}
         className="flex-1 min-w-0 flex items-center gap-3"
       >
-        <TypeIcon className="w-5 h-5 text-primary flex-shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="font-medium truncate">{item.title}</div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="px-1.5 py-0.5 bg-muted rounded text-[10px] uppercase font-medium">{typeLabel}</span>
-            {item.space?.name && <span>{item.space.name}</span>}
-            {item.status && <span>· {item.status}</span>}
-          </div>
-        </div>
+        <ItemVignette
+          format="ligne"
+          title={item.title}
+          Icon={getTypeIcon(item.type)}
+          iconClass={getTypeTextColor(item.type)}
+          spaceName={item.space?.name}
+          face={itemFace(item, 'ligne', labels)}
+          titleClassName="font-medium"
+        />
       </Link>
       <button
         onClick={() => onRemove(item.id)}

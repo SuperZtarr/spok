@@ -137,11 +137,11 @@ const visibleAgenda = (agenda: LiveAgendaItem[], viewer: AgendaViewer) => {
   return agenda.filter((a) => a.presentedAt || a.presenter?.id === viewer.userId).map((a) => ({ ...a, thumbnailUrl: null }));
 };
 
-const IMAGE_URL = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
+type SourceThumb = { contents: { kind: string; url: string | null }[] };
 
-/** Vignette d'un item source : son image (IMAGE), l'aperçu PNG d'un schéma (DIAGRAM) ou une URL d'image. */
-const thumbnailOf = (src: { type: string; url: string | null } | undefined) =>
-  src?.url && (src.type === 'IMAGE' || src.type === 'DIAGRAM' || IMAGE_URL.test(src.url)) ? src.url : null;
+/** Vignette d'un item source : sa première image, sinon l'aperçu PNG de son premier schéma (contenus, lot 4). */
+const thumbnailOf = (src: SourceThumb | undefined) =>
+  src?.contents.find((c) => c.kind === 'IMAGE' && c.url)?.url ?? src?.contents.find((c) => c.kind === 'DIAGRAM' && c.url)?.url ?? null;
 
 /** Préparation ordonnée avec nom d'espace source (null si l'espace n'existe plus) et vignette de l'item source. */
 async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaItem[]> {
@@ -152,10 +152,10 @@ async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaIte
   const itemIds = [...new Set(rows.map((r: any) => r.sourceItemId))];
   const [spaces, sources] = await Promise.all([
     spaceIds.length ? prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, name: true } }) : [],
-    itemIds.length ? prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, type: true, url: true } }) : [],
+    itemIds.length ? prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, contents: { select: { kind: true, url: true }, orderBy: { position: 'asc' } } } }) : [],
   ]);
   const names = new Map<string, string>((spaces ?? []).map((sp: any) => [sp.id, sp.name]));
-  const sourceById = new Map<string, { type: string; url: string | null }>((sources ?? []).map((it: any) => [it.id, it]));
+  const sourceById = new Map<string, SourceThumb>((sources ?? []).map((it: any) => [it.id, it]));
   return rows.map((r: any) => ({
     id: r.id, presenter: r.presenter, sourceItemId: r.sourceItemId, sourceSpaceId: r.sourceSpaceId,
     sourceSpaceName: names.get(r.sourceSpaceId) ?? null, title: r.title, position: r.position,

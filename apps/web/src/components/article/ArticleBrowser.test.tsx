@@ -10,7 +10,7 @@ vi.mock('../../lib/api', () => ({ articlesApi: api }));
 
 import { ArticleBrowser } from './ArticleBrowser';
 
-const item = (id: string, parentId: string | null, position: number, type = 'NOTE') =>
+const item = (id: string, parentId: string | null, position: number, type = 'UNDEFINED') =>
   ({ id, type, title: `Titre ${id}`, status: null, statusLabel: null, parentId, position });
 
 const show = (presentIds = new Set<string>()) => {

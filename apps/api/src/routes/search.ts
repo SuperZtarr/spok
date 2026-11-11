@@ -16,6 +16,8 @@
  *   connecté = nom seul, comptes actifs, membres de la portée lisible ou, sans portée, soi-même et ceux avec qui il
  *   partage un espace ou une communauté, réponse limitée à id, nom, avatar ; admin en mode admin = tous, nom et e-mail,
  *   réponse complète. Ne pas élargir sans décision : la colonne email ne se cherche jamais hors mode admin.
+ * Items (les deux routes) : titre, description, et contenus de l'élément — noms de fichiers et adresses des liens
+ * (contenus multiples, lot 3a, 2026-11-08 ; plus d'ancien champ url depuis le lot 4).
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
@@ -184,7 +186,9 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     let totalItems = 0;
     if (enabledTypes.has('items')) {
       const itemWhere: Record<string, unknown> = buildWordsWhere(words, [
-        { name: 'title' }, { name: 'description', nullable: true }, { name: 'url', nullable: true },
+        { name: 'title' }, { name: 'description', nullable: true },
+        // Contenus multiples (lot 3a) : noms des fichiers / contenus et adresses des liens
+        { relation: 'contents', fields: ['name', 'url'] },
       ]);
       if (effectiveSpaceFilter) itemWhere.spaceId = effectiveSpaceFilter;
       else if (spaceFilter) itemWhere.spaceId = spaceFilter;
@@ -373,12 +377,16 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       spaceFilter = { spaceId: { in: spaceIds } };
     }
 
-    // Search items (title + description)
+    // Search items (title + description + noms et adresses des contenus)
     const itemWhere = {
       ...spaceFilter,
       OR: [
         { title: { contains: query, mode: 'insensitive' as const } },
         { description: { contains: query, mode: 'insensitive' as const } },
+        { contents: { some: { OR: [
+          { name: { contains: query, mode: 'insensitive' as const } },
+          { url: { contains: query, mode: 'insensitive' as const } },
+        ] } } },
       ],
     };
 

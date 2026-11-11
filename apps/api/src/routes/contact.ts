@@ -1,5 +1,8 @@
-/* Formulaire de contact public : crée un item dans l'espace Support de la communauté SPOK. */
+/* Formulaire de contact public : crée un item dans l'espace Support de la communauté SPOK.
+   Statut posé : premier statut « à faire » du référentiel de l'espace (firstStatusIn), jamais 'todo' en dur. */
 import { FastifyPluginAsync } from 'fastify';
+import { firstStatusIn } from '@spok/shared';
+import { statusesOfSpace } from '../utils/referentiels.js';
 import { z } from 'zod';
 import { createNotification } from '../utils/notifications.js';
 
@@ -49,10 +52,10 @@ export const contactRoutes: FastifyPluginAsync = async (fastify) => {
     // Create the item
     const item = await fastify.prisma.item.create({
       data: {
-        type: 'NOTE',
+        type: 'UNDEFINED',
         title,
         description,
-        status: 'todo',
+        status: firstStatusIn('open', await statusesOfSpace(fastify.prisma, spaceId)),
         spaceId,
         createdById,
         startDate: new Date(),

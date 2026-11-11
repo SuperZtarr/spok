@@ -1,6 +1,6 @@
 /*
- * Compte-rendu d'une séance de présentation en direct (décision Thomas 2026-11-08) : une Note (type NOTE, jamais
- * DOCUMENT — DOCUMENT porte des pièces jointes) « Compte-rendu — <nom de l'espace de séance> », créée dans l'espace de
+ * Compte-rendu d'une séance de présentation en direct (décision Thomas 2026-11-08) : un Élément de texte (type
+ * UNDEFINED depuis la fusion de la Note dans l'Élément, 2026-11-11) « Compte-rendu — <nom de l'espace de séance> », créée dans l'espace de
  * séance à la clôture (/end) ou après coup (/:id/report), rattachée par LiveSession.reportItemId.
  * - Instantané figé : rien ne se met à jour tout seul ; « Régénérer » (animateur) réécrit tout ce qui précède le titre
  *   « Décisions » et CONSERVE ce titre et tout ce qui suit (les décisions écrites après coup ne sont jamais perdues).
@@ -318,7 +318,7 @@ export async function generateLiveReport(prisma: any, sessionId: string, userId:
   }
   const note = await prisma.item.create({
     data: {
-      type: 'NOTE', title: `Compte-rendu — ${s.space?.name ?? 'Séance'}`,
+      type: 'UNDEFINED', title: `Compte-rendu — ${s.space?.name ?? 'Séance'}`,
       description: mergeDecisions(generated, null), spaceId: s.spaceId, createdById: userId,
     },
   });

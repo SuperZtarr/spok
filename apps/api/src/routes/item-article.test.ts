@@ -174,7 +174,7 @@ describe('Article — composition', () => {
     const res = await app.inject({ method: 'POST', url: url('/texts'), headers: auth(), payload: {} })
     expect(res.statusCode).toBe(201)
     expect(prisma.item.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ type: 'NOTE', spaceId: SPACE, createdById: USER }),
+      data: expect.objectContaining({ type: 'UNDEFINED', spaceId: SPACE, createdById: USER }),
     }))
     expect(prisma.articleBlock.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ itemId: 'txt' }) }))
   })

@@ -1,5 +1,7 @@
 /* Seed initial de la base locale : admin, communauté et espaces d'exemple (pnpm db:seed).
-   Relations : uniquement les types officiels (blocks / implements / drives / relates — constants/relationTypes). */
+   Relations : uniquement les types officiels (blocks / implements / drives / relates — constants/relationTypes).
+   Types : ceux du registre depuis le lot 4 « contenus multiples » (anciens Lien/Image/Document/Config/Note → Élément,
+   Bug → Tâche) ; les adresses d'exemple restent dans la colonne url, inutilisée (pas de contenus créés ici). */
 import { PrismaClient, SpaceType, Role, ItemType, GlobalRole, CommunityRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 
@@ -437,7 +439,7 @@ async function main() {
   // --- NOTE ---
   const noteArchi = await prisma.item.create({
     data: {
-      type: ItemType.NOTE,
+      type: ItemType.UNDEFINED,
       title: 'Architecture technique SPOK',
       description: '<h2>Stack technique</h2><ul><li>Frontend : React + Vite + Tailwind</li><li>Backend : Fastify + Prisma</li><li>DB : PostgreSQL</li><li>Storage : Cloudflare R2</li></ul><p>Le monorepo utilise pnpm workspaces avec 2 packages partagés (<code>@spok/shared</code> et <code>@spok/database</code>).</p>',
       spaceId: spaceDev.id,
@@ -447,7 +449,7 @@ async function main() {
 
   const noteRetro = await prisma.item.create({
     data: {
-      type: ItemType.NOTE,
+      type: ItemType.UNDEFINED,
       title: 'Rétrospective Sprint 3',
       description: '<h3>Points positifs</h3><ul><li>Import forum terminé</li><li>Docker dev fonctionnel</li></ul><h3>Points à améliorer</h3><ul><li>Tests automatisés manquants</li><li>Documentation API incomplète</li></ul>',
       spaceId: spaceDev.id,
@@ -458,7 +460,7 @@ async function main() {
   // --- LINK ---
   const linkFigma = await prisma.item.create({
     data: {
-      type: ItemType.LINK,
+      type: ItemType.UNDEFINED,
       title: 'Maquettes Figma — Design System',
       url: 'https://www.figma.com/file/example-design-system',
       description: '<p>Maquettes du design system SPOK : composants, couleurs, typographie.</p>',
@@ -469,7 +471,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.LINK,
+      type: ItemType.UNDEFINED,
       title: 'Documentation Prisma',
       url: 'https://www.prisma.io/docs',
       description: '<p>Référence ORM pour le backend.</p>',
@@ -480,7 +482,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.LINK,
+      type: ItemType.UNDEFINED,
       title: 'Tailwind CSS Cheat Sheet',
       url: 'https://tailwindcss.com/docs',
       spaceId: spaceDev.id,
@@ -491,7 +493,7 @@ async function main() {
   // --- IMAGE ---
   await prisma.item.create({
     data: {
-      type: ItemType.IMAGE,
+      type: ItemType.UNDEFINED,
       title: 'Capture écran — Dashboard V2',
       url: 'https://picsum.photos/seed/spok-dashboard/800/600.webp',
       description: '<p>Capture du nouveau Dashboard avec les cartes communautaires.</p>',
@@ -502,7 +504,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.IMAGE,
+      type: ItemType.UNDEFINED,
       title: 'Diagramme architecture réseau',
       url: 'https://picsum.photos/seed/spok-archi/1024/768.webp',
       spaceId: spaceDev.id,
@@ -513,7 +515,7 @@ async function main() {
   // --- DOCUMENT ---
   await prisma.item.create({
     data: {
-      type: ItemType.DOCUMENT,
+      type: ItemType.UNDEFINED,
       title: 'Cahier des charges V1',
       description: '<p>Spécifications fonctionnelles détaillées de la première version.</p>',
       spaceId: spaceDev.id,
@@ -524,7 +526,7 @@ async function main() {
   // --- CONFIG ---
   await prisma.item.create({
     data: {
-      type: ItemType.CONFIG,
+      type: ItemType.UNDEFINED,
       title: 'Variables d\'environnement production',
       description: '<p>Liste des variables à configurer sur Railway pour le déploiement.</p><ul><li>DATABASE_URL</li><li>JWT_SECRET</li><li>RESEND_API_KEY</li><li>R2_*</li></ul>',
       spaceId: spaceDev.id,
@@ -535,7 +537,7 @@ async function main() {
   // --- BUG ---
   const bugLogin = await prisma.item.create({
     data: {
-      type: ItemType.BUG,
+      type: ItemType.TASK,
       title: 'Déconnexion aléatoire après 30 minutes',
       description: '<p>Le refresh token ne se renouvelle pas correctement. L\'utilisateur est déconnecté même avec une activité continue.</p>',
       status: 'in_progress',
@@ -547,7 +549,7 @@ async function main() {
 
   const bugCss = await prisma.item.create({
     data: {
-      type: ItemType.BUG,
+      type: ItemType.TASK,
       title: 'Overflow horizontal sur mobile (page Kanban)',
       description: '<p>Les colonnes Kanban débordent de l\'écran sur iPhone 12. Pas de scroll horizontal visible.</p>',
       status: 'todo',
@@ -559,7 +561,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.BUG,
+      type: ItemType.TASK,
       title: 'Erreur 500 lors de la suppression d\'un espace avec enfants',
       description: '<p>La cascade ne fonctionne pas si un item enfant a des relations. Erreur FK constraint.</p>',
       status: 'done',
@@ -662,7 +664,7 @@ async function main() {
   // --- NOTE dans Organisation ---
   await prisma.item.create({
     data: {
-      type: ItemType.NOTE,
+      type: ItemType.UNDEFINED,
       title: 'Conventions de nommage',
       description: '<h3>Code</h3><ul><li>camelCase pour variables/fonctions</li><li>PascalCase pour composants React</li><li>UPPER_SNAKE pour constantes</li></ul><h3>Commits</h3><p>Format : <code>type: description courte</code></p><p>Types : feat, fix, refactor, docs, style, test, chore</p>',
       spaceId: spaceOrga.id,
@@ -743,7 +745,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.NOTE,
+      type: ItemType.UNDEFINED,
       title: 'Conventions API REST',
       description: '<ul><li>GET pour lecture, POST pour création, PUT pour mise à jour complète, PATCH pour partielle, DELETE pour suppression</li><li>Codes : 200, 201, 204, 400, 401, 403, 404, 409, 500</li><li>Pagination : ?page=1&limit=50</li></ul>',
       spaceId: spaceBackend.id,
@@ -785,7 +787,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.BUG,
+      type: ItemType.TASK,
       title: 'MindMap : nœuds superposés au chargement',
       description: '<p>Lorsque l\'espace a plus de 50 items, les nœuds se chevauchent avant que le layout s\'applique.</p>',
       status: 'todo',
@@ -797,7 +799,7 @@ async function main() {
 
   await prisma.item.create({
     data: {
-      type: ItemType.LINK,
+      type: ItemType.UNDEFINED,
       title: 'React Flow — Documentation',
       url: 'https://reactflow.dev/docs/introduction',
       spaceId: spaceFrontend.id,

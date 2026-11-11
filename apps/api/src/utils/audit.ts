@@ -63,7 +63,6 @@ export function serializeItemForAudit(item: Record<string, unknown>): Record<str
     title: item.title,
     description: item.description,
     content: item.content,
-    url: item.url,
     status: item.status,
     priority: item.priority,
     position: item.position,

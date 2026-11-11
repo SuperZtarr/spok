@@ -3,7 +3,8 @@
  * GET …/article/candidates, item-article.ts) — fonction pure, sans base :
  * - correspondance sur le TEXTE VISIBLE (plainText : balises retirées, entités décodées) : un terme présent seulement
  *   dans le HTML (balise, attribut style/class…) n'est pas un résultat ;
- * - rang 0 = titre qui commence par le terme, 1 = titre qui le contient, 2 = texte de la description ou adresse ;
+ * - rang 0 = titre qui commence par le terme, 1 = titre qui le contient, 2 = texte de la description, nom ou adresse
+ *   d'un contenu (lot 4 contenus multiples : plus d'Item.url) ;
  *   à rang égal : espace de l'article, puis même communauté, puis updatedAt décroissant ;
  * - comparaison insensible à la casse et aux accents ; extrait (≤ 120 caractères + « … ») seulement au rang 2.
  * Règle businessRules « article-picker-relevance ». Les droits et exclusions sont appliqués par la route.
@@ -15,7 +16,7 @@ export type CandidateRow = {
   type: string;
   title: string;
   description: string | null;
-  url: string | null;
+  contents?: { url: string | null; name: string | null }[];
   spaceId: string;
   updatedAt: Date;
   space: { name: string; communityId: string | null; community: { name: string } | null };
@@ -65,7 +66,10 @@ export function rankArticleCandidates(
       const text = plainText(row.description).normalize('NFC');
       const at = fold(text).indexOf(t);
       if (at >= 0) { rank = 2; snippet = snippetAround(text, at, t.length); }
-      else if (row.url && fold(row.url).includes(t)) { rank = 2; snippet = row.url; }
+      else {
+        const hit = (row.contents ?? []).flatMap((c) => [c.name, c.url]).find((v): v is string => !!v && fold(v).includes(t));
+        if (hit) { rank = 2; snippet = hit; }
+      }
     }
     if (rank < 0) continue;
     const proximity = row.spaceId === ctx.articleSpaceId ? 0 : ctx.articleCommunityId && row.space.communityId === ctx.articleCommunityId ? 1 : 2;
