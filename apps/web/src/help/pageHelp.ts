@@ -24,6 +24,7 @@ import { help as newsHelp } from '../pages/help/news.help';
 import { help as profileHelp } from '../components/help/profile.help';
 import { help as liveWindowHelp } from '../components/help/live-window.help';
 import { help as questionHelp } from '../components/help/question.help';
+import { help as itemContentsHelp } from '../components/help/item-contents.help';
 import { help as liveSessionHelp } from '../components/help/live-session.help';
 import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
@@ -67,6 +68,7 @@ export const PAGE_HELP = {
   profile: profileHelp,
   'live-window': liveWindowHelp,
   question: questionHelp,
+  'item-contents': itemContentsHelp,
   'live-session': liveSessionHelp,
   'merge-item': mergeItemHelp,
   'move-to-space': moveToSpaceHelp,

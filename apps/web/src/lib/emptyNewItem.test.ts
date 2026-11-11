@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { isItemEmpty, isFreshDraft, FRESH_DRAFT_MAX_AGE_MS } from './emptyNewItem';
 
-const blank = { title: '', description: null, url: null, content: null, dueDate: null, startDate: null, endDate: null, priority: null, assignedToId: null, tags: [] };
+const blank = { title: '', description: null, content: null, dueDate: null, startDate: null, endDate: null, priority: null, assignedToId: null, tags: [] };
 
 describe('isItemEmpty', () => {
   it('vide : titre blanc, description vide de l\'éditeur, type et statut ignorés', () => {
@@ -14,7 +14,7 @@ describe('isItemEmpty', () => {
     expect(isItemEmpty({ ...blank, title: 'A' }, 0)).toBe(false);
     expect(isItemEmpty({ ...blank, description: '<p>x</p>' }, 0)).toBe(false);
     expect(isItemEmpty({ ...blank, description: '<p><img src="a.webp"></p>' }, 0)).toBe(false);
-    expect(isItemEmpty({ ...blank, url: 'https://x.fr' }, 0)).toBe(false);
+    expect(isItemEmpty({ ...blank, contents: [{ id: 'c1' } as any] }, 0)).toBe(false);
     expect(isItemEmpty({ ...blank, content: { xml: '<x/>' } }, 0)).toBe(false);
     expect(isItemEmpty({ ...blank, dueDate: '2026-11-01' }, 0)).toBe(false);
     expect(isItemEmpty({ ...blank, priority: 2 }, 0)).toBe(false);

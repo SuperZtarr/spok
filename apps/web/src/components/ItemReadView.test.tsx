@@ -1,4 +1,5 @@
-/* TNR de ItemReadView — rendu de la fiche : image intégrée, document nommé, enfants cliquables, HTML nettoyé. */
+/* TNR de ItemReadView — rendu de la fiche : image intégrée, document nommé, enfants cliquables, HTML nettoyé ; contenus
+   multiples (lot 2) rendus après la description, à la place du média unique. */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ItemReadView } from './ItemReadView';
@@ -27,5 +28,22 @@ describe('ItemReadView', () => {
     expect(screen.getByText('a.pdf — Ouvrir').closest('a')?.getAttribute('href')).toBe('https://r2/a.pdf');
     fireEvent.click(screen.getByText('Enfant'));
     expect(onOpenChild).toHaveBeenCalledWith('c1');
+  });
+
+  it('contenus : regroupés après la description, le média unique n’est plus affiché', () => {
+    const at = '2026-11-08T00:00:00Z';
+    const contents = [
+      { id: 'l1', itemId: 'i', kind: 'LINK', url: 'https://site.fr', name: 'Le site', position: 0, createdAt: at, updatedAt: at },
+      { id: 'f1', itemId: 'i', kind: 'FILE', url: 'https://r2/b.pdf', name: 'b.pdf', size: 2048, position: 0, createdAt: at, updatedAt: at },
+      { id: 'm1', itemId: 'i', kind: 'IMAGE', url: 'javascript:alert(1)', name: 'piège', position: 0, createdAt: at, updatedAt: at },
+    ] as any;
+    const { container } = render(<ItemReadView sheet={base} contents={contents} />);
+    expect(container.querySelector('img[src="https://r2/d.webp"]')).toBeNull();
+    expect(container.querySelector('img[src^="javascript"]')).toBeNull();
+    const text = container.textContent ?? '';
+    expect(text.indexOf('gras')).toBeLessThan(text.indexOf('Fichiers'));
+    expect(text.indexOf('Fichiers')).toBeLessThan(text.indexOf('Liens'));
+    expect(screen.getByText('b.pdf — Ouvrir').closest('a')?.getAttribute('href')).toBe('https://r2/b.pdf');
+    expect(screen.getByText('Le site').closest('a')?.getAttribute('href')).toBe('https://site.fr');
   });
 });
