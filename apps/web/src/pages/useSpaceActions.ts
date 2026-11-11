@@ -11,11 +11,13 @@
  * statuses : statuts de la communauté (référentiels). handleInlineUpdate (Kanban, menu ⋯, listes) applique au changement de
  * statut les mêmes règles de dates que la fiche via lib/statusChange.ts (« Non défini » efface début et fin) ; annuler la
  * propagation rétablit statut et dates d'avant.
+ * handleSetTags(id, tags) (vue Tags, 2026-11-11) : enregistre la liste complète des tags (tagIds), affichage optimiste,
+ * refus signalé par window.alert puis relecture.
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { Item, ItemType, StatusConfig } from '@spok/shared';
+import type { Item, ItemType, StatusConfig, Tag } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { statusChangeFields } from '../lib/statusChange';
 import { itemUrl, type ItemOpenMode } from '../lib/itemOpenMode';
@@ -332,6 +334,31 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [resolveItemSpaceId, updateItemMutation, allItems, statuses]);
 
+  // Tags d'un élément (vue Tags, 2026-11-11) : liste complète enregistrée (tagIds seuls, permis aussi sur une copie de
+  // séance verrouillée) ; affichage mis à jour avant la réponse, rétabli par relecture et signalé en cas de refus.
+  const setTagsMutation = useMutation({
+    mutationFn: ({ id, itemSpaceId, tags }: { id: string; itemSpaceId: string; tags: Tag[] }) =>
+      itemsApi.update(itemSpaceId, id, { tagIds: tags.map((t) => t.id) }),
+    onMutate: ({ id, tags }) => {
+      queryClient.setQueriesData({ queryKey: ['items'] }, (old: any) => {
+        if (!old?.data) return old;
+        return { ...old, data: old.data.map((item: any) => (item.id === id ? { ...item, tags } : item)) };
+      });
+    },
+    onError: (error) => {
+      window.alert(`Tags non enregistrés : ${error instanceof Error ? error.message : 'erreur'}`);
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['item', variables.itemSpaceId, variables.id] });
+      if (variables.itemSpaceId !== spaceId) queryClient.invalidateQueries({ queryKey: ['items', variables.itemSpaceId] });
+    },
+  });
+
+  const handleSetTags = useCallback((id: string, tags: Tag[]) => {
+    setTagsMutation.mutate({ id, itemSpaceId: resolveItemSpaceId(id), tags });
+  }, [resolveItemSpaceId, setTagsMutation]);
+
   const handleMove = useCallback((id: string, parentId: string | null, position: number) => {
     const itemSpaceId = resolveItemSpaceId(id);
     moveItemMutation.mutate({ id, itemSpaceId, parentId, position });
@@ -492,6 +519,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     convertToSpacePending: convertToSpaceMutation.isPending,
     // Inline updates
     handleInlineUpdate,
+    handleSetTags,
     // Move
     handleMove,
     moveItemMutation,
