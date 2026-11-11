@@ -1,5 +1,6 @@
 /* Admin statistiques (/admin/stats) : compteurs par entité et activité (lecture seule).
-   Aide utilisateur : fiche pages/help/admin-stats.help.ts — « ? » (PageHelpButton). */
+   Aide utilisateur : fiche pages/help/admin-stats.help.ts — « ? » (PageHelpButton).
+   Couleur d'un type : getTypeHex (registre des types), jamais de table locale. */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, FileText, MessageSquare, Users, FolderKanban, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -17,6 +18,7 @@ import {
 } from 'recharts';
 import { adminApi } from '../../lib/api';
 import { PageHelpButton } from '../../help/PageHelpButton';
+import { getTypeHex } from '../../constants/ui';
 
 const PERIODS = [
   { value: '7d', label: '7j' },
@@ -25,19 +27,6 @@ const PERIODS = [
   { value: '365d', label: '1an' },
   { value: 'all', label: 'Tout' },
 ] as const;
-
-const TYPE_COLORS: Record<string, string> = {
-  NOTE: '#3b82f6',
-  PROJECT: '#8b5cf6',
-  TASK: '#f59e0b',
-  MEETING: '#10b981',
-  PERIOD: '#6366f1',
-  LINK: '#ec4899',
-  CONFIG: '#64748b',
-  DOCUMENT: '#0ea5e9',
-  IMAGE: '#14b8a6',
-  BUG: '#ef4444',
-};
 
 function StatCard({ label, value, icon: Icon, trend }: { label: string; value: number; icon: typeof FileText; trend?: number }) {
   return (
@@ -199,7 +188,7 @@ export function StatsPage() {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       shape={(props: any) => {
                         const { x, y, width, height, payload } = props;
-                        const color = TYPE_COLORS[payload.type] || '#64748b';
+                        const color = getTypeHex(payload.type);
                         return <rect x={x} y={y} width={width} height={height} rx={4} fill={color} />;
                       }}
                     />

@@ -1,9 +1,11 @@
-/* Vue Réseau ego : relations centrées sur un item sélectionné. */
+/* Vue Réseau ego : relations centrées sur un item sélectionné.
+   Couleur d'un élément : getTypeHex (registre des types), jamais de table locale. */
 import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { Item, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { getTypeHex } from '../../constants/ui';
 
 interface EgoNetworkViewProps {
   items: Item[];
@@ -16,19 +18,6 @@ interface EgoNetworkViewProps {
   portalGroups?: { spaceId: string; spaceName: string; items: any[] }[];
   currentSpaceId?: string;
 }
-
-const TYPE_COLORS: Record<string, string> = {
-  NOTE: '#3b82f6',
-  TASK: '#22c55e',
-  PROJECT: '#8b5cf6',
-  MEETING: '#f59e0b',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#6b7280',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
-  BUG: '#ef4444',
-};
 
 interface NodePos {
   id: string;
@@ -281,7 +270,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
                   >
                     <span
                       className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: TYPE_COLORS[item.type] || '#6b7280' }}
+                      style={{ backgroundColor: getTypeHex(item.type) }}
                     />
                     <span className="truncate">{item.title}</span>
                   </button>
@@ -379,7 +368,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
 
             {/* Nodes */}
             {nodes.map((node) => {
-              const color = TYPE_COLORS[node.item.type] || '#6b7280';
+              const color = getTypeHex(node.item.type);
               const isCenter = node.depth === 0;
               const r = isCenter ? nodeRadius + 6 : nodeRadius;
               const isHighlighted =
@@ -496,7 +485,7 @@ export function EgoNetworkView({ items, relations, onEdit, highlightType, highli
             <div className="flex items-center gap-2 text-muted-foreground mt-0.5">
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: TYPE_COLORS[tooltip.item.type] || '#6b7280' }}
+                style={{ backgroundColor: getTypeHex(tooltip.item.type) }}
               />
               <span>{tooltip.item.type}</span>
               {tooltip.item.status && <span>• {tooltip.item.status}</span>}

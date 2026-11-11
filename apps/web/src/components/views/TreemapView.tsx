@@ -1,35 +1,12 @@
-/* Vue Treemap (D3) : hiérarchie en rectangles imbriqués proportionnels. */
+/* Vue Treemap (D3) : hiérarchie en rectangles imbriqués proportionnels.
+   Couleur et libellé d'un type : getTypeHex / getTypeLabel (registre des types), jamais de table locale. */
 import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
 import { EmptyHelp } from '../../help/EmptyHelp';
-
-const ITEM_TYPE_COLORS: Record<string, string> = {
-  PROJECT: '#3b82f6',
-  NOTE: '#22c55e',
-  TASK: '#f97316',
-  MEETING: '#a855f7',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#64748b',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
-  BUG: '#dc2626',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  PROJECT: 'Projet',
-  NOTE: 'Note',
-  TASK: 'Tâche',
-  MEETING: 'Réunion',
-  PERIOD: 'Période',
-  LINK: 'Lien',
-  CONFIG: 'Config',
-  DOCUMENT: 'Document',
-  IMAGE: 'Image',
-  BUG: 'Bug',
-};
+import { getTypeHex, getTypeLabel } from '../../constants/ui';
+import { ITEM_TYPES } from '@spok/shared';
 
 type SizeMode = 'children' | 'contributions' | 'equal';
 
@@ -253,16 +230,16 @@ export function TreemapView({
 
         {/* Legend */}
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          {Object.entries(TYPE_LABELS).map(([type, label]) => {
+          {ITEM_TYPES.map((type) => {
             const hasItems = items.some((i) => i.type === type);
             if (!hasItems) return null;
             return (
               <div key={type} className="flex items-center gap-1">
                 <span
                   className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                  style={{ backgroundColor: ITEM_TYPE_COLORS[type] }}
+                  style={{ backgroundColor: getTypeHex(type) }}
                 />
-                <span className="text-[10px] text-muted-foreground">{label}</span>
+                <span className="text-[10px] text-muted-foreground">{getTypeLabel(type)}</span>
               </div>
             );
           })}
@@ -282,7 +259,7 @@ export function TreemapView({
             if (w < 1 || h < 1) return null;
 
             const hasChildren = !!(node.children && node.children.length > 0);
-            const color = ITEM_TYPE_COLORS[node.data.type] || '#94a3b8';
+            const color = getTypeHex(node.data.type);
             const isLeaf = !hasChildren;
             const depth = node.depth;
 
@@ -370,9 +347,9 @@ export function TreemapView({
             <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
               <span
                 className="w-2 h-2 rounded-full inline-block"
-                style={{ backgroundColor: ITEM_TYPE_COLORS[tooltip.node.type] || '#94a3b8' }}
+                style={{ backgroundColor: getTypeHex(tooltip.node.type) }}
               />
-              {TYPE_LABELS[tooltip.node.type] || tooltip.node.type}
+              {getTypeLabel(tooltip.node.type)}
               {tooltip.node.status && <span>· {tooltip.node.status}</span>}
             </div>
           </div>

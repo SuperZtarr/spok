@@ -1,5 +1,7 @@
-/* Vue Graphe (D3 force) : nœuds items/espaces/communautés, liens hiérarchie/relations/tags, filtres. */
+/* Vue Graphe (D3 force) : nœuds items/espaces/communautés, liens hiérarchie/relations/tags, filtres.
+   Couleur d'un élément : getTypeHex (registre des types), jamais de table locale. */
 import { matchesCriteria } from '../../lib/itemHighlight';
+import { getTypeHex } from '../../constants/ui';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useQuery } from '@tanstack/react-query';
@@ -14,16 +16,8 @@ const STORAGE_KEY = 'graph-link-types';
 const SCOPE_STORAGE_KEY = 'graph-scope';
 const COMMUNITY_FILTER_KEY = 'graph-community-filter';
 
+// Nœuds qui ne sont pas des éléments ; un élément prend la couleur de son type (getTypeHex)
 const NODE_COLORS: Record<string, string> = {
-  PROJECT: '#3b82f6',
-  NOTE: '#22c55e',
-  TASK: '#f97316',
-  MEETING: '#a855f7',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#64748b',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
   SPACE: '#f59e0b',
   COMMUNITY: '#ef4444',
 };
@@ -247,7 +241,7 @@ export function GraphView({ level, entityId, spaceId, spaceName, communityId, co
     const isPortalSpace = isStructural && node.type === 'SPACE' && portalSpaceIdSet.has(node.spaceId);
     const nodeRadius = isStructural ? (node.type === 'COMMUNITY' ? 10 : 8) : 5;
     const fontSize = Math.max((isStructural ? 14 : 12) / globalScale, 2);
-    const color = NODE_COLORS[node.type] || '#94a3b8';
+    const color = NODE_COLORS[node.type] || getTypeHex(node.type);
 
     // Determine if this node matches the highlight filter
     const isItemNode = !isStructural;

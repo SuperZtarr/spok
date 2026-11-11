@@ -1,4 +1,5 @@
-/* Vue Sunburst (D3) : hiérarchie en cercles concentriques, zoom par secteur — mode espace ou global. */
+/* Vue Sunburst (D3) : hiérarchie en cercles concentriques, zoom par secteur — mode espace ou global.
+   Couleur et libellé d'un type d'élément : getTypeHex / getTypeLabel (registre des types), jamais de table locale. */
 import { matchesCriteria } from '../../lib/itemHighlight';
 import { useState, useEffect, useRef, useMemo, useCallback, type RefCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,8 @@ import { arc as d3arc } from 'd3-shape';
 import { useSunburstData } from '../../hooks/useSunburstData';
 import { communitiesApi } from '../../lib/api';
 import type { SunburstNode } from '@spok/shared';
+import { ITEM_TYPES } from '@spok/shared';
+import { getTypeHex, getTypeLabel } from '../../constants/ui';
 import { EmptyHelp } from '../../help/EmptyHelp';
 
 const COMMUNITY_FILTER_KEY = 'graph-community-filter';
@@ -18,23 +21,10 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   space: '#f59e0b',
 };
 
-const ITEM_TYPE_COLORS: Record<string, string> = {
-  PROJECT: '#3b82f6',
-  NOTE: '#22c55e',
-  TASK: '#f97316',
-  MEETING: '#a855f7',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#64748b',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
-  BUG: '#dc2626',
-};
-
 function getNodeColor(d: HierarchyRectangularNode<SunburstNode>): string {
   const data = d.data;
   if (data.nodeType === 'item' && data.itemType) {
-    return ITEM_TYPE_COLORS[data.itemType] || '#94a3b8';
+    return getTypeHex(data.itemType);
   }
   return NODE_TYPE_COLORS[data.nodeType] || '#94a3b8';
 }
@@ -324,10 +314,10 @@ export function SunburstView({ spaceId, spaceName, onNodeClick, highlightType, h
                 <span className="capitalize">{key === 'community' ? 'Communaute' : 'Espace'}</span>
               </div>
             ))}
-            {Object.entries(ITEM_TYPE_COLORS).map(([key, color]) => (
+            {ITEM_TYPES.map((key) => (
               <div key={key} className="flex items-center gap-1.5 text-[10px]">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                <span>{key}</span>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getTypeHex(key) }} />
+                <span>{getTypeLabel(key)}</span>
               </div>
             ))}
           </div>

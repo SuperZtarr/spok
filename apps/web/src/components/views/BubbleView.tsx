@@ -1,35 +1,11 @@
-/* Vue Bulles (D3 pack) : items en cercles groupés par espace/statut. */
+/* Vue Bulles (D3 pack) : items en cercles groupés par espace/statut.
+   Couleur et libellé d'un type : getTypeHex / getTypeLabel (registre des types), jamais de table locale. */
 import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { hierarchy, pack, type HierarchyCircularNode } from 'd3-hierarchy';
 import type { Item } from '@spok/shared';
 import { EmptyHelp } from '../../help/EmptyHelp';
-
-const ITEM_TYPE_COLORS: Record<string, string> = {
-  PROJECT: '#3b82f6',
-  NOTE: '#22c55e',
-  TASK: '#f97316',
-  MEETING: '#a855f7',
-  PERIOD: '#06b6d4',
-  LINK: '#6366f1',
-  CONFIG: '#64748b',
-  DOCUMENT: '#78716c',
-  IMAGE: '#ec4899',
-  BUG: '#dc2626',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  PROJECT: 'Projet',
-  NOTE: 'Note',
-  TASK: 'Tâche',
-  MEETING: 'Réunion',
-  PERIOD: 'Période',
-  LINK: 'Lien',
-  CONFIG: 'Config',
-  DOCUMENT: 'Document',
-  IMAGE: 'Image',
-  BUG: 'Bug',
-};
+import { getTypeHex, getTypeLabel } from '../../constants/ui';
 
 type SizeMode = 'equal' | 'contributions' | 'relations';
 
@@ -312,7 +288,7 @@ export function BubbleView({
         >
           {nodes.map((node) => {
             const d = node.data;
-            const color = ITEM_TYPE_COLORS[d.type] || '#94a3b8';
+            const color = getTypeHex(d.type);
             const hasChildren = !!(node.children && node.children.length > 0);
             const dimmed = (highlightType || highlightStatus) && !isHighlighted(d);
             const searchMatch = isSearchMatch(d);
@@ -370,9 +346,9 @@ export function BubbleView({
             <span className="inline-flex items-center gap-1">
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: ITEM_TYPE_COLORS[tooltip.node.type] || '#94a3b8' }}
+                style={{ backgroundColor: getTypeHex(tooltip.node.type) }}
               />
-              {TYPE_LABELS[tooltip.node.type] || tooltip.node.type}
+              {getTypeLabel(tooltip.node.type)}
             </span>
             {tooltip.node.status && (
               <span>{tooltip.node.status}</span>
@@ -417,9 +393,9 @@ export function BubbleView({
           <span key={type} className="inline-flex items-center gap-1">
             <span
               className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: ITEM_TYPE_COLORS[type] || '#94a3b8' }}
+              style={{ backgroundColor: getTypeHex(type) }}
             />
-            <span className="text-muted-foreground">{TYPE_LABELS[type] || type}</span>
+            <span className="text-muted-foreground">{getTypeLabel(type)}</span>
           </span>
         ))}
       </div>

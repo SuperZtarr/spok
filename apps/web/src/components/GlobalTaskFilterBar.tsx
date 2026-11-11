@@ -1,10 +1,11 @@
-/* Barre de filtres de la page Tâches globales : types, statuts (sans les issues réservées aux questions), priorités, dates, mes tâches. */
+/* Barre de filtres de la page Tâches globales : types, statuts (sans les issues réservées aux questions), priorités, dates, mes tâches.
+   Types proposés : registre des types (TYPE_FILTER_OPTIONS), jamais de liste locale. */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Search, X, SlidersHorizontal } from 'lucide-react';
 import { spacesApi, communitiesApi } from '../lib/api';
 import { Input } from './ui/Input';
-import { TYPE_LABELS } from '../constants/ui';
+import { TYPE_FILTER_OPTIONS } from '../constants/ui';
 import { DEFAULT_STATUSES } from '@spok/shared';
 import type { GlobalTaskFilterState } from '../hooks/useGlobalTaskFilters';
 
@@ -80,19 +81,8 @@ function FilterRow({
   );
 }
 
-const typeOptions = [
-  { id: 'UNDEFINED', label: TYPE_LABELS['UNDEFINED'] || 'Non défini', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  { id: 'TASK', label: TYPE_LABELS['TASK'] || 'Tâche', color: 'bg-green-100 text-green-800 border-green-300' },
-  { id: 'PROJECT', label: TYPE_LABELS['PROJECT'] || 'Projet', color: 'bg-purple-100 text-purple-800 border-purple-300' },
-  { id: 'NOTE', label: TYPE_LABELS['NOTE'] || 'Note', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { id: 'MEETING', label: TYPE_LABELS['MEETING'] || 'Réunion', color: 'bg-orange-100 text-orange-800 border-orange-300' },
-  { id: 'BUG', label: TYPE_LABELS['BUG'] || 'Anomalie', color: 'bg-red-100 text-red-800 border-red-300' },
-  { id: 'DOCUMENT', label: TYPE_LABELS['DOCUMENT'] || 'Document', color: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
-  { id: 'PERIOD', label: TYPE_LABELS['PERIOD'] || 'Période', color: 'bg-teal-100 text-teal-800 border-teal-300' },
-  { id: 'LINK', label: TYPE_LABELS['LINK'] || 'Lien', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-  { id: 'IMAGE', label: TYPE_LABELS['IMAGE'] || 'Image', color: 'bg-pink-100 text-pink-800 border-pink-300' },
-  { id: 'DIAGRAM', label: TYPE_LABELS['DIAGRAM'] || 'Diagramme', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-];
+// Types : registre (TYPE_FILTER_OPTIONS), jamais de liste locale
+const typeOptions = TYPE_FILTER_OPTIONS;
 
 // Statuts sans réservation seulement : les issues d'une question ne concernent pas les tâches
 const statusOptions = DEFAULT_STATUSES

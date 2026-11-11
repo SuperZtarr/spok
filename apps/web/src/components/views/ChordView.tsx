@@ -1,9 +1,11 @@
-/* Vue Chord (D3) : relations entre espaces en arcs de cercle. */
+/* Vue Chord (D3) : relations entre espaces en arcs de cercle.
+   Couleur et libellé d'un type : getTypeHex / getTypeLabel (registre des types), jamais de table locale. */
 import { useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { chord, ribbon } from 'd3-chord';
 import { arc as d3Arc } from 'd3-shape';
 import type { Item, ItemRelation } from '@spok/shared';
 import { EmptyHelp } from '../../help/EmptyHelp';
+import { getTypeHex, getTypeLabel } from '../../constants/ui';
 
 interface ChordViewProps {
   items: Item[];
@@ -16,32 +18,6 @@ interface ChordViewProps {
 }
 
 type GroupMode = 'type' | 'space';
-
-const TYPE_COLORS: Record<string, string> = {
-  NOTE: '#3b82f6',
-  PROJECT: '#a855f7',
-  TASK: '#22c55e',
-  MEETING: '#f97316',
-  PERIOD: '#14b8a6',
-  LINK: '#6366f1',
-  DOCUMENT: '#06b6d4',
-  IMAGE: '#ec4899',
-  BUG: '#ef4444',
-  CONFIG: '#6b7280',
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  NOTE: 'Note',
-  PROJECT: 'Projet',
-  TASK: 'Tâche',
-  MEETING: 'Réunion',
-  PERIOD: 'Période',
-  LINK: 'Lien',
-  DOCUMENT: 'Document',
-  IMAGE: 'Image',
-  BUG: 'Anomalie',
-  CONFIG: 'Config',
-};
 
 // Generate distinct colors for spaces
 const SPACE_PALETTE = [
@@ -98,8 +74,8 @@ function buildChordData(
     }
 
     return {
-      labels: types.map((t) => TYPE_LABELS[t] || t),
-      colors: types.map((t) => TYPE_COLORS[t] || '#94a3b8'),
+      labels: types.map((t) => getTypeLabel(t)),
+      colors: types.map((t) => getTypeHex(t)),
       matrix,
       ids: types,
     };

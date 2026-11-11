@@ -1,8 +1,9 @@
-/* Toolbar de filtres legacy (remplacée par les blocs Filtre/Highlight du global-toolbar, cf. skill spok-menu). */
+/* Toolbar de filtres legacy (remplacée par les blocs Filtre/Highlight du global-toolbar, cf. skill spok-menu).
+   Types proposés : ITEM_TYPES (registre des types), jamais de liste locale. */
 import { useState, useRef } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
 import type { ItemType, SpaceReferentiels } from '@spok/shared';
-import { DEFAULT_REFERENTIELS } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, ITEM_TYPES } from '@spok/shared';
 import { TYPE_LABELS, getTypeColor } from '../../constants/ui';
 
 export interface FilterToolbarProps {
@@ -80,7 +81,7 @@ export function FilterToolbar({
               </button>
               {typeOpen && (
                 <div className="absolute top-full left-0 mt-1 z-50 bg-card border rounded-lg shadow-xl py-1 min-w-[160px]">
-                  {(['ALL', 'UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'] as const).map(t => (
+                  {(['ALL', ...ITEM_TYPES] as const).map(t => (
                     <button key={t} onClick={() => { onFilterChange(t); setTypeOpen(false); }}
                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${filter === t ? 'bg-accent font-medium' : 'text-foreground/80 hover:bg-accent'}`}>
                       {t !== 'ALL' && <span className={`w-2 h-2 rounded-full ${getTypeColor(t, referentiels?.typeLabels).bgHover}`} />}

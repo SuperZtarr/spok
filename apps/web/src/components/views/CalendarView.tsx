@@ -1,5 +1,7 @@
-/* Vue Calendrier : items datés par mois/semaine, navigation, création à la date cliquée. */
+/* Vue Calendrier : items datés par mois/semaine, navigation, création à la date cliquée.
+   Couleur d'un élément : celle de son type, renommée/recolorée par la communauté (getTypeHexSet + referentiels). */
 import { matchesStatus, matchesType } from '../../lib/itemHighlight';
+import { getTypeHexSet } from '../../constants/ui';
 import React, { useMemo, useCallback, useRef } from 'react';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -10,7 +12,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import type { EventInput, EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
-import type { Item, ItemType, SpaceReferentiels } from '@spok/shared';
+import type { Item, SpaceReferentiels } from '@spok/shared';
 
 interface PortalGroup {
   spaceId: string;
@@ -45,23 +47,6 @@ interface CalendarViewProps {
   viewContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-// Convert hex-like tailwind color refs to usable CSS
-function typeColorToHex(type: ItemType, _referentiels?: SpaceReferentiels['typeLabels']): { bg: string; border: string; text: string } {
-  const colorMap: Record<string, { bg: string; border: string; text: string }> = {
-    NOTE: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
-    TASK: { bg: '#dcfce7', border: '#22c55e', text: '#166534' },
-    PROJECT: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
-    MEETING: { bg: '#f3e8ff', border: '#a855f7', text: '#6b21a8' },
-    PERIOD: { bg: '#e0e7ff', border: '#6366f1', text: '#3730a3' },
-    LINK: { bg: '#cffafe', border: '#06b6d4', text: '#155e75' },
-    BUG: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
-    DOCUMENT: { bg: '#f1f5f9', border: '#64748b', text: '#334155' },
-    IMAGE: { bg: '#fce7f3', border: '#ec4899', text: '#9d174d' },
-    DIAGRAM: { bg: '#ecfdf5', border: '#10b981', text: '#065f46' },
-    CONFIG: { bg: '#f5f5f4', border: '#78716c', text: '#44403c' },
-  };
-  return colorMap[type] || colorMap.NOTE;
-}
 
 export function CalendarView({
   items,
@@ -91,7 +76,7 @@ export function CalendarView({
     return items
       .filter(item => item.startDate || item.endDate || item.dueDate)
       .map(item => {
-        const colors = typeColorToHex(item.type as ItemType, referentiels?.typeLabels);
+        const colors = getTypeHexSet(item.type, referentiels?.typeLabels);
         const isPortal = !!(currentSpaceId && item.spaceId && item.spaceId !== currentSpaceId);
         const portalName = isPortal ? portalSpaceNames.get(item.spaceId) : undefined;
         const isDimmed =
