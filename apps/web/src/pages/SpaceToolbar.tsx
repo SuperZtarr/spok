@@ -1,12 +1,12 @@
 /*
- * Barre d'outils d'espace : sélecteur de vues, filtre ou aperçu, tri, création.
+ * Barre d'outils d'espace : sélecteur de vues, filtre ou aperçu, tri, création. Types du filtre : ITEM_TYPES (registre).
  * Filtre / Aperçu (décision Thomas 2026-11-04) : un seul bloc, selon la vue (prop highlightMode, calculée par SpacePage) —
  * « Aperçu » sur les vues qui estompent sans masquer, « Filtre » sur celles qui réduisent la liste. Mêmes états
  * (filter, statusFilter, searchQuery) : un critère posé reste actif en changeant de vue, et change juste d'effet.
  * Types et Statuts à choix multiple (2026-11-05) : listes de valeurs cochées, liste vide = tous ; le menu reste ouvert
  * pendant qu'on coche. Bloc toujours déplié à partir de xl (1280 px) ; en dessous, le bouton Filtre/Aperçu le déplie.
- * Critère posé (type, statut ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à côté, hors du bloc
- * dépliable pour rester accessible, qui vide les trois critères.
+ * Critère posé (type, statut ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à droite des
+ * composants de filtre (2026-11-11), hors du bloc dépliable pour rester accessible, qui vide les trois critères.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
@@ -48,7 +48,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig, StatusConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY, statusesForItems } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, ITEM_TYPES, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY, statusesForItems } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
@@ -471,19 +471,6 @@ export function SpaceToolbar({
                     <ChevronDown className={`w-3 h-3 transition-transform xl:hidden ${filtreOpen ? 'rotate-180' : ''}`} />
                   </button>
                   </HelpHint>
-                  {hasActive && (
-                    <HelpHint text={highlightMode ? H.clearHighlight : H.clearFilters}>
-                      <button
-                        type="button"
-                        onClick={() => { onFilterChange([]); onStatusFilterChange([]); onSearchQueryChange(''); }}
-                        aria-label={highlightMode ? H.clearHighlight : H.clearFilters}
-                        className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors whitespace-nowrap"
-                      >
-                        <X className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="hidden sm:inline">Effacer</span>
-                      </button>
-                    </HelpHint>
-                  )}
                   <div className={`${filtreOpen ? 'flex' : 'hidden'} xl:flex items-center gap-1`}>
                       {/* Types */}
                       <div ref={typeDropdownRef} className="relative flex-shrink-0">
@@ -504,7 +491,7 @@ export function SpaceToolbar({
                               className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${filter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                               <span className="flex-1 text-left">Tous les types</span>
                             </button>
-                            {(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'] as const).map((t) => {
+                            {ITEM_TYPES.map((t) => {
                               const isActive = filter.includes(t);
                               const typeColor = getTypeColor(t, referentiels?.typeLabels);
                               return (
@@ -572,6 +559,19 @@ export function SpaceToolbar({
                         )}
                       </div>
                   </div>
+                  {hasActive && (
+                    <HelpHint text={highlightMode ? H.clearHighlight : H.clearFilters}>
+                      <button
+                        type="button"
+                        onClick={() => { onFilterChange([]); onStatusFilterChange([]); onSearchQueryChange(''); }}
+                        aria-label={highlightMode ? H.clearHighlight : H.clearFilters}
+                        className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors whitespace-nowrap"
+                      >
+                        <X className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="hidden sm:inline">Effacer</span>
+                      </button>
+                    </HelpHint>
+                  )}
                 </>
               );
               // Deux zones nommées (DevZoneInspector, mode Aide, tours) pour une seule commande
