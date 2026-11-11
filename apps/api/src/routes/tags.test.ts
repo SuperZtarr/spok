@@ -108,7 +108,8 @@ describe('Tags routes', () => {
   describe('POST /spaces/:spaceId/tags', () => {
     it('should create a tag', async () => {
       allowAccess()
-      prisma.tag.findUnique.mockResolvedValue(null) // no duplicate
+      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      prisma.tag.findFirst.mockResolvedValue(null) // no duplicate
       prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'feature', color: '#00ff00', spaceId: SPACE_ID })
 
       const res = await app.inject({
@@ -120,11 +121,33 @@ describe('Tags routes', () => {
 
       expect(res.statusCode).toBe(201)
       expect(res.json().name).toBe('feature')
+      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'feature', color: '#00ff00', spaceId: SPACE_ID } })
+    })
+
+    it('espace d\'une communauté : tag créé dans la communauté', async () => {
+      allowAccess()
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      prisma.tag.findFirst.mockResolvedValue(null)
+      prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'bug', communityId: 'com-1' })
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/spaces/${SPACE_ID}/tags`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { name: 'bug' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'bug', color: undefined, communityId: 'com-1' } })
+      expect(prisma.tag.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ OR: [{ spaceId: SPACE_ID }, { communityId: 'com-1' }] }),
+      }))
     })
 
     it('should reject duplicate tag name', async () => {
       allowAccess()
-      prisma.tag.findUnique.mockResolvedValue({ id: 'existing', name: 'feature', spaceId: SPACE_ID })
+      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      prisma.tag.findFirst.mockResolvedValue({ id: 'existing' })
 
       const res = await app.inject({
         method: 'POST',

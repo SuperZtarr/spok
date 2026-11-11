@@ -1,4 +1,7 @@
-/* Tags d'un espace : CRUD + association aux items (couleur hex, unicité par espace). */
+/* Tags d'un espace : liste (tags de l'espace + de sa communauté), création, modification et suppression.
+ * Création (2026-11-11) : dans la communauté de l'espace s'il en a une (tags partagés, comme utils/classificationTag.ts),
+ * sinon dans l'espace ; nom unique sans casse dans l'espace et sa communauté. Modification / suppression : tags propres
+ * à l'espace seulement — les tags de communauté se gèrent par /communities/:id/tags (OWNER/ADMIN). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { checkSpaceAccess } from './items.js';
@@ -63,15 +66,23 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = createTagSchema.parse(request.body);
+      const name = body.name.trim();
+      if (!name) return reply.badRequest('Tag name is required');
 
-      // Check if tag name already exists in space
-      const existing = await fastify.prisma.tag.findUnique({
+      // Espace d'une communauté : le tag est créé dans la communauté (partagé par tous ses espaces, même règle que
+      // ensureTag) ; sinon dans l'espace. Doublon (sans casse) refusé dans l'espace comme dans sa communauté.
+      const space = await fastify.prisma.space.findUnique({
+        where: { id: request.params.spaceId },
+        select: { communityId: true },
+      });
+      const communityId = space?.communityId ?? null;
+
+      const existing = await fastify.prisma.tag.findFirst({
         where: {
-          spaceId_name: {
-            spaceId: request.params.spaceId,
-            name: body.name,
-          },
+          name: { equals: name, mode: 'insensitive' },
+          OR: [{ spaceId: request.params.spaceId }, ...(communityId ? [{ communityId }] : [])],
         },
+        select: { id: true },
       });
 
       if (existing) {
@@ -80,9 +91,9 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const tag = await fastify.prisma.tag.create({
         data: {
-          name: body.name,
+          name,
           color: body.color,
-          spaceId: request.params.spaceId,
+          ...(communityId ? { communityId } : { spaceId: request.params.spaceId }),
         },
       });
 

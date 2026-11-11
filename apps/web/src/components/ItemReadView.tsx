@@ -7,13 +7,21 @@
  * - toolbar : boutons d'action fournis par la modale (Copier la fiche, Imprimer) — affichés en haut à droite
  * - reactions : barre de réactions (lecture seule chez un visiteur) fournie par la modale
  * - onOpenChild : clic sur un enfant (navigation dans la modale)
- * - articleContent : blocs d'un article (ArticleReadBlocks) sous la description, pour le type ARTICLE
+ * - articleContent : blocs d'un article (ArticleReadBlocks) ou bloc Question, sous la description
+ * - contents : contenus de l'élément (contenus multiples, lot 2) — fournis par la modale (item.contents, hors Article) :
+ *   rendus en grand APRÈS la description et articleContent (ItemContentsRead), regroupés Images, Fichiers, Liens,
+ *   Schémas ; le média unique de la fiche (sheet.media) n'est alors plus affiché. Absent (undefined) : ancien média
+ *   unique en tête. La copie (« Copier la fiche », sheet) garde le média unique jusqu'au lot 3.
+ * - tags : tags de l'élément, affichés en couleur (TagBadge, comme dans les vues — 2026-11-11) ; absent : noms en gris.
  * Règles : aucun champ modifiable ici — l'édition reste dans la fiche (ItemEditModal, sélecteur Afficher / Modifier).
  * Zones data-devzone item-lecture, item-lecture-media, item-lecture-contenu : DevZoneInspector et mode Aide (textes : help/shellZones.ts).
  * HTML de description et contributions : toujours nettoyé par sanitizeHtml (l'API ne filtre pas le HTML). */
 import { useState, type ReactNode } from 'react';
 import { ExternalLink, Paperclip } from 'lucide-react';
+import type { ItemContent, Tag } from '@spok/shared';
+import { TagBadge } from './ui/TagBadge';
 import type { ItemSheet } from '../lib/itemClipboard';
+import { ItemContentsRead } from './contents/ItemContentsSection';
 import { sanitizeHtml, isSafeUrl } from '../lib/sanitizeHtml';
 
 interface ItemReadViewProps {
@@ -23,6 +31,10 @@ interface ItemReadViewProps {
   onOpenChild?: (id: string) => void;
   /** Contenu d'un article (blocs), affiché sous la description — fourni par la modale pour le type ARTICLE */
   articleContent?: ReactNode;
+  /** Contenus de l'élément (undefined = ancien média unique de la fiche) */
+  contents?: ItemContent[];
+  /** Tags de l'élément avec leur couleur (TagBadge) ; absent : noms seuls de la fiche (sheet.tags) */
+  tags?: Tag[];
 }
 
 const PROSE = 'prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground';
@@ -31,10 +43,10 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border pb-1 mb-3">{children}</h2>;
 }
 
-export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent }: ItemReadViewProps) {
+export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent, contents, tags }: ItemReadViewProps) {
   const [zoomed, setZoomed] = useState(false);
   // item.url n'est pas filtré par l'API : un schéma hors liste blanche (javascript:…) n'est ni affiché ni cliquable
-  const media = sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
+  const media = contents === undefined && sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
 
   return (
     <article className="w-full space-y-8 pb-8" data-tour="item-read-view" data-devzone="item-lecture">
@@ -53,7 +65,11 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
             ))}
           </dl>
         )}
-        {sheet.tags.length > 0 && (
+        {tags && tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5" data-devzone="item-tags">
+            {tags.map((t) => <TagBadge key={t.id} tag={t} />)}
+          </div>
+        ) : sheet.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {sheet.tags.map((t) => (
               <span key={t} className="px-2 py-0.5 rounded-full text-xs border border-border text-muted-foreground">{t}</span>
@@ -98,6 +114,8 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
         )}
 
         {articleContent}
+
+        {contents && <ItemContentsRead contents={contents} />}
 
         {sheet.children.length > 0 && (
           <section>
