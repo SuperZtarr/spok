@@ -1,6 +1,7 @@
 /* Tests de la zone Contenus de la fiche (ItemContentsSection, contenus multiples lot 2) : regroupement dans l'ordre fixe
  * Images, Fichiers, Liens, Schémas ; menu « + Ajouter » ; ajout d'un lien ; retrait confirmé ; ordre dans une sorte ;
- * affichage seul sans droit ; élément non enregistré. API simulée (lib/api). */
+ * affichage seul sans droit ; élément non enregistré ; vignettes (aperçu de fichier, extension, site) dans les deux
+ * modes (mise en forme en vignettes, 2026-11-11). API simulée (lib/api). */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, waitFor, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -15,7 +16,7 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../../lib/api', () => ({ itemContentsApi: api }))
 
-import { ItemContentsSection, groupContents, formatSize } from './ItemContentsSection'
+import { ItemContentsSection, ItemContentsRead, groupContents, formatSize } from './ItemContentsSection'
 
 const at = '2026-11-08T00:00:00Z'
 const c = (id: string, kind: ItemContent['kind'], position: number, extra: Partial<ItemContent> = {}): ItemContent =>
@@ -71,11 +72,11 @@ describe('ItemContentsSection', () => {
     await waitFor(() => expect(api.add).toHaveBeenCalledWith('s1', 'i1', { kind: 'DIAGRAM', xml: '' }))
   })
 
-  it('retrait après confirmation ; descente dans la sorte', async () => {
+  it('retrait après confirmation ; placer après dans la sorte', async () => {
     api.remove.mockResolvedValue(undefined)
     api.reorder.mockResolvedValue([])
     renderZone({ contents: [c('f1', 'FILE', 0), c('f2', 'FILE', 1)] })
-    fireEvent.click(screen.getAllByLabelText('Descendre')[0])
+    fireEvent.click(screen.getAllByLabelText('Placer après')[0])
     await waitFor(() => expect(api.reorder).toHaveBeenCalledWith('s1', 'i1', ['f2', 'f1']))
     fireEvent.click(screen.getAllByLabelText('Retirer')[1])
     expect(api.remove).not.toHaveBeenCalled()
@@ -95,6 +96,27 @@ describe('ItemContentsSection', () => {
       </QueryClientProvider>,
     )
     expect(container.textContent).toBe('')
+  })
+
+  it('vignettes : fichier avec aperçu (1re page, clic = ouvrir), sans aperçu (extension), lien (site)', () => {
+    renderZone({ contents: [
+      c('f1', 'FILE', 0, { name: 'Rapport.pdf', previewUrl: 'https://x/p1.webp', size: 2048 }),
+      c('f2', 'FILE', 1, { name: 'Archive.zip' }),
+      c('l1', 'LINK', 0, { url: 'https://www.exemple.fr/page', name: 'Exemple' }),
+    ] })
+    const page = screen.getByLabelText('Rapport.pdf — Ouvrir')
+    expect(page.getAttribute('href')).toBe('https://x/f1')
+    expect(page.querySelector('img')?.getAttribute('src')).toBe('https://x/p1.webp')
+    expect(screen.getByText('2 Ko')).toBeTruthy()
+    expect(screen.getByLabelText('Archive.zip — Ouvrir').textContent).toContain('ZIP')
+    expect(screen.getByText('exemple.fr')).toBeTruthy()
+  })
+
+  it('mode Afficher : mêmes vignettes, sans action', () => {
+    render(<ItemContentsRead contents={[c('f1', 'FILE', 0, { name: 'Note.txt', excerpt: 'Début du texte' }), c('m1', 'IMAGE', 0)]} />)
+    expect(screen.getByText('Début du texte')).toBeTruthy()
+    expect(screen.getByAltText('m1')).toBeTruthy()
+    expect(screen.queryByLabelText('Retirer')).toBeNull()
   })
 
   it('élément pas encore enregistré : pas d\'ajout, phrase d\'explication', () => {

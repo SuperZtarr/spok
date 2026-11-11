@@ -43,7 +43,8 @@ describe('ItemReadView', () => {
     const text = container.textContent ?? '';
     expect(text.indexOf('gras')).toBeLessThan(text.indexOf('Fichiers'));
     expect(text.indexOf('Fichiers')).toBeLessThan(text.indexOf('Liens'));
-    expect(screen.getByText('b.pdf — Ouvrir').closest('a')?.getAttribute('href')).toBe('https://r2/b.pdf');
+    // Vignette (2026-11-11) : le nom du fichier est le lien qui l'ouvre
+    expect(screen.getByText('b.pdf').closest('a')?.getAttribute('href')).toBe('https://r2/b.pdf');
     expect(screen.getByText('Le site').closest('a')?.getAttribute('href')).toBe('https://site.fr');
   });
 });

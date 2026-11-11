@@ -1,4 +1,5 @@
-/* Éditeur de diagrammes draw.io embarqué (iframe) : lit/écrit le XML dans item.content. */
+/* Éditeur de diagrammes draw.io embarqué (iframe) : lit/écrit le XML dans item.content.
+ * compact : aperçu seul qui remplit son cadre (vignette de la zone Contenus, 2026-11-11) — clic = éditeur plein écran. */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Workflow, Loader2 } from 'lucide-react';
 import { Button } from './Button';
@@ -9,11 +10,13 @@ interface DrawioEditorProps {
   onSaveAndClose?: (xml: string, pngBlob: Blob) => Promise<void>;
   previewUrl?: string;
   editable?: boolean;
+  /** Aperçu seul, remplissant son cadre (vignette de la zone Contenus) : clic = ouvrir l'éditeur plein écran */
+  compact?: boolean;
 }
 
 const DRAWIO_URL = 'https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&saveAndExit=1';
 
-export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editable = true }: DrawioEditorProps) {
+export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editable = true, compact = false }: DrawioEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -111,6 +114,21 @@ export function DrawioEditor({ xml, onChange, onSaveAndClose, previewUrl, editab
           </div>
         )}
       </div>
+    );
+  }
+
+  const startEditing = () => { if (editable) { initialXmlRef.current = xml; setIsEditing(true); } };
+
+  // Aperçu compact (vignette de la zone Contenus) : remplit son cadre, clic = modifier, pas de bouton
+  if (compact) {
+    return (
+      <button type="button" onClick={startEditing} disabled={!editable}
+        className="flex h-full w-full items-center justify-center bg-white p-1 text-muted-foreground enabled:cursor-pointer enabled:hover:opacity-90 dark:bg-gray-900"
+        title={editable ? (xml ? 'Cliquer pour modifier' : 'Cliquer pour dessiner') : undefined}>
+        {previewUrl
+          ? <img src={previewUrl} alt="Diagramme" className="h-full w-full object-contain" />
+          : <span className="flex flex-col items-center gap-1 text-xs"><Workflow className="h-8 w-8 opacity-50" />{xml ? 'Sans aperçu' : 'Schéma vide'}</span>}
+      </button>
     );
   }
 

@@ -9,8 +9,11 @@
  *   aperçu PNG envoyé à « Enregistrer et fermer » de draw.io). Sans droit (lecteur, copie de séance verrouillée) :
  *   affichage seul. Chaque écriture part tout de suite (pas besoin d'« Enregistrer »).
  * - ItemContentsRead (mode Afficher, ItemReadView) : les mêmes contenus en grand, sans action d'écriture.
- * Fichier (aperçu des fichiers, 2026-11-11) : miniature de la 1re page et début du texte en mode Modifier, grand
- * aperçu au-dessus du lien en mode Afficher (FilePreviewThumb) ; rien de plus si le fichier n'a pas d'aperçu.
+ * Mise en forme en vignettes (décision Thomas 2026-11-11), dans les deux modes : chaque sorte est une suite de
+ * vignettes alignées à gauche (flex-wrap), grande zone d'aperçu en haut (ContentTile / TilePreview), nom et détail
+ * dessous ; en mode Modifier, actions en pied (renommer, ← → dans la sorte, retirer), toujours visibles ; en mode
+ * Afficher, vignettes plus grandes. Fichier : 1re page ou début du texte (FilePreviewThumb), sinon icône + extension ;
+ * schéma modifiable : DrawioEditor compact (clic = draw.io plein écran).
  * Props clés : spaceId, itemId (absent = élément pas encore enregistré), contents (item.contents, détail complet avec
  * xml), canEdit, onTitleHint (titre suggéré par le premier fichier ou lien, appliqué par la fiche si le titre est vide).
  * Règles : zone masquée sur un Article (décidé par l'appelant) ; adresses toujours passées par safeHref / isSafeUrl
@@ -18,7 +21,8 @@
  * (zones data-help-zone item-contents:*, rappels pageHint('item-contents', …)). Règle de gestion : item-contents-zone.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Trash2, ChevronUp, ChevronDown, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Trash2, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { fileExtension, hostOf } from '../../lib/itemFace';
 import { ITEM_CONTENT_KINDS, sortItemContents, type ItemContent, type ItemContentKind } from '@spok/shared';
 import { useItemContents } from '../../hooks/useItemContents';
 import { isSafeUrl, safeHref } from '../../lib/sanitizeHtml';
@@ -165,7 +169,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
         {groups.map(([kind, list]) => (
           <section key={kind} className="space-y-1.5" aria-label={KIND_LABELS[kind]}>
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{KIND_LABELS[kind]}</h4>
-            <div className={kind === 'IMAGE' ? 'grid grid-cols-2 sm:grid-cols-3 gap-2' : 'space-y-1.5'}>
+            <div className="flex flex-wrap gap-2">
               {list.map((c, i) => (
                 <ContentRow key={c.id} content={c} canEdit={writable}
                   first={i === 0} last={i === list.length - 1}
@@ -250,8 +254,6 @@ function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, 
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name ?? '');
   useEffect(() => { if (!renaming) setName(c.name ?? ''); }, [c.name, renaming]);
-  const href = safeHref(c.url);
-  const label = displayName(c);
 
   const actions = canEdit && (
     <div className="flex items-center gap-0.5 shrink-0">
@@ -265,13 +267,13 @@ function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, 
       {!(first && last) && (
         <>
           <HelpHint text={pageHint('item-contents', 'moveUp')}>
-            <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30" disabled={first} onClick={onUp} aria-label="Monter">
-              <ChevronUp className="w-3.5 h-3.5" />
+            <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30" disabled={first} onClick={onUp} aria-label="Placer avant">
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </HelpHint>
           <HelpHint text={pageHint('item-contents', 'moveDown')}>
-            <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30" disabled={last} onClick={onDown} aria-label="Descendre">
-              <ChevronDown className="w-3.5 h-3.5" />
+            <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30" disabled={last} onClick={onDown} aria-label="Placer après">
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </HelpHint>
         </>
@@ -297,52 +299,84 @@ function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, 
     </div>
   );
 
-  if (c.kind === 'IMAGE') {
-    return (
-      <figure className="rounded-md border bg-muted/30 overflow-hidden">
-        {c.url && isSafeUrl(c.url) ? (
-          <img src={c.url} alt={label ?? ''} onClick={onOpenImage} title="Cliquer pour agrandir"
-            className="w-full h-28 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
-        ) : <div className="h-28 flex items-center justify-center text-muted-foreground"><ImageIcon className="w-6 h-6" /></div>}
-        <figcaption className="flex items-center gap-1 px-1.5 py-1 text-xs">
-          {renameField || <span className="truncate flex-1" title={label ?? ''}>{c.name || ''}</span>}
-          {actions}
-        </figcaption>
-      </figure>
-    );
-  }
+  const preview = c.kind === 'DIAGRAM'
+    ? <DiagramContent content={c} canEdit={canEdit} diagram={diagram} />
+    : <TilePreview content={c} onOpenImage={onOpenImage} />;
+  return <ContentTile content={c} preview={preview} caption={renameField || undefined} footer={actions || undefined} />;
+}
 
-  if (c.kind === 'DIAGRAM') {
-    return (
-      <div className="space-y-1">
-        <DiagramContent content={c} canEdit={canEdit} diagram={diagram} />
-        {canEdit && <div className="flex justify-end">{actions}</div>}
-      </div>
-    );
-  }
+/** Détail sous le nom : taille d'un fichier, site d'un lien */
+function tileDetail(c: ItemContent): string | null {
+  if (c.kind === 'FILE') return formatSize(c.size);
+  if (c.kind === 'LINK') return hostOf(c.url) ?? c.url ?? null;
+  return null;
+}
 
-  const Icon = c.kind === 'FILE' ? FileText : ExternalLink;
-  const size = c.kind === 'FILE' ? formatSize(c.size) : null;
-  // Fichier : miniature de sa 1re page à la place de l'icône, début du texte sous le nom
-  const thumb = c.kind === 'FILE' && hasFilePreview(c, 'sm');
-  const fileExcerpt = c.kind === 'FILE' ? c.excerpt?.trim() : null;
+/** Icône de remplacement, grande, centrée dans la zone d'aperçu (avec l'extension d'un fichier) */
+function TileIcon({ kind, label }: { kind: ItemContentKind; label?: string | null }) {
+  const Icon = kind === 'LINK' ? ExternalLink : KIND_ICONS[kind];
   return (
-    <div className="flex items-center gap-2 rounded-md border px-2 py-1.5">
-      {thumb
-        ? <div data-help-zone="item-contents:apercu" className="shrink-0"><FilePreviewThumb content={c} size="sm" /></div>
-        : <Icon className="w-4 h-4 shrink-0 text-primary" />}
-      {renameField || (
-        <div className="min-w-0 flex-1">
-          {href ? (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{label}</a>
-          ) : <span className="text-sm break-all">{label}</span>}
-          {(size || (c.kind === 'LINK' && c.name)) && (
-            <span className="block text-xs text-muted-foreground truncate">{c.kind === 'LINK' ? c.url : size}</span>
-          )}
-          {fileExcerpt && <span className="block text-xs text-muted-foreground line-clamp-2">{fileExcerpt}</span>}
-        </div>
-      )}
-      {actions}
+    <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+      <Icon className="h-10 w-10 opacity-60" />
+      {label && <span className="text-xs font-semibold">{label}</span>}
+    </span>
+  );
+}
+
+/**
+ * Zone d'aperçu d'une vignette (hors schéma modifiable) : image (clic = plein écran), fichier (1re page ou début du
+ * texte, sinon icône + extension ; clic = ouvrir), lien (icône + site ; clic = ouvrir), schéma en lecture (aperçu,
+ * clic = plein écran). Adresses passées par safeHref / isSafeUrl.
+ */
+function TilePreview({ content: c, onOpenImage }: { content: ItemContent; onOpenImage: () => void }) {
+  const href = safeHref(c.url);
+  const label = displayName(c) ?? '';
+  if (c.kind === 'IMAGE' || c.kind === 'DIAGRAM') {
+    if (!c.url || !isSafeUrl(c.url)) return <TileIcon kind={c.kind} label={c.kind === 'DIAGRAM' ? 'Sans aperçu' : null} />;
+    return (
+      <button type="button" onClick={onOpenImage} title="Cliquer pour agrandir" className="block h-full w-full cursor-zoom-in hover:opacity-90 transition-opacity">
+        <img src={c.url} alt={label} className={`h-full w-full ${c.kind === 'IMAGE' ? 'object-cover' : 'object-contain bg-white p-1 dark:bg-gray-900'}`} />
+      </button>
+    );
+  }
+  if (!href) return <TileIcon kind={c.kind} />;
+  if (c.kind === 'FILE' && hasFilePreview(c)) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" data-help-zone="item-contents:apercu" aria-label={`${label} — Ouvrir`}
+        className="block h-full w-full hover:opacity-90 transition-opacity">
+        <FilePreviewThumb content={c} size="fill" />
+      </a>
+    );
+  }
+  const ext = c.kind === 'FILE' ? fileExtension(c.name) ?? fileExtension(c.url) : null;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} — Ouvrir`} className="block h-full w-full hover:bg-accent/50 transition-colors">
+      <TileIcon kind={c.kind} label={ext} />
+    </a>
+  );
+}
+
+/**
+ * Vignette d'un contenu (mise en forme en vignettes, décision Thomas 2026-11-11) : grande zone d'aperçu en haut, nom
+ * (lien pour un fichier ou un lien) et détail dessous, actions en pied (mode Modifier). wide : mode Afficher, plus grande.
+ * caption remplace le nom (champ de renommage).
+ */
+function ContentTile({ content: c, preview, caption, footer, wide = false }: {
+  content: ItemContent; preview: React.ReactNode; caption?: React.ReactNode; footer?: React.ReactNode; wide?: boolean;
+}) {
+  const href = c.kind === 'FILE' || c.kind === 'LINK' ? safeHref(c.url) : undefined;
+  const label = displayName(c) ?? '';
+  const detail = tileDetail(c);
+  return (
+    <div className={`flex flex-col overflow-hidden rounded-md border bg-card ${wide ? 'w-52' : 'w-40'}`}>
+      <div className={`overflow-hidden border-b bg-muted/30 ${wide ? 'h-64' : 'h-48'}`}>{preview}</div>
+      <div className="min-w-0 space-y-0.5 px-2 py-1.5">
+        {caption || (href
+          ? <a href={href} target="_blank" rel="noopener noreferrer" title={label} className="block text-xs font-medium text-primary hover:underline line-clamp-2 break-all">{label}</a>
+          : <span title={label} className="block text-xs font-medium line-clamp-2 break-all">{c.name || (c.kind === 'IMAGE' || c.kind === 'DIAGRAM' ? '' : label)}</span>)}
+        {detail && <span className="block truncate text-[11px] text-muted-foreground" title={c.kind === 'LINK' ? c.url ?? '' : undefined}>{detail}</span>}
+      </div>
+      {footer && <div className="mt-auto flex justify-end border-t px-1 py-0.5">{footer}</div>}
     </div>
   );
 }
@@ -365,6 +399,7 @@ function DiagramContent({ content, canEdit, diagram }: { content: ItemContent; c
 
   return (
     <DrawioEditor
+      compact
       xml={xml}
       onChange={onChange}
       editable={canEdit}
@@ -380,7 +415,7 @@ function DiagramContent({ content, canEdit, diagram }: { content: ItemContent; c
   );
 }
 
-/** Mode Afficher : contenus en grand, regroupés dans l'ordre fixe, sans action d'écriture */
+/** Mode Afficher : contenus en grandes vignettes, regroupés dans l'ordre fixe, sans action d'écriture */
 export function ItemContentsRead({ contents }: { contents?: ItemContent[] }) {
   const [lightbox, setLightbox] = useState<ItemContent | null>(null);
   const groups = groupContents(contents);
@@ -392,45 +427,14 @@ export function ItemContentsRead({ contents }: { contents?: ItemContent[] }) {
           {(groups.length > 1 || list.length > 1) && (
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{KIND_LABELS[kind]}</h3>
           )}
-          {list.map((c) => {
-            const label = displayName(c) ?? '';
-            if (c.kind === 'IMAGE' || c.kind === 'DIAGRAM') {
-              if (!c.url || !isSafeUrl(c.url)) {
-                return c.kind === 'DIAGRAM'
-                  ? <p key={c.id} className="text-sm text-muted-foreground flex items-center gap-2"><Workflow className="w-4 h-4" /> {c.name || 'Schéma sans aperçu'}</p>
-                  : null;
-              }
-              return (
-                <figure key={c.id} className="space-y-1">
-                  <img src={c.url} alt={label} onClick={() => setLightbox(c)} title="Cliquer pour le plein écran"
-                    className="w-full max-h-[70vh] object-contain rounded-md border bg-white dark:bg-gray-900 cursor-zoom-in" />
-                  {c.name && <figcaption className="text-xs text-muted-foreground text-center">{c.name}</figcaption>}
-                </figure>
-              );
-            }
-            const href = safeHref(c.url);
-            if (!href) return null;
-            const size = c.kind === 'FILE' ? formatSize(c.size) : null;
-            const link = (
-              <a key={c.id} href={href} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-                {c.kind === 'FILE' ? <FileText className="w-4 h-4 flex-shrink-0" /> : <ExternalLink className="w-4 h-4 flex-shrink-0" />}
-                <span className="flex-1">{c.kind === 'FILE' ? `${label} — Ouvrir` : label}</span>
-                {size && <span className="text-xs text-muted-foreground">{size}</span>}
-              </a>
-            );
-            // Fichier : aperçu de la 1re page (ou début du texte) au-dessus du lien, cliquable comme lui
-            if (c.kind !== 'FILE' || !hasFilePreview(c, 'lg')) return link;
-            return (
-              <div key={c.id} className="space-y-1.5">
-                <a href={href} target="_blank" rel="noopener noreferrer" data-help-zone="item-contents:apercu"
-                  className="block w-fit max-w-full hover:opacity-90 transition-opacity" aria-label={`${label} — Ouvrir`}>
-                  <FilePreviewThumb content={c} size="lg" />
-                </a>
-                {link}
-              </div>
-            );
-          })}
+          <div className="flex flex-wrap gap-3">
+            {list
+              // Image sans adresse sûre : rien à montrer ; fichier ou lien sans adresse sûre : rien à ouvrir
+              .filter((c) => c.kind === 'DIAGRAM' || !!safeHref(c.url))
+              .map((c) => (
+                <ContentTile key={c.id} content={c} wide preview={<TilePreview content={c} onOpenImage={() => setLightbox(c)} />} />
+              ))}
+          </div>
         </div>
       ))}
       {lightbox?.url && <Lightbox url={lightbox.url} alt={displayName(lightbox) ?? ''} onClose={() => setLightbox(null)} />}
