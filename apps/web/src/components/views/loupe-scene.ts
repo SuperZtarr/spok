@@ -6,7 +6,9 @@
  * Règle : aucune lecture du DOM ni appel réseau ici — tout passe par des paramètres, pour rester testable (loupe-scene.test.ts).
  * radialLayout vient de mindmap-layout.ts (seul calcul radial de l'application) : à importer, jamais à recopier ni modifier d'ici.
  */
+import type { Tag } from '@spok/shared';
 import type { ItemLink, LinkedItem } from '../../lib/api';
+import type { FaceContent } from '../../lib/itemFace';
 import { radialLayout } from './mindmap-layout';
 
 export type VignetteSize = 'small' | 'mid' | 'midTall' | 'big' | 'bigTall';
@@ -51,6 +53,9 @@ export interface LoupeSourceItem {
   endDate?: string | Date | null;
   assignedTo?: { name?: string | null } | null;
   assignedToName?: string | null;
+  /** Vignette commune (lib/itemFace.ts) : miniature et pastilles ; tags affichés en carte et en grande */
+  contents?: FaceContent[] | null;
+  tags?: Tag[];
   relationsFrom?: Array<{ type: string; label?: string | null; toItemId: string }>;
   relationsTo?: Array<{ type: string; label?: string | null; fromItemId: string }>;
 }

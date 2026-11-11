@@ -21,7 +21,7 @@ const elements: HelpElements = {
   elements: {
     title: 'Les éléments',
     short: 'Cliquez pour ouvrir l\'élément.',
-    text: 'Cliquez pour ouvrir l\'élément : une fois vu, il quitte la liste. « Marquer comme non lu », dans son menu, le fait revenir ici.',
+    text: 'Chaque élément a le même aspect que dans les vues d\'un espace (miniature, titre, l\'essentiel de son type, pastilles de ses contenus), avec en dessous qui l\'a modifié et quand. Cliquez pour ouvrir l\'élément : une fois vu, il quitte la liste. « Marquer comme non lu », dans son menu, le fait revenir ici.',
     target: '[data-tour="activity-items"]',
     side: 'bottom',
   },

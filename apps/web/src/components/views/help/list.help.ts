@@ -16,7 +16,7 @@ export const elements = {
   ligne: {
     title: 'Un élément',
     short: 'Cliquez pour ouvrir sa fiche, glissez pour le déplacer.',
-    text: 'Cliquez pour ouvrir sa fiche. Glissez-le pour le réordonner ou le ranger sous un autre élément du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮. Le nom de la personne assignée s\'affiche à côté du titre, avec une icône.',
+    text: 'Sa miniature (première image ou premier schéma, sinon l\'icône du type), son titre et des pastilles qui comptent ses autres contenus, comme dans les autres vues. Cliquez pour ouvrir sa fiche. Glissez-le pour le réordonner ou le ranger sous un autre élément du même espace ; pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮. Le nom de la personne assignée s\'affiche à côté du titre, avec une icône.',
     target: '[data-tour="list-row"]',
     side: 'bottom',
   },

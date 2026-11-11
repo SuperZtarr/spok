@@ -6,6 +6,7 @@
  * Accès : seuls les espaces LISIBLES par l'utilisateur (filterReadableSpaceIds : membre direct, OWNER de la
  * communauté ou visibilité effective non privée) — être membre de la communauté ne suffit pas (fuite corrigée
  * 2026-10-14 : titres d'items d'espaces privés visibles sur l'accueil et /activity).
+ * Chaque item porte url et contents (sorte, adresse, nom, sans xml) : vignette d'élément commune côté web.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { filterReadableSpaceIds } from './items.js';
@@ -105,6 +106,9 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
           },
         },
         updatedBy: { select: { id: true, name: true, avatarUrl: true } },
+        // Vignette commune (web lib/itemFace.ts) : miniature et pastilles — sorte, adresse, nom ; jamais le xml
+        url: true,
+        contents: { select: { kind: true, url: true, name: true }, orderBy: { position: 'asc' } },
         views: { where: { userId }, select: { viewedAt: true, markedUnread: true } },
         contributions: {
           where: { authorId: { not: userId } },

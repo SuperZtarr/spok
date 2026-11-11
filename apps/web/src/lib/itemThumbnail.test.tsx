@@ -43,6 +43,19 @@ describe('buildItemThumbnail', () => {
     expect(buildItemThumbnail(sheet({ media: media('file', 'https://r2/a.pdf', 'a.pdf') }), 'DOCUMENT').attachment).toBe('a.pdf');
     expect(buildItemThumbnail(sheet({ media: media('url', 'https://www.site.fr/page') }), 'LINK').attachment).toBe('site.fr');
   });
+
+  it('contenus : première image en miniature, autres contenus en pastilles écrites', () => {
+    const contents = [
+      { kind: 'IMAGE' as const, url: 'https://r2/a.webp' }, { kind: 'IMAGE' as const, url: 'https://r2/b.webp' },
+      { kind: 'FILE' as const, url: 'https://r2/x.pdf', name: 'x.pdf' },
+    ];
+    const t = buildItemThumbnail(sheet(), 'UNDEFINED', contents);
+    expect(t).toMatchObject({ imageUrl: 'https://r2/a.webp', attachment: 'x.pdf' });
+    expect(t.badges).toEqual([{ kind: 'IMAGE', count: 1 }, { kind: 'FILE', count: 1 }]);
+    render(<ItemThumbnailCard thumb={{ ...t, imageUrl: null }} />);
+    expect(screen.getByText('1 image')).toBeTruthy();
+    expect(screen.getByText('1 fichier')).toBeTruthy();
+  });
 });
 
 describe('withEmbeddedImage', () => {

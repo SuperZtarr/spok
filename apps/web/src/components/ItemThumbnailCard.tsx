@@ -1,9 +1,16 @@
 /* ItemThumbnailCard — carte dessinée hors écran puis convertie en PNG par « Copier la vignette » (lib/itemThumbnail.ts).
  * Prop : thumb (données déjà préparées, image en data URL).
  * Styles en ligne et couleurs fixes, jamais Tailwind ni variables de thème : l'image doit rester claire et lisible
- * où qu'elle soit collée, même si SPOK est en sombre. Largeur fixe 600 px. Pas d'usage à l'écran. */
+ * où qu'elle soit collée, même si SPOK est en sombre. Largeur fixe 600 px. Pas d'usage à l'écran.
+ * Format « grande » de la vignette commune (lib/itemFace.ts) : pastilles de contenus écrites en toutes lettres
+ * (« 2 fichiers »), lisibles hors de SPOK. */
+import type { ItemContentKind } from '@spok/shared';
 import { TYPE_ICONS } from '../constants/ui';
 import type { ItemThumbnail } from '../lib/itemThumbnail';
+
+const BADGE_WORDS: Record<ItemContentKind, [string, string]> = {
+  IMAGE: ['image', 'images'], FILE: ['fichier', 'fichiers'], LINK: ['lien', 'liens'], DIAGRAM: ['schéma', 'schémas'],
+};
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const INK = '#111827';
@@ -46,6 +53,12 @@ export function ItemThumbnailCard({ thumb }: { thumb: ItemThumbnail }) {
       ) : null}
 
       {thumb.attachment && <div style={{ fontSize: 14, color: '#2563eb', marginBottom: 14, wordBreak: 'break-all' }}>{thumb.attachment}</div>}
+
+      {thumb.badges.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          {thumb.badges.map(({ kind, count }) => <Chip key={kind}>{`${count} ${BADGE_WORDS[kind][count > 1 ? 1 : 0]}`}</Chip>)}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, color: MUTED, fontSize: 13 }}>
         <span style={{ flex: 1, minWidth: 0 }}>{thumb.meta.join(' · ')}</span>

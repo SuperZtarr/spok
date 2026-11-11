@@ -15,7 +15,7 @@ const elements: HelpElements = {
   noeud: {
     title: 'Un nœud',
     short: 'Cliquez pour ouvrir sa fiche, glissez pour le déplacer.',
-    text: 'Cliquez pour ouvrir sa fiche ; double-cliquez sur un projet pour ne voir que lui. Glissez-le pour le déplacer ou déposez-le sur un autre nœud pour le ranger dessous, sous un parent du même espace seulement : pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮. La flèche le replie ou le déplie.',
+    text: 'Un élément, avec le même aspect que dans les autres vues : miniature (première image ou premier schéma, sinon l\'icône du type), titre, l\'essentiel de son type et des pastilles qui comptent ses autres contenus ; le fond suit son statut, la bordure sa priorité. Cliquez pour ouvrir sa fiche ; double-cliquez sur un projet pour ne voir que lui. Glissez-le pour le déplacer ou déposez-le sur un autre nœud pour le ranger dessous, sous un parent du même espace seulement : pour changer d\'espace, utilisez « Déplacer vers un espace » du menu ⋮. La flèche le replie ou le déplie.',
     target: '[data-tour="mindmap-node"]',
     side: 'right',
   },

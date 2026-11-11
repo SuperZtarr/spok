@@ -16,7 +16,7 @@ const elements: HelpElements = {
   vignette: {
     title: 'Un élément',
     short: 'Survolez pour l\'agrandir, cliquez pour figer.',
-    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un clic sur un élément lié avance d\'un pas ; un nouveau clic sur l\'élément figé, « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un double-clic ouvre la fiche. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, selon le type de l\'élément (échéance d\'une tâche, site d\'un lien, miniature d\'une image…) ; agrandi, un lien ou un document porte un bouton « Ouvrir », et le menu ⋮ se trouve sur l\'élément.',
+    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un clic sur un élément lié avance d\'un pas ; un nouveau clic sur l\'élément figé, « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un double-clic ouvre la fiche. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, comme dans les autres vues : au repos, une ligne (miniature, titre, l\'essentiel, pastilles des contenus) ; à mi-taille, une carte (infos du type, début de la description, tags) ; agrandie, tout le détail, avec un bouton « Ouvrir » pour le premier fichier ou lien et le menu ⋮.',
     target: '[data-tour="loupe-node"]',
     side: 'right',
   },

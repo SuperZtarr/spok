@@ -15,7 +15,7 @@ const elements: HelpElements = {
   element: {
     title: 'Un élément',
     short: 'Cliquez pour ouvrir sa fiche.',
-    text: 'Son échéance et son statut ; cliquez pour ouvrir sa fiche.',
+    text: 'Sa miniature (première image ou premier schéma, sinon l\'icône du type), son titre et des pastilles qui comptent ses autres contenus, comme dans les autres vues ; puis, en colonnes, son type, son échéance et son statut. Cliquez pour ouvrir sa fiche.',
     side: 'bottom',
   },
 };

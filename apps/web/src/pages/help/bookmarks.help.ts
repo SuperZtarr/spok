@@ -21,7 +21,7 @@ const elements: HelpElements = {
   epingles: {
     title: 'Éléments épinglés',
     short: 'Les éléments épinglés depuis leur menu.',
-    text: 'Les éléments épinglés depuis leur menu ; le bouton corbeille les retire.',
+    text: 'Les éléments épinglés depuis leur menu, sur une ligne comme dans la Liste (miniature, titre, l\'essentiel, pastilles des contenus), avec le nom de leur espace ; le bouton corbeille les retire.',
     target: '[data-tour="bookmarks-pinned"]',
     side: 'top',
   },

@@ -1,6 +1,7 @@
 /* Profil utilisateur : préférences (thème), avatar (R2 ; formats/tailles via validateUpload('image')
    de @spok/shared), changement de mot de passe, suivi de l'aide (GET/PATCH /help-state : tutoriel d'accueil et annonces
-   traitées, règles dans utils/helpState.ts). */
+   traitées, règles dans utils/helpState.ts). Favoris (GET /bookmarks) : chaque item porte ses contenus (sorte, adresse,
+   nom, sans xml) pour la vignette d'élément commune côté web. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { hash, compare } from 'bcrypt';
@@ -271,6 +272,8 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
               createdBy: { select: { id: true, name: true } },
               assignedTo: { select: { id: true, name: true } },
               tags: { include: { tag: true } },
+              // Vignette commune (web lib/itemFace.ts) : miniature et pastilles, sans xml
+              contents: { select: { kind: true, url: true, name: true }, orderBy: { position: 'asc' } },
             },
           },
         },
