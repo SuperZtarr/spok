@@ -23,10 +23,16 @@ const elements: HelpElements = {
   },
   noeud: {
     title: 'Un item',
-    short: 'Déplacez-le, reliez-le, double-cliquez pour sa fiche.',
-    text: 'Déplacez-le à la souris ; double-cliquez pour ouvrir sa fiche. Tirez depuis son bord vers un autre item pour créer une relation et choisir son type. « Retirer du process » le renvoie dans le panneau sans le supprimer. Déplacé vers un autre espace, il emporte sa place dans le process, et y arrive libre s\'il part sans son couloir.',
+    short: 'Déplacez-le, reliez-le, cliquez pour sa fiche.',
+    text: 'Déplacez-le à la souris ; cliquez dessus pour ouvrir sa fiche. Tirez depuis son bord vers un autre item pour créer une relation et choisir son type. « Retirer du process » le renvoie dans le panneau sans le supprimer. Déplacé vers un autre espace, il emporte sa place dans le process, et y arrive libre s\'il part sans son couloir.',
     target: '[data-tour="process-node"]',
     side: 'right',
+    changes: [{
+      id: 'process-node-click-open',
+      kind: 'evolution',
+      text: 'Un simple clic sur un item du process ouvre désormais sa fiche, comme dans la carte mentale.',
+      date: '2026-11-11',
+    }],
   },
   couloir: {
     title: 'Un couloir',

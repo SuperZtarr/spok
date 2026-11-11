@@ -3,7 +3,8 @@
  * carte entière teintée de la couleur du statut — demande Thomas 2026-10-29, avant : liseré gauche seul —,
  * texte sombre pour rester lisible sur le fond pastel, menu contextuel habituel + « Retirer du process »).
  * Poignées : entrée à gauche, sortie à droite — tirer de l'une vers un autre nœud ouvre la modale de relation
- * (gérée par ProcessView). Masquées si !canEdit. Double-clic = ouvrir l'item (onEdit).
+ * (gérée par ProcessView). Masquées si !canEdit. Clic = ouvrir l'item : géré par ProcessView (onNodeClick), pas ici ;
+ * le double-clic est seulement arrêté pour ne pas créer de note sur le canevas.
  * Toutes les données/actions arrivent par `data` (ProcessNodeData), construites par ProcessView.
  */
 import { memo } from 'react';
@@ -18,21 +19,20 @@ export type ProcessNodeData = {
   dimmed: boolean;
   canEdit: boolean;
   menuGroups: ItemActionGroup[];
-  onEdit?: (id: string) => void;
 };
 
 export type ProcessFlowNode = Node<ProcessNodeData, 'process'>;
 
 function ProcessNodeComponent({ data }: NodeProps<ProcessFlowNode>) {
-  const { item, statusHex, dimmed, canEdit, menuGroups, onEdit } = data;
-  const Icon = getTypeIcon(item.type, item.url);
+  const { item, statusHex, dimmed, canEdit, menuGroups } = data;
+  const Icon = getTypeIcon(item.type);
   const handleClass = `!w-2.5 !h-2.5 !bg-slate-400 !border-white ${canEdit ? '' : '!opacity-0 !pointer-events-none'}`;
 
   return (
     <div
       className={`group relative w-48 rounded-lg border border-black/10 text-slate-900 shadow-sm px-2.5 py-2 transition-opacity ${dimmed ? 'opacity-30' : ''}`}
       style={{ backgroundColor: statusHex }}
-      onDoubleClick={(e) => { e.stopPropagation(); onEdit?.(item.id); }}
+      onDoubleClick={(e) => e.stopPropagation()}
       data-tour="process-node"
       data-help-zone="process:noeud"
     >

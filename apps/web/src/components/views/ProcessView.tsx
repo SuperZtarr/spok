@@ -20,6 +20,8 @@
  *   un couloir replié (préférence locale, localStorage process-collapsed-lanes:<espace>) masque ses items et
  *   rattache leurs liens au couloir (endpointOverrides de buildProcessEdges) ; ses liens internes sont masqués.
  * Pas d'autre disposition automatique : hors ce bouton, la place choisie par l'utilisateur fait foi.
+ * - Clic sur un item (2026-11-11, comme la MindMap) : onNodeClick → onEdit ouvre sa fiche ; ignoré sur un couloir
+ *   (son titre a son propre bouton) et sur le menu ⋯ (.nodrag). xyflow ne compte pas un glisser comme un clic.
  */
 import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -244,7 +246,6 @@ function ProcessCanvas({
       data: {
         item, dimmed, canEdit, menuGroups,
         statusHex: tailwindBgToHex(getStatusColor(item.status, statuses)),
-        onEdit: cb.onEdit,
       },
     };
   }), [placed, isHidden, canEdit, canEditItem, highlightType, highlightStatus, searchMatchIds, statusOptions, statuses, remove, addLane]);
@@ -306,6 +307,12 @@ function ProcessCanvas({
     setTimeout(() => fitView({ maxZoom: 1, duration: 300 }), 50);
   }, [placeMany, placed, relations, lanes, moveLanes, fitView]);
 
+  // Clic sur un item : ouvre sa fiche (même geste que la MindMap)
+  const onNodeClick = useCallback((e: React.MouseEvent, node: CanvasNode) => {
+    if (node.type !== 'process' || (e.target as HTMLElement).closest('.nodrag')) return;
+    menuRef.current.onEdit?.(node.id);
+  }, []);
+
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   // Une extrémité « couloir » (lane-<id>) désigne l'item du couloir : la relation est créée avec lui
   const laneItemByNodeId = useMemo(() => new Map(lanes.map((l) => [laneNodeId(l.id), l.itemId])), [lanes]);
@@ -362,6 +369,7 @@ function ProcessCanvas({
             edgeTypes={EDGE_TYPES}
             onNodesChange={onNodesChange}
             onNodeDragStop={onNodeDragStop}
+            onNodeClick={onNodeClick}
             onConnect={canEdit ? onConnect : undefined}
             onEdgeClick={onEdgeClick}
             nodesDraggable={canEdit}
