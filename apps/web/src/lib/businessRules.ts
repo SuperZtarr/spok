@@ -1,6 +1,7 @@
 /* Registre des règles de gestion implicites (type/statut/priorité), consulté par RuleHint (UI dev) et par Claude comme documentation vivante.
    Règles de statut : appliesToValues dérivés des catégories (statusIdsIn), jamais une liste de statuts recopiée.
-   Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents. */
+   Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents.
+   Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune. */
 import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, statusIdsIn } from '@spok/shared';
 
 export interface ItemBusinessRule {
@@ -78,11 +79,19 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'packages/shared/src/constants/typeRegistry.ts (isComposedType), apps/web/src/components/ItemEditModal.tsx',
   },
   {
+    id: 'question-option-item-ref',
+    category: 'type',
+    appliesToValues: ['QUESTION'],
+    trigger: 'Réponse possible liée à un élément existant',
+    effect: "Un lien nouveau ou changé doit viser un élément que l'auteur peut lire, autre que la question (400 sinon) ; un lien déjà enregistré est gardé tel quel. L'élément (titre, type, espace) n'est montré qu'au lecteur qui peut lire son espace — sinon la réponse s'affiche par son seul texte. Élément supprimé : le lien tombe, la réponse et ses votes restent. Copie de séance, suite et duplication gardent le lien. Retenir une réponse liée ne crée aucune relation (décision Thomas 2026-11-12)",
+    location: 'apps/api/src/routes/item-question.ts (PUT …/question/options, viewerOf), apps/api/src/utils/question.ts (readableRefItems, copyQuestionData), packages/database/prisma/schema.prisma (QuestionOption.refItemId)',
+  },
+  {
     id: 'question-options-stable-id',
     category: 'type',
     appliesToValues: ['QUESTION'],
     trigger: 'Modification des options d’une question',
-    effect: "Une option corrigée ou déplacée garde son identifiant, donc ses votes ; une option retirée perd ses votes ; passer en choix unique ne garde que le dernier vote de chacun. Les options d'une copie de séance ne se modifient pas. Une question dupliquée reprend ses options, repart Ouverte, sans votes",
+    effect: "Dans la fiche, les réponses possibles s'enregistrent au fil de l'eau (champ quitté, Entrée, déplacement, retrait, choix multiple — sans bouton, 2026-11-11) ; retirer une réponse qui a des votes demande confirmation. Une option corrigée ou déplacée garde son identifiant, donc ses votes ; une option retirée perd ses votes ; passer en choix unique ne garde que le dernier vote de chacun. Les options d'une copie de séance ne se modifient pas. Une question dupliquée reprend ses options, repart Ouverte, sans votes",
     location: 'apps/api/src/routes/item-question.ts (PUT …/question/options), apps/api/src/routes/item-bulk.ts',
   },
   {
@@ -104,10 +113,19 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   {
     id: 'item-types-retired',
     category: 'type',
-    appliesToValues: ['UNDEFINED', 'TASK'],
-    trigger: "Élément d'un ancien type Image, Lien, Diagramme, Document, Note, Configuration ou Anomalie (avant le lot 4), ou modèle enregistré qui en cite un",
+    appliesToValues: ['UNDEFINED'],
+    trigger: "Élément d'un ancien type Image, Lien, Diagramme, Document, Note, Configuration ou Anomalie (avant le lot 4), ou modèle enregistré qui en cite un (part Tâche : item-types-retired-anomaly)",
     effect: "Ces sept types n'existent plus (lot 4 « contenus multiples », décision Thomas 2026-11-08 ; Note fusionnée dans l'Élément le 2026-11-11) : le type dit la nature de l'élément, les contenus ce qu'il porte, les tags son classement. Image, Lien, Diagramme, Document, Note → Élément (UNDEFINED, libellé « Élément », type par défaut ; sans contenu, il se présente par le début de sa description) avec leur média en contenu ; Configuration → Élément + tag « config » ; Anomalie → Tâche + tag « bug » (tag de la communauté, créé s'il manque). Plus de champ url : un média est toujours un contenu (la colonne reste en base, en sauvegarde). Les libellés de types d'une communauté qui citent un type retiré l'ignorent",
     location: 'packages/shared/src/constants/retiredTypes.ts, apps/api/scripts/migrate-item-types.ts, apps/api/src/utils/itemTree.ts, apps/api/src/utils/referentiels.ts (withDefaultTypeLabels)',
+  },
+  {
+    // Séparée de item-types-retired (2026-11-12) : l'indice du bouton Tâche montrait la règle de l'Élément
+    id: 'item-types-retired-anomaly',
+    category: 'type',
+    appliesToValues: ['TASK'],
+    trigger: "Élément de l'ancien type Anomalie (avant le lot 4), ou modèle enregistré qui le cite",
+    effect: "Le type Anomalie n'existe plus : une anomalie est une Tâche taguée « bug » (tag de la communauté, créé s'il manque). La vue Bugs est remplacée par le filtre Tags (« bug ») et la vue Tags",
+    location: 'packages/shared/src/constants/retiredTypes.ts, apps/api/scripts/migrate-item-types.ts, apps/api/src/utils/classificationTag.ts',
   },
   {
     id: 'retired-view-opens-list',
