@@ -5,10 +5,14 @@
  * visé par ITEM_MENU_STEP des tours de vue) — tout autre usage (menu ⋯ des espaces de la barre latérale) passe le
  * sien, sinon le tour d'une vue pointerait la barre latérale (premier élément du DOM).
  * onOpenChange : prévient la vue quand le menu s'ouvre ou se ferme (la Loupe y fige son zoom, le menu étant en portail).
+ * Sous-menu : chevauche le menu (aucun trou) et tolère le survol d'autres éléments en chemin (SUBMENU_CLOSE_DELAY_MS).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, ChevronRight, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
+
+/** Délai avant fermeture d'un sous-menu quand la souris le quitte (trajet diagonal toléré) */
+const SUBMENU_CLOSE_DELAY_MS = 450;
 
 export interface ItemAction {
   id: string;
@@ -112,18 +116,22 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId
     }
     const menuWidth = 200;
     const margin = 8;
-    let left = rect.right + 2;
+    // Chevauche le bord du menu (pas de trou à traverser entre les deux panneaux)
+    let left = rect.right - 4;
     if (left + menuWidth > window.innerWidth - margin) {
-      left = rect.left - menuWidth - 2;
+      left = rect.left - menuWidth + 4;
     }
     setOpenSubmenuId(id);
     setSubmenuPosition({ top: rect.top, left });
   }, []);
 
+  // Délai généreux : en glissant en diagonale vers un statut bas, la souris survole les éléments suivants
+  // (« Déplacer vers un espace »…) ; le sous-menu ne doit pas se fermer pendant ce trajet.
   const scheduleCloseSubmenu = useCallback(() => {
+    if (submenuCloseTimerRef.current) clearTimeout(submenuCloseTimerRef.current);
     submenuCloseTimerRef.current = setTimeout(() => {
       setOpenSubmenuId(null);
-    }, 200);
+    }, SUBMENU_CLOSE_DELAY_MS);
   }, []);
 
   const cancelCloseSubmenu = useCallback(() => {
