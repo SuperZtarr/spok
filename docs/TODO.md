@@ -206,6 +206,7 @@
 - [x] Process - clic sur un item ouvre sa fiche — 2026-11-11
 - [x] Profil - onglets et modale agrandie — 2026-11-11
 - [x] Tags - toujours visibles dans la fiche, créés dans la communauté — 2026-11-11
+- [x] Question - groupe Compositions, enregistrement auto, statut dans la fiche, bloc en 3 étapes — 2026-11-11
 - [x] Skill spok-deploy : `pnpm exec vitest run src/help` depuis apps/web n'a pas jsdom (7 échecs « document is not defined ») → commande remplacée par `pnpm exec vitest run --project web apps/web/src/help` depuis la racine — 2026-10-15 (411d2ed)
 - [x] Aide utilisateur intégrée — phase 3 : états vides (EmptyHelp, 28 vues), infobulles (HelpHint, barre d'espace + boutons à icône seule), aide sous les champs (FieldHelp : paramètres espace/communauté, fiche d'item, créations) — 2026-10-14 (652665a)
 - [x] Barre de la vue Arborescence et des vues graphiques (SpacePage, 12 occurrences, corrigé 2026-10-14 — 515065c) : bouton « + Nouveau » en bg-secondary recopié au lieu de NewItemButton (règle spok-menu)

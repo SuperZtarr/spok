@@ -3,8 +3,9 @@
    en data-devzone, d'où noZone ici). Registre help/pageHelp.ts.
    hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
    hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
+   Lot 5 contenus multiples : copySheet et annonce copy-sheet-all-contents (élément actions) — tous les contenus copiés.
    hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
-   hints.print : Imprimer du mode Afficher. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
+   hints.print : Imprimer du mode Afficher. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -28,7 +29,7 @@ export const elements = {
   modes: {
     title: 'Modes de la fiche',
     short: 'Afficher, Modifier ou Composer.',
-    text: 'Afficher présente l\'élément comme un document : média en grand, description mise en forme, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
     target: '[data-tour="item-mode-switch"]',
     noZone: true,
     side: 'bottom',
@@ -41,11 +42,11 @@ export const elements = {
     noZone: true,
     side: 'top',
   },
-  // Présent dans tous les modes ; fiche réduite, les étapes Type → Tags n'apparaissent qu'une fois dépliée
+  // Présent dans tous les modes ; fiche réduite, les étapes Type → Relations n'apparaissent qu'une fois dépliée (Tags : toujours)
   champs: {
     title: 'Plus de champs',
     short: 'Déplie ou replie la fiche.',
-    text: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates, les relations et les tags, ou repliez-la (« Moins de champs ») pour ne garder que le titre, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
+    text: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates et les relations, ou repliez-la (« Moins de champs ») pour ne garder que le titre, les tags, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
     target: '[data-tour="item-more-fields"]',
     noZone: true,
     side: 'bottom',
@@ -53,15 +54,16 @@ export const elements = {
   type: {
     title: 'Type',
     short: 'La nature de l\'élément.',
-    text: 'La nature de l\'élément : Note, Tâche, Projet, Réunion, Document, Diagramme, etc. Elle détermine les statuts proposés et le rangement dans les vues.',
+    text: 'La nature de l\'élément : Élément (par défaut : texte, image, fichier, lien…), Tâche, Projet, Réunion, Période, Article ou Question. Elle détermine les statuts proposés et le rangement dans les vues. Ce que l\'élément porte (images, fichiers, liens, schémas) se joint dans la zone « Contenus » ; son classement (ex. « bug », « config ») passe par les tags.',
+    changes: [{ id: 'item-types-simplified', kind: 'evolution', text: 'Types simplifiés : Note, Image, Lien, Document et Diagramme deviennent des « Éléments » (leurs médias sont des contenus) ; une anomalie est une Tâche taguée « bug », une configuration un Élément tagué « config ».', date: '2026-11-11' }],
     target: '[data-tour="item-type-selector"]',
     noZone: true,
     side: 'bottom',
   },
   contentTypes: {
     title: 'Type de contenu',
-    short: 'Type de l\'élément : Note (texte), Lien (une adresse), Document (un fichier joint), Image, Schéma (dessiné dans SPOK) ou Article (assemblage d\'éléments). Le choisir fait apparaître sa zone sous la description ; le type est enregistré avec « Enregistrer » (un fichier envoyé, lui, est enregistré tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
-    text: 'Fiche réduite : choisissez Note, Lien, Document, Image, Schéma ou Article ; la zone correspondante apparaît sous la description.',
+    short: 'Type de l\'élément : Élément (par défaut : un texte, une photo, un fichier ou un lien), Article (assemblage d\'éléments) ou Question, enregistré avec « Enregistrer ». Quel que soit le type, fichiers, images, liens et schémas se joignent dans la zone « Contenus » sous la description (enregistrés tout de suite). Tâches, projets, dates et statuts : « Plus de champs ».',
+    text: 'Fiche réduite : choisissez Élément, Article ou Question. Fichiers, images, liens et schémas se joignent dans la zone « Contenus », quel que soit le type.',
     target: '[data-tour="item-content-types"]',
     noZone: true,
     side: 'bottom',
@@ -93,7 +95,7 @@ export const elements = {
   statut: {
     title: 'Statut',
     short: 'L\'avancement de l\'élément.',
-    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban.',
+    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮.',
     target: '[data-tour="item-status"]',
     noZone: true,
     side: 'left',
@@ -117,7 +119,8 @@ export const elements = {
   tags: {
     title: 'Tags',
     short: 'Les étiquettes de l\'élément.',
-    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément. Les tags d\'espace et de communauté sont disponibles. Créez-en de nouveaux en tapant.',
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Les tags de l\'espace et de sa communauté sont proposés ; un tag créé en tapant rejoint la communauté de l\'espace (sinon l\'espace) et devient disponible dans tous ses espaces.',
+    changes: [{ id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' }],
     target: '[data-tour="item-tags"]',
     noZone: true,
     side: 'left',
@@ -133,10 +136,16 @@ export const elements = {
   actions: {
     title: 'Actions',
     short: 'Enregistrer, fermer et autres actions.',
-    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion) ou copier sa vignette en image.',
+    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion), avec tous ses contenus, ou copier sa vignette en image.',
     target: '[data-tour="item-actions"]',
     noZone: true,
     side: 'top',
+    changes: [{
+      id: 'copy-sheet-all-contents',
+      kind: 'evolution',
+      text: '« Copier la fiche » reprend désormais tous les contenus de l\'élément (images, fichiers, liens, schémas), et non plus le seul média principal.',
+      date: '2026-11-11',
+    }],
   },
 } satisfies HelpElements;
 
@@ -150,15 +159,15 @@ export const help: HelpEntry = {
     ...derived.hints,
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
-    openArticleUnsaved: 'Enregistrez d\'abord l\'élément : le mode Composer (choix et mise en page des blocs) s\'active une fois qu\'il est enregistré avec le type « Article ».',
-    copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, la description, l\'image ou le schéma, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et l\'image ; un document joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
+    openArticleUnsaved: 'Enregistrement de l\'article… Le mode Composer (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
+    copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, tous les contenus (images, fichiers, liens, schémas), la description, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et ses images ; un fichier joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     copyThumbnail: 'Copier la vignette : met dans le presse-papier une image PNG de l\'élément (type, statut, titre, image ou début de la description, espace, dates, assigné), à coller dans Teams, Slack, un mail ou PowerPoint. L\'image reflète la version enregistrée. Rien n\'est modifié dans SPOK.',
     copyThumbnailDone: 'Vignette copiée',
     copyThumbnailDownloaded: 'Le navigateur a refusé la copie : image téléchargée.',
     copyThumbnailError: 'Vignette impossible à créer. Réessayez.',
     print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',
-    readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (image ou schéma en grand). C\'est exactement ce que copie « Copier la fiche ». Rien ne peut y être modifié.',
+    readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (images et schémas en grand, puis fichiers et liens). Rien ne peut y être modifié.',
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
     editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
     composeMode: 'Composer : ajouter, réordonner, régler ou retirer les blocs de l\'article (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place.',

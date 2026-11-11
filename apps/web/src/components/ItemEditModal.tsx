@@ -1,18 +1,26 @@
 /**
  * ItemEditModal — Modale d'édition complète d'un item.
  * Affiche et permet de modifier tous les champs : titre, type, description, statut, priorité,
- * assignation, tags, dates (début/fin/échéance), URL, relations, contributions (thread).
- * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state.
+ * assignation, tags, dates (début/fin/échéance), contenus, relations, contributions (thread).
+ * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state. Type daté à l'heure près et
+ * durée proposée à la fin : registre des types (timed, defaultDuration), jamais de test de type en dur. Choix du statut
+ * (pickStatus) : règles de dates partagées avec Kanban / menu ⋯ (lib/statusChange.ts) — fin pré-remplie si le statut
+ * ferme l'élément, début pré-rempli, « Non défini » efface les deux.
  * Les dates sont lues/écrites en heure locale via toDatetimeLocal() — ne jamais utiliser toISOString() pour afficher.
  * Fiche réduite ou complète, dans tous les modes d'interface : réduite = Titre + Description (hauteur adaptée au
  * contenu, 240px min / 40vh max, pour que les contributions restent visibles juste dessous) + blocs media +
  * Réactions/Contributions ; le bouton « Plus de champs / Moins de champs » (expanded → showAll), toujours affiché,
- * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Tags/Enfants en layout 3 colonnes. Une fois réduite,
+ * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Enfants en layout 3 colonnes. Tags (tagsSection)
+ * toujours visibles (2026-11-11) : fiche réduite au-dessus de la Description, fiche complète en colonne droite. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
  * Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
- * Schéma, Article) au-dessus de la Description — en choisir un affiche son bloc (mediaSection). Les types de pilotage,
- * dates, priorité et statut restent dans la fiche complète ; un élément d'un tel type voit son type, non modifiable ici.
+ * Schéma, Article) au-dessus de la Description. Les types de pilotage, dates, priorité et statut restent dans la fiche
+ * complète ; un élément d'un tel type voit son type, non modifiable ici.
+ * Zone « Contenus » (contenus multiples, lot 2, 2026-11-08) : ItemContentsSection sous la Description (mediaSection),
+ * quel que soit le type, masquée sur un Article — images, fichiers, liens, schémas, plusieurs par sorte, écrits tout
+ * de suite (hooks/useItemContents), hors « Enregistrer ». Le formulaire n'envoie ni url ni content.xml (plus de champ
+ * url depuis le lot 4 : un média est toujours un contenu).
  * Mode Composer d'un article (décision Thomas 2026-11-06) : troisième choix du sélecteur, si article.canEditArticle.
  * Grisé si la fiche n'est pas enregistrée en ARTICLE (hint openArticleUnsaved, aussi affiché en phrase visible dans le
  * formulaire, et seul pour un élément en création) ou a des modifications non enregistrées. Sans droit, un
@@ -31,8 +39,8 @@
  * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
  * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
  * Accusé de lecture à l'assignation sous « Assigné à » (assignmentReceipt de l'API) : « Vu par X le … » ou
- * « Pas encore vu », seulement pour l'assigné enregistré. Écritures directes hors Enregistrer (upload image/document, XML de diagramme
- * auto-sauvé ou « Enregistrer et fermer » draw.io) : toujours suivies de refreshItem(), sinon faux 409.
+ * « Pas encore vu », seulement pour l'assigné enregistré. Écritures directes hors Enregistrer (contenus : envoi, lien,
+ * schéma auto-sauvé…) : toujours suivies d'une relecture de la fiche (useItemContents), sinon faux 409.
  * Fraîcheur : la fiche ['item', spaceId, itemId] est TOUJOURS relue à l'ouverture (staleTime 0) et
  * chaque version plus récente (updatedAt) est fusionnée champ par champ dans le formulaire
  * (mergeFormWithServer) — les vues modifient l'item sans invalider cette clé.
@@ -47,7 +55,7 @@
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions) ;
  * le premier est grisé (« Déjà dans la préparation de … ») quand l'élément y est, d'après le cache de la séance (useLiveSession).
- * Contributions affichées via sanitizeHtml, liens vers url via safeHref (règle user-html-sanitized).
+ * Contributions affichées via sanitizeHtml (règle user-html-sanitized) ; liens des contenus : ItemContentsSection (safeHref).
  * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
@@ -56,9 +64,12 @@
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
- * Type QUESTION (2026-11-08) : bloc QuestionPanel (options, votes, issue) dans les blocs media et en mode Afficher ; pas
- * de sélecteur Statut (l'issue se note dans le bloc). Statuts proposés aux autres types : statusesForType (sans les
- * issues réservées) ; un statut devenu non permis par un changement de type est remis à « Non défini ».
+ * Type QUESTION (2026-11-08) : bloc QuestionPanel (réponses, votes, issue) au-dessus de la zone Contenus et en mode Afficher ;
+ * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
+ * Statuts proposés aux autres types : statusesForType (sans les issues réservées) ; un statut devenu non permis par un
+ * changement de type est remis à « Non défini ».
+ * Types à composants (groupe « Compositions » : Article, Question — isComposedType, 2026-11-11) : choisir un de ces types
+ * enregistre aussitôt le type seul, fiche ouverte, pour afficher ses composants (règle composed-type-autosave).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RELATION_TYPE_LIST, getRelationMeta, type OfficialRelationType } from '../constants/relationTypes';
@@ -73,19 +84,21 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS, statusAllowedForType, statusesForType } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusAllowedForType, statusesForType } from '@spok/shared';
+import { statusChangeFields } from '../lib/statusChange';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ExternalLink, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { QuestionPanel } from './question/QuestionPanel';
+import { QuestionStatusField } from './question/QuestionStatusField';
 import { ArticleEditor } from './article/ArticleEditor';
 import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
-import { sanitizeHtml, safeHref } from '../lib/sanitizeHtml';
+import { sanitizeHtml } from '../lib/sanitizeHtml';
 import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
@@ -102,9 +115,7 @@ import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
-import { DrawioEditor } from './ui/DrawioEditor';
-import { ImageUploadZone } from './ui/ImageUploadZone';
-import { FileUploadZone } from './ui/FileUploadZone';
+import { ItemContentsSection } from './contents/ItemContentsSection';
 import { DateTimeField } from './ui/DateTimeField';
 import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
@@ -114,7 +125,7 @@ import { RelationEditDialog } from './relations/RelationEditDialog';
 import type { RelationEnd } from './relations/RelationSentenceRow';
 import { formatDate, formatDateTime } from '../lib/utils';
 import { MEETING_DURATIONS, DUE_DATE_DURATIONS } from './item-edit-constants';
-import { fileNameToTitle, urlToTitle, getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
+import { getDescendantIds, mergeFormWithServer, tagKey, buildForumSummary } from './item-edit-helpers';
 import { printItem, exportItemPDF } from '../lib/itemExport';
 import { buildItemSheet, copyItemSheet } from '../lib/itemClipboard';
 import { buildItemThumbnail, copyItemThumbnail } from '../lib/itemThumbnail';
@@ -186,25 +197,33 @@ export function ItemEditModal({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [url, setUrl] = useState('');
-  const [imageExpanded, setImageExpanded] = useState(false);
   const [parentId, setParentId] = useState<string>('');
   const [status, setStatus] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
   const [assignedToName, setAssignedToName] = useState(''); // saisie libre : personne sans compte SPOK
-  const [type, setType] = useState<ItemType>('NOTE');
+  const [type, setType] = useState<ItemType>('UNDEFINED');
   // Statut non permis pour le nouveau type (issue d'une question sur un autre type, ou l'inverse) : remis à « Non
   // défini » — une question enregistrée sans statut repart « Ouverte » (API, utils/question.ts)
+  // Type à composants (Question…) : enregistré tout de suite, l'API fixe le statut — la relecture le reporte ici
   useEffect(() => {
-    if (!statusAllowedForType(status, type)) setStatus('');
+    if (!statusAllowedForType(status, type) && !isComposedType(type)) setStatus('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  // Choix d'un statut : mêmes règles de dates que Kanban / menu ⋯ (lib/statusChange.ts) — « Non défini » efface
+  // début et fin, un statut qui ferme remplit la fin vide, tout statut remplit le début vide
+  const pickStatus = (picked: string) => {
+    const toIso = (local: string) => (local ? fromDatetimeLocal(local).toISOString() : null);
+    const toLocal = (iso: string | null) => (iso ? toDatetimeLocal(new Date(iso)) : '');
+    const fields = statusChangeFields(picked, { startDate: toIso(startDate), endDate: toIso(endDate) }, referentiels?.statuses);
+    setStatus(fields.status ?? '');
+    if (fields.startDate !== undefined) setStartDate(toLocal(fields.startDate));
+    if (fields.endDate !== undefined) setEndDate(toLocal(fields.endDate));
+  };
   const [allDay, setAllDay] = useState(true);
   const [priority, setPriority] = useState<number | null>(null);
-  const [diagramXml, setDiagramXml] = useState('');
   const [parentSortMode, setParentSortMode] = useState<ParentSortMode>(() => {
     return (localStorage.getItem(STORAGE_KEYS.PARENT_SORT_MODE) as ParentSortMode) || 'tree';
   });
@@ -365,14 +384,12 @@ export function ItemEditModal({
     const toForm = (it: NonNullable<typeof item>) => ({
       title: it.title,
       description: it.description || '',
-      url: it.url || '',
       parentId: it.parentId || '',
       status: it.status || '',
       priority: it.priority ?? null,
       assignedToId: it.assignedToId || '',
       assignedToName: it.assignedToName || '',
       type: it.type as string,
-      diagramXml: (it.content as Record<string, unknown>)?.xml as string || '',
       // datetime-local (YYYY-MM-DDTHH:mm) en heure locale
       dueDate: it.dueDate ? toDatetimeLocal(new Date(it.dueDate)) : '',
       startDate: it.startDate ? toDatetimeLocal(new Date(it.startDate)) : '',
@@ -383,14 +400,13 @@ export function ItemEditModal({
     loadedItemRef.current = item;
     const next = toForm(item);
     const merged = mergeFormWithServer(
-      { title, description, url, parentId, status, priority, assignedToId, assignedToName, type: type as string, diagramXml, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
+      { title, description, parentId, status, priority, assignedToId, assignedToName, type: type as string, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
       base,
       next,
     );
 
     setTitle(merged.title);
     setDescription(merged.description);
-    setUrl(merged.url);
     setParentId(merged.parentId);
     setStatus(merged.status);
     setPriority(merged.priority);
@@ -398,9 +414,8 @@ export function ItemEditModal({
     setAssignedToName(merged.assignedToName);
     if (!base || merged.type !== type) {
       setType(merged.type as ItemType);
-      setAllDay(merged.type !== 'MEETING');
+      setAllDay(!getItemTypeDef(merged.type)?.timed);
     }
-    setDiagramXml(merged.diagramXml);
     setDueDate(merged.dueDate);
     setStartDate(merged.startDate);
     setEndDate(merged.endDate);
@@ -448,34 +463,9 @@ export function ItemEditModal({
     descendants: CascadeDependent[];
   } | null>(null);
 
-  // Écritures directes de la modale hors « Enregistrer » (upload image/document, XML de diagramme) :
-  // elles font avancer updatedAt côté serveur. Sans relire la fiche, « Enregistrer » renverrait
-  // l'ancien updatedAt → 409 « conflit » contre sa propre modification (bug 2026-09-28). La relecture
-  // est fusionnée champ par champ (mergeFormWithServer) : la saisie en cours est conservée.
-  const refreshItem = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-    queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
-  }, [queryClient, spaceId, itemId]);
-
-  const autoSaveDiagramMutation = useMutation({
-    mutationFn: (xml: string) =>
-      itemsApi.update(spaceId, itemId!, { content: { xml } }),
-    onSuccess: refreshItem,
-  });
-
-  const autoSaveDiagramTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (type !== 'DIAGRAM' || !itemId) return;
-    const savedXml = (item?.content as Record<string, unknown>)?.xml as string || '';
-    if (diagramXml === savedXml) return;
-    if (autoSaveDiagramTimerRef.current) clearTimeout(autoSaveDiagramTimerRef.current);
-    autoSaveDiagramTimerRef.current = setTimeout(() => {
-      autoSaveDiagramMutation.mutate(diagramXml);
-    }, 2000);
-    return () => {
-      if (autoSaveDiagramTimerRef.current) clearTimeout(autoSaveDiagramTimerRef.current);
-    };
-  }, [diagramXml]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Écritures directes hors « Enregistrer » (contenus) : useItemContents relit la fiche après chacune — sans quoi
+  // « Enregistrer » renverrait l'ancien updatedAt → 409 « conflit » contre sa propre modification (bug 2026-09-28).
+  // La relecture est fusionnée champ par champ (mergeFormWithServer) : la saisie en cours est conservée.
 
   const createContributionMutation = useMutation({
     mutationFn: (data: { content: string; parentId?: string }) =>
@@ -514,24 +504,6 @@ export function ItemEditModal({
       itemsApi.deleteContribution(spaceId, itemId!, contributionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-    },
-  });
-
-  // Image upload mutation
-  const uploadImageMutation = useMutation({
-    mutationFn: (file: File) => itemsApi.uploadImage(spaceId, itemId!, file),
-    onSuccess: (updatedItem) => {
-      setUrl(updatedItem.url || '');
-      refreshItem();
-    },
-  });
-
-  // Document upload mutation
-  const uploadDocumentMutation = useMutation({
-    mutationFn: (file: File) => itemsApi.uploadDocument(spaceId, itemId!, file),
-    onSuccess: (updatedItem) => {
-      setUrl(updatedItem.url || '');
-      refreshItem();
     },
   });
 
@@ -595,13 +567,11 @@ export function ItemEditModal({
       const needsDefault = !endDate || (endDate && fromDatetimeLocal(endDate) <= fromDatetimeLocal(newStart));
       if (needsDefault) {
         const start = fromDatetimeLocal(newStart);
-        if (type === 'MEETING' || type === 'TASK') {
-          setEndDate(toDatetimeLocal(addHours(start, 1)));
-        } else if (type === 'PROJECT') {
-          setEndDate(toDatetimeLocal(addMonths(start, 1)));
-        } else if (type === 'PERIOD') {
-          setEndDate(toDatetimeLocal(addDays(start, 1)));
-        }
+        // Durée proposée selon le type : registre des types (defaultDuration)
+        const duration = getItemTypeDef(type)?.defaultDuration;
+        if (duration === 'hour') setEndDate(toDatetimeLocal(addHours(start, 1)));
+        else if (duration === 'month') setEndDate(toDatetimeLocal(addMonths(start, 1)));
+        else if (duration === 'day') setEndDate(toDatetimeLocal(addDays(start, 1)));
       }
     }
   }, [startDate, endDate, type]);
@@ -677,11 +647,6 @@ export function ItemEditModal({
       return trimmed;
     };
     if (normalizeDesc(description) !== normalizeDesc(item.description)) return true;
-    if (type === 'DIAGRAM') {
-      const currentXml = (item.content as Record<string, unknown>)?.xml as string || '';
-      if (diagramXml !== currentXml) return true;
-    }
-    if ((url || null) !== (item.url || null)) return true;
     if ((parentId || null) !== item.parentId) return true;
     if (status !== (item.status || '')) return true;
     if (priority !== (item.priority ?? null)) return true;
@@ -703,7 +668,7 @@ export function ItemEditModal({
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
     return false;
-  }, [item, type, title, description, diagramXml, url, parentId, status, priority, assignedToId, assignedToName, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
+  }, [item, type, title, description, parentId, status, priority, assignedToId, assignedToName, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
 
   const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges);
 
@@ -759,18 +724,7 @@ export function ItemEditModal({
       updates.description = newDescription;
     }
 
-    // Handle diagram content
-    if (type === 'DIAGRAM') {
-      const currentXml = (item.content as Record<string, unknown>)?.xml as string || '';
-      if (diagramXml !== currentXml) {
-        updates.content = { xml: diagramXml };
-      }
-    }
-
-    const newUrl = url || null;
-    if (newUrl !== (item.url || null)) {
-      updates.url = newUrl;
-    }
+    // Les médias ne partent pas d'ici : les contenus s'écrivent tout de suite (ItemContentsSection).
 
     const newParentId = parentId || null;
     if (newParentId !== item.parentId) {
@@ -846,6 +800,17 @@ export function ItemEditModal({
       closeIfAsked();
     }
   };
+
+  // Type à composants choisi (groupe « Compositions » : Article, Question — isComposedType) : le type est enregistré
+  // tout de suite, fiche ouverte, pour afficher ses composants (bloc Question, Composer). Seul le type part : les autres
+  // saisies restent en attente d'« Enregistrer » (fusion champ par champ à la relecture). Règle composed-type-autosave.
+  useEffect(() => {
+    if (!item || !canEdit || isLockedCopy || updateMutation.isPending) return;
+    if (type === item.type || !isComposedType(type)) return;
+    closeAfterSaveRef.current = false;
+    updateMutation.mutate({ type, updatedAt: item.updatedAt });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, item?.type]);
 
   const confirmCascade = (includeDescendants: boolean) => {
     if (!pendingCascade) return;
@@ -984,7 +949,7 @@ export function ItemEditModal({
     setThumbnailState('busy');
     let next: 'copied' | 'downloaded' | 'error';
     try {
-      next = await copyItemThumbnail(buildItemThumbnail(buildSheet(), type));
+      next = await copyItemThumbnail(buildItemThumbnail(buildSheet(), type, item?.contents));
     } catch {
       next = 'error';
     }
@@ -1014,8 +979,8 @@ export function ItemEditModal({
     printItem({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName });
   };
 
-  // Blocs media (URL/Diagramme/Image/Fichier) — conditionnés au type, pas au mode.
-  // Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
+  // Blocs sous la Description : phrase d'un Article non enregistré, bloc Question, puis zone Contenus (tout type sauf
+  // Article). Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
   // rendus sous la Description dans la colonne principale.
   const mediaSection = (
     <>
@@ -1028,87 +993,34 @@ export function ItemEditModal({
       {type === 'QUESTION' && (itemId && item?.type === 'QUESTION'
         ? <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
         : <FieldHelp page="question" field="unsaved" />)}
-      {/* URL — seulement pour le type LINK */}
-      {type === 'LINK' && <div className="space-y-2" data-devzone="item-medias">
-        <label className="text-sm font-medium">URL</label>
-        {canEdit ? (
-          <Input type="url" value={url}
-            onChange={(e) => { setUrl(e.target.value); const extracted = urlToTitle(e.target.value); if (extracted) autoFillTitle(extracted); }}
-            placeholder="https://..." />
-        ) : null}
-        {url ? (
-          <a href={safeHref(url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-            <ExternalLink className="w-4 h-4 flex-shrink-0" /> {url}
-          </a>
-        ) : null}
-      </div>}
-
-      {/* Diagramme — seulement pour le type DIAGRAM */}
-      {type === 'DIAGRAM' && <div className="space-y-2" data-devzone="item-medias">
-        <label className="text-sm font-medium">Diagramme</label>
-        <DrawioEditor
-          xml={diagramXml}
-          onChange={setDiagramXml}
-          onSaveAndClose={async (savedXml, pngBlob) => {
-            if (!itemId) return;
-            await itemsApi.update(spaceId, itemId, { content: { xml: savedXml } });
-            setDiagramXml(savedXml);
-            const file = new File([pngBlob], 'diagram.png', { type: 'image/png' });
-            // XML déjà écrit : relire la fiche même si l'upload du PNG échoue (ex. R2 absent en local)
-            try {
-              await uploadImageMutation.mutateAsync(file);
-            } finally {
-              refreshItem();
-            }
-          }}
-          previewUrl={url || undefined}
-          editable={canEdit}
-        />
-      </div>}
-
-      {/* Image — seulement pour le type IMAGE */}
-      {type === 'IMAGE' && <div className="space-y-2" data-devzone="item-medias">
-        <label className="text-sm font-medium">Image</label>
-        {canEdit ? (
-          <>
-            <ImageUploadZone currentUrl={url || null}
-              onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadImageMutation.mutate(file); }}
-              onRemove={() => setUrl('')} isUploading={uploadImageMutation.isPending} />
-            {uploadImageMutation.isError && <p className="text-sm text-destructive">{(uploadImageMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-          </>
-        ) : url && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url) ? (
-          <>
-            <img src={url} alt="Image" className="w-16 h-16 object-cover rounded border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setImageExpanded(true)} title="Cliquer pour agrandir" />
-            {imageExpanded && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={() => setImageExpanded(false)}>
-                <img src={url} alt="Image" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">Aucune image</p>
-        )}
-      </div>}
-
-      {/* Fichier — seulement pour le type DOCUMENT */}
-      {type === 'DOCUMENT' && <div className="space-y-2" data-devzone="item-medias">
-        <label className="text-sm font-medium">Fichier</label>
-        {canEdit ? (
-          <>
-            <FileUploadZone currentUrl={url || null}
-              onUpload={(file) => { autoFillTitle(fileNameToTitle(file.name)); uploadDocumentMutation.mutate(file); }}
-              onRemove={() => setUrl('')} isUploading={uploadDocumentMutation.isPending} />
-            {uploadDocumentMutation.isError && <p className="text-sm text-destructive">{(uploadDocumentMutation.error as Error)?.message || "Erreur lors de l'upload"}</p>}
-          </>
-        ) : url ? (
-          <a href={safeHref(url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors break-all">
-            <ExternalLink className="w-4 h-4 flex-shrink-0" /> Télécharger le fichier
-          </a>
-        ) : (
-          <p className="text-sm text-muted-foreground">Aucun fichier</p>
-        )}
-      </div>}
+      {/* Contenus : images, fichiers, liens, schémas, quel que soit le type — masqués sur un Article (ses blocs) */}
+      {type !== 'ARTICLE' && (
+        <ItemContentsSection spaceId={item?.spaceId ?? spaceId} itemId={itemId ?? undefined} contents={item?.contents}
+          canEdit={canEdit} onTitleHint={autoFillTitle} />
+      )}
     </>
+  );
+
+  // Tags — toujours visibles (décision Thomas 2026-11-11 : une anomalie est une Tâche taguée « bug », une
+  // configuration une Note taguée « config ») : fiche réduite sous la ligne de type, fiche complète en colonne droite.
+  const tagsSection = (
+    <div className="space-y-3" data-tour="item-tags" data-devzone="item-tags">
+      <h2 className="text-sm font-semibold flex items-center gap-2">
+        <TagIcon className="w-4 h-4" />
+        Tags
+      </h2>
+      {canEditTags ? (
+        <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {item?.tags && item.tags.length > 0 ? (
+            item.tags.map((tag: Tag) => <TagBadge key={tag.id} tag={tag} />)
+          ) : (
+            <span className="text-sm text-muted-foreground">Aucun tag</span>
+          )}
+        </div>
+      )}
+    </div>
   );
 
   return (<>
@@ -1251,6 +1163,7 @@ export function ItemEditModal({
               <div className="flex-1 overflow-y-auto pr-1">
                 <ItemReadView
                   sheet={buildSheet()}
+                  tags={item?.tags}
                   onOpenChild={onNavigate}
                   articleContent={item?.type === 'ARTICLE' && itemId ? (
                     <div ref={articlePrintRef}>
@@ -1259,6 +1172,7 @@ export function ItemEditModal({
                   ) : item?.type === 'QUESTION' && itemId ? (
                     <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
                   ) : undefined}
+                  contents={item?.type === 'ARTICLE' ? [] : (item?.contents ?? [])}
                   toolbar={(
                     <>
                       <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>
@@ -1362,6 +1276,9 @@ export function ItemEditModal({
                   </HelpHint>
                 );
               })()}
+
+              {/* Fiche réduite : tags toujours visibles, avant la Description */}
+              {!showAll && tagsSection}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
               <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
@@ -1525,14 +1442,14 @@ export function ItemEditModal({
                     <div className="sm:hidden">
                       <Select
                         value={type}
-                        onChange={(e) => { setType(e.target.value as ItemType); if (e.target.value === 'MEETING') setAllDay(false); }}
+                        onChange={(e) => { setType(e.target.value as ItemType); if (getItemTypeDef(e.target.value)?.timed) setAllDay(false); }}
                         options={(Object.entries(referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels))
                           .filter(([, c]) => c.visible)
                           .sort(([, a], [, b]) => a.order - b.order)
                           .map(([key, c]) => ({ value: key, label: c.labelShort }))}
                       />
                     </div>
-                    {/* Desktop: buttons, groupés par TYPE_GROUPS (Défaut/Activités/Livrables) */}
+                    {/* Desktop: buttons, groupés par TYPE_GROUPS (Défaut/Activités/Compositions) */}
                     <div className="hidden sm:flex flex-col gap-1.5">
                       {(() => {
                         const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
@@ -1540,7 +1457,7 @@ export function ItemEditModal({
                           const Icon = TYPE_ICONS[key];
                           const isSelected = type === key;
                           return (
-                            <button key={key} type="button" onClick={() => { setType(key as ItemType); if (key === 'MEETING') setAllDay(false); }}
+                            <button key={key} type="button" onClick={() => { setType(key as ItemType); if (getItemTypeDef(key)?.timed) setAllDay(false); }}
                               className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md border-2 transition-all ${config.color} ${isSelected ? `${config.bgHover} font-semibold shadow-sm ring-2 ring-offset-1 ring-current text-gray-900` : 'opacity-60 hover:opacity-100'}`}>
                               {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
                               {config.labelShort}
@@ -1582,8 +1499,11 @@ export function ItemEditModal({
               </div>}
 
               {/* Statut */}
-              {/* Question : son issue se note dans le bloc Question (QuestionPanel), pas ici */}
-              {showAll && type !== 'QUESTION' && <div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
+              {/* Question : ses 4 statuts réservés, appliqués tout de suite comme une issue (QuestionStatusField) */}
+              {showAll && type === 'QUESTION' && itemId && item?.type === 'QUESTION' && (
+                <QuestionStatusField spaceId={item.spaceId ?? spaceId} itemId={itemId} statuses={referentiels?.statuses} />
+              )}
+              {showAll && type !== 'QUESTION' &&<div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium">Statut</label>
                 {canEdit ? (
                   <>
@@ -1591,16 +1511,7 @@ export function ItemEditModal({
                     <div className="sm:hidden">
                       <Select
                         value={status || 'undefined'}
-                        onChange={(e) => {
-                          const newStatus = e.target.value === 'undefined' ? '' : e.target.value;
-                          setStatus(newStatus);
-                          if (newStatus === '') { setStartDate(''); setEndDate(''); }
-                          else {
-                            let currentEndDate = endDate;
-                            if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { const m = new Date(); m.setHours(0,0,0,0); currentEndDate = toDatetimeLocal(m); setEndDate(currentEndDate); }
-                            if (!startDate) { const now = new Date(); const m = new Date(now.getFullYear(), now.getMonth(), now.getDate()); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(m)); }
-                          }
-                        }}
+                        onChange={(e) => pickStatus(e.target.value)}
                         options={statusesForType(referentiels?.statuses || DEFAULT_REFERENTIELS.statuses, type).map((s) => ({ value: s.id, label: s.label }))}
                       />
                     </div>
@@ -1610,16 +1521,7 @@ export function ItemEditModal({
                         const isSelected = (s.id === 'undefined' && !status) || s.id === status;
                         return (
                           <button key={s.id} type="button"
-                            onClick={() => {
-                              const newStatus = s.id === 'undefined' ? '' : s.id;
-                              setStatus(newStatus);
-                              if (newStatus === '') { setStartDate(''); setEndDate(''); }
-                              else {
-                                let currentEndDate = endDate;
-                                if ((newStatus === 'done' || newStatus === 'cancelled') && !currentEndDate) { currentEndDate = toDatetimeLocal(new Date()); setEndDate(currentEndDate); }
-                                if (!startDate) { const now = new Date(); setStartDate(currentEndDate && fromDatetimeLocal(currentEndDate) < now ? currentEndDate : toDatetimeLocal(now)); }
-                              }
-                            }}
+                            onClick={() => pickStatus(s.id)}
                             className={`px-3 py-1.5 text-sm rounded-md border-2 transition-all text-gray-900 ${isSelected ? `${s.borderColor} font-semibold shadow-sm ring-2 ring-offset-1 ring-current` : `${s.borderColor} opacity-60 hover:opacity-100`}`}>
                             {s.label}
                             <RuleHint category="status" value={s.id} />
@@ -1950,26 +1852,8 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Tags — sous le toggle « Plus de champs » */}
-              {showAll && (
-              <div className="space-y-3" data-tour="item-tags" data-devzone="item-tags">
-                <h2 className="text-sm font-semibold flex items-center gap-2">
-                  <TagIcon className="w-4 h-4" />
-                  Tags
-                </h2>
-                {canEditTags ? (
-                  <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {item?.tags && item.tags.length > 0 ? (
-                      item.tags.map((tag: Tag) => <TagBadge key={tag.id} tag={tag} />)
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Aucun tag</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              )}
+              {/* Tags — fiche complète ; en fiche réduite ils sont sous la ligne de type */}
+              {showAll && tagsSection}
 
               {/* Children items */}
               {showAll && item && (() => {

@@ -2,9 +2,14 @@
  * QuestionPanel — bloc d'un élément Question (type QUESTION, 2026-11-08) : options et votes nominatifs, issue,
  * préparation des options. Monté dans la fiche (ItemEditModal : formulaire et mode Afficher) et dans la fenêtre en
  * direct d'une séance (LiveWindow, variant="live" : gros boutons d'issue pour l'animateur, pas d'édition des options).
+ * Fiche (2026-11-11) : trois étapes nommées dans l'ordre d'usage — 1. Réponses possibles (éditeur, deux lignes vides au
+ * départ, bouton « Enregistrer les réponses » gardé : retirer une réponse efface ses votes), 2. Votes (une seule liste,
+ * « Retenir » sur chaque ligne pour qui peut trancher), 3. Issue (Reportée, Sans conclusion, autre réponse, précision,
+ * Rouvrir). En séance, pas d'étapes : gros boutons de réponse dans l'issue.
  * Props : spaceId / itemId (la question — en séance, la copie verrouillée), variant ('sheet' | 'live').
  * Droits : ceux calculés par l'API dans QuestionView (canVote, canDecide, canEditOptions) — rien n'est recalculé ici.
- * Les votes ne tranchent jamais : l'option en tête est seulement mise en avant ; l'issue se note par les boutons
+ * Les votes ne tranchent jamais : l'option en tête est seulement mise en avant (badge « Unanimité » si tous les votants,
+ * au moins deux, l'ont choisie — unanimousOptionIds de l'API) ; l'issue se note par les boutons
  * (canDecide). Textes : fiche d'aide 'question' (components/help/question.help.ts), jamais en dur.
  * Posé dans un <form> (fiche) : tous les boutons sont type="button" et Entrée dans un champ ne soumet pas la fiche.
  * Données : hooks/useQuestion (queryKey ['question', spaceId, itemId]) ; en séance, relu à chaque événement SSE.
@@ -39,6 +44,12 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
 
   if (isLoading || !question) return null;
   const error = errorText(vote.error ?? setOutcome.error ?? saveOptions.error);
+  // Fiche : étapes nommées et numérotées dans l'ordre d'usage (réponses possibles → votes → issue, 2026-11-11)
+  const editOptions = !live && question.canEditOptions;
+  const step = (n: number, title: string) => (live ? null : (
+    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{n}. {title}</h3>
+  ));
+  const s = editOptions ? 1 : 0;
 
   return (
     <div className="space-y-3 rounded-md border border-sky-200 bg-sky-50/40 p-3 dark:border-sky-900 dark:bg-sky-950/20" onClick={(e) => e.stopPropagation()}>
@@ -49,13 +60,28 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
         {!live && <PageHelpButton pageKey="question" />}
       </div>
 
-      <Votes question={question} onVote={(ids) => vote.mutate(ids)} pending={vote.isPending} live={live} />
+      {editOptions && (
+        <div className="space-y-1.5">
+          {step(1, 'Réponses possibles')}
+          <OptionsEditor question={question} pending={saveOptions.isPending} onSave={(body) => saveOptions.mutate(body)} />
+        </div>
+      )}
 
-      <Outcome question={question} live={live} statusLabel={statusLabel} pending={setOutcome.isPending}
-        onOutcome={(body) => setOutcome.mutate(body)} />
+      {question.options.length > 0 && (
+        <div className="space-y-1.5">
+          {step(s + 1, 'Votes')}
+          <Votes question={question} onVote={(ids) => vote.mutate(ids)} pending={vote.isPending || setOutcome.isPending} live={live}
+            onDecide={(id) => setOutcome.mutate({ status: QUESTION_STATUS.DECIDED, chosenOptionId: id })} />
+        </div>
+      )}
+      {question.options.length === 0 && !editOptions && <FieldHelp page="question" field="noOptions" />}
 
-      {!live && question.canEditOptions && (
-        <OptionsEditor question={question} pending={saveOptions.isPending} onSave={(body) => saveOptions.mutate(body)} />
+      {(question.canDecide || !question.open) && (
+        <div className="space-y-1.5">
+          {step(s + (question.options.length > 0 ? 2 : 1), 'Issue')}
+          <Outcome question={question} live={live} statusLabel={statusLabel} pending={setOutcome.isPending}
+            onOutcome={(body) => setOutcome.mutate(body)} />
+        </div>
       )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -63,7 +89,11 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
   );
 }
 
-function Votes({ question, onVote, pending, live }: { question: QuestionView; onVote: (ids: string[]) => void; pending: boolean; live: boolean }) {
+function Votes({ question, onVote, onDecide, pending, live }: {
+  question: QuestionView; onVote: (ids: string[]) => void; onDecide: (optionId: string) => void; pending: boolean; live: boolean;
+}) {
+  // Fiche : « Retenir » sur chaque réponse (une seule liste) ; en séance, gros boutons d'issue dans le bloc Issue
+  const canPick = !live && question.canDecide && question.open;
   const mine = new Set(question.myOptionIds);
   const toggle = (id: string) => {
     if (question.multiple) onVote(mine.has(id) ? [...mine].filter((x) => x !== id) : [...mine, id]);
@@ -71,7 +101,6 @@ function Votes({ question, onVote, pending, live }: { question: QuestionView; on
   };
   return (
     <div data-help-zone="question:vote" className="space-y-1.5">
-      {question.options.length === 0 && <FieldHelp page="question" field="noOptions" />}
       {question.options.map((o) => {
         const leading = question.leadingOptionIds.includes(o.id);
         const chosen = question.outcome.chosenOptionId === o.id;
@@ -89,7 +118,20 @@ function Votes({ question, onVote, pending, live }: { question: QuestionView; on
             <div className="min-w-0 flex-1">
               <div className={`flex items-baseline gap-2 ${live ? 'text-base' : 'text-sm'}`}>
                 <span className={`flex-1 break-words ${leading ? 'font-semibold' : ''}`}>{o.label}</span>
+                {question.unanimousOptionIds.includes(o.id) && (
+                  <HelpHint text={pageHint('question', 'unanimous')}>
+                    <span className="rounded-full border border-emerald-400 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">Unanimité</span>
+                  </HelpHint>
+                )}
                 <span className="text-xs tabular-nums text-muted-foreground">{o.voters.length}</span>
+                {canPick && (
+                  <HelpHint text={pageHint('question', 'decide')}>
+                    <button type="button" disabled={pending} onClick={() => onDecide(o.id)}
+                      className="rounded-md border border-emerald-400 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30">
+                      Retenir
+                    </button>
+                  </HelpHint>
+                )}
               </div>
               {o.voters.length > 0 && (
                 <p className="text-xs text-muted-foreground">{o.voters.map((v) => v.name).join(', ')}</p>
@@ -136,7 +178,8 @@ function Outcome({ question, live, statusLabel, pending, onOutcome }: {
       {question.canDecide && question.open && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            {question.options.map((o) => (
+            {/* Réponses à retenir : ici en séance seulement — dans la fiche, « Retenir » est sur chaque ligne des votes */}
+            {live && question.options.map((o) => (
               <HelpHint key={o.id} text={pageHint('question', 'decide')}>
                 <button type="button" disabled={pending}
                   onClick={() => onOutcome({ status: QUESTION_STATUS.DECIDED, chosenOptionId: o.id })}
@@ -204,10 +247,13 @@ function OptionsEditor({ question, pending, onSave }: {
   question: QuestionView; pending: boolean; onSave: (body: { multiple: boolean; options: Array<{ id?: string; label: string }> }) => void;
 }) {
   const initial = useMemo(() => question.options.map((o) => ({ id: o.id as string | undefined, label: o.label })), [question.options]);
-  const [rows, setRows] = useState(initial);
+  // Aucune réponse encore : deux lignes vides prêtes à remplir (une question se prépare avec au moins deux réponses)
+  const startRows = () => (initial.length ? initial : [{ id: undefined, label: '' }, { id: undefined, label: '' }]);
+  const [rows, setRows] = useState(startRows);
   const [multiple, setMultiple] = useState(question.multiple);
-  useEffect(() => { setRows(initial); setMultiple(question.multiple); }, [initial, question.multiple]);
-  const dirty = multiple !== question.multiple || JSON.stringify(rows) !== JSON.stringify(initial);
+  useEffect(() => { setRows(startRows()); setMultiple(question.multiple); }, [initial, question.multiple]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dirty = multiple !== question.multiple
+    || JSON.stringify(rows.filter((r) => r.id || r.label.trim())) !== JSON.stringify(initial);
   const move = (i: number, d: number) => setRows((r) => {
     const next = [...r];
     [next[i], next[i + d]] = [next[i + d], next[i]];
@@ -216,10 +262,10 @@ function OptionsEditor({ question, pending, onSave }: {
   const save = () => onSave({ multiple, options: rows.map((r) => ({ ...r, label: r.label.trim() })).filter((r) => r.label) });
 
   return (
-    <div data-help-zone="question:options" className="space-y-1.5 border-t pt-2">
+    <div data-help-zone="question:options" className="space-y-1.5">
       {rows.map((r, i) => (
         <div key={r.id ?? `new-${i}`} className="flex items-center gap-1">
-          <input value={r.label} maxLength={200} aria-label={`Option ${i + 1}`}
+          <input value={r.label} maxLength={200} aria-label={`Réponse ${i + 1}`} placeholder={`Réponse ${i + 1}`}
             onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
             onKeyDown={(e) => noSubmit(e)}
             className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm" />
@@ -231,7 +277,7 @@ function OptionsEditor({ question, pending, onSave }: {
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => setRows((rs) => [...rs, { id: undefined, label: '' }])}
           className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-          <Plus className="h-4 w-4" /> Option
+          <Plus className="h-4 w-4" /> Réponse
         </button>
         <label className="inline-flex items-center gap-1.5 text-sm">
           <input type="checkbox" checked={multiple} onChange={(e) => setMultiple(e.target.checked)} /> Choix multiple
@@ -240,7 +286,7 @@ function OptionsEditor({ question, pending, onSave }: {
         <HelpHint text={pageHint('question', 'saveOptions')}>
           <button type="button" disabled={!dirty || pending} onClick={save}
             className="h-8 rounded-md bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50">
-            Enregistrer les options
+            Enregistrer les réponses
           </button>
         </HelpHint>
       </div>
