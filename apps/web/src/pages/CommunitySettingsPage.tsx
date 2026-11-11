@@ -1,5 +1,6 @@
 /* Paramètres communauté (/communities/:id/settings) : infos, visibilité, membres, référentiels, emails — OWNER.
    Aperçu d'un e-mail envoyé : HTML nettoyé par sanitizeHtml (règle user-html-sanitized).
+   Tags de la communauté : couleur par pastilles (TagColorPicker, 2026-11-11), comme /admin/tags.
    Mode admin = mêmes droits que le OWNER partout (canEdit) : visibilité, contexte, gestion des membres
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
@@ -32,6 +33,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { TagColorPicker } from '../components/ui/TagColorPicker';
 import { CommunityMembersManager } from '../components/settings/CommunityMembersManager';
 import { CommunityCard, CommunityBanner } from '../components/ui/CommunityCard';
 import { CommunityDeleteConfirmModal } from '../components/CommunityDeleteConfirmModal';
@@ -1123,10 +1125,14 @@ export function CommunitySettingsPage() {
 function CommunityTagsSection({ communityId }: { communityId: string }) {
   const queryClient = useQueryClient();
   const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#6366f1');
+  // Couleurs par pastilles (TagColorPicker, demande Thomas 2026-11-11) ; null = sans couleur
+  const [newTagColor, setNewTagColor] = useState<string | null>('#6366f1');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editColor, setEditColor] = useState('');
+  const [editColor, setEditColor] = useState<string | null>(null);
+  const createTag = () => {
+    if (newTagName.trim()) createMutation.mutate({ name: newTagName.trim(), ...(newTagColor ? { color: newTagColor } : {}) });
+  };
   const [deletingTag, setDeletingTag] = useState<{ id: string; name: string } | null>(null);
 
   const { data: tags = [] } = useQuery({
@@ -1171,15 +1177,9 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
       {/* Existing tags */}
       <div className="space-y-2 mb-4">
         {tags.map((tag) => (
-          <div key={tag.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+          <div key={tag.id} className="flex flex-wrap items-center gap-2 p-2 bg-muted/50 rounded-md">
             {editingId === tag.id ? (
               <>
-                <input
-                  type="color"
-                  value={editColor}
-                  onChange={(e) => setEditColor(e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border-0"
-                />
                 <input
                   type="text"
                   value={editName}
@@ -1200,6 +1200,9 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
                 <button onClick={() => setEditingId(null)} className="p-1 text-muted-foreground hover:bg-accent rounded">
                   <X className="w-3.5 h-3.5" />
                 </button>
+                <div className="basis-full">
+                  <TagColorPicker size="sm" value={editColor} onChange={setEditColor} />
+                </div>
               </>
             ) : (
               <>
@@ -1209,7 +1212,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
                 <span className="flex-1 text-sm">{tag.name}</span>
                 <span className="text-xs text-muted-foreground">{tag.itemCount} items</span>
                 <button
-                  onClick={() => { setEditingId(tag.id); setEditName(tag.name); setEditColor(tag.color || '#6366f1'); }}
+                  onClick={() => { setEditingId(tag.id); setEditName(tag.name); setEditColor(tag.color ?? null); }}
                   className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -1230,31 +1233,26 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
       </div>
 
       {/* Create new tag */}
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={newTagColor}
-          onChange={(e) => setNewTagColor(e.target.value)}
-          className="w-8 h-8 rounded cursor-pointer border-0"
-        />
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           value={newTagName}
           onChange={(e) => setNewTagName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newTagName.trim()) createMutation.mutate({ name: newTagName.trim(), color: newTagColor });
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter') createTag(); }}
           placeholder="Nouveau tag..."
           className="flex-1 px-3 py-1.5 text-sm border border-border rounded-md bg-background"
         />
         <Button
           size="sm"
-          onClick={() => { if (newTagName.trim()) createMutation.mutate({ name: newTagName.trim(), color: newTagColor }); }}
+          onClick={createTag}
           disabled={!newTagName.trim() || createMutation.isPending}
         >
           <Plus className="w-4 h-4 mr-1" />
           Ajouter
         </Button>
+        <div className="basis-full">
+          <TagColorPicker value={newTagColor} onChange={setNewTagColor} />
+        </div>
       </div>
 
       <ConfirmModal

@@ -6,7 +6,8 @@
      des autres sur lui puis les supprime. Une cible n'est proposée que si elle est visible depuis tous les éléments
      (global, ou communauté de tous les éléments) — l'API refuse sinon ; un ancien tag d'espace n'est jamais une cible.
    Aide utilisateur : fiche pages/help/admin-tags.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint),
-   phrase d'explication visible sous le titre des doublons (bloc de décision). */
+   phrase d'explication visible sous le titre des doublons (bloc de décision).
+   Couleur : TagColorPicker (pastilles, « Aucune » = sans couleur — demande Thomas 2026-11-11, plus d'input type=color). */
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tag as TagIcon, RefreshCw, Globe, Trash2, Pencil, Check, X, Merge, Plus } from 'lucide-react';
@@ -14,6 +15,7 @@ import type { Tag } from '@spok/shared';
 import { adminApi, type AdminTag } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { TagBadge } from '../../components/ui/TagBadge';
+import { TagColorPicker } from '../../components/ui/TagColorPicker';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { PageHelpButton } from '../../help/PageHelpButton';
 import { HelpHint } from '../../help/HelpHint';
@@ -48,8 +50,8 @@ export function TagsPage() {
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
   const [search, setSearch] = useState('');
   const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState('#6366f1');
-  const [editing, setEditing] = useState<{ id: string; name: string; color: string } | null>(null);
+  const [newColor, setNewColor] = useState<string | null>('#6366f1');
+  const [editing, setEditing] = useState<{ id: string; name: string; color: string | null } | null>(null);
   const [deleting, setDeleting] = useState<AdminTag | null>(null);
   const [targets, setTargets] = useState<Record<string, string>>({});
   const [merging, setMerging] = useState<{ key: string; target: DuplicateTag; sources: DuplicateTag[] } | null>(null);
@@ -67,12 +69,12 @@ export function TagsPage() {
   const onError = (e: unknown) => setError(errorText(e));
 
   const createMutation = useMutation({
-    mutationFn: () => adminApi.tags.create({ name: newName.trim(), color: newColor }),
+    mutationFn: () => adminApi.tags.create({ name: newName.trim(), ...(newColor ? { color: newColor } : {}) }),
     onSuccess: () => { setNewName(''); refresh(); },
     onError,
   });
   const updateMutation = useMutation({
-    mutationFn: (e: { id: string; name: string; color: string }) => adminApi.tags.update(e.id, { name: e.name.trim(), color: e.color }),
+    mutationFn: (e: { id: string; name: string; color: string | null }) => adminApi.tags.update(e.id, { name: e.name.trim(), color: e.color }),
     onSuccess: () => { setEditing(null); refresh(); },
     onError,
   });
@@ -159,12 +161,14 @@ export function TagsPage() {
               placeholder="Nom du tag global"
               className="flex-1 min-w-[12rem] px-3 py-1.5 text-sm rounded-md border border-border bg-background"
             />
-            <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} aria-label="Couleur du tag" className="w-9 h-8 rounded border border-border" />
             <HelpHint text={pageHint('admin-tags', 'create')}>
               <Button type="submit" size="sm" disabled={!newName.trim() || createMutation.isPending} className="gap-1">
                 <Plus className="w-4 h-4" /> Créer un tag global
               </Button>
             </HelpHint>
+            <div className="basis-full pl-6">
+              <TagColorPicker value={newColor} onChange={setNewColor} />
+            </div>
           </form>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -194,18 +198,20 @@ export function TagsPage() {
               <div key={tag.id} className="flex items-center gap-3 px-3 py-2 flex-wrap">
                 {editing?.id === tag.id ? (
                   <form
-                    className="flex items-center gap-2 flex-1 min-w-0"
+                    className="flex flex-wrap items-center gap-2 flex-1 min-w-0"
                     onSubmit={(e) => { e.preventDefault(); if (editing.name.trim()) updateMutation.mutate(editing); }}
                   >
                     <input
                       value={editing.name}
                       onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                       aria-label="Nom du tag"
-                      className="flex-1 min-w-0 px-2 py-1 text-sm rounded-md border border-border bg-background"
+                      className="flex-1 min-w-[10rem] px-2 py-1 text-sm rounded-md border border-border bg-background"
                     />
-                    <input type="color" value={editing.color} onChange={(e) => setEditing({ ...editing, color: e.target.value })} aria-label="Couleur du tag" className="w-9 h-7 rounded border border-border" />
                     <Button type="submit" size="sm" variant="bordered" aria-label="Enregistrer le tag" disabled={updateMutation.isPending}><Check className="w-4 h-4" /></Button>
                     <Button type="button" size="sm" variant="ghost" aria-label="Annuler" onClick={() => setEditing(null)}><X className="w-4 h-4" /></Button>
+                    <div className="basis-full">
+                      <TagColorPicker size="sm" value={editing.color} onChange={(color) => setEditing({ ...editing, color })} />
+                    </div>
                   </form>
                 ) : (
                   <>
@@ -216,7 +222,7 @@ export function TagsPage() {
                     <span className="text-xs text-muted-foreground tabular-nums">{tag.itemCount} élément{tag.itemCount > 1 ? 's' : ''}</span>
                     <div className="flex items-center gap-1">
                       <HelpHint text={pageHint('admin-tags', 'edit')}>
-                        <Button size="sm" variant="ghost" aria-label="Renommer ou recolorer" onClick={() => setEditing({ id: tag.id, name: tag.name, color: tag.color ?? '#6366f1' })}>
+                        <Button size="sm" variant="ghost" aria-label="Renommer ou recolorer" onClick={() => setEditing({ id: tag.id, name: tag.name, color: tag.color })}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                       </HelpHint>

@@ -19,6 +19,9 @@ _(aucun lot en attente)_
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
 
+### MEP — 2026-11-11 (3)
+- 2 lots poussés : vue Tags (tous les tags, palette, sélection multiple, route bulk-tags) ; admin tags, couleur par pastilles. Micro-correction MEP sur /bulk-tags : un MEMBER ne change que les tags de ses éléments (auteur ou assigné), sauf copie de séance verrouillée, comme PATCH /:id ; un seul élément étranger refuse la requête (test ajouté). Annonce tags-view-palette datée. Typecheck OK, TNR 2640/2640, en-têtes OK
+
 ### MEP — 2026-11-11 (2), 7 lots
 - 7 commits, un par lot : vignettes des contenus, diagnostic des aperçus (--check), tags globaux et communauté + /admin/tags, filtre Tags, health-check R2, vue Tags glisser-déposer, vue Bugs retirée. 3 annonces datées. build:packages, typecheck 5 paquets OK, TNR 2629/2629, en-têtes OK. Push SEULEMENT après `migrate-space-tags.ts --prod --apply` (accord de Thomas) ; après push : `backfill-file-previews.ts --prod --check`.
 
