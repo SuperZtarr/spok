@@ -17,6 +17,7 @@
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  * En-tête : chaque commande sous HelpHint (textes : timeline.help.ts → hints), pas de `title` natif.
+ * Libellé de plage et sélecteur d'échelle à largeur fixe : naviguer ou zoomer ne décale pas la barre (2026-11-11).
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type) — ne pas recréer de modale inline ici.
  * Colonne des éléments : GANTT_LABEL_WIDTH (400 px), badge de l'assigné sur chaque ligne (2026-11-05).
@@ -1132,7 +1133,8 @@ treeSort: treeSortProp,
             <ChevronRight className="w-4 h-4" />
           </Button>
         </HelpHint>
-        <div className="text-sm text-muted-foreground hidden sm:block">
+        {/* Largeur fixe : le libellé varie selon les jours/mois (« mer. »/« sept. ») et ne doit pas décaler la barre */}
+        <div className="text-sm text-muted-foreground hidden sm:block w-[19rem] flex-shrink-0 text-center whitespace-nowrap tabular-nums">
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
         <div className="h-4 w-px bg-border mx-1" />
@@ -1186,7 +1188,7 @@ treeSort: treeSortProp,
           </HelpHint>
           <HelpHint text={TH.zoomLevel}>
           <select
-            className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 min-w-[100px] text-center"
+            className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 w-[120px] text-center"
             value={zoomLevel}
             onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
             aria-label="Niveau de zoom"
