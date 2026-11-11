@@ -1,4 +1,7 @@
-/* Registre des règles de gestion implicites (type/statut/priorité), consulté par RuleHint (UI dev) et par Claude comme documentation vivante. */
+/* Registre des règles de gestion implicites (type/statut/priorité), consulté par RuleHint (UI dev) et par Claude comme documentation vivante.
+   Règles de statut : appliesToValues dérivés des catégories (statusIdsIn), jamais une liste de statuts recopiée.
+   Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents. */
+import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, statusIdsIn } from '@spok/shared';
 
 export interface ItemBusinessRule {
   id: string;
@@ -18,6 +21,30 @@ export interface PageBusinessRule {
 }
 
 export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
+  {
+    id: 'item-contents-order',
+    category: 'type',
+    appliesToValues: [],
+    trigger: 'Affichage des contenus d’un élément (images, fichiers, liens, schémas)',
+    effect: "Un élément porte plusieurs contenus, de toutes sortes, quel que soit son type (au plus 30). Ils s'affichent regroupés par sorte dans un ordre fixe — Images, Fichiers, Liens, Schémas — qui ne se règle pas ; seul l'ordre à l'intérieur d'une sorte se choisit. Ajouter, envoyer, retirer ou réordonner un contenu : membres de l'espace (pas les lecteurs), jamais sur une copie de séance verrouillée (refonte « contenus multiples », décision Thomas 2026-11-08)",
+    location: 'packages/shared/src/types/itemContent.ts (ITEM_CONTENT_KINDS, ITEM_CONTENTS_MAX, sortItemContents), apps/api/src/routes/item-contents.ts',
+  },
+  {
+    id: 'item-contents-shared-file',
+    category: 'type',
+    appliesToValues: [],
+    trigger: 'Retrait d’un contenu image ou fichier',
+    effect: "Le fichier stocké n'est effacé que s'il n'est plus utilisé par aucun autre contenu ni par la colonne url d'un élément, gardée en sauvegarde depuis l'abandon du champ (lot 4) : les contenus recopiés depuis l'existant partagent le fichier d'origine",
+    location: 'apps/api/src/routes/item-contents.ts (DELETE …/contents/:contentId), apps/api/scripts/backfill-item-contents.ts',
+  },
+  {
+    id: 'item-contents-file-preview',
+    category: 'type',
+    appliesToValues: [],
+    trigger: 'Envoi d’un contenu fichier ; affichage d’un fichier (fiche, vue Documents, vignette)',
+    effect: "À l'envoi, l'API calcule l'aperçu du fichier : image de la 1re page (PDF dessiné ; docx/xlsx/pptx : miniature intégrée au fichier si le logiciel l'a enregistrée) et début du texte (PDF, docx, txt/md/csv, 500 caractères au plus). Jamais bloquant : format non couvert, fichier illisible ou plus de 10 s → fichier enregistré sans aperçu. L'image est rangée avec les fichiers de l'élément, effacée avec le fichier (même règle d'usage partagé), recopiée par la duplication et la copie de séance. Affichage : miniature de la vignette après la première image et le premier schéma (pastille d'extension, fichier non compté dans les pastilles de contenus) ; sans description, la vignette montre le début du texte du premier fichier. Fichiers envoyés avant : scripts/backfill-file-previews.ts (2026-11-11)",
+    location: 'apps/api/src/utils/filePreview.ts, apps/api/src/routes/item-contents.ts (upload, DELETE), apps/api/src/utils/itemContentCopy.ts, apps/web/src/lib/itemFace.ts (coverOf, fileExcerptOf), apps/web/src/components/contents/FilePreviewThumb.tsx',
+  },
   {
     id: 'status-reserved-for-type',
     category: 'status',
@@ -43,6 +70,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'apps/api/src/routes/item-question.ts (PUT …/question/outcome), apps/api/src/utils/question.ts, apps/api/src/utils/sessionCopy.ts, apps/api/src/routes/live-sessions.ts (suite)',
   },
   {
+    id: 'composed-type-autosave',
+    category: 'type',
+    appliesToValues: ['ARTICLE', 'QUESTION'],
+    trigger: 'Choix d’un type à composants (groupe « Compositions » : Article, Question, Process à venir) dans la fiche',
+    effect: "Le type est enregistré aussitôt, fiche ouverte, pour afficher ses composants (bloc Question, mode Composer) ; seul le type part, les autres saisies attendent « Enregistrer ». Le statut est alors fixé par l'API (une question repart « Ouverte »). Un brouillon resté vide reste supprimé à la fermeture sans enregistrement : le type ne compte pas (décision Thomas 2026-11-11)",
+    location: 'packages/shared/src/constants/typeRegistry.ts (isComposedType), apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
     id: 'question-options-stable-id',
     category: 'type',
     appliesToValues: ['QUESTION'],
@@ -55,40 +90,40 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     category: 'type',
     appliesToValues: ['UNDEFINED'],
     trigger: "Création d'un item",
-    effect: 'Type initialisé à UNDEFINED ("Non défini")',
+    effect: 'Type initialisé à UNDEFINED (« Élément »)',
     location: 'apps/web/src/pages/SpacePage.tsx:470,502,517',
   },
   {
-    id: 'type-shows-url-field',
+    id: 'item-contents-zone',
     category: 'type',
-    appliesToValues: ['LINK'],
-    trigger: 'Type = Lien',
-    effect: 'Affiche un champ URL',
-    location: 'apps/web/src/components/ItemEditModal.tsx:1244-1256',
+    appliesToValues: [],
+    trigger: "Fiche d'un élément (Modifier ou Afficher), quel que soit son type sauf Article",
+    effect: "Une zone « Contenus » sous la description (et sous le bloc Question) remplace les blocs média propres aux types Lien, Diagramme, Image et Document : « + Ajouter » joint un fichier, une image, un lien ou un schéma, plusieurs de chaque sorte, enregistrés tout de suite (hors « Enregistrer »). Masquée sur un Article (ses blocs l'affichent autrement) ; affichage seul pour un lecteur ou une copie de séance verrouillée ; un élément pas encore enregistré ne reçoit pas de contenu. En mode Afficher, les contenus remplacent le média unique et s'affichent en grand après la description (contenus multiples, lot 2, décision Thomas 2026-11-08)",
+    location: 'apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/components/ItemEditModal.tsx (mediaSection), apps/web/src/components/ItemReadView.tsx',
   },
   {
-    id: 'type-shows-diagram-editor',
+    id: 'item-types-retired',
     category: 'type',
-    appliesToValues: ['DIAGRAM'],
-    trigger: 'Type = Diagramme',
-    effect: "Affiche l'éditeur de diagramme (draw.io)",
-    location: 'apps/web/src/components/ItemEditModal.tsx:1259-1275',
+    appliesToValues: ['UNDEFINED', 'TASK'],
+    trigger: "Élément d'un ancien type Image, Lien, Diagramme, Document, Note, Configuration ou Anomalie (avant le lot 4), ou modèle enregistré qui en cite un",
+    effect: "Ces sept types n'existent plus (lot 4 « contenus multiples », décision Thomas 2026-11-08 ; Note fusionnée dans l'Élément le 2026-11-11) : le type dit la nature de l'élément, les contenus ce qu'il porte, les tags son classement. Image, Lien, Diagramme, Document, Note → Élément (UNDEFINED, libellé « Élément », type par défaut ; sans contenu, il se présente par le début de sa description) avec leur média en contenu ; Configuration → Élément + tag « config » ; Anomalie → Tâche + tag « bug » (tag de la communauté, créé s'il manque). Plus de champ url : un média est toujours un contenu (la colonne reste en base, en sauvegarde). Les libellés de types d'une communauté qui citent un type retiré l'ignorent",
+    location: 'packages/shared/src/constants/retiredTypes.ts, apps/api/scripts/migrate-item-types.ts, apps/api/src/utils/itemTree.ts, apps/api/src/utils/referentiels.ts (withDefaultTypeLabels)',
   },
   {
-    id: 'type-shows-image-upload',
+    id: 'bugs-view-tag',
     category: 'type',
-    appliesToValues: ['IMAGE'],
-    trigger: 'Type = Image',
-    effect: "Affiche la zone d'upload d'image",
-    location: 'apps/web/src/components/ItemEditModal.tsx:1278-1299',
+    appliesToValues: [],
+    trigger: "Vue Bugs d'un espace",
+    effect: "Affiche les éléments qui portent le tag suivi (sans casse), quel que soit leur type : « bug » par défaut, réglable dans l'en-tête de la vue par le propriétaire de la communauté (ou un admin en mode admin), pour toute la communauté (référentiels, bugsViewTag). Les autres membres voient le tag suivi sans pouvoir le changer",
+    location: 'apps/web/src/components/views/BugsView.tsx, apps/web/src/pages/SpacePage.tsx, apps/api/src/routes/community-referentiels.ts, packages/shared/src/constants/defaultReferentiels.ts (DEFAULT_BUGS_VIEW_TAG)',
   },
   {
-    id: 'type-shows-document-upload',
+    id: 'tag-created-in-community',
     category: 'type',
-    appliesToValues: ['DOCUMENT'],
-    trigger: 'Type = Document',
-    effect: "Affiche la zone d'upload de fichier",
-    location: 'apps/web/src/components/ItemEditModal.tsx:1302-1318',
+    appliesToValues: [],
+    trigger: "Création d'un tag depuis la fiche d'un élément (saisie dans le sélecteur de tags)",
+    effect: "Le tag est créé dans la communauté de l'espace — donc proposé dans tous ses espaces —, ou dans l'espace s'il n'a pas de communauté. Un nom déjà pris (sans casse) dans l'espace ou sa communauté est refusé. Membres de l'espace (pas les lecteurs) ; renommer ou supprimer un tag de communauté reste réservé au propriétaire ou à un admin de la communauté (Paramètres → Tags) (décision Thomas 2026-11-11)",
+    location: 'apps/api/src/routes/tags.ts (POST), apps/api/src/utils/classificationTag.ts (même règle pour les tags posés par le système), apps/web/src/components/ui/TagSelector.tsx',
   },
   {
     id: 'type-shows-hours-mode',
@@ -126,29 +161,51 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     id: 'status-clear-dates',
     category: 'status',
     appliesToValues: ['undefined'],
-    trigger: 'Statut = "Non défini"',
-    effect: 'Vide les dates de début et de fin',
-    location: 'apps/web/src/components/ItemEditModal.tsx:1084',
+    trigger: 'Statut = "Non défini" choisi dans l’interface (fiche, Kanban, menu ⋯, listes)',
+    effect: "Vide les dates de début et de fin (l'élément quitte le Gantt) ; enregistré sans statut (null). Pas appliqué par l'API seule (MCP) ni à la propagation aux enfants, pour qu'un appel n'efface pas de dates par erreur",
+    location: 'apps/web/src/lib/statusChange.ts (source unique web) — appelé par apps/web/src/components/ItemEditModal.tsx (pickStatus) et apps/web/src/pages/useSpaceActions.ts (handleInlineUpdate)',
   },
   {
     id: 'status-autofill-start',
     category: 'status',
-    appliesToValues: ['todo', 'in_progress', 'to_validate', 'scheduled', 'late'],
+    appliesToValues: statusIdsIn(STATUS_CATEGORY_OPTIONS.map((c) => c.id)),
     trigger: 'Statut choisi (≠ "Non défini"), date de début vide',
     effect: "Remplit la date de début à aujourd'hui (ou à la date de fin si elle est passée), quel que soit le chemin (modale, menu ⋯, Kanban, Aujourd'hui, MCP), descendants inclus quand le statut leur est propagé",
-    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/components/ItemEditModal.tsx, apps/web/src/pages/useSpaceActions.ts (handleInlineUpdate)',
+    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/lib/statusChange.ts (fiche et useSpaceActions.handleInlineUpdate)',
   },
   {
     id: 'status-autofill-end-terminal',
     category: 'status',
-    appliesToValues: ['done', 'cancelled'],
-    trigger: 'Statut = "Terminé"/"Annulé", date de fin vide',
+    appliesToValues: statusIdsIn(CLOSED_CATEGORIES),
+    trigger: 'Statut de catégorie « Terminé » ou « Annulé » (statuts personnalisés compris), date de fin vide',
     effect: "Remplit la date de fin à aujourd'hui, quel que soit le chemin (modale, menu ⋯, Kanban, Aujourd'hui, MCP), descendants inclus quand le statut leur est propagé",
-    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/components/ItemEditModal.tsx, apps/web/src/pages/useSpaceActions.ts (handleInlineUpdate)',
+    location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/lib/statusChange.ts (fiche et useSpaceActions.handleInlineUpdate)',
+  },
+  {
+    id: 'status-category',
+    category: 'status',
+    appliesToValues: [],
+    trigger: 'Tout statut, y compris un statut créé par une communauté',
+    effect: "Sa catégorie (À faire, En cours, À valider, En retard, Terminé, Annulé), choisie dans le réglage des statuts, décide de son sens partout : Terminé et Annulé ferment l'élément (sorti des listes « à faire » et des retards, date de fin remplie, compté fait dans Burndown et Flux cumulatif) ; En cours, À valider et En retard alimentent les indicateurs du tableau de bord et le classement des suggestions de Ma journée ; la case « fait » de Ma journée pose le premier statut Terminé. Statut personnalisé sans catégorie : celle du statut par défaut de même identifiant, sinon À faire (décision 2026-11-08)",
+    location: 'packages/shared/src/constants/statusCategory.ts (statusCategory, isClosedStatus, statusIdsIn, firstStatusIn), apps/api/src/utils/referentiels.ts (statusesOfSpaces), apps/web/src/components/settings/StatusManager.tsx',
   },
 ];
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
+  {
+    id: 'item-contents-views',
+    page: 'Vues Images, Documents et Liens',
+    trigger: "Affichage de la vue (et de ses sections de sous-espaces)",
+    effect: "Une entrée par contenu de la sorte de la vue, quel que soit le type de l'élément : Images = contenus Image et schémas qui ont un aperçu ; Documents = contenus Fichier ; Liens = contenus Lien. Un élément qui porte trois fichiers apparaît trois fois dans Documents. Titre de l'entrée = titre de l'élément, suivi du nom du contenu si l'élément en porte plusieurs de ces sortes. Contenu sans adresse sûre écarté. Clic, double-clic, menu ⋮ et glisser vers un autre parent agissent sur l'élément ; le téléchargement (Documents), l'ouverture du lien (Liens) et l'aperçu plein écran (Images) portent sur le contenu (contenus multiples, lot 3a, décision Thomas 2026-11-08 ; avant : filtre sur le type ou l'adresse de l'élément)",
+    location: 'apps/web/src/lib/itemContentEntries.ts, apps/web/src/components/views/ImagesView.tsx, DocumentsView.tsx, LinksView.tsx',
+  },
+  {
+    id: 'search-item-contents',
+    page: 'Recherche (/search) et recherche du header',
+    trigger: "Recherche d'un mot",
+    effect: "Un élément est trouvé aussi par le nom d'un de ses contenus (nom de fichier, nom donné à un lien ou à un schéma) ou par l'adresse d'un de ses liens et fichiers. Mot exclu : l'élément est écarté si l'un de ses contenus le contient (contenus multiples, lot 3a, 2026-11-08)",
+    location: 'apps/api/src/utils/searchWhere.ts (relation contents), apps/api/src/routes/search.ts (GET / et /advanced)',
+  },
   {
     id: 'search-word-presence',
     page: 'Recherche (/search) ; recherche du header et sélecteur d\'éléments pour le comportement par défaut',
@@ -202,7 +259,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'empty-new-item-discarded',
     page: "Fiche d'un élément (ItemEditModal)",
     trigger: "Fermeture sans enregistrement (croix, Échap, clic à côté, Fermer / Quitter sans enregistrer) d'un élément créé par l'utilisateur moins de 5 minutes avant l'ouverture de sa fiche, vide à l'ouverture et toujours vide",
-    effect: "L'élément est supprimé (suppression normale, tracée dans l'historique). Vide = ni titre, description, adresse, fichier/schéma, dates, priorité, assignation, étiquettes, sous-éléments, relations ni contributions (type, statut et parent ne comptent pas). Un ancien élément vide rouvert, ou celui d'un autre, n'est jamais supprimé ; une fermeture après enregistrement non plus",
+    effect: "L'élément est supprimé (suppression normale, tracée dans l'historique). Vide = ni titre, description, adresse, fichier/schéma, contenu joint (image, fichier, lien, schéma), dates, priorité, assignation, étiquettes, sous-éléments, relations ni contributions (type, statut et parent ne comptent pas). Un ancien élément vide rouvert, ou celui d'un autre, n'est jamais supprimé ; une fermeture après enregistrement non plus",
     location: 'apps/web/src/lib/emptyNewItem.ts (règle) ; apps/web/src/components/ItemEditModal.tsx (closeWithoutSaving)',
   },
   {
@@ -304,10 +361,10 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/utils/articleVisibility.ts (isLessVisible), apps/web/src/components/article/ArticleEditor.tsx',
   },
   {
-    id: 'article-block-display-by-type',
+    id: 'article-block-display-by-contents',
     page: 'Article',
     trigger: 'Affichage d\'un bloc (lecture, Composer, impression)',
-    effect: "Contenu d'abord, champs vides omis, jamais de bloc vide (au moins le titre). Note : intertitre + texte ; Document : intertitre + texte + fichier joint ; Image / Schéma : image + légende titre et description ; Lien : icône du site (repli générique) + titre + adresse ; Réunion : date et heures ; Tâche / Bug : statut · échéance · priorité ; Projet : dates · statut ; Période : dates. Jamais tags, assigné, contributions, relations ni enfants. Libellé de statut résolu par l'API dans les référentiels de l'espace d'origine",
+    effect: "Rendu selon les contenus de l'élément, plus selon son type (contenus multiples, lot 3a, 2026-11-08). Contenu d'abord, champs vides omis, jamais de bloc vide (au moins le titre). Élément qui ne porte que des images ou des schémas avec aperçu : images + légende titre et description (seul cas où la position gauche / droite s'applique) ; que des liens : une carte par lien, icône du site (repli générique) + titre + adresse, description dessous ; sinon intertitre + ligne d'infos du type (Réunion : date et heures ; Tâche / Bug : statut · échéance · priorité ; Projet : dates · statut ; Période : dates) + texte, puis les contenus regroupés dans l'ordre Images, Fichiers (📎 nom), Liens (cartes), Schémas (aperçu). Schéma sans aperçu et adresse non sûre omis. Jamais tags, assigné, contributions, relations ni enfants. Libellé de statut résolu par l'API dans les référentiels de l'espace d'origine",
     location: 'apps/web/src/components/article/ArticleBlock.tsx, articleBlockContent.ts, apps/api/src/routes/item-article.ts (resolveBlocks)',
   },
   {
@@ -337,6 +394,27 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "Affichage de l'action « Absorber les enfants »",
     effect: "Proposée uniquement si l'item a des enfants (childCount de la liste API ou children des vues en arbre ; allItems dans la modale) — sinon l'API répond 400 « No children to absorb »",
     location: 'apps/web/src/lib/itemMenuGroups.ts (hasChildItems), apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
+    id: 'item-contents-merge',
+    page: 'Modale « Fusionner avec… » (MergeItemModal) + « Absorber les enfants » (menu ⋯, fiche)',
+    trigger: 'Fusion de deux éléments, ou absorption des enfants par leur parent',
+    effect: "Les contenus (images, fichiers, liens, schémas) sont cumulés sur l'élément gardé (cible, ou parent) : les siens d'abord, ceux des autres à la suite dans chaque sorte. Un doublon de même sorte n'est gardé qu'une fois, dans la version de l'élément gardé — lien : même adresse (domaine sans casse, « / » final ignoré) ; image ou fichier : même fichier stocké, ou même nom et même taille ; schéma : même dessin. Si le total dépasse 30, l'opération est refusée (400) avant toute écriture. La modale annonce « source + cible → total (n doublons retirés) » depuis le même calcul (GET …/merge-preview). Le fichier d'un doublon retiré n'est pas effacé du stockage (décision Thomas 2026-11-11)",
+    location: 'apps/api/src/utils/contentMerge.ts, apps/api/src/routes/item-merge.ts (merge, merge-preview, absorb-children), apps/web/src/components/MergeItemModal.tsx, apps/web/src/pages/useSpaceActions.ts (refus d\'absorption signalé)',
+  },
+  {
+    id: 'item-split-keeps-contents',
+    page: 'Toutes les vues (menu contextuel) + modale item',
+    trigger: '« Éclater en sous-items » (une Note enfant par titre de niveau 2 ou 3 de la description)',
+    effect: "Les contenus (images, fichiers, liens, schémas) restent tous sur l'élément d'origine : ils ne font pas partie du texte découpé. Les Notes enfants naissent sans contenu (décision Thomas 2026-11-11)",
+    location: 'apps/api/src/routes/items.ts (POST /:id/split)',
+  },
+  {
+    id: 'copy-sheet-all-contents',
+    page: "Fiche d'un élément (ItemEditModal, mode Afficher) — « Copier la fiche »",
+    trigger: 'Copie de la fiche dans le presse-papier',
+    effect: "Tous les contenus à l'adresse sûre sont copiés, avant la description, rangés Images, Fichiers, Liens, Schémas : images et schémas intégrés (PNG si possible), fichiers en liens nommés, liens tels quels ; une image de la description déjà présente dans les contenus n'est pas répétée. La vignette copiée garde un seul visuel (lot 5 contenus multiples)",
+    location: 'apps/web/src/lib/itemClipboard.ts (buildContents, itemSheetToClipboardHtml)',
   },
   {
     id: 'login-remember-last-email',
@@ -377,7 +455,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'item-thumbnail-copy',
     page: "Modale d'un élément (Afficher et Modifier)",
     trigger: 'Clic sur « Copier la vignette »',
-    effect: "Une image PNG de 600 px (double résolution, toujours en thème clair) part dans le presse-papier : type, statut, priorité, titre, image ou schéma de l'élément, sinon début de la description, puis espace, échéance ou dates, assigné. Elle reflète la version enregistrée. Image illisible : la vignette montre la description. Presse-papier refusé : le PNG est téléchargé, avec un message. Rien n'est modifié dans SPOK",
+    effect: "Une image PNG de 600 px (double résolution, toujours en thème clair) part dans le presse-papier : type, statut, priorité, titre, miniature de la vignette commune (première image, sinon premier schéma — règle item-vignette-format), sinon début de la description, puis premier fichier ou site du premier lien, nombre des autres contenus écrit en toutes lettres (« 2 fichiers »), espace, échéance ou dates, assigné. Elle reflète la version enregistrée. Image illisible : la vignette montre la description. Presse-papier refusé : le PNG est téléchargé, avec un message. Rien n'est modifié dans SPOK",
     location: 'apps/web/src/lib/itemThumbnail.ts, apps/web/src/components/ItemThumbnailCard.tsx, apps/web/src/components/ItemEditModal.tsx',
   },
   {
@@ -388,11 +466,11 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/item-relations.ts (GET /:id/links), apps/web/src/components/views/LoupeView.tsx',
   },
   {
-    id: 'loupe-vignette-grid',
-    page: 'Vue Loupe (LoupeView)',
-    trigger: 'Affichage d\'un élément à taille minimale, intermédiaire ou zoomée',
-    effect: "Minimale : icône et titre (Image et Diagramme : leur image à la place de l'icône, l'icône revient si l'image est illisible). Intermédiaire, puis zoomée en plus : Tâche et Anomalie = statut, échéance, puis priorité, assigné, description ; Projet = statut, dates, puis enfants, assigné, description ; Réunion = date, puis assigné, description ; Période = dates, puis durée, description ; Note = une ligne de texte, puis texte plus long ; Document (pièce jointe) = extension, puis description et bouton Ouvrir ; Lien = nom du site, puis adresse, description et bouton Ouvrir ; Image et Diagramme = miniature, puis grande miniature ; autres types = type et statut, puis description. Le bouton Ouvrir ouvre un nouvel onglet et ne fige pas le zoom. Une adresse jugée dangereuse n'est ni affichée ni ouverte",
-    location: 'apps/web/src/components/views/loupe-vignette.ts, apps/web/src/components/views/LoupeVignette.tsx',
+    id: 'item-vignette-format',
+    page: 'Loupe, Kanban, Liste (arbre et à plat), Gantt / PERT (colonne des titres), Planning, MindMap, Activité, Favoris, « Copier la vignette »',
+    trigger: "Affichage d'un élément dans une vue",
+    effect: "Un élément a le même visage partout à format égal (décision Thomas 2026-11-08) ; la vue ne garde que son cadre (glisser, menu ⋮, couleurs et poignées de la MindMap, colonnes du Planning et de la Liste à plat). Miniature : première image, sinon aperçu du premier schéma, sinon icône du type (image illisible = icône). Pastilles : nombre d'images, fichiers, liens et schémas, dans cet ordre, la miniature non comptée. Ligne (Liste, arbre, Planning, MindMap, Favoris, Loupe minimale) : miniature 24 px, titre sur une ligne, info la plus utile (statut d'une Tâche, d'un Projet ; date d'une Réunion ; dates d'une Période ; extension du fichier ou site du lien d'un Élément), pastilles. Carte (Kanban, Activité, Loupe intermédiaire) : image en bandeau, titre sur deux lignes, infos du type (Tâche : statut, échéance ; Projet : statut, dates ; autres : type, statut), extrait de deux lignes, tags, pastilles. Grande (Loupe zoomée, copie de vignette) : grande image, toutes les infos (priorité, assigné, enfants, durée), description sur quatre lignes, adresse d'un lien, bouton Ouvrir du premier fichier sinon du premier lien (nouvel onglet ; ne fige pas le zoom de la Loupe). Sans contenus renvoyés, l'icône du type (plus de repli sur l'ancien champ url depuis le lot 4). Une adresse dangereuse n'est ni affichée ni ouverte. Les galeries Images / Documents / Liens (une entrée par contenu) et les blocs d'Article n'utilisent pas cette vignette",
+    location: 'apps/web/src/lib/itemFace.ts, apps/web/src/components/item/ItemVignette.tsx, apps/web/src/components/item/ContentBadges.tsx',
   },
   {
     id: 'item-open-mode-default',
@@ -482,8 +560,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'bulk-upload-images-documents',
     page: 'Vues Images et Documents (import en masse)',
     trigger: "Import de plusieurs fichiers (bouton « Importer des … » ou glisser-déposer sur la vue)",
-    effect: "Un item IMAGE (vue Images) ou DOCUMENT (vue Documents) par fichier, créé à la racine de l'espace, titré du nom de fichier sans extension. Fichiers refusés avant envoi (format, extension interdite, taille) listés avec leur raison ; si l'envoi échoue après création, l'item est supprimé. Réservé aux membres pouvant éditer",
-    location: 'apps/web/src/lib/bulkUpload.ts, apps/web/src/hooks/useBulkUpload.ts',
+    effect: "Un élément de type « Élément » par fichier, qui porte ce fichier comme contenu Image (vue Images) ou Fichier (vue Documents), créé à la racine de l'espace, titré du nom de fichier sans extension (depuis le lot 3a des contenus multiples, 2026-11-08 ; avant : un item Image ou Document). Fichiers refusés avant envoi (format, extension interdite, taille) listés avec leur raison ; si l'envoi échoue après création, l'item est supprimé. Réservé aux membres pouvant éditer",
+    location: 'apps/web/src/lib/bulkUpload.ts, apps/web/src/hooks/useBulkUpload.ts (itemContentsApi.upload)',
   },
   {
     id: 'image-resize-before-upload',

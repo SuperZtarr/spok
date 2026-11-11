@@ -14,11 +14,50 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+### MEP — 2026-11-11 (21 lots)
+- 21 commits, un par lot ; fichiers partagés entiers avec le dernier lot qui les touche (5 tests sans mention rattachés au lot 4). 19 annonces datées du 2026-11-11. install, build:packages, typecheck 5 paquets OK, TNR 2581/2581, en-têtes OK. Prod avant push : table item_contents recréée (script additif), types médias déjà convertis remis d'après leur adresse, migrate-item-types --prod --apply, App Sleeping de spok-api désactivé par Thomas (à réactiver). Après déploiement, sur demande de Thomas : backfill-file-previews.ts --prod. Laissé hors MEP : .claude/skills/spok-start/SKILL.md
+
+### MEP — 2026-11-11 : INCIDENT migration des types en prod
+- Accès prod par tunnel (`railway connect Postgres --tunnel-only`), proxy public retiré. Table `item_contents` créée en prod (script additif), puis `migrate-item-types --prod --apply` lancé avec accord de Thomas.
+- 12:19 l'API prod s'est endormie (App Sleeping), 12:26 réveil : son `db push --accept-data-loss` à l'ANCIEN schéma a supprimé `item_contents` (152 contenus) ; le script a échoué. Sauvegarde du script écrite seulement en fin : aucune pour la prod.
+- État prod : 2959 éléments déjà convertis (NOTE 2775, LINK 107, IMAGE 56, DOCUMENT 13, CONFIG 5, DIAGRAM 3, BUG 1 → Élément/Tâche), leur url et leur xml intacts ; reste à migrer ~7900 ; pas de table item_contents. Rien commité ni poussé. L'appli en prod fonctionne (anciens types toujours valides).
+
+### Aperçu des fichiers — 2026-11-11
+- Lot terminé, Poussé par la MEP du 2026-11-11. Rattrapage prod à lancer après le déploiement, sur demande de Thomas
+
+### Question : catégorie, enregistrement auto, statuts — 2026-11-11
+- Lot terminé, Poussé par la MEP du 2026-11-11
+
+### Profil en onglets — 2026-11-11
+- Lot terminé, Poussé par la MEP du 2026-11-11
+
+### Contenus multiples, lot 5 (fonctions annexes) — 2026-11-11
+- Lot terminé, Poussé par la MEP du 2026-11-11. Décidé avec Thomas : fusion = cumul avec contrôle de doublon, éclatement = contenus restent sur l'élément d'origine. Spec alignée sur le code (Thomas 2026-11-11) : éclatement garde le texte d'avant le premier titre, absorption en titres H3. Aide de Absorber / Éclater : inscrite au TODO pour après la MEP. Reste signalé : llms.txt cite encore « documents, liens » comme types
+
+### Contenus multiples, lot 4 (types) — 2026-11-11
+- Lot terminé, Poussé par la MEP du 2026-11-11, avec la procédure de migration prod. Base locale migrée (sauvegarde dans backups/)
+
+### Types d'élément : source unique — 2026-11-08
+- Lot 1 (registre des types) et lot 2 (catégories de statut) terminés, Poussé par la MEP du 2026-11-11. Note pour le lot 4 contenus : `source-unique-types.md` (dossier de notes de « Tâches restantes »)
+
+### Contenus multiples, lot 3a (affichages) — 2026-11-08
+- Lot terminé, Poussé par la MEP du 2026-11-11. Règle tranchée par Thomas : une entrée par contenu dans Images / Documents / Liens (transmise à la session vignettes, note contenus-lot3a-pour-vignettes.md)
+
+### Vignette d'élément commune — 2026-11-08
+- Direction et plan validés par Thomas (trois formats ligne / carte / grande, miniature et pastilles tirées de `item.contents`, galeries et blocs d'Article hors du lot). Plan : `vignettes-plan.md` dans le dossier de notes de la session vignettes
+- Lot 3b terminé (trois étapes), Poussé par la MEP du 2026-11-11. Favoris en ligne (et non en carte) validé par Thomas
+
+### Contenus multiples, lot 2 (fiche) — 2026-11-08
+- Lot terminé, Poussé par la MEP du 2026-11-11. Thomas teste la fiche à l'écran (API locale à redémarrer si elle ne recharge pas items.ts / item-contents.ts)
+
+### Contenus multiples, lot 1 (socle) — 2026-11-08
+- Lot terminé, Poussé par la MEP du 2026-11-11. Base locale déjà poussée (table item_contents) et recopie faite en local
+
 ### MEP — 2026-11-08
 - 3 lots poussés en 2 commits : instructions MCP, sens du type DOCUMENT (fix) ; compte-rendu de séance à la clôture et type Question avec votes (feat), regroupés car imbriqués (schéma, liveSession.ts, live-sessions.ts, liveReport.ts, useLiveSession.ts, api.ts, businessRules.ts). Annonces live-session-compte-rendu, live-question, question-type datées du 2026-11-08. Schéma : 3 tables, 1 valeur d'enum, 1 colonne unique facultative (db push au démarrage de l'API). build:packages, typecheck OK, TNR 2461/2461, en-têtes OK. Laissés hors MEP : .claude/skills/spok-start/SKILL.md (travail en cours), ImagesView.tsx (fins de ligne seulement). Base locale à mettre à jour par la session Start avant tout essai
 
 ### Type Question et votes — 2026-11-08
-- Lot terminé, poussé par la MEP du 2026-11-08. Base locale à pousser par la session Start avant essai
+- Lot terminé, poussé par la MEP du 2026-11-08. Badge « Unanimité » ajouté ensuite : inscrit PRÊT POUR MEP (NON COMMITÉ)
 
 ### Séances : compte-rendu — 2026-11-08
 - Lot terminé, poussé par la MEP du 2026-11-08. La session type-question ajoutera la section « Questions » dans `apps/api/src/utils/liveReport.ts` (buildReportHtml / loadReportData)

@@ -1,5 +1,6 @@
 /* Vue Types : items groupés par type d'item (colonnes façon kanban).
- * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Miniature d'une carte : coverOf (lib/itemFace, contenus de l'élément — adresse déjà passée par safeHref) ; 1re page
+ * d'un fichier cadrée sur le haut.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,7 +17,7 @@ import {
   useDraggable,
   closestCenter,
 } from '@dnd-kit/core';
-import { ExternalLink, GripVertical, FolderKanban, GripHorizontal } from 'lucide-react';
+import { GripVertical, FolderKanban, GripHorizontal } from 'lucide-react';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
@@ -27,7 +28,7 @@ import { Badge } from '../ui/Badge';
 import { getTypeIcon } from '../../constants/ui';
 import { stripMarkup } from '../../lib/bbcode';
 import { EmptyHelp } from '../../help/EmptyHelp';
-import { safeHref } from '../../lib/sanitizeHtml';
+import { coverOf } from '../../lib/itemFace';
 
 interface PortalGroup {
   spaceId: string;
@@ -119,7 +120,8 @@ const MIN_BOARD_HEIGHT = 200;
 const DEFAULT_BOARD_HEIGHT = 400;
 
 function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, isDragging, statusLabels, statusColors, canEdit = true, canEditItem, currentSpaceId }: TypeCardProps) {
-  const Icon = getTypeIcon(item.type, item.url);
+  const Icon = getTypeIcon(item.type);
+  const cover = coverOf(item); // miniature commune (lib/itemFace) : première image, sinon aperçu de schéma
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: item.id,
     data: { item },
@@ -174,26 +176,14 @@ function TypeCard({ item, onEdit, onDelete, onAddChild, onMoveToSpace, onDuplica
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <h4 className="text-sm font-medium truncate" title={item.title}>{item.title}</h4>
-            {item.url && (
-              <a
-                href={safeHref(item.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-700 flex-shrink-0"
-                onClick={(e) => e.stopPropagation()}
-                title="Ouvrir le lien"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
           </div>
           {item.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
               {stripMarkup(item.description)}
             </p>
           )}
-          {item.url && (item.type === 'DIAGRAM' || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.url)) && (
-            <img src={item.url} alt="" className="w-full max-h-32 object-cover rounded border border-border mt-1.5" />
+          {cover.url && (
+            <img src={cover.url} alt="" className={`w-full max-h-32 object-cover rounded border border-border mt-1.5 ${cover.kind === 'document' ? 'object-top' : ''}`} />
           )}
           {statusLabel && (
             <Badge
@@ -549,7 +539,7 @@ export function TypesView({ items, currentSpaceId, portalGroups, onEdit, onDelet
           <div className="bg-card border rounded-lg p-3 shadow-lg opacity-90 w-[200px]">
             <div className="flex items-start gap-2">
               {(() => {
-                const Icon = getTypeIcon(activeItem.type, activeItem.url);
+                const Icon = getTypeIcon(activeItem.type);
                 return <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />;
               })()}
               <div className="flex-1 min-w-0">

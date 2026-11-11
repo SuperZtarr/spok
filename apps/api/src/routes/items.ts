@@ -15,14 +15,18 @@
  * MEMBER : modifie/supprime les items qu'il a crÃ©Ã©s OU qui lui sont assignÃ©s (canMemberManageItem, utils/itemOwnership.ts).
  * Dates liÃ©es au statut (PATCH et propagation aux descendants) : utils/statusDates.ts â€” source unique,
  * tous chemins confondus (modale, menu â‹¯, Kanban, Today, MCP) ; ne complÃ¨te que les dates vides.
- * url : http(s) seulement (itemUrlField) â€” jamais javascript:/data: (rÃ¨gle user-html-sanitized). Le HTML des
+ * Plus de champ url (lot 4 contenus multiples, 2026-11-11) : un url envoyé est ignoré — médias = contenus. Le HTML des
  * descriptions n'est PAS nettoyÃ© ici : il l'est Ã  l'affichage (web, lib/sanitizeHtml.ts).
  * parentId : un parent qui change doit être dans le même espace (utils/itemParent.ts), refus en 400 sinon.
  * Personnes (auteur, assigné, auteurs de contributions) : id et nom seulement, jamais l'e-mail — ces routes sont
  * ouvertes aux visiteurs (règle members-email-scope, décision Thomas 2026-11-06).
+ * contents (contenus multiples, 2026-11-08) : renvoyés triés par sorte puis position ; le détail les donne complets,
+ * la liste sans xml (poids des schémas). Écriture : item-contents.ts (seule source des médias, plus de pont).
+ * Types d'item (z.enum, filtre ?type=) : ITEM_TYPES / isItemType du registre des types (@spok/shared), jamais recopiés.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
+import { statusesOfSpace } from '../utils/referentiels.js';
 import { z } from 'zod';
 import { assignmentStamp, computeAssignmentReceipts, exclusiveAssignee } from '../utils/assignment.js';
 import { isLocked, lockedFieldViolations, LOCKED_MESSAGE } from '../utils/itemLock.js';
@@ -36,29 +40,32 @@ import { itemRelationsRoutes } from './item-relations.js';
 import { itemCascadeShiftRoutes } from './item-cascade-shift.js';
 import { itemMoveRoutes } from './item-move.js';
 import { itemBulkRoutes } from './item-bulk.js';
-import { itemUploadRoutes } from './item-uploads.js';
 import { itemContributionRoutes } from './item-contributions.js';
 import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
 import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
-import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
-import { statusAllowedForType } from '@spok/shared';
+import { itemContentRoutes } from './item-contents.js';
 
-// URL d'item : http(s) seulement. z.string().url() accepte javascript:â€¦ (lien piÃ©gÃ© exÃ©cutÃ© au clic cÃ´tÃ© web).
-const HTTP_URL = /^https?:\/\//i;
-const itemUrlField = z.string().url().refine((u) => HTTP_URL.test(u), { message: "L'URL doit commencer par http:// ou https://" });
+// Contenus renvoyés avec l'élément : ordre d'affichage (enum Prisma déclaré IMAGE, FILE, LINK, DIAGRAM)
+const CONTENTS_ORDER = [{ kind: 'asc' as const }, { position: 'asc' as const }, { createdAt: 'asc' as const }];
+// Liste : tout sauf le xml des schémas (aperçu d'un fichier inclus : vignettes)
+const CONTENTS_LIST_SELECT = {
+  id: true, itemId: true, kind: true, url: true, name: true, mimeType: true, size: true, previewUrl: true, excerpt: true,
+  position: true, createdById: true, createdAt: true, updatedAt: true,
+};
+import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
+import { ITEM_TYPES, isItemType, statusAllowedForType } from '@spok/shared';
 
 // Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
 
 const createItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION']),
+  type: z.enum(ITEM_TYPES),
   title: z.string().default(''),
   description: z.string().optional(),
   content: z.record(z.unknown()).optional(),
-  url: itemUrlField.optional(),
   status: statusField,
   priority: z.number().int().min(1).max(4).optional(),
   dueDate: z.string().datetime().optional(),
@@ -71,11 +78,10 @@ const createItemSchema = z.object({
 });
 
 const updateItemSchema = z.object({
-  type: z.enum(['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION']).optional(),
+  type: z.enum(ITEM_TYPES).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   content: z.record(z.unknown()).optional(),
-  url: itemUrlField.nullable().optional(),
   status: statusField,
   priority: z.number().int().min(1).max(4).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
@@ -90,11 +96,10 @@ const updateItemSchema = z.object({
   propagateToChildren: z.boolean().optional(),
 });
 
-const ITEM_TYPE_VALUES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'];
 
 const querySchema = z.object({
   // Une ou plusieurs valeurs séparées par des virgules (filtre à choix multiple de la barre d'espace)
-  type: z.string().refine((v) => v.split(',').every((t) => ITEM_TYPE_VALUES.includes(t)), 'Type inconnu').optional(),
+  type: z.string().refine((v) => v.split(',').every((t) => isItemType(t)), 'Type inconnu').optional(),
   status: z.string().optional(), // idem ; 'none' désigne les éléments sans statut
   parentId: z.string().nullable().optional(),
   search: z.string().optional(),
@@ -335,13 +340,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemCascadeShiftRoutes);
     await authInstance.register(itemMoveRoutes);
     await authInstance.register(itemBulkRoutes);
-    await authInstance.register(itemUploadRoutes);
     await authInstance.register(itemContributionRoutes);
     await authInstance.register(itemConvertRoutes);
     await authInstance.register(itemMergeRoutes);
     await authInstance.register(itemReactionRoutes);
     await authInstance.register(itemArticleWriteRoutes);
     await authInstance.register(itemQuestionWriteRoutes);
+    await authInstance.register(itemContentRoutes);
   });
 
   // Lecture d'un article (authentification facultative : un article public se lit en anonyme)
@@ -397,6 +402,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         children: { select: { id: true } },
         assignedTo: { select: { id: true, name: true } },
         _count: { select: { children: true, contributions: true } },
+        contents: { select: CONTENTS_LIST_SELECT, orderBy: CONTENTS_ORDER },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
@@ -604,6 +610,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         parent: true,
         createdBy: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
+        contents: { orderBy: CONTENTS_ORDER },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
@@ -722,7 +729,6 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             type: 'Type',
             title: 'Titre',
             description: 'Description',
-            url: 'URL',
             status: 'Statut',
             priority: 'PrioritÃ©',
             dueDate: 'Date d\'Ã©chÃ©ance',
@@ -785,11 +791,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Dates liÃ©es au statut (utils/statusDates.ts) : ne complÃ¨te que les dates absentes du payload
+      // Statuts de la communauté : un statut personnalisé de catégorie « terminé » remplit aussi la fin
+      const spaceStatuses = updateData.status !== undefined ? await statusesOfSpace(fastify.prisma, existingItem.spaceId) : undefined;
       const autoDates = updateData.status !== undefined
         ? statusDateDefaults(updateData.status, {
             startDate: updateData.startDate !== undefined ? (updateData.startDate ? new Date(updateData.startDate) : null) : existingItem.startDate,
             endDate: updateData.endDate !== undefined ? (updateData.endDate ? new Date(updateData.endDate) : null) : existingItem.endDate,
-          })
+          }, new Date(), spaceStatuses)
         : {};
       const autoStartDate = updateData.startDate === undefined ? autoDates.startDate : undefined;
       const autoEndDate = updateData.endDate === undefined ? autoDates.endDate : undefined;
@@ -862,7 +870,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           // MÃªmes rÃ¨gles de dates que l'item propagÃ©, item par item (dates vides seulement)
           const now = new Date();
           for (const d of descendants) {
-            const dates = statusDateDefaults(updateData.status, d, now);
+            const dates = statusDateDefaults(updateData.status, d, now, spaceStatuses);
             if (dates.startDate || dates.endDate) {
               await fastify.prisma.item.update({ where: { id: d.id }, data: dates });
             }
@@ -896,6 +904,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // Split item description by headings into child items
+  // Contenus (images, fichiers, liens, schémas) : restent sur l'élément d'origine, enfants sans contenu (règle item-split-keeps-contents)
   fastify.post<{ Params: { spaceId: string; id: string } }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
@@ -945,7 +954,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           data: {
             title: section.title || 'Sans titre',
             description: section.description || null,
-            type: 'NOTE',
+            type: 'UNDEFINED',
             spaceId: item.spaceId,
             parentId: item.id,
             position: pos,

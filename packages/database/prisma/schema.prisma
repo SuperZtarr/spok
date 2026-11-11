@@ -71,6 +71,7 @@ model User {
   articleBlocksAdded          ArticleBlock[]     @relation("ArticleBlockAddedBy")
   questionsDecided            Question[]         @relation("QuestionDecidedBy")
   questionVotes               QuestionVote[]
+  itemContentsAdded           ItemContent[]      @relation("ItemContentCreatedBy")
 
   @@map("users")
 }
@@ -375,6 +376,7 @@ model Item {
   referencedIn  ArticleBlock[] @relation("ArticleReferences")
   question        Question?
   questionOptions QuestionOption[]
+  contents        ItemContent[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -500,19 +502,50 @@ model ProcessLane {
   @@map("process_lanes")
 }
 
+// Contenu d'un élément (refonte « contenus multiples », lot 1, 2026-11-08) : un élément porte plusieurs contenus de
+// plusieurs sortes, au lieu du seul champ Item.url décidé par le type. Affichés regroupés par sorte dans l'ordre fixe
+// Images, Fichiers, Liens, Schémas (ITEM_CONTENT_KINDS, @spok/shared) ; position = ordre à l'intérieur d'une sorte.
+// IMAGE/FILE : url R2 (ou adresse externe pour une image) + nom, type mime, taille ; LINK : url ; DIAGRAM : xml draw.io
+// (+ url d'aperçu facultative). Routes : apps/api/src/routes/item-contents.ts. Item.url reste en place jusqu'au lot 4.
+// FILE : previewUrl = image webp de la 1re page (PDF, miniature intégrée Office), excerpt = début du texte ; calculés à
+// l'envoi par apps/api/src/utils/filePreview.ts, absents si le format ne s'y prête pas (aperçu des fichiers, 2026-11-11).
+model ItemContent {
+  id          String          @id @default(cuid())
+  itemId      String
+  item        Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  kind        ItemContentKind
+  url         String?
+  name        String?
+  mimeType    String?
+  size        Int?
+  xml         String?         @db.Text
+  previewUrl  String?
+  excerpt     String?         @db.Text
+  position    Int             @default(0)
+  createdById String?
+  createdBy   User?           @relation("ItemContentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([itemId, position])
+  @@index([url])
+  @@index([previewUrl])
+  @@map("item_contents")
+}
+
+enum ItemContentKind {
+  IMAGE
+  FILE
+  LINK
+  DIAGRAM
+}
+
 enum ItemType {
   UNDEFINED
-  NOTE
   PROJECT
   TASK
   MEETING
   PERIOD
-  LINK
-  CONFIG
-  DOCUMENT
-  IMAGE
-  BUG
-  DIAGRAM
   ARTICLE
   QUESTION
 }

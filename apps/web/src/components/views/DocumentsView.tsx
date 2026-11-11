@@ -1,8 +1,13 @@
 /*
- * Vue Documents : items DOCUMENT en tableau (téléchargement, remplacement), groupés par parent.
- * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un item
- * DOCUMENT par fichier, créé à la racine — réservé à canEdit et à l'espace courant (currentSpaceId).
+ * Vue Documents : contenus Fichier de TOUS les éléments, quel que soit leur type — une carte par fichier
+ * (contentEntries, lib/itemContentEntries ; décision Thomas 2026-11-08, règle item-contents-views), groupées par
+ * parent de l'élément ; titre = titre de l'élément (+ nom du fichier s'il en porte plusieurs), extension tirée du nom.
+ * Glisser une carte déplace l'élément (id de glisser = id du contenu) ; clic, menu ⋮ : l'élément ; ⬇ : ce fichier.
+ * Import en masse (bouton + glisser-déposer de fichiers sur la vue) via useBulkUpload : un élément « Élément »
+ * (UNDEFINED) portant un contenu Fichier par fichier, créé à la racine — réservé à canEdit et à l'espace courant.
  * Liens vers une URL d'item via safeHref (règle user-html-sanitized).
+ * Aperçu (2026-11-11) : une carte dont le fichier a un aperçu montre sa 1re page, ou à défaut le début du texte, en
+ * haut de la carte à la place de l'icône (FilePreviewThumb, règle item-contents-file-preview).
  */
 import { useMemo, useCallback } from 'react';
 import { useBulkUpload } from '../../hooks/useBulkUpload';
@@ -14,19 +19,20 @@ import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ItemActionMenu } from '../ui/ItemActionMenu';
-import { getTypeIcon } from '../../constants/ui';
+import { getFileIcon } from '../../constants/ui';
 import { buildItemMenuGroups, hasHeadings, hasChildItems } from '../../lib/itemMenuGroups';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { safeHref } from '../../lib/sanitizeHtml';
+import { contentEntries, fileExtension, type ContentEntry } from '../../lib/itemContentEntries';
+import { FilePreviewThumb, hasFilePreview } from '../contents/FilePreviewThumb';
 
-function getFileIcon(url: string) {
-  return getTypeIcon('DOCUMENT', url);
+/** Icône selon l'extension du fichier (nom du contenu, sinon adresse) */
+function entryIcon(entry: ContentEntry) {
+  const ext = fileExtension(entry);
+  return getFileIcon(ext ? `fichier.${ext.toLowerCase()}` : entry.url ?? '');
 }
 
-function getFileExtension(url: string): string {
-  const parts = url.split('.');
-  return parts.length > 1 ? parts.pop()!.toUpperCase() : '';
-}
+const FILE_KINDS = ['FILE'] as const;
 
 function DraggableDoc({ id, children, canDrag }: { id: string; children: React.ReactNode; canDrag: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !canDrag });
@@ -55,7 +61,7 @@ function DroppableDocGroup({ id, children }: { id: string; children: React.React
 interface DocGroup {
   parentId: string | null;
   parentTitle: string;
-  docs: Item[];
+  docs: ContentEntry[];
 }
 
 interface PortalGroup {
@@ -98,8 +104,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
   const bulk = useBulkUpload(currentSpaceId, 'document');
   const canBulkUpload = canEdit && !!currentSpaceId;
   const documents = useMemo(() => {
-    if (!items) return [];
-    return items.filter(item => item.type === 'DOCUMENT' && item.url);
+    return contentEntries(items, FILE_KINDS);
   }, [items]);
 
   const groups = useMemo<DocGroup[]>(() => {
@@ -107,9 +112,9 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
     if (items) {
       for (const item of items) parentNames[item.id] = item.title;
     }
-    const groupMap = new Map<string | null, Item[]>();
+    const groupMap = new Map<string | null, ContentEntry[]>();
     for (const doc of documents) {
-      const key = doc.parentId || null;
+      const key = doc.item.parentId || null;
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key)!.push(doc);
     }
@@ -131,12 +136,13 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || !onMove) return;
-    const itemId = active.id as string;
+    // id de glisser = id du contenu ; le déplacement porte sur l'élément qui le porte
+    const doc = documents.find(d => d.key === active.id);
     const dropId = over.id as string;
-    if (!dropId.startsWith('group:')) return;
+    if (!doc || !dropId.startsWith('group:')) return;
+    const itemId = doc.item.id;
     const newParentId = dropId === 'group:__root__' ? null : dropId.replace('group:', '');
-    const doc = documents.find(d => d.id === itemId);
-    if (!doc || (doc.parentId || null) === newParentId) return;
+    if ((doc.item.parentId || null) === newParentId) return;
     const targetGroup = groups.find(g => g.parentId === newParentId);
     const position = targetGroup ? targetGroup.docs.length : 0;
     onMove(itemId, newParentId, position);
@@ -187,22 +193,27 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
           </div>
           <div className="p-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {group.docs.map(doc => {
-                const Icon = getFileIcon(doc.url!);
-                const ext = getFileExtension(doc.url!);
+              {group.docs.map(entry => {
+                const doc = entry.item;
+                const Icon = entryIcon(entry);
+                const ext = fileExtension(entry);
                 return (
-                  <DraggableDoc key={doc.id} id={doc.id} canDrag={canEdit && !!onMove}>
+                  <DraggableDoc key={entry.key} id={entry.key} canDrag={canEdit && !!onMove}>
                   <div
                     data-tour="documents-row"
                     data-help-zone="documents:ligne"
-                    className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
+                    className="group flex flex-wrap items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
                     onClick={() => onEdit?.(doc.id)}
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-muted-foreground" />
-                    </div>
+                    {hasFilePreview(entry.content) ? (
+                      <FilePreviewThumb content={entry.content} size="md" className="basis-full" />
+                    ) : (
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.title}</p>
+                      <p className="text-sm font-medium truncate">{entry.label}</p>
                       {doc.description && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{doc.description}</p>
                       )}
@@ -214,7 +225,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <a
-                        href={safeHref(doc.url)}
+                        href={safeHref(entry.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -241,14 +252,14 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
 
       {/* Portal sections for child spaces */}
       {portalGroups?.map(group => {
-        const portalDocs = group.items.filter(item => item.type === 'DOCUMENT' && item.url);
+        const portalDocs = contentEntries(group.items, FILE_KINDS);
         if (portalDocs.length === 0) return null;
         // Group portal docs by parent
         const portalParentNames: Record<string, string> = {};
         for (const item of group.items) portalParentNames[item.id] = item.title;
-        const portalGroupMap = new Map<string | null, Item[]>();
+        const portalGroupMap = new Map<string | null, ContentEntry[]>();
         for (const doc of portalDocs) {
-          const key = doc.parentId || null;
+          const key = doc.item.parentId || null;
           if (!portalGroupMap.has(key)) portalGroupMap.set(key, []);
           portalGroupMap.get(key)!.push(doc);
         }
@@ -278,20 +289,25 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                 </div>
                 <div className="p-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {pGroup.docs.map(doc => {
-                      const Icon = getFileIcon(doc.url!);
-                      const ext = getFileExtension(doc.url!);
+                    {pGroup.docs.map(entry => {
+                      const doc = entry.item;
+                const Icon = entryIcon(entry);
+                      const ext = fileExtension(entry);
                       return (
                         <div
-                          key={doc.id}
-                          className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
+                          key={entry.key}
+                          className="group flex flex-wrap items-start gap-3 p-3 rounded-lg border bg-card hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
                           onClick={() => onEdit?.(doc.id)}
                         >
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-muted-foreground" />
-                          </div>
+                          {hasFilePreview(entry.content) ? (
+                            <FilePreviewThumb content={entry.content} size="md" className="basis-full" />
+                          ) : (
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{doc.title}</p>
+                            <p className="text-sm font-medium truncate">{entry.label}</p>
                             {doc.description && (
                               <p className="text-xs text-muted-foreground truncate mt-0.5">{doc.description}</p>
                             )}
@@ -303,7 +319,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <a
-                              href={safeHref(doc.url)}
+                              href={safeHref(entry.url)}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}

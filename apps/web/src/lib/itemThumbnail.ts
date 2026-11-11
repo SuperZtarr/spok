@@ -5,7 +5,11 @@
  *   Le média passe d'abord par imageToPngDataUrl ; s'il est illisible (CORS, réseau), la carte montre l'extrait
  * - copyItemThumbnail : presse-papier image/png ; si le navigateur refuse, téléchargement du PNG. Le PNG est passé
  *   en promesse à ClipboardItem : l'écriture démarre pendant le clic (geste utilisateur exigé par Safari)
- * Règle businessRules « item-thumbnail-copy ». Ne pas réutiliser pour un export de vue : exportUtils.ts s'en charge. */
+ * Règle businessRules « item-thumbnail-copy ». Ne pas réutiliser pour un export de vue : exportUtils.ts s'en charge.
+ * Format « grande » de la vignette commune (lib/itemFace.ts, 2026-11-08) : miniature et pastilles viennent de la même
+ * règle (coverOf, badgesOf) à partir des contenus de l'élément ; les infos restent celles de la fiche (déjà libellées).
+ * Aperçu des fichiers (2026-11-11) : la miniature peut être la 1re page d'un fichier ; sans description, l'extrait est
+ * le début du premier fichier (fileExcerptOf). */
 import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -14,6 +18,7 @@ import { ItemThumbnailCard } from '../components/ItemThumbnailCard';
 import { imageToPngDataUrl, type ItemSheet } from './itemClipboard';
 import { htmlToText } from './sanitizeHtml';
 import { sanitizeFilename } from './exportUtils';
+import { badgesOf, coverOf, fileExcerptOf, hostOf, type ContentBadge, type FaceContent } from './itemFace';
 
 export interface ItemThumbnail {
   /** Type technique de l'item (icône) */
@@ -29,6 +34,8 @@ export interface ItemThumbnail {
   attachment: string | null;
   /** Espace, échéance ou dates, assigné */
   meta: string[];
+  /** Nombre des autres contenus par sorte (pastilles de la vignette commune) */
+  badges: ContentBadge[];
 }
 
 const EXCERPT_MAX = 320;
@@ -41,26 +48,32 @@ function excerptOf(html: string | null): string | null {
   return text.length > EXCERPT_MAX ? `${text.slice(0, EXCERPT_MAX).trimEnd()}…` : text;
 }
 
-function hostOf(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
-}
-
-export function buildItemThumbnail(sheet: ItemSheet, type: string): ItemThumbnail {
+/** contents : contenus de l'élément enregistré (seule source de la miniature depuis le lot 4). */
+export function buildItemThumbnail(sheet: ItemSheet, type: string, contents?: FaceContent[] | null): ItemThumbnail {
   const field = (label: string) => sheet.fields.find((f) => f.label === label)?.value ?? null;
   const media = sheet.media;
   const dates = field('Échéance')
     ? `Échéance ${field('Échéance')}`
     : [field('Début'), field('Fin')].filter(Boolean).join(' → ');
+  const source = { type, contents };
+  const cover = coverOf(source);
+  const firstFile = contents?.find((c) => c.kind === 'FILE');
+  const firstLink = contents?.find((c) => c.kind === 'LINK');
+  const attachment = firstFile ? firstFile.name || firstFile.url || null
+    : firstLink ? hostOf(firstLink.url) ?? firstLink.url ?? null
+    : media?.kind === 'file' ? media.name : media?.kind === 'url' ? hostOf(media.url) ?? media.url : null;
   return {
     type,
     title: sheet.title,
     typeLabel: field('Type'),
     status: field('Statut'),
     priority: field('Priorité'),
-    imageUrl: media?.kind === 'image' ? media.url : null,
-    excerpt: excerptOf(sheet.descriptionHtml),
-    attachment: media?.kind === 'file' ? media.name : media?.kind === 'url' ? hostOf(media.url) : null,
+    imageUrl: cover.url ?? (media?.kind === 'image' ? media.url : null),
+    // Sans description : début du premier fichier (aperçu des fichiers, comme la vignette commune)
+    excerpt: excerptOf(sheet.descriptionHtml) ?? excerptOf(fileExcerptOf(source) ?? null),
+    attachment,
     meta: [field('Espace'), dates, field('Assigné à')].filter((v): v is string => !!v),
+    badges: badgesOf(source, cover),
   };
 }
 
