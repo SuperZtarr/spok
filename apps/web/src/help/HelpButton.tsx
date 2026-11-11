@@ -9,6 +9,9 @@
  * Au lancement du tour, le bouton se marque (TOUR_ANCHOR_ATTR) : c'est lui que pointe la dernière étape.
  * L'encart propose aussi le mode Aide (survol des zones, help/HelpModeOverlay ; raccourci Maj+?). Sur écran tactile
  * (help/touch.ts) : libellé « toucher » sans raccourci, et rappel de l'appui long sur un bouton.
+ * compact (2026-11-12) : sans la liste des fonctions — pour un écran dont chaque section porte son propre « ? »
+ * (help/ElementHelp), où la liste complète faisait doublon et devenait illisible (fiche élément). L'encart est limité à
+ * la hauteur de la fenêtre et défile à l'intérieur.
  */
 import { useState, useRef, useEffect } from 'react';
 import { HelpCircle, X, Play, MousePointerClick } from 'lucide-react';
@@ -25,6 +28,8 @@ interface HelpButtonProps {
   buttonTitle?: string;
   /** 'toolbar' (défaut) : discret, barres de vue ; 'page' : encadré, en-têtes de page et de modale. */
   variant?: 'toolbar' | 'page';
+  /** Sans la liste des fonctions : chaque section de l'écran a son « ? » (ElementHelp). */
+  compact?: boolean;
 }
 
 const BUTTON_CLASSES = {
@@ -32,7 +37,7 @@ const BUTTON_CLASSES = {
   page: (pulse?: boolean) => `inline-flex items-center justify-center w-8 h-8 rounded-md border border-input bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0${pulse ? ' animate-pulse ring-2 ring-primary ring-offset-2' : ''}`,
 };
 
-export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur cette vue', variant = 'toolbar' }: HelpButtonProps) {
+export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur cette vue', variant = 'toolbar', compact = false }: HelpButtonProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -85,8 +90,8 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
       {open && createPortal(
         <div
           ref={popoverRef}
-          className="fixed z-50 w-[320px] rounded-lg border border-border bg-card shadow-lg"
-          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-50 w-[320px] overflow-y-auto rounded-lg border border-border bg-card shadow-lg"
+          style={{ top: pos.top, left: pos.left, maxHeight: `calc(100vh - ${pos.top + 8}px)` }}
         >
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <h3 className="text-sm font-semibold text-foreground">{help.title}</h3>
@@ -95,7 +100,9 @@ export function HelpButton({ help, onStartTour, pulse, buttonTitle = 'Aide sur c
             </button>
           </div>
           <p className="px-4 pb-2 text-xs text-muted-foreground leading-relaxed">{help.summary}</p>
-          {help.tips.length > 0 && (
+          {/* Encart compact : dire où se trouve l'aide de chaque section (hints.sectionHelp de la fiche) */}
+          {compact && help.hints?.sectionHelp && <p className="px-4 pb-3 text-xs text-foreground/80 leading-relaxed">{help.hints.sectionHelp}</p>}
+          {!compact && help.tips.length > 0 && (
             <ul className="px-4 pb-3 space-y-1">
               {help.tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">

@@ -51,6 +51,8 @@
  * assignedToId, garanti par l'API).
  * Relations : cible choisie par ItemSearchPicker (cet espace, communauté, tous mes espaces — droits appliqués par l'API).
  * Zones data-devzone item-* : vocabulaire de DevZoneInspector et du mode Aide (textes : help/shellZones.ts).
+ * Aide par section (2026-11-12) : chaque section porte son « ? » (ElementHelp, élément de item-modal.help.ts de même
+ * clé) ; le « ? » de l'en-tête est compact (résumé, tutoriel, mode Aide, sans liste). Section ajoutée = son « ? ».
  * Copie de séance live (lockedAt) : lecture seule sauf tags (canEditTags) et contributions ; bandeau d'origine ;
  * l'enregistrement n'envoie alors que tagIds (l'API refuse tout autre champ, cf. utils/itemLock.ts).
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions) ;
@@ -107,6 +109,7 @@ import { HelpButton } from '../help/HelpButton';
 import { PAGE_HELP } from '../help/pageHelp';
 import { HelpHint } from '../help/HelpHint';
 import { FieldHelp } from '../help/FieldHelp';
+import { ElementHelp } from '../help/ElementHelp';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { TagBadge } from './ui/TagBadge';
 import { RuleHint } from './ui/RuleHint';
@@ -1008,6 +1011,7 @@ export function ItemEditModal({
       <h2 className="text-sm font-semibold flex items-center gap-2">
         <TagIcon className="w-4 h-4" />
         Tags
+        <ElementHelp page="item-modal" element="tags" />
       </h2>
       {canEditTags ? (
         <TagSelector spaceId={spaceId} value={selectedTagIds} onChange={setSelectedTagIds} />
@@ -1134,6 +1138,7 @@ export function ItemEditModal({
                 )}
               </div>
             )}
+            {!isNewItem && <ElementHelp page="item-modal" element="modes" />}
             {formMode && <button
               type="button"
               onClick={() => setExpanded(v => !v)}
@@ -1144,6 +1149,7 @@ export function ItemEditModal({
               {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               <span className="hidden sm:inline">{expanded ? 'Moins de champs' : 'Plus de champs'}</span>
             </button>}
+            {formMode && <ElementHelp page="item-modal" element="champs" />}
             <div className="flex items-center gap-2 flex-shrink-0">
               {item?.createdBy && (
                 <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1153,7 +1159,7 @@ export function ItemEditModal({
                   <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
               )}
-              <HelpButton help={PAGE_HELP['item-modal']} onStartTour={startItemTour} pulse={itemPulse} variant="page" buttonTitle="Aide" />
+              <HelpButton help={PAGE_HELP['item-modal']} onStartTour={startItemTour} pulse={itemPulse} variant="page" buttonTitle="Aide" compact />
             </div>
           </div>
 
@@ -1254,6 +1260,7 @@ export function ItemEditModal({
                 const offered = CONTENT_TYPES.filter((t) => typeLabels[t]?.visible !== false);
                 const isContentType = (CONTENT_TYPES as string[]).includes(type);
                 return (
+                  <div className="flex items-center gap-1.5">
                   <HelpHint text={itemHints?.contentTypes}>
                     <div className="flex flex-wrap items-center gap-1.5" data-tour="item-content-types" data-devzone="item-type">
                       {isContentType ? offered.map((key) => {
@@ -1274,6 +1281,8 @@ export function ItemEditModal({
                       )}
                     </div>
                   </HelpHint>
+                  <ElementHelp page="item-modal" element="contentTypes" />
+                  </div>
                 );
               })()}
 
@@ -1282,7 +1291,7 @@ export function ItemEditModal({
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
               <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
-                <label className="text-sm font-medium">Description</label>
+                <label className="text-sm font-medium flex items-center gap-1.5">Description <ElementHelp page="item-modal" element="description" /></label>
                 <RichTextEditor
                   key={itemId}
                   content={description}
@@ -1302,14 +1311,19 @@ export function ItemEditModal({
               <div className="space-y-3" data-tour="item-reactions" data-devzone="item-contributions">
                 {/* Reaction bar on item */}
                 {item && (
-                  <ReactionBar
-                    spaceId={spaceId}
-                    itemId={item.id}
-                    summary={(item as any).reactionSummary || []}
-                    onReacted={() => canInteract && setShowContributionField(true)}
-                    label="Réagissez ou Contribuez à l'article"
-                    readOnly={!user}
-                  />
+                  <div className="flex items-start gap-1.5">
+                    <div className="flex-1 min-w-0">
+                      <ReactionBar
+                        spaceId={spaceId}
+                        itemId={item.id}
+                        summary={(item as any).reactionSummary || []}
+                        onReacted={() => canInteract && setShowContributionField(true)}
+                        label="Réagissez ou Contribuez à l'article"
+                        readOnly={!user}
+                      />
+                    </div>
+                    <ElementHelp page="item-modal" element="reactions" />
+                  </div>
                 )}
 
                 {/* New contribution field (shown after reaction or manual click) */}
@@ -1419,6 +1433,7 @@ export function ItemEditModal({
                       <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <MessageSquarePlus className="w-4 h-4" />
                         Contributions ({contributionCount})
+                        <ElementHelp page="item-modal" element="contributions" />
                       </h2>
                       <div className="divide-y divide-border/50">
                         {rootContribs.map(c => renderContribution(c, 0))}
@@ -1435,7 +1450,7 @@ export function ItemEditModal({
 
               {/* Type */}
               {showAll && <div className="space-y-2" data-tour="item-type-selector" data-devzone="item-type">
-                <label className="text-sm font-medium">Type</label>
+                <label className="text-sm font-medium flex items-center gap-1.5">Type <ElementHelp page="item-modal" element="type" /></label>
                 {canEdit ? (
                   <>
                     {/* Mobile: select */}
@@ -1504,7 +1519,7 @@ export function ItemEditModal({
                 <QuestionStatusField spaceId={item.spaceId ?? spaceId} itemId={itemId} statuses={referentiels?.statuses} />
               )}
               {showAll && type !== 'QUESTION' &&<div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
-                <label className="text-sm font-medium">Statut</label>
+                <label className="text-sm font-medium flex items-center gap-1.5">Statut <ElementHelp page="item-modal" element="statut" /></label>
                 {canEdit ? (
                   <>
                     {/* Mobile: select */}
@@ -1584,9 +1599,10 @@ export function ItemEditModal({
 
               {/* Dates */}
               {showAll && <div data-tour="item-dates" data-devzone="item-dates" className="space-y-3">
-                {/* Toggle Jours pleins / Heures — pleine largeur */}
-                {canEdit && (
+                {/* Toggle Jours pleins / Heures — pleine largeur ; le « ? » des dates reste visible sans droit d'édition */}
+                {canEdit ? (
                   <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium flex items-center gap-1.5">Dates <ElementHelp page="item-modal" element="dates" /></span>
                     <div className="flex rounded-md border border-border overflow-hidden text-xs">
                       <button type="button"
                         onClick={() => setAllDay(true)}
@@ -1600,6 +1616,8 @@ export function ItemEditModal({
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <span className="text-sm font-medium flex items-center gap-1.5">Dates <ElementHelp page="item-modal" element="dates" /></span>
                 )}
                 {/* Champs de dates + sélecteur heures à droite */}
                 <div className="flex gap-4 items-start">
@@ -1762,6 +1780,7 @@ export function ItemEditModal({
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
                     Dépendances
+                    <ElementHelp page="item-modal" element="relations" />
                   </h2>
                   {canEdit && (
                     <Button type="button" variant="bordered" size="sm" onClick={() => setShowAddRelation(!showAddRelation)}>
@@ -1864,6 +1883,7 @@ export function ItemEditModal({
                     <h2 className="text-sm font-semibold flex items-center gap-2">
                       <GitBranch className="w-4 h-4" />
                       Éléments enfants ({children.length})
+                      <ElementHelp page="item-modal" element="enfants" />
                     </h2>
                     <div className="space-y-0.5 max-h-[400px] overflow-y-auto">
                       {children.map(child => {
@@ -1974,6 +1994,7 @@ export function ItemEditModal({
                 )}
               </>
             )}
+            <span className="inline-flex items-center"><ElementHelp page="item-modal" element="actions" /></span>
             {/* Contextual actions */}
             {item && canEdit && itemId && (
               <div className="flex items-center gap-1 sm:ml-auto">

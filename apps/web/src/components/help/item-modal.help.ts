@@ -5,7 +5,10 @@
    hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
    Lot 5 contenus multiples : copySheet et annonce copy-sheet-all-contents (élément actions) — tous les contenus copiés.
    hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
-   hints.print : Imprimer du mode Afficher. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
+   hints.print : Imprimer du mode Afficher.
+   Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans ItemEditModal — sauf
+   insertion, déjà expliqué par les infobulles de la barre d'insertion répétée entre les blocs) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête.
+   Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -33,6 +36,7 @@ export const elements = {
     target: '[data-tour="item-mode-switch"]',
     noZone: true,
     side: 'bottom',
+    changes: [{ id: 'item-section-help', kind: 'evolution', text: 'Chaque section de la fiche a son propre « ? », qui explique cette seule section. Le « ? » en haut à droite garde le tutoriel et le mode Aide.', date: '2026-11-11' }],
   },
   insertion: {
     title: 'Insérer un bloc',
@@ -157,6 +161,7 @@ export const help: HelpEntry = {
   ...derived,
   hints: {
     ...derived.hints,
+    sectionHelp: 'Chaque section de la fiche a son petit « ? » : cliquez-le pour savoir à quoi elle sert et comment s\'en servir.',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
     openArticleUnsaved: 'Enregistrement de l\'article… Le mode Composer (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
