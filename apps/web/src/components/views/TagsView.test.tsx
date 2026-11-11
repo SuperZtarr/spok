@@ -1,13 +1,14 @@
-/* Tests de la vue Tags (2026-11-11) : règle de dépôt (ajout sur une colonne de tag, retrait sur « Sans tag »),
-   colonnes (tags portés + colonnes ajoutées, triées), rendu des colonnes et retrait par le bouton ×. */
+/* Tests de la vue Tags (2026-11-11, refonte) : règle de dépôt d'une carte, colonnes = tous les tags proposés,
+   palette globaux puis communauté, cibles d'un geste (élément seul ou sélection), rendu, × et barre de sélection. */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { Item, Tag } from '@spok/shared';
-import { buildTagColumns, NO_TAG_COLUMN, TagsView, tagsAfterDrop } from './TagsView';
+import { buildTagColumns, NO_TAG_COLUMN, splitPalette, TagsView, tagsAfterDrop, targetsOf } from './TagsView';
 
-const bug: Tag = { id: 'bug', name: 'bug', color: '#ef4444' } as Tag;
-const ux: Tag = { id: 'ux', name: 'UX', color: null } as Tag;
-const perf: Tag = { id: 'perf', name: 'perf', color: null } as Tag;
+const bug = { id: 'bug', name: 'bug', color: '#ef4444', isGlobalTag: true } as Tag & { isGlobalTag: boolean };
+const ux = { id: 'ux', name: 'UX', color: null, isGlobalTag: false } as Tag & { isGlobalTag: boolean };
+const perf = { id: 'perf', name: 'perf', color: null, isGlobalTag: false } as Tag & { isGlobalTag: boolean };
+const old = { id: 'old', name: 'ancien', color: null } as Tag;
 
 const item = (id: string, tags: Tag[]): Item =>
   ({ id, title: `Élément ${id}`, type: 'TASK', status: null, spaceId: 's1', tags, createdAt: '', updatedAt: '' }) as unknown as Item;
@@ -17,11 +18,9 @@ describe('tagsAfterDrop', () => {
     expect(tagsAfterDrop([bug], 'bug', 'ux', ux)).toEqual([bug, ux]);
     expect(tagsAfterDrop([], NO_TAG_COLUMN, 'ux', ux)).toEqual([ux]);
   });
-
   it('« Sans tag » : retire le tag de la colonne d\'origine', () => {
     expect(tagsAfterDrop([bug, ux], 'bug', NO_TAG_COLUMN)).toEqual([ux]);
   });
-
   it('rien à changer : même colonne, tag déjà porté, « Sans tag » vers « Sans tag »', () => {
     expect(tagsAfterDrop([bug], 'bug', 'bug', bug)).toBeNull();
     expect(tagsAfterDrop([bug, ux], 'bug', 'ux', ux)).toBeNull();
@@ -29,10 +28,18 @@ describe('tagsAfterDrop', () => {
   });
 });
 
-describe('buildTagColumns', () => {
-  it('tags portés et colonnes ajoutées, sans doublon, triés par nom', () => {
-    const cols = buildTagColumns([item('a', [ux, bug]), item('b', [bug])], [perf, bug]);
-    expect(cols.map((t) => t.id)).toEqual(['bug', 'perf', 'ux']);
+describe('colonnes, palette, cibles', () => {
+  it('colonnes : tous les tags proposés, même non portés, plus un tag porté hors propositions, triés', () => {
+    expect(buildTagColumns([item('a', [old])], [ux, bug, perf]).map((t) => t.id)).toEqual(['old', 'bug', 'perf', 'ux']);
+  });
+  it('palette : globaux d\'abord, communauté ensuite', () => {
+    const p = splitPalette([ux, bug, perf]);
+    expect(p.global.map((t) => t.id)).toEqual(['bug']);
+    expect(p.community.map((t) => t.id)).toEqual(['perf', 'ux']);
+  });
+  it('cibles : toute la sélection si l\'élément en fait partie, sinon lui seul', () => {
+    expect(targetsOf('a', new Set(['a', 'b']))).toEqual(['a', 'b']);
+    expect(targetsOf('c', new Set(['a', 'b']))).toEqual(['c']);
   });
 });
 
@@ -40,23 +47,36 @@ describe('TagsView', () => {
   const noop = () => {};
   const base = { onEdit: noop, onDelete: noop, onUpdateStatus: noop, onAddChild: noop };
 
-  it('« Sans tag » puis une colonne par tag ; × retire le tag de la colonne', () => {
-    const onSetTags = vi.fn();
-    render(<TagsView {...base} items={[item('a', [bug, ux]), item('b', [])]} tagOptions={[bug, ux, perf]} onSetTags={onSetTags} />);
-
-    expect(screen.getByText('Sans tag')).toBeTruthy();
-    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
-    expect(headings).toEqual(['Sans tag', 'bug', 'UX']);
-    // L'élément a est dans deux colonnes
-    expect(screen.getAllByText('Élément a')).toHaveLength(2);
-
-    fireEvent.click(screen.getAllByLabelText("Retirer ce tag de l'élément")[0]);
-    expect(onSetTags).toHaveBeenCalledWith('a', [ux]);
+  it('une colonne par tag proposé, même vide ; « Masquer les tags vides » les retire', () => {
+    render(<TagsView {...base} items={[item('a', [bug])]} tagOptions={[bug, ux]} onSetTags={vi.fn()} onBulkTags={vi.fn()} />);
+    const headings = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+    expect(headings()).toEqual(['Sans tag', 'bug', 'UX']);
+    fireEvent.click(screen.getByLabelText('Masquer les tags vides'));
+    expect(headings()).toEqual(['Sans tag', 'bug']);
   });
 
-  it('lecture seule : ni ×, ni « + Colonne »', () => {
-    render(<TagsView {...base} items={[item('a', [bug])]} tagOptions={[bug]} onSetTags={vi.fn()} canEdit={false} />);
+  it('× retire le tag de la colonne ; la sélection propose d\'ajouter un tag à tous les cochés', () => {
+    const onSetTags = vi.fn();
+    const onBulkTags = vi.fn();
+    render(<TagsView {...base} items={[item('a', [bug]), item('b', [])]} tagOptions={[bug, ux]} onSetTags={onSetTags} onBulkTags={onBulkTags} />);
+
+    fireEvent.click(screen.getByLabelText("Retirer ce tag de l'élément"));
+    expect(onSetTags).toHaveBeenCalledWith('a', []);
+
+    for (const box of screen.getAllByLabelText("Sélectionner l'élément")) fireEvent.click(box);
+    expect(screen.getByText('2 éléments sélectionnés')).toBeTruthy();
+    fireEvent.click(screen.getByText('Ajouter un tag'));
+    // La pastille de la palette (rôle bouton posé par dnd-kit) précède l'entrée du menu dans la page
+    fireEvent.click(screen.getAllByRole('button', { name: 'UX' }).pop()!);
+    const [ids, add] = onBulkTags.mock.calls[0];
+    expect([...ids].sort()).toEqual(['a', 'b']);
+    expect(add).toEqual([ux]);
+  });
+
+  it('lecture seule : ni palette, ni cases, ni ×', () => {
+    render(<TagsView {...base} items={[item('a', [bug])]} tagOptions={[bug]} onSetTags={vi.fn()} onBulkTags={vi.fn()} canEdit={false} />);
     expect(screen.queryByLabelText("Retirer ce tag de l'élément")).toBeNull();
-    expect(screen.queryByText('Colonne')).toBeNull();
+    expect(screen.queryByLabelText("Sélectionner l'élément")).toBeNull();
+    expect(screen.queryByText('Globaux')).toBeNull();
   });
 });

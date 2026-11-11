@@ -24,7 +24,7 @@
  * Filtre Tags de la barre (tagFilter, 2026-11-11) : appliqué ici seulement — en Filtre par filterBySearch (élément
  * gardé s'il porte l'un des tags cochés), en Aperçu par searchMatchIds (correspond à la recherche ET aux tags) que
  * toutes les vues estompent déjà ; aucune vue ne compare les tags elle-même. Tags proposés : ['tags', spaceId].
- * Vue Tags (TagsView, 2026-11-11) : vue en Filtre (isFlatView), reçoit tagOptions et actions.handleSetTags.
+ * Vue Tags (TagsView, 2026-11-11) : vue en Filtre (isFlatView), reçoit tagOptions, actions.handleSetTags et handleBulkTags.
  * Vue Bugs retirée (2026-11-11) : une vue inconnue (?view=, vue mémorisée, vue de l'espace) ouvre la Liste (knownViewOr).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -1492,6 +1492,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               items={filterBySearch(itemsData?.data)}
               tagOptions={tagOptions}
               onSetTags={actions.handleSetTags}
+              onBulkTags={actions.handleBulkTags}
               onEdit={openItemFromView}
               onDelete={actions.handleDelete}
               onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}

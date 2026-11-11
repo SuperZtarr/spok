@@ -1,16 +1,18 @@
 /* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace.
    Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue.
    Tags des copies : tagMapping (utils/tagScope.ts, 2026-11-11) — tous les tags (communauté, globaux) suivent, plus
-   seulement les anciens tags d'espace. */
+   seulement les anciens tags d'espace.
+   POST /bulk-tags (2026-11-11) : ajout / retrait de tags sur plusieurs éléments en une transaction (vue Tags). */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
 import { copyItemContents } from '../utils/itemContentCopy.js';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
+import { createAuditLog, createAuditLogs, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { shiftItemDates } from '../utils/dateShift.js';
-import { tagMapping } from '../utils/tagScope.js';
+import { isGlobalTag, tagMapping } from '../utils/tagScope.js';
+import { canMemberManageItem } from '../utils/itemOwnership.js';
 
 const bulkDuplicateSchema = z.object({
   itemIds: z.array(z.string()).min(1),
@@ -20,7 +22,84 @@ const bulkDuplicateSchema = z.object({
   offsetUnit: z.enum(['day', 'week', 'month', 'year']).optional(),
 });
 
+const bulkTagsSchema = z.object({
+  itemIds: z.array(z.string().min(1)).min(1).max(500),
+  addTagIds: z.array(z.string().min(1)).default([]),
+  removeTagIds: z.array(z.string().min(1)).default([]),
+}).refine((b) => b.addTagIds.length + b.removeTagIds.length > 0, { message: 'Aucun tag à ajouter ni à retirer' });
+
 export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
+  // Tags de plusieurs éléments en une fois (vue Tags, sélection multiple — 2026-11-11). Éléments de cet espace ou de
+  // ses sous-espaces affichés (droit d'écriture vérifié par espace) ; un tag ajouté doit être visible depuis l'espace
+  // de chaque élément (global ou de sa communauté, utils/tagScope.ts). Tags seuls : permis sur une copie de séance
+  // verrouillée, comme PATCH tagIds. Une transaction ; une entrée d'audit UPDATE par élément changé (même batchId).
+  fastify.post<{ Params: { spaceId: string }; Body: z.infer<typeof bulkTagsSchema> }>('/bulk-tags', async (request, reply) => {
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
+    if (!membership) return reply.notFound('Space not found');
+    if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') return reply.forbidden('Viewers cannot change tags');
+
+    const { itemIds, addTagIds, removeTagIds } = bulkTagsSchema.parse(request.body);
+    const items = await fastify.prisma.item.findMany({
+      where: { id: { in: [...new Set(itemIds)] } },
+      select: {
+        id: true, spaceId: true, createdById: true, assignedToId: true, lockedAt: true,
+        space: { select: { communityId: true } }, tags: { select: { tag: { select: { id: true, name: true } } } },
+      },
+    });
+    if (items.length === 0) return reply.notFound('No items found');
+
+    const roleOf = new Map<string, string>([[request.params.spaceId, membership.role]]);
+    for (const spaceId of new Set(items.map((i) => i.spaceId))) {
+      if (spaceId === request.params.spaceId) continue;
+      const m = await checkSpaceAccess(fastify.prisma, request.user.userId, spaceId, request.isAdminMode);
+      if (!m || (m.role !== 'OWNER' && m.role !== 'MEMBER')) return reply.forbidden('Cannot change tags of items in another space');
+      roleOf.set(spaceId, m.role);
+    }
+    // Même règle que PATCH /:id : un MEMBER ne change que ses éléments (auteur ou assigné), sauf copie de séance
+    // verrouillée (tags libres) ; un seul élément étranger refuse toute la requête, comme bulk-move.
+    if (items.some((i) => roleOf.get(i.spaceId) === 'MEMBER' && !i.lockedAt && !canMemberManageItem(i, request.user.userId))) {
+      return reply.forbidden('Members can only change tags of items they created or are assigned to');
+    }
+
+    const addTags = addTagIds.length
+      ? await fastify.prisma.tag.findMany({ where: { id: { in: addTagIds } }, select: { id: true, name: true, communityId: true, spaceId: true } })
+      : [];
+    if (addTags.length !== new Set(addTagIds).size) return reply.notFound('Tag not found');
+    const outOfScope = items.filter((i) => addTags.some((t) => !isGlobalTag(t) && t.communityId !== i.space?.communityId));
+    if (outOfScope.length > 0) {
+      return reply.badRequest(`${outOfScope.length} élément(s) hors de la communauté d'un tag ajouté : seuls les tags globaux s'appliquent partout`);
+    }
+
+    const changed = items.filter((i) => {
+      const current = new Set(i.tags.map((t) => t.tag.id));
+      return addTagIds.some((id) => !current.has(id)) || removeTagIds.some((id) => current.has(id));
+    });
+    const ids = changed.map((i) => i.id);
+    const batchId = crypto.randomUUID();
+    const nameOf = new Map(addTags.map((t) => [t.id, t.name]));
+
+    await fastify.prisma.$transaction(async (tx) => {
+      if (ids.length === 0) return;
+      if (addTagIds.length) {
+        await tx.itemTag.createMany({ data: ids.flatMap((itemId) => addTagIds.map((tagId) => ({ itemId, tagId }))), skipDuplicates: true });
+      }
+      if (removeTagIds.length) await tx.itemTag.deleteMany({ where: { itemId: { in: ids }, tagId: { in: removeTagIds } } });
+      // Fiche ouverte ailleurs : la date de modification change, la fiche relit l'élément
+      await tx.item.updateMany({ where: { id: { in: ids } }, data: { updatedAt: new Date() } });
+      await createAuditLogs(tx, changed.map((i) => {
+        const before = i.tags.map((t) => t.tag.name);
+        const kept = i.tags.filter((t) => !removeTagIds.includes(t.tag.id)).map((t) => t.tag.name);
+        const added = addTagIds.filter((id) => !i.tags.some((t) => t.tag.id === id)).map((id) => nameOf.get(id) ?? id);
+        return {
+          action: 'UPDATE' as const, entity: 'Item' as const, entityId: i.id, userId: request.user.userId, spaceId: i.spaceId, batchId,
+          changes: { before: { tags: before }, after: { tags: [...kept, ...added] } },
+        };
+      }));
+    });
+
+    return { updated: ids.length };
+  });
+
   // Bulk duplicate items to another space (or same space)
   fastify.post<{
     Params: { spaceId: string };

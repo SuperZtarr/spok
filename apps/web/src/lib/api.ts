@@ -9,6 +9,7 @@
  * itemContentsApi : contenus d'un élément (images, fichiers, liens, schémas) — via hooks/useItemContents.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
  * adminApi.tags : tags globaux et doublons de tags (page /admin/tags, AdminTag).
+ * itemsApi.bulkTags : ajout / retrait de tags sur plusieurs éléments (vue Tags, via useSpaceActions.handleBulkTags).
  */
 import type {
   ItemContent,
@@ -1199,6 +1200,10 @@ export const itemsApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  // Tags de plusieurs éléments en une transaction (vue Tags, 2026-11-11)
+  bulkTags: (spaceId: string, data: { itemIds: string[]; addTagIds?: string[]; removeTagIds?: string[] }) =>
+    fetchApi<{ updated: number }>(`/spaces/${spaceId}/items/bulk-tags`, { method: 'POST', body: JSON.stringify(data) }),
 
   bulkMove: (
     spaceId: string,

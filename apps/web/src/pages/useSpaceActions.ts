@@ -12,7 +12,8 @@
  * statut les mêmes règles de dates que la fiche via lib/statusChange.ts (« Non défini » efface début et fin) ; annuler la
  * propagation rétablit statut et dates d'avant.
  * handleSetTags(id, tags) (vue Tags, 2026-11-11) : enregistre la liste complète des tags (tagIds), affichage optimiste,
- * refus signalé par window.alert puis relecture.
+ * refus signalé par window.alert puis relecture. handleBulkTags(itemIds, add, removeIds) : même chose pour plusieurs
+ * éléments en une requête (POST bulk-tags).
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -359,6 +360,38 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     setTagsMutation.mutate({ id, itemSpaceId: resolveItemSpaceId(id), tags });
   }, [resolveItemSpaceId, setTagsMutation]);
 
+  // Tags de plusieurs éléments (sélection de la vue Tags) : une seule requête (POST bulk-tags), affichage optimiste
+  const bulkTagsMutation = useMutation({
+    mutationFn: ({ itemIds, add, removeIds }: { itemIds: string[]; add: Tag[]; removeIds: string[] }) =>
+      itemsApi.bulkTags(spaceId!, { itemIds, addTagIds: add.map((t) => t.id), removeTagIds: removeIds }),
+    onMutate: ({ itemIds, add, removeIds }) => {
+      const ids = new Set(itemIds);
+      queryClient.setQueriesData({ queryKey: ['items'] }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((item: any) => {
+            if (!ids.has(item.id)) return item;
+            const kept = (item.tags ?? []).filter((t: Tag) => !removeIds.includes(t.id));
+            return { ...item, tags: [...kept, ...add.filter((t) => !kept.some((k: Tag) => k.id === t.id))] };
+          }),
+        };
+      });
+    },
+    onError: (error) => {
+      window.alert(`Tags non enregistrés : ${error instanceof Error ? error.message : 'erreur'}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['item'] });
+    },
+  });
+
+  const handleBulkTags = useCallback((itemIds: string[], add: Tag[], removeIds: string[] = []) => {
+    if (itemIds.length === 0 || (add.length === 0 && removeIds.length === 0)) return;
+    bulkTagsMutation.mutate({ itemIds, add, removeIds });
+  }, [bulkTagsMutation]);
+
   const handleMove = useCallback((id: string, parentId: string | null, position: number) => {
     const itemSpaceId = resolveItemSpaceId(id);
     moveItemMutation.mutate({ id, itemSpaceId, parentId, position });
@@ -520,6 +553,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     // Inline updates
     handleInlineUpdate,
     handleSetTags,
+    handleBulkTags,
     // Move
     handleMove,
     moveItemMutation,

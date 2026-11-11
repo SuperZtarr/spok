@@ -239,9 +239,9 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'tags-view-drop',
     page: 'Vue Tags (TagsView)',
-    trigger: "Carte glissée d'une colonne à une autre, ou bouton × d'une carte",
-    effect: "Déposer une carte sur une colonne de tag AJOUTE ce tag à l'élément (il garde ses autres tags et reste dans ses autres colonnes). La déposer sur « Sans tag » RETIRE le tag de la colonne d'origine. Le bouton × retire le tag de la colonne de la carte. La liste complète des tags est enregistrée aussitôt (tagIds), sans « Enregistrer » ; un refus est signalé et l'affichage relu. Le tag lui-même n'est jamais supprimé (décision Thomas 2026-11-11)",
-    location: 'apps/web/src/components/views/TagsView.tsx (tagsAfterDrop), apps/web/src/pages/useSpaceActions.ts (handleSetTags)',
+    trigger: "Pastille de la palette glissée sur une carte, carte glissée d'une colonne à une autre, bouton × d'une carte, ou barre de sélection (Ajouter / Retirer un tag)",
+    effect: "Colonnes : « Sans tag » puis tous les tags proposés dans l'espace (communauté + globaux), même vides. Pastille déposée sur une carte : ajoute ce tag à l'élément — à toute la sélection si la carte est cochée. Carte déposée sur une colonne de tag : AJOUTE ce tag (l'élément garde ses autres tags) ; sur « Sans tag » : RETIRE le tag de la colonne d'origine ; carte cochée → toute la sélection. × : retire le tag de la colonne de la carte. Barre de sélection : ajoute ou retire un tag sur tous les éléments cochés, en une requête (POST bulk-tags, une transaction, un tag ajouté doit être global ou de la communauté de chaque élément). Enregistré aussitôt, sans « Enregistrer » ; un refus est signalé et l'affichage relu. Le tag lui-même n'est jamais supprimé (décisions Thomas 2026-11-11)",
+    location: 'apps/web/src/components/views/TagsView.tsx (tagsAfterDrop, targetsOf), apps/web/src/pages/useSpaceActions.ts (handleSetTags, handleBulkTags), apps/api/src/routes/item-bulk.ts (POST /bulk-tags)',
   },
   {
     id: 'filter-multi-choice',
