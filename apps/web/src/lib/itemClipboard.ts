@@ -1,12 +1,14 @@
 /* Copie de la fiche d'un item dans le presse-papier — bouton « Copier la fiche » de la modale item.
  * Une seule copie, deux formats : text/html (collage mis en forme dans Word, mail, Notion) et
  * text/plain en Markdown (éditeur texte, Claude, champ simple). Seuls les champs renseignés apparaissent.
- * Média de l'item (url) : IMAGE et DIAGRAM sont intégrés comme image — à la copie, l'image est téléchargée et
+ * Contenus (lot 5 contenus multiples) : TOUS les contenus de l'élément sont copiés, avant la description, dans l'ordre de
+ * la fiche (Images, Fichiers, Liens, Schémas — buildContents) ; `media` (premier visuel) ne sert plus qu'à la vignette.
+ * Chaque contenu : images et schémas intégrés comme image — à la copie, l'image est téléchargée et
  * convertie en PNG dans le HTML (data URL : les fichiers stockés sont en WebP, mal lus par Word / Outlook) ;
  * si c'est impossible (CORS, réseau), <img> pointe sur l'adresse rendue absolue (les uploads locaux du dev sont
  * relatifs, Word ne les trouverait pas) — withAbsoluteMediaUrl, imageToPngDataUrl, itemSheetToClipboardHtml ;
- * DOCUMENT devient un lien nommé d'après le fichier (un fichier ne s'intègre pas dans un collage) ;
- * LINK reste un lien. Le Markdown ne contient que l'adresse (![titre](url) pour une image).
+ * fichier : lien nommé d'après le fichier (un fichier ne s'intègre pas dans un collage) ;
+ * lien : reste un lien. Le Markdown ne contient que l'adresse (![titre](url) pour une image).
  * - buildItemSheet : extrait les données de la fiche (labels résolus par l'appelant, référentiels de l'espace)
  * - itemSheetToMarkdown / itemSheetToHtml : rendus purs, testables sans DOM
  * - htmlToMarkdown : convertisseur volontairement limité au HTML produit par l'éditeur (p, br, gras,
@@ -14,7 +16,7 @@
  * - copyItemSheet : écriture presse-papier (ClipboardItem, repli writeText en Markdown)
  * Sécurité : média seulement si son URL est sûre (isSafeUrl), HTML copié passé par sanitizeHtml (user-html-sanitized).
  * La même fiche (ItemSheet) est affichée par la vue lecture (ItemReadView) : ce qu'on lit = ce qu'on copie.
- * Doublon média : une <img> de la description pointant sur l'URL du média (items IMAGE importés de Confluence,
+ * Doublon média : une <img> de la description pointant sur l'URL d'une image des contenus (items IMAGE importés de Confluence,
  * scripts fix-confluence-split-images / fix-drawio-attachments) est retirée — l'image n'apparaît qu'une fois.
  * Impression et PDF restent dans itemExport.ts. */
 import type { Item, ItemRelation, ContributionWithAuthor } from '@spok/shared';
@@ -38,13 +40,19 @@ export interface ItemSheetSource extends Item {
   contributions?: ContributionWithAuthor[];
 }
 
+export interface SheetMedia { kind: 'image' | 'file' | 'url'; label: string; url: string; name: string }
+
 export interface ItemSheet {
   title: string;
   fields: { label: string; value: string }[];
   tags: string[];
   descriptionHtml: string | null;
-  /** image : affichée dans la fiche ; file : lien nommé d'après le fichier ; url : lien brut */
-  media: { kind: 'image' | 'file' | 'url'; label: string; url: string; name: string } | null;
+  /** Média principal (premier visuel, sinon fichier, sinon lien) : vignette copiée (itemThumbnail), lecture héritée.
+   *  image : affichée dans la fiche ; file : lien nommé d'après le fichier ; url : lien brut */
+  media: SheetMedia | null;
+  /** Tous les contenus copiables, ordre de la fiche (Images, Fichiers, Liens, Schémas — lot 5). Absent : rendu de
+   *  `media` seul (fiches construites hors buildItemSheet). */
+  contents?: SheetMedia[];
   children: { id: string; title: string; status: string | null }[];
   relations: { label: string; title: string; comment: string | null }[];
   contributions: { author: string; date: string; contentHtml: string }[];
@@ -61,7 +69,14 @@ export interface BuildItemSheetInput {
   relationLabel: (type: string, direction: 'from' | 'to') => string;
 }
 
-const LINK_LABELS: Partial<Record<string, string>> = { LINK: 'Lien', IMAGE: 'Image', DIAGRAM: 'Diagramme', DOCUMENT: 'Fichier' };
+// Média principal de la fiche copiée, tiré des contenus (lot 4 : plus d'Item.url) : première image, sinon aperçu du
+// premier schéma, sinon premier fichier, sinon premier lien
+const MEDIA_ORDER = [
+  { kind: 'IMAGE', media: 'image', label: 'Image' },
+  { kind: 'DIAGRAM', media: 'image', label: 'Diagramme' },
+  { kind: 'FILE', media: 'file', label: 'Fichier' },
+  { kind: 'LINK', media: 'url', label: 'Lien' },
+] as const;
 
 /** Nom lisible d'un fichier stocké : dernier segment de l'URL, sans le préfixe horodaté `<ms>-` posé à l'upload. */
 export function fileNameFromUrl(url: string): string {
@@ -71,20 +86,39 @@ export function fileNameFromUrl(url: string): string {
   return name.replace(/^\d{10,}-/, '') || last;
 }
 
-function buildMedia(item: Item): ItemSheet['media'] {
-  if (!item.url || !isSafeUrl(item.url)) return null; // javascript:… jamais copié ni affiché
-  const label = LINK_LABELS[item.type] ?? 'URL';
-  const kind = item.type === 'IMAGE' || item.type === 'DIAGRAM' ? 'image' : item.type === 'DOCUMENT' ? 'file' : 'url';
-  return { kind, label, url: item.url, name: kind === 'file' ? fileNameFromUrl(item.url) : item.title };
+// Contenus copiés dans l'ordre de la fiche (lot 5) : Images, Fichiers, Liens, Schémas
+const CONTENT_ORDER = [MEDIA_ORDER[0], MEDIA_ORDER[2], MEDIA_ORDER[3], MEDIA_ORDER[1]] as const;
+
+/** Tous les contenus à l'adresse sûre, rangés Images, Fichiers, Liens, Schémas (chaque sorte dans son ordre). */
+function buildContents(item: Item): SheetMedia[] {
+  const contents = [...(item.contents ?? [])].sort((a, b) => a.position - b.position);
+  return CONTENT_ORDER.flatMap((m) => contents
+    .filter((c) => c.kind === m.kind && c.url && isSafeUrl(c.url))
+    .map((c) => ({
+      kind: m.media, label: m.label, url: c.url!,
+      name: m.media === 'file' ? c.name || fileNameFromUrl(c.url!) : c.name || item.title,
+    })));
 }
 
-/** Description sans les <img> qui répètent le média de l'item ; null si plus rien de lisible ne reste. */
-function descriptionWithoutMedia(description: string | null | undefined, media: ItemSheet['media']): string | null {
+function buildMedia(item: Item): ItemSheet['media'] {
+  for (const m of MEDIA_ORDER) {
+    // javascript:… jamais copié ni affiché
+    const c = item.contents?.find((x) => x.kind === m.kind && x.url && isSafeUrl(x.url));
+    if (!c?.url) continue;
+    const name = m.media === 'file' ? c.name || fileNameFromUrl(c.url) : c.name || item.title;
+    return { kind: m.media, label: m.label, url: c.url, name };
+  }
+  return null;
+}
+
+/** Description sans les <img> qui répètent une image des contenus ; null si plus rien de lisible ne reste. */
+function descriptionWithoutMedia(description: string | null | undefined, contents: SheetMedia[]): string | null {
   if (!description) return null;
   let html = description;
-  if (media?.kind === 'image') {
+  const imageUrls = new Set(contents.filter(c => c.kind === 'image').map(c => c.url));
+  if (imageUrls.size > 0) {
     html = html
-      .replace(/<img\s[^>]*>/gi, tag => (/\ssrc\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] === media.url ? '' : tag))
+      .replace(/<img\s[^>]*>/gi, tag => (imageUrls.has(/\ssrc\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] ?? '') ? '' : tag))
       .replace(/<p>\s*<\/p>/gi, '');
   }
   return htmlToMarkdown(html).trim() ? html : null;
@@ -110,12 +144,14 @@ export function buildItemSheet({ item, children = [], spaceName, parentTitle, la
   ];
 
   const media = buildMedia(item);
+  const contents = buildContents(item);
   return {
     title: item.title,
     fields,
     tags: (item.tags ?? []).map(t => t.name),
-    descriptionHtml: descriptionWithoutMedia(item.description, media),
+    descriptionHtml: descriptionWithoutMedia(item.description, contents),
     media,
+    contents,
     children: children.map(c => ({ id: c.id, title: c.title, status: c.status && c.status !== 'undefined' ? (labels.statusLabel(c.status) ?? c.status) : null })),
     relations,
     contributions: (item.contributions ?? []).map(c => ({
@@ -211,14 +247,20 @@ export function htmlToMarkdown(html: string): string {
 // Rendus
 // ---------------------------------------------------------------------------
 
+/** Contenus rendus : tous (buildItemSheet), sinon le média principal seul. */
+function sheetContents(sheet: ItemSheet): SheetMedia[] {
+  return sheet.contents ?? (sheet.media ? [sheet.media] : []);
+}
+
 export function itemSheetToMarkdown(sheet: ItemSheet): string {
   const out: string[] = [`# ${sheet.title}`];
   if (sheet.fields.length) out.push(sheet.fields.map(f => `- **${f.label}** : ${f.value}`).join('\n'));
   if (sheet.tags.length) out.push(`**Tags** : ${sheet.tags.join(', ')}`);
-  const m = sheet.media;
-  if (m?.kind === 'image') out.push(`![${m.name}](${m.url})`);
-  else if (m?.kind === 'file') out.push(`**${m.label}** : [${m.name}](${m.url})`);
-  else if (m) out.push(`**${m.label}** : ${m.url}`);
+  for (const m of sheetContents(sheet)) {
+    if (m.kind === 'image') out.push(`![${m.name}](${m.url})`);
+    else if (m.kind === 'file') out.push(`**${m.label}** : [${m.name}](${m.url})`);
+    else out.push(`**${m.label}** : ${m.url}`);
+  }
   if (sheet.descriptionHtml) out.push(`## Description\n\n${htmlToMarkdown(sheet.descriptionHtml)}`);
   if (sheet.children.length) {
     out.push(`## Éléments enfants (${sheet.children.length})\n\n${sheet.children.map(c => `- ${c.title}${c.status ? ` — ${c.status}` : ''}`).join('\n')}`);
@@ -241,14 +283,15 @@ export function itemSheetToHtml(sheet: ItemSheet): string {
   const parts: string[] = [`<h1>${esc(sheet.title)}</h1>`];
   if (sheet.fields.length) parts.push(`<ul>${sheet.fields.map(f => `<li><strong>${esc(f.label)}</strong> : ${esc(f.value)}</li>`).join('')}</ul>`);
   if (sheet.tags.length) parts.push(`<p><strong>Tags</strong> : ${esc(sheet.tags.join(', '))}</p>`);
-  const m = sheet.media;
-  if (m?.kind === 'image') {
-    // width/style : taille plafonnée dans Word et les mails, qui ignorent souvent l'un ou l'autre
-    parts.push(`<p><img src="${esc(m.url)}" alt="${esc(m.name)}" width="640" style="max-width:100%;height:auto"></p>`);
-  } else if (m?.kind === 'file') {
-    parts.push(`<p><strong>${esc(m.label)}</strong> : 📎 <a href="${esc(m.url)}">${esc(m.name)}</a></p>`);
-  } else if (m) {
-    parts.push(`<p><strong>${esc(m.label)}</strong> : <a href="${esc(m.url)}">${esc(m.url)}</a></p>`);
+  for (const m of sheetContents(sheet)) {
+    if (m.kind === 'image') {
+      // width/style : taille plafonnée dans Word et les mails, qui ignorent souvent l'un ou l'autre
+      parts.push(`<p><img src="${esc(m.url)}" alt="${esc(m.name)}" width="640" style="max-width:100%;height:auto"></p>`);
+    } else if (m.kind === 'file') {
+      parts.push(`<p><strong>${esc(m.label)}</strong> : 📎 <a href="${esc(m.url)}">${esc(m.name)}</a></p>`);
+    } else {
+      parts.push(`<p><strong>${esc(m.label)}</strong> : <a href="${esc(m.url)}">${esc(m.url)}</a></p>`);
+    }
   }
   if (sheet.descriptionHtml) parts.push(`<h2>Description</h2>${sanitizeHtml(sheet.descriptionHtml)}`);
   if (sheet.children.length) {
@@ -263,14 +306,17 @@ export function itemSheetToHtml(sheet: ItemSheet): string {
   return parts.join('\n');
 }
 
-/** Adresse absolue du média : en dev les uploads locaux sont relatifs (/api/local-uploads/…), illisibles hors de l'appli. */
+/** Adresses absolues du média et des contenus : en dev les uploads locaux sont relatifs (/api/local-uploads/…),
+ *  illisibles hors de l'appli. */
 export function withAbsoluteMediaUrl(sheet: ItemSheet, origin: string): ItemSheet {
-  if (!sheet.media) return sheet;
-  try {
-    return { ...sheet, media: { ...sheet.media, url: new URL(sheet.media.url, origin).href } };
-  } catch {
-    return sheet;
-  }
+  const abs = (m: SheetMedia): SheetMedia => {
+    try { return { ...m, url: new URL(m.url, origin).href }; } catch { return m; }
+  };
+  return {
+    ...sheet,
+    media: sheet.media ? abs(sheet.media) : null,
+    ...(sheet.contents ? { contents: sheet.contents.map(abs) } : {}),
+  };
 }
 
 /** Largeur max du PNG intégré : 2× l'affichage (640 px), net sans alourdir le collage. */
@@ -297,12 +343,15 @@ export async function imageToPngDataUrl(url: string): Promise<string | null> {
   }
 }
 
-/** HTML copié : image intégrée en PNG si possible, sinon <img> sur l'adresse (absolue) du média. */
+/** HTML copié : chaque image intégrée en PNG si possible, sinon <img> sur son adresse (absolue). */
 export async function itemSheetToClipboardHtml(sheet: ItemSheet, toPng = imageToPngDataUrl): Promise<string> {
-  const m = sheet.media;
-  if (m?.kind !== 'image') return itemSheetToHtml(sheet);
-  const png = await toPng(m.url);
-  return itemSheetToHtml(png ? { ...sheet, media: { ...m, url: png } } : sheet);
+  const toEmbedded = async (m: SheetMedia): Promise<SheetMedia> => {
+    if (m.kind !== 'image') return m;
+    const png = await toPng(m.url);
+    return png ? { ...m, url: png } : m;
+  };
+  const embedded = await Promise.all(sheetContents(sheet).map(toEmbedded));
+  return itemSheetToHtml({ ...sheet, contents: embedded });
 }
 
 /** Copie la fiche (HTML + Markdown). Repli Markdown seul si ClipboardItem est indisponible. */

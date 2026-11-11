@@ -6,6 +6,10 @@
  * Toute écriture d'item passe par les conventions de l'espace (conventions.ts) ; les erreurs (ConventionError,
  * SpokApiError) sont renvoyées au modèle en isError, jamais levées. Ajouter un outil = choisir son niveau.
  * Tout paramètre d'identifiant DOIT utiliser zId() (jamais z.string()) : il est interpolé dans un chemin REST.
+ * Types d'item : jamais de liste recopiée ici (zItemType + conventions de l'espace).
+ * Contenus (lot 4 contenus multiples) : plus de champ url ; le paramètre url de create_item / update_item AJOUTE un
+ * contenu Lien (POST …/contents) ; get_item liste les contenus avec leur id. Lot 5 : add_item_content (lien, schéma),
+ * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z, type ZodRawShape } from 'zod'
@@ -14,7 +18,7 @@ import { ConventionError, SpokApiError } from './errors.js'
 import { fetchConventions, resolveStatus, resolveTags, assertTypeAllowed, assertDateOrder, type SpaceConventions } from './conventions.js'
 import { normalizeDate } from './dates.js'
 import { markdownToHtml } from './markdown.js'
-import { extractText, formatItemLine } from './format.js'
+import { extractText, formatContents, formatItemLine } from './format.js'
 
 export type ToolProfile = 'admin' | 'public' | 'public-read'
 type Level = 'read' | 'write' | 'admin'
@@ -25,7 +29,9 @@ const ALLOWED: Record<ToolProfile, Level[]> = {
   'public-read': ['read'],
 }
 
-const ITEM_TYPES = ['UNDEFINED', 'NOTE', 'PROJECT', 'TASK', 'MEETING', 'PERIOD', 'LINK', 'CONFIG', 'DOCUMENT', 'IMAGE', 'BUG', 'DIAGRAM', 'ARTICLE', 'QUESTION'] as const
+/** Type d'item : pas de liste ici (source unique = registre des types @spok/shared, servi par l'API) — la valeur est
+ *  vérifiée contre les types de l'espace (get_space_conventions, assertTypeAllowed). */
+const zItemType = () => z.string().min(1).max(32)
 /** Miroir de RELATION_TYPES @spok/shared (l'API refuse tout autre type). */
 const RELATION_TYPE_VALUES = ['blocks', 'implements', 'drives', 'relates'] as const
 
@@ -187,7 +193,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
   define('read', 'list_items', 'Liste les items d\'un espace SPOK avec filtres optionnels.',
     {
       spaceId: zId().describe('ID de l\'espace'),
-      type: z.string().optional().describe('Filtrer par type (NOTE, TASK, PROJECT…)'),
+      type: z.string().optional().describe('Filtrer par type (UNDEFINED, TASK, PROJECT…)'),
       status: z.string().optional().describe('Filtrer par statut (todo, in_progress, done…)'),
       parentId: zId().optional().describe('Filtrer par parent'),
       pageSize: z.number().optional().default(100).describe('Nombre max de résultats (défaut 100)'),
@@ -214,12 +220,13 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
         item.startDate ? `Début : ${item.startDate.slice(0, 10)}` : null,
         item.endDate ? `Fin : ${item.endDate.slice(0, 10)}` : null,
         item.dueDate ? `Échéance : ${item.dueDate.slice(0, 10)}` : null,
-        item.url ? `URL : ${item.url}` : null,
         item.parentId ? `Parent : ${item.parentId}` : null,
         item.spaceId ? `Espace : ${item.spaceId}` : null,
       ].filter(Boolean)
       const text = extractText(item.content ?? item.description)
       if (text) lines.push(`\nContenu :\n${text}`)
+      const contents = formatContents(item.contents)
+      if (contents) lines.push(`\nContenus (images, fichiers, liens, schémas) :\n${contents}`)
       return ok(lines.join('\n'))
     })
 
@@ -301,7 +308,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     'Crée un item dans un espace. Statut et type doivent appartenir aux conventions de l\'espace (get_space_conventions). Description en Markdown.',
     {
       spaceId: zId().describe('ID de l\'espace cible'),
-      type: z.enum(ITEM_TYPES).describe('Type d\'item (id renvoyé par get_space_conventions)'),
+      type: zItemType().describe('Type d\'item (id renvoyé par get_space_conventions)'),
       title: z.string().min(1).describe('Titre court'),
       description: z.string().optional().describe('Description en Markdown'),
       status: z.string().optional().describe('Id (ou libellé) d\'un statut de l\'espace'),
@@ -310,16 +317,16 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       startDate: z.string().optional().describe('AAAA-MM-JJ ou ISO 8601'),
       endDate: z.string().optional().describe('AAAA-MM-JJ ou ISO 8601, ≥ startDate'),
       dueDate: z.string().optional().describe('Échéance, AAAA-MM-JJ ou ISO 8601'),
-      url: z.string().url().optional().describe('URL (obligatoire pour LINK)'),
+      url: z.string().url().optional().describe('Adresse ajoutée comme contenu Lien de l\'item (http/https)'),
       tags: z.array(z.string()).optional().describe('Tags existants de l\'espace (noms ou ids, cf. get_space_conventions)'),
     },
     async ({ spaceId, title, priority, url, ...rest }) => {
-      if (rest.type === 'LINK' && !url) throw new ConventionError('Un item LINK exige une url.')
       const body: Record<string, unknown> = { title, ...(await prepareItemFields(client, spaceId, rest, conventionsCache)) }
       if (priority) body.priority = priority
-      if (url) body.url = url
       const item = await client.post(`/spaces/${spaceId}/items`, body)
-      return ok(`Item créé : [${item.id}] [${item.type}] ${item.title}`)
+      // Plus de champ url (lot 4 contenus multiples) : l'adresse devient un contenu Lien
+      if (url) await client.post(`/spaces/${spaceId}/items/${item.id}/contents`, { kind: 'LINK', url })
+      return ok(`Item créé : [${item.id}] [${item.type}] ${item.title}${url ? ' (+ lien)' : ''}`)
     })
 
   define('write', 'update_item',
@@ -331,11 +338,11 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       description: z.string().nullable().optional().describe('Markdown ; null efface'),
       status: z.string().nullable().optional(),
       priority: z.number().int().min(1).max(4).nullable().optional(),
-      type: z.enum(ITEM_TYPES).optional(),
+      type: zItemType().optional().describe('Type d\'item (id renvoyé par get_space_conventions)'),
       startDate: z.string().nullable().optional(),
       endDate: z.string().nullable().optional(),
       dueDate: z.string().nullable().optional(),
-      url: z.string().url().nullable().optional(),
+      url: z.string().url().optional().describe('Adresse AJOUTÉE comme contenu Lien (n\'en retire aucun)'),
       parentId: zId().nullable().optional().describe('null = racine'),
       tags: z.array(z.string()).optional().describe('REMPLACE la liste complète des tags de l\'item (noms ou ids existants) ; [] = aucun tag'),
     },
@@ -343,9 +350,9 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       const body: Record<string, unknown> = await prepareItemFields(client, spaceId, rest, conventionsCache)
       if (title !== undefined) body.title = title
       if (priority !== undefined) body.priority = priority
-      if (url !== undefined) body.url = url
       const item = await client.patch(`/spaces/${spaceId}/items/${itemId}`, body)
-      return ok(`Item mis à jour : [${item.id}] ${item.title}`)
+      if (url) await client.post(`/spaces/${spaceId}/items/${itemId}/contents`, { kind: 'LINK', url })
+      return ok(`Item mis à jour : [${item.id}] ${item.title}${url ? ' (+ lien)' : ''}`)
     })
 
   define('write', 'delete_item', 'Supprime un item SPOK. Ne jamais l\'appeler sans confirmation explicite de l\'utilisateur.',
@@ -358,6 +365,68 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       const qs = deleteChildren ? '?deleteChildren=true' : ''
       await client.delete(`/spaces/${spaceId}/items/${itemId}${qs}`)
       return ok(`Item ${itemId} supprimé.`)
+    })
+
+  // --- Contenus d'un item (lot 5 contenus multiples) : liens et schémas ; images et fichiers s'envoient depuis SPOK ---
+  define('write', 'add_item_content',
+    'Ajoute un contenu à un item : un lien (kind LINK, url http/https) ou un schéma draw.io (kind DIAGRAM, xml). Les images et fichiers ne s\'envoient pas par MCP. Un item porte au plus 30 contenus.',
+    {
+      spaceId: zId().describe('ID de l\'espace'),
+      itemId: zId().describe('ID de l\'item'),
+      kind: z.enum(['LINK', 'DIAGRAM']).describe('LINK = lien ; DIAGRAM = schéma draw.io'),
+      url: z.string().url().optional().describe('Adresse du lien (obligatoire pour LINK)'),
+      xml: z.string().optional().describe('XML draw.io du schéma (obligatoire pour DIAGRAM)'),
+      name: z.string().max(200).optional().describe('Nom affiché'),
+    },
+    async ({ spaceId, itemId, kind, url, xml, name }) => {
+      if (kind === 'LINK' && !url) throw new ConventionError('Un contenu LINK exige une url.')
+      if (kind === 'DIAGRAM' && !xml) throw new ConventionError('Un contenu DIAGRAM exige le xml du schéma.')
+      const body = kind === 'LINK' ? { kind, url, name } : { kind, xml, name }
+      const content = await client.post(`/spaces/${spaceId}/items/${itemId}/contents`, body)
+      return ok(`Contenu ajouté : [${content.id}] ${kind === 'LINK' ? 'Lien' : 'Schéma'}${name ? ` « ${name} »` : ''}`)
+    })
+
+  define('write', 'update_item_content',
+    'Modifie un contenu d\'un item (id lu dans get_item) : nom, adresse d\'un lien, xml d\'un schéma, ou place dans sa sorte (position 1 = premier).',
+    {
+      spaceId: zId().describe('ID de l\'espace'),
+      itemId: zId().describe('ID de l\'item'),
+      contentId: zId().describe('ID du contenu (get_item)'),
+      name: z.string().max(200).nullable().optional().describe('Nom affiché ; null efface'),
+      url: z.string().url().optional().describe('Nouvelle adresse (lien seulement)'),
+      xml: z.string().optional().describe('Nouveau XML draw.io (schéma seulement)'),
+      position: z.number().int().min(1).optional().describe('Nouvelle place dans sa sorte, 1 = premier'),
+    },
+    async ({ spaceId, itemId, contentId, name, url, xml, position }) => {
+      const body: Record<string, unknown> = {}
+      if (name !== undefined) body.name = name
+      if (url !== undefined) body.url = url
+      if (xml !== undefined) body.xml = xml
+      if (Object.keys(body).length > 0) await client.patch(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, body)
+      if (position !== undefined) {
+        // L'API attend l'ordre complet de la sorte : on le recompose depuis l'item
+        const item = await client.get(`/spaces/${spaceId}/items/${itemId}`)
+        const all: any[] = item.contents ?? []
+        const kind = all.find((c) => c.id === contentId)?.kind
+        if (!kind) throw new ConventionError(`Contenu ${contentId} introuvable sur l'item.`)
+        const ids = all.filter((c) => c.kind === kind).sort((a, b) => a.position - b.position).map((c) => c.id).filter((id) => id !== contentId)
+        ids.splice(Math.min(position - 1, ids.length), 0, contentId)
+        await client.put(`/spaces/${spaceId}/items/${itemId}/contents/order`, { ids })
+      }
+      if (Object.keys(body).length === 0 && position === undefined) throw new ConventionError('Rien à modifier : donner name, url, xml ou position.')
+      return ok(`Contenu ${contentId} mis à jour.`)
+    })
+
+  define('write', 'delete_item_content',
+    'Retire un contenu d\'un item (id lu dans get_item). Le fichier stocké n\'est effacé que s\'il n\'est plus utilisé ailleurs. Ne jamais l\'appeler sans confirmation explicite de l\'utilisateur.',
+    {
+      spaceId: zId().describe('ID de l\'espace'),
+      itemId: zId().describe('ID de l\'item'),
+      contentId: zId().describe('ID du contenu (get_item)'),
+    },
+    async ({ spaceId, itemId, contentId }) => {
+      await client.delete(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`)
+      return ok(`Contenu ${contentId} retiré.`)
     })
 
   define('write', 'create_space', 'Crée un espace SPOK dans une communauté.',

@@ -1,18 +1,27 @@
 /*
  * Instructions serveur MCP envoyées à chaque client à l'initialisation : modèle de données SPOK et
  * règles d'écriture. Source unique — toute nouvelle convention métier exposée aux modèles s'ajoute ici.
+ * Contenus : outils *_item_content décrits ici (lot 5 contenus multiples).
  */
 export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informations.
 
 ## Modèle
 - Communauté → Espaces (arborescence) → Items.
-- Un item a un type : PROJECT (ensemble de travail avec dates), TASK (action à faire, statut + échéance),
-  MEETING (réunion datée), NOTE (texte rédigé : notes, compte-rendu, synthèse), DOCUMENT (porte des pièces jointes, pas du texte), LINK (url obligatoire),
-  PERIOD (plage de dates sans action, ex. vacances, sprint), BUG (anomalie à corriger), IMAGE, DIAGRAM, CONFIG,
-  ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
+- Un item a un type (sa nature) : PROJECT (ensemble de travail avec dates), TASK (action à faire, statut + échéance),
+  MEETING (réunion datée, à l'heure près), PERIOD (plage de dates sans action, ex. vacances, sprint),
+  UNDEFINED (« Élément » : type par défaut — texte rédigé (notes, compte-rendu, synthèse), photo, fichier ou lien
+  déposé seul), ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
   QUESTION (titre = la question ; issue notée par ses statuts réservés question_open / question_decided /
   question_postponed / question_no_conclusion, qu'elle seule utilise ; options et votes ne se gèrent pas par MCP).
   Les types réellement utilisés et leurs libellés dépendent de la communauté : voir get_space_conventions.
+- Contenus : un item de n'importe quel type porte des images, fichiers, liens et schémas (plusieurs de chaque).
+  get_item les liste avec leur id. Par MCP : add_item_content ajoute un lien ou un schéma draw.io (xml) — le
+  paramètre url de create_item / update_item ajoute aussi un lien ; update_item_content renomme, change l'adresse
+  d'un lien ou le xml d'un schéma, ou déplace un contenu dans sa sorte ; delete_item_content le retire (après
+  confirmation de l'utilisateur). Images et fichiers ne s'envoient pas par MCP. Au plus 30 contenus par item.
+  Il n'y a plus de type Note, Lien, Image, Document, Diagramme, Configuration ni Anomalie.
+- Tags = classement libre. Une anomalie est une TASK taguée « bug » (la vue Bugs suit ce tag), une configuration
+  un UNDEFINED tagué « config ».
 - Hiérarchie (parentId) : décomposition. Un PROJECT contient des TASK ; une TASK peut contenir des sous-TASK.
   Le parent doit être dans le même espace.
 - Relations (create_relation), entre items qui ne sont pas parent/enfant :

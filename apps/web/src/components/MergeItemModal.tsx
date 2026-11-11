@@ -3,14 +3,18 @@
  * Cibles : mergeTargets (lib/mergeTargets.ts) — même espace que la source, gérables par l'utilisateur
  * (canManageItem = canEditItem de SpacePage) : jamais une cible que l'API refuserait (403/404).
  * Aide : fiche components/help/merge-item.help.ts (« ? », tour merge-source / merge-targets, rappels pageHint).
+ * Libellés de statut : buildStatusLabelMap (référentiel par défaut).
+ * Contenus (lot 5 contenus multiples) : ligne « Contenus » lue sur l'API (itemsApi.mergePreview, même calcul que la
+ * fusion : cumul, doublons retirés) ; au-delà du plafond, « Fusionner » est désactivé et la raison affichée.
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Search, ArrowRight } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { TYPE_ICONS, TYPE_LABELS, getPriorityConfig } from '../constants/ui';
 import type { Item } from '@spok/shared';
+import { buildStatusLabelMap } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { mergeTargets } from '../lib/mergeTargets';
 import { PageHelpButton } from '../help/PageHelpButton';
@@ -37,12 +41,8 @@ interface MergeItemModalProps {
   canManageItem?: (item: Item) => boolean;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'À faire',
-  in_progress: 'En cours',
-  done: 'Terminé',
-  cancelled: 'Annulé',
-};
+// Libellés des statuts : référentiel par défaut (tous les statuts, questions comprises), jamais de table locale
+const STATUS_LABELS = buildStatusLabelMap();
 
 function formatDate(d?: string | null): string {
   if (!d) return '—';
@@ -96,7 +96,6 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
       { key: 'startDate', label: 'Date début', sourceValue: formatDate(sourceItem.startDate), targetValue: formatDate(targetItem.startDate) },
       { key: 'endDate', label: 'Date fin', sourceValue: formatDate(sourceItem.endDate), targetValue: formatDate(targetItem.endDate) },
       { key: 'dueDate', label: 'Échéance', sourceValue: formatDate(sourceItem.dueDate), targetValue: formatDate(targetItem.dueDate) },
-      { key: 'url', label: 'URL', sourceValue: displayValue(sourceItem.url), targetValue: displayValue(targetItem.url) },
     ];
   }, [sourceItem, targetItem]);
 
@@ -112,6 +111,15 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
       setDescriptionChoice('concat');
     }
   }, [step, sourceItem?.id, targetItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Contenus après fusion : calcul de l'API (le chiffre annoncé est celui appliqué)
+  const previewQuery = useQuery({
+    queryKey: ['merge-preview', spaceId, sourceItem?.id, targetItem?.id],
+    queryFn: () => itemsApi.mergePreview(spaceId, sourceItem!.id, targetItem!.id),
+    enabled: isOpen && step === 'compare' && !!sourceItem && !!targetItem,
+    staleTime: 0,
+  });
+  const contentsPreview = previewQuery.data?.contents;
 
   const mergeMutation = useMutation({
     mutationFn: (data: Parameters<typeof itemsApi.merge>[2]) =>
@@ -140,7 +148,6 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
         startDate: keep.startDate || 'target',
         endDate: keep.endDate || 'target',
         dueDate: keep.dueDate || 'target',
-        url: keep.url || 'target',
         description: descriptionChoice,
       },
     });
@@ -327,6 +334,28 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
                     </div>
                   </td>
                 </tr>
+
+                {/* Contenus : pas de choix, cumul annoncé (calcul de l'API) */}
+                <tr data-help-zone="merge-item:contenus">
+                  <td className="px-3 py-2 font-medium text-muted-foreground">Contenus</td>
+                  <td className="px-3 py-2" colSpan={3}>
+                    <HelpHint text={pageHint('merge-item', 'contents')}>
+                      <span className={`text-xs ${contentsPreview?.tooMany ? 'text-red-600 font-medium' : ''}`}>
+                        {!contentsPreview
+                          ? (previewQuery.isError ? 'Calcul impossible' : '…')
+                          : `${contentsPreview.source} + ${contentsPreview.target} → ${contentsPreview.total}`
+                            + (contentsPreview.duplicates > 0
+                              ? ` (${contentsPreview.duplicates} doublon${contentsPreview.duplicates > 1 ? 's' : ''} retiré${contentsPreview.duplicates > 1 ? 's' : ''})`
+                              : '')}
+                      </span>
+                    </HelpHint>
+                    {contentsPreview?.tooMany && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {(pageHint('merge-item', 'contentsTooMany') ?? '').replace('{max}', String(contentsPreview.max))}
+                      </p>
+                    )}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -347,7 +376,7 @@ export function MergeItemModal({ isOpen, onClose, sourceItem, allItems, spaceId,
                 Annuler
               </Button>
               <HelpHint text={pageHint('merge-item', 'confirm')}>
-                <Button onClick={handleConfirm} disabled={mergeMutation.isPending}>
+                <Button onClick={handleConfirm} disabled={mergeMutation.isPending || !!contentsPreview?.tooMany}>
                   {mergeMutation.isPending ? 'Fusion...' : 'Fusionner'}
                 </Button>
               </HelpHint>

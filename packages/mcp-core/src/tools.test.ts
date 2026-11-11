@@ -1,7 +1,7 @@
 /*
  * TNR des outils MCP SPOK via un client mémoire : sélection des outils par profil, validation des
  * conventions avant écriture (statut, type, dates, parent), conversion Markdown, erreurs renvoyées
- * en isError au lieu de faire planter le serveur.
+ * en isError au lieu de faire planter le serveur. Contenus (lot 5) : add/update/delete_item_content.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -10,7 +10,7 @@ import { createSpokMcpServer, type ToolProfile } from './index.js'
 import { SpokApiError } from './errors.js'
 import type { SpokClient } from './client.js'
 
-function fakeClient(): SpokClient & { post: any; patch: any; get: any } {
+function fakeClient(): SpokClient & { post: any; patch: any; put: any; get: any; delete: any } {
   return {
     get: vi.fn(async (path: string) => {
       if (path === '/spaces/s1/referentiels') return { referentiels: {
@@ -27,6 +27,7 @@ function fakeClient(): SpokClient & { post: any; patch: any; get: any } {
     }),
     post: vi.fn(async (_p: string, body: any) => ({ id: 'new', ...body })),
     patch: vi.fn(async (_p: string, body: any) => ({ id: 'i1', title: 'x', ...body })),
+    put: vi.fn(async () => ({})),
     delete: vi.fn(async () => ({})),
   }
 }
@@ -85,6 +86,15 @@ describe('create_item', () => {
     expect(body.status).toBe('in_progress')
     expect(body.startDate).toBe('2026-10-12T00:00:00.000Z')
     expect(body.description).toContain('<strong>un</strong>')
+  })
+
+  it('url → contenu Lien ajouté après la création, jamais dans le corps de l\'item (lot 4)', async () => {
+    const { mcp, client } = await connect('public')
+    client.post.mockResolvedValueOnce({ id: 'i9', type: 'TASK', title: 'Site' })
+    const r = await mcp.callTool({ name: 'create_item', arguments: { spaceId: 's1', type: 'TASK', title: 'Site', url: 'https://site.fr' } })
+    expect(r.isError).toBeFalsy()
+    expect(client.post.mock.calls[0][1]).not.toHaveProperty('url')
+    expect(client.post.mock.calls[1]).toEqual(['/spaces/s1/items/i9/contents', { kind: 'LINK', url: 'https://site.fr' }])
   })
 
   it('statut inconnu → isError avec la liste, aucun POST', async () => {
@@ -233,5 +243,41 @@ describe('create_space', () => {
     expect(r.isError).toBeFalsy()
     expect(client.post).toHaveBeenCalledWith('/spaces', expect.objectContaining({ type: 'GROUP', visibility: 'PRIVATE' }))
     expect(client.patch).not.toHaveBeenCalled()
+  })
+})
+
+describe('contenus (lot 5)', () => {
+  it('add_item_content : lien envoyé sur la route des contenus ; LINK sans url → isError sans appel', async () => {
+    const { mcp, client } = await connect('public')
+    await mcp.callTool({ name: 'add_item_content', arguments: { spaceId: 's1', itemId: 'i1', kind: 'LINK', url: 'https://site.fr', name: 'Site' } })
+    expect(client.post).toHaveBeenCalledWith('/spaces/s1/items/i1/contents', { kind: 'LINK', url: 'https://site.fr', name: 'Site' })
+    const r = await mcp.callTool({ name: 'add_item_content', arguments: { spaceId: 's1', itemId: 'i1', kind: 'LINK' } })
+    expect(r.isError).toBe(true)
+    expect(client.post).toHaveBeenCalledTimes(1)
+  })
+
+  it('update_item_content : position → ordre complet de la sorte envoyé en PUT', async () => {
+    const client = fakeClient()
+    const get = client.get
+    client.get = vi.fn(async (path: string) => path === '/spaces/s1/items/i1'
+      ? { id: 'i1', contents: [
+        { id: 'a', kind: 'LINK', position: 0 }, { id: 'b', kind: 'LINK', position: 1 }, { id: 'c', kind: 'LINK', position: 2 },
+        { id: 'img', kind: 'IMAGE', position: 0 },
+      ] }
+      : get(path))
+    const { mcp } = await connect('public', client)
+    const r = await mcp.callTool({ name: 'update_item_content', arguments: { spaceId: 's1', itemId: 'i1', contentId: 'c', position: 1 } })
+    expect(r.isError).toBeFalsy()
+    expect(client.put).toHaveBeenCalledWith('/spaces/s1/items/i1/contents/order', { ids: ['c', 'a', 'b'] })
+    expect(client.patch).not.toHaveBeenCalled()
+  })
+
+  it('delete_item_content : route du contenu ; public-read n\'a pas les outils de contenus', async () => {
+    const { mcp, client } = await connect('public')
+    await mcp.callTool({ name: 'delete_item_content', arguments: { spaceId: 's1', itemId: 'i1', contentId: 'c1' } })
+    expect(client.delete).toHaveBeenCalledWith('/spaces/s1/items/i1/contents/c1')
+    const ro = await connect('public-read')
+    const names = (await ro.mcp.listTools()).tools.map((t) => t.name)
+    for (const n of ['add_item_content', 'update_item_content', 'delete_item_content']) expect(names).not.toContain(n)
   })
 })

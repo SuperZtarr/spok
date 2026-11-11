@@ -6,9 +6,11 @@
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
  * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
  * questionsApi : question (type QUESTION) — via hooks/useQuestion, pas d'appel direct dans les composants.
+ * itemContentsApi : contenus d'un élément (images, fichiers, liens, schémas) — via hooks/useItemContents.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
  */
 import type {
+  ItemContent,
   AuthResponse,
   LoginInput,
   RegisterInput,
@@ -466,6 +468,8 @@ export const userApi = {
 // User Tasks (global across spaces)
 export interface GlobalTaskFilters {
   type?: string;
+  /** Éléments qui portent au moins un contenu de cette sorte (LINK, IMAGE, FILE, DIAGRAM), quel que soit leur type */
+  contentKind?: string;
   status?: string;
   priority?: string;
   spaceId?: string;
@@ -550,6 +554,7 @@ export const userTasksApi = {
   list: (params?: GlobalTaskFilters) => {
     const sp = new URLSearchParams();
     if (params?.type) sp.set('type', params.type);
+    if (params?.contentKind) sp.set('contentKind', params.contentKind);
     if (params?.status) sp.set('status', params.status);
     if (params?.priority) sp.set('priority', params.priority);
     if (params?.spaceId) sp.set('spaceId', params.spaceId);
@@ -947,6 +952,31 @@ export const questionsApi = {
     fetchApi<QuestionView>(`/spaces/${spaceId}/items/${itemId}/question/vote`, { method: 'PUT', body: JSON.stringify({ optionIds }) }),
 };
 
+/** Contenus d'un élément (contenus multiples, routes item-contents.ts) — réservé à useItemContents */
+export type ItemContentInput =
+  | { kind: 'LINK'; url: string; name?: string | null }
+  | { kind: 'IMAGE'; url: string; name?: string | null }
+  | { kind: 'DIAGRAM'; xml: string; url?: string | null; name?: string | null };
+
+export const itemContentsApi = {
+  add: (spaceId: string, itemId: string, body: ItemContentInput) =>
+    fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents`, { method: 'POST', body: JSON.stringify(body) }),
+  /** Envoi d'une image ou d'un fichier ; previewOf = id d'un schéma dont l'image devient l'aperçu */
+  upload: (spaceId: string, itemId: string, kind: 'image' | 'file', file: File | Blob, previewOf?: string) => {
+    const formData = new FormData();
+    formData.append('file', file, file instanceof File ? file.name : 'diagram.png');
+    const query = `kind=${kind}${previewOf ? `&previewOf=${encodeURIComponent(previewOf)}` : ''}`;
+    return fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/upload?${query}`, { method: 'POST', body: formData });
+  },
+  update: (spaceId: string, itemId: string, contentId: string, body: { name?: string | null; url?: string | null; xml?: string }) =>
+    fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  remove: (spaceId: string, itemId: string, contentId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'DELETE' }),
+  /** Ordre complet des contenus d'UNE sorte */
+  reorder: (spaceId: string, itemId: string, ids: string[]) =>
+    fetchApi<ItemContent[]>(`/spaces/${spaceId}/items/${itemId}/contents/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+};
+
 export const articlesApi = {
   get: (spaceId: string, articleId: string) =>
     fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article`),
@@ -1047,6 +1077,8 @@ export interface LinkedItem {
   endDate?: string | null;
   assigneeName?: string | null;
   childCount?: number;
+  /** Contenus sans xml (vignette : miniature et pastilles) */
+  contents?: Pick<ItemContent, 'kind' | 'url' | 'name'>[];
 }
 
 export interface ItemLink {
@@ -1205,7 +1237,6 @@ export const itemsApi = {
       startDate: 'source' | 'target';
       endDate: 'source' | 'target';
       dueDate: 'source' | 'target';
-      url: 'source' | 'target';
       description: 'source' | 'target' | 'concat';
     };
   }) =>
@@ -1213,6 +1244,12 @@ export const itemsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // Contenus après fusion de itemId dans targetItemId (même calcul que merge : cumul, doublons, plafond)
+  mergePreview: (spaceId: string, itemId: string, targetItemId: string) =>
+    fetchApi<{ contents: { target: number; source: number; duplicates: number; total: number; max: number; tooMany: boolean } }>(
+      `/spaces/${spaceId}/items/${itemId}/merge-preview?targetItemId=${encodeURIComponent(targetItemId)}`,
+    ),
 
   absorbChildren: (spaceId: string, itemId: string) =>
     fetchApi<Item>(`/spaces/${spaceId}/items/${itemId}/absorb-children`, {
@@ -1244,44 +1281,6 @@ export const itemsApi = {
     fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${itemId}/contributions/${contributionId}`, {
       method: 'DELETE',
     }),
-
-  uploadImage: async (spaceId: string, itemId: string, file: File): Promise<Item> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/spaces/${spaceId}/items/${itemId}/image`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload image', error);
-    }
-
-    return response.json();
-  },
-
-  uploadDocument: async (spaceId: string, itemId: string, file: File): Promise<Item> => {
-    const token = localStorage.getItem('accessToken');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_URL}/spaces/${spaceId}/items/${itemId}/document`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.message || 'Erreur upload document', error);
-    }
-
-    return response.json();
-  },
 };
 
 // Modèles de structures d'items (portée globale)

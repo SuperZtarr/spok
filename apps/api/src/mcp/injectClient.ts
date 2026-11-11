@@ -22,7 +22,7 @@ export function createInjectClient(
 ): SpokClient {
   const max = opts.maxPerMinute ?? MCP_SUBREQUESTS_PER_MINUTE_PER_TOKEN
 
-  async function call(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown) {
+  async function call(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown) {
     const pathname = path.split('?')[0]
     if (!path.startsWith('/') || UNSAFE_PATH.test(pathname)) {
       throw new SpokApiError(400, 'Chemin refusé (identifiant invalide)', path)
@@ -49,6 +49,7 @@ export function createInjectClient(
     get: (path) => call('GET', path),
     post: (path, body) => call('POST', path, body),
     patch: (path, body) => call('PATCH', path, body),
+    put: (path, body) => call('PUT', path, body),
     delete: (path) => call('DELETE', path),
   }
 }

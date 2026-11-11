@@ -7,12 +7,17 @@
  * pendant la fenêtre réseau entre le clic et la réponse du serveur.
  * handleOpen(id, mode) : navigation vers l'item dans son espace, mode Afficher porté par ?mode=lecture.
  * handleMove : un dépôt refusé par l'API (parent d'un autre espace, cycle) est signalé par window.alert (pas de toast dans l'app).
+ * handleAbsorbChildren : même signalement d'un refus (plafond de contenus du parent dépassé, lot 5 contenus multiples).
+ * statuses : statuts de la communauté (référentiels). handleInlineUpdate (Kanban, menu ⋯, listes) applique au changement de
+ * statut les mêmes règles de dates que la fiche via lib/statusChange.ts (« Non défini » efface début et fin) ; annuler la
+ * propagation rétablit statut et dates d'avant.
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { Item, ItemType } from '@spok/shared';
+import type { Item, ItemType, StatusConfig } from '@spok/shared';
 import { itemsApi } from '../lib/api';
+import { statusChangeFields } from '../lib/statusChange';
 import { itemUrl, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Types for modal states
@@ -45,6 +50,9 @@ export interface PendingStatusPropagation {
   status: string;
   childCount: number;
   previousStatus: string | null;
+  /** Dates d'avant le changement, rétablies si l'utilisateur annule */
+  previousStartDate: string | null;
+  previousEndDate: string | null;
 }
 
 export interface PendingCrossSpaceMove {
@@ -62,6 +70,8 @@ interface UseSpaceActionsOptions {
   allItems: Item[];
   communityId?: string | null;
   communitySpaces?: Array<{ id: string; name: string }>;
+  /** Statuts de la communauté (sens terminé / annulé des statuts personnalisés) */
+  statuses?: StatusConfig[];
 }
 
 // Count all descendants recursively
@@ -70,7 +80,7 @@ function countDescendants(allItems: Item[], parentId: string): number {
   return children.reduce((acc, child) => acc + 1 + countDescendants(allItems, child.id), 0);
 }
 
-export function useSpaceActions({ spaceId, allItems, communityId, communitySpaces }: UseSpaceActionsOptions) {
+export function useSpaceActions({ spaceId, allItems, communityId, communitySpaces, statuses }: UseSpaceActionsOptions) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -103,7 +113,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
+    mutationFn: ({ id, itemSpaceId, data }: { id: string; itemSpaceId: string; data: { status?: string | null; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; updatedAt?: string; propagateToChildren?: boolean } }) =>
       itemsApi.update(itemSpaceId, id, data),
     // Optimistic update : applique startDate/endDate/dueDate au cache avant la réponse serveur.
     // Évite qu'ItemEditModal lise des dates stales si ouverte juste après un drag dans le Gantt,
@@ -256,7 +266,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     setDeletingItem({
       id,
       title: item?.title || 'cet élément',
-      type: item?.type || 'NOTE',
+      type: item?.type || 'UNDEFINED',
       childCount: countDescendants(allItems, id),
       contributionCount: (item as any)?.contributionCount || 0,
       description: item?.description,
@@ -265,7 +275,6 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       dueDate: item?.dueDate,
       startDate: item?.startDate,
       endDate: item?.endDate,
-      url: item?.url,
       assignedToName: item?.assignedTo?.name || item?.assignedToName || null,
       tags: item?.tags?.map(t => ({ name: t.name, color: t.color })),
     });
@@ -297,27 +306,12 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
 
   const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
-    const updates = { ...data };
-
-    // Auto-fill dates when status changes — pré-remplissage pour l'affichage immédiat (optimistic) ;
-    // la règle fait foi côté API (apps/api/src/utils/statusDates.ts), qui l'applique aussi aux descendants propagés
-    if (updates.status !== undefined) {
-      const item = allItems.find(i => i.id === id);
-      const now = new Date().toISOString();
-
-      if ((updates.status === 'done' || updates.status === 'cancelled') && !item?.endDate) {
-        updates.endDate = now;
-      }
-      if (updates.status && updates.status !== 'undefined' && !item?.startDate) {
-        if (item?.endDate && new Date(item.endDate) < new Date()) {
-          updates.startDate = item.endDate;
-        } else if (updates.endDate && new Date(updates.endDate) < new Date()) {
-          updates.startDate = updates.endDate;
-        } else {
-          updates.startDate = now;
-        }
-      }
-    }
+    const item = allItems.find(i => i.id === id);
+    // Statut changé : mêmes règles de dates que la fiche (lib/statusChange.ts) — « Non défini » efface début et fin,
+    // un statut qui ferme remplit la fin vide, tout statut remplit le début vide
+    const updates: Omit<typeof data, 'status'> & { status?: string | null } = data.status !== undefined
+      ? { ...data, ...statusChangeFields(data.status, { startDate: item?.startDate, endDate: item?.endDate }, statuses) }
+      : { ...data };
 
     updateItemMutation.mutate({ id, itemSpaceId, data: updates });
 
@@ -325,17 +319,18 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     if (data.status !== undefined) {
       const childCount = countDescendants(allItems, id);
       if (childCount > 0) {
-        const item = allItems.find(i => i.id === id);
         setPendingStatusPropagation({
           itemId: id,
           itemTitle: item?.title || 'cet élément',
-          status: data.status,
+          status: updates.status ?? '',
           childCount,
           previousStatus: item?.status ?? null,
+          previousStartDate: item?.startDate ?? null,
+          previousEndDate: item?.endDate ?? null,
         });
       }
     }
-  }, [resolveItemSpaceId, updateItemMutation, allItems]);
+  }, [resolveItemSpaceId, updateItemMutation, allItems, statuses]);
 
   const handleMove = useCallback((id: string, parentId: string | null, position: number) => {
     const itemSpaceId = resolveItemSpaceId(id);
@@ -414,7 +409,12 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       updateItemMutation.mutate({
         id: pendingStatusPropagation.itemId,
         itemSpaceId,
-        data: { status: pendingStatusPropagation.previousStatus ?? undefined },
+        // Annuler = revenir à l'état d'avant, statut vide et dates comprises (remplies ou effacées par le changement)
+        data: {
+          status: pendingStatusPropagation.previousStatus,
+          startDate: pendingStatusPropagation.previousStartDate,
+          endDate: pendingStatusPropagation.previousEndDate,
+        },
       });
       setPendingStatusPropagation(null);
     }
@@ -435,6 +435,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
       // reflète immédiatement la description compilée
       queryClient.invalidateQueries({ queryKey: ['item', itemSpaceId, id] });
     },
+    // Refus de l'API (plafond de contenus du parent dépassé, copie verrouillée…) : message de l'API, comme handleMove
+    onError: (error) => window.alert(error instanceof Error ? error.message : 'Absorption impossible'),
   });
 
   const handleAbsorbChildren = useCallback((id: string) => {

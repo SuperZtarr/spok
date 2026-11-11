@@ -1,12 +1,15 @@
 /*
  * Fusion de deux items : choix champ par champ (source/target), absorption des enfants,
- * contributions et relations, puis suppression de la source. L'assigné retenu conserve sa date et son
+ * contributions, contenus et relations, puis suppression de la source. L'assigné retenu conserve sa date et son
  * auteur d'assignation (assignedAt / assignedById) — pas de nouvel accusé de lecture.
  * Fusion et absorption refusées si un item concerné est une copie de séance verrouillée (itemLock).
  * Tous les items lus doivent appartenir à l'espace de l'URL (celui dont l'accès est contrôlé) — 404 sinon.
  * Un MEMBER ne fusionne / n'absorbe que des items qu'il a créés ou qui lui sont assignés (source ET cible ;
  * parent ET chaque enfant) — canMemberManageItem. Sans cette garde, la fusion réécrit l'item d'un autre et,
  * en gardant l'assignation de la source, lui en transfère les droits (revue sécu 2026-10-15). OWNER : libre.
+ * Contenus (images, fichiers, liens, schémas — lot 5, décision Thomas 2026-11-11) : cumulés sur l'élément gardé (cible,
+ * ou parent pour l'absorption), doublons retirés, refus 400 au-delà du plafond AVANT toute écriture
+ * (utils/contentMerge.ts). GET /:id/merge-preview?targetItemId= renvoie le même calcul pour la modale.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -14,6 +17,7 @@ import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
+import { loadContentMergePlan, applyContentMergePlan, ContentMergeError } from '../utils/contentMerge.js';
 
 const mergeItemSchema = z.object({
   targetItemId: z.string(),
@@ -27,7 +31,7 @@ const mergeItemSchema = z.object({
     startDate: z.enum(['source', 'target']),
     endDate: z.enum(['source', 'target']),
     dueDate: z.enum(['source', 'target']),
-    url: z.enum(['source', 'target']),
+    url: z.enum(['source', 'target']).optional(), // ignoré depuis le lot 4 (plus d'Item.url : contenus réunis)
     description: z.enum(['source', 'target', 'concat']),
   }),
 });
@@ -79,6 +83,10 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.forbidden('Members can only merge items they created or are assigned to');
     }
 
+    // Contenus : plan calculé et plafond vérifié avant toute écriture
+    const contentPlan = await loadContentMergePlan(fastify.prisma, targetItemId, [sourceId]);
+    if (contentPlan.tooMany) return reply.badRequest(new ContentMergeError(contentPlan).message);
+
     const beforeSource = serializeItemForAudit(source);
     const beforeTarget = serializeItemForAudit(target);
 
@@ -114,7 +122,6 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
         startDate: pick('startDate').startDate,
         endDate: pick('endDate').endDate,
         dueDate: pick('dueDate').dueDate,
-        url: pick('url').url,
         description: mergedDescription,
       },
     });
@@ -124,6 +131,9 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
       where: { parentId: sourceId },
       data: { parentId: targetItemId },
     });
+
+    // Contenus de la source ajoutés à la cible, après les siens dans chaque sorte, doublons retirés
+    await applyContentMergePlan(fastify.prisma, targetItemId, contentPlan);
 
     // Move contributions from source to target
     await fastify.prisma.contribution.updateMany({
@@ -199,6 +209,30 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     return result;
   });
 
+  // GET /spaces/:spaceId/items/:id/merge-preview?targetItemId= — contenus après fusion de :id dans la cible
+  // (même calcul que /merge : la modale annonce ce qui sera appliqué). Lecture seule, accès à l'espace suffisant.
+  fastify.get<{
+    Params: { spaceId: string; id: string };
+    Querystring: { targetItemId?: string };
+  }>('/:id/merge-preview', async (request, reply) => {
+    const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
+    if (!membership) return reply.notFound('Space not found');
+    const targetItemId = request.query.targetItemId;
+    if (!targetItemId || targetItemId === request.params.id) return reply.badRequest('targetItemId required');
+    const [source, target] = await Promise.all([
+      fastify.prisma.item.findFirst({ where: { id: request.params.id, spaceId: request.params.spaceId }, select: { id: true } }),
+      fastify.prisma.item.findFirst({ where: { id: targetItemId, spaceId: request.params.spaceId }, select: { id: true } }),
+    ]);
+    if (!source || !target) return reply.notFound('Item not found');
+    const plan = await loadContentMergePlan(fastify.prisma, targetItemId, [request.params.id]);
+    return {
+      contents: {
+        target: plan.keptCount, source: plan.incomingCount, duplicates: plan.duplicateIds.length,
+        total: plan.total, max: plan.max, tooMany: plan.tooMany,
+      },
+    };
+  });
+
   // POST /spaces/:spaceId/items/:id/absorb-children
   // Absorb all direct children into this item
   fastify.post<{
@@ -231,6 +265,11 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
       && ![parent, ...children].every(i => canMemberManageItem(i, request.user.userId))) {
       return reply.forbidden('Members can only absorb items they created or are assigned to');
     }
+
+    // Contenus des enfants cumulés sur le parent (avant leur suppression, qui les emporterait) ; plafond vérifié d'abord
+    const contentPlan = await loadContentMergePlan(fastify.prisma, parentId, children.map(c => c.id));
+    if (contentPlan.tooMany) return reply.badRequest(new ContentMergeError(contentPlan).message);
+    await applyContentMergePlan(fastify.prisma, parentId, contentPlan);
 
     const beforeParent = serializeItemForAudit(parent);
 

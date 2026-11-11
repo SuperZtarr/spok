@@ -6,7 +6,8 @@
 // (espaces, items, recherche) ne renvoient PAS 401 avec un token expiré : elles répondent comme à
 // un anonyme (communautés publiques seules, 404 sur un espace privé). On se reconnecte donc AVANT
 // l'échéance lue dans le champ `exp` du JWT ; le retry sur 401 reste en filet pour les routes strictes.
-// Implémente SpokClient de @spok/mcp-core ; les erreurs non 2xx lèvent SpokApiError.
+// Implémente SpokClient de @spok/mcp-core (get, post, patch, put, delete) ; les erreurs non 2xx lèvent SpokApiError ;
+// une réponse vide (204) rend {}.
 import { readFileSync } from 'fs';
 import { SpokApiError, type SpokClient } from '@spok/mcp-core';
 import { fileURLToPath } from 'url';
@@ -85,12 +86,15 @@ async function req(path: string, options: RequestInit = {}, retry = true): Promi
     throw new SpokApiError(res.status, body, path);
   }
 
-  return res.json() as Promise<any>;
+  // Réponse vide (204, ex. retrait d'un contenu) : {} au lieu d'une erreur de lecture JSON
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 }
 
 export const api: SpokClient = {
   get: (path: string) => req(path),
   post: (path: string, body: unknown) => req(path, { method: 'POST', body: JSON.stringify(body) }),
   patch: (path: string, body: unknown) => req(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  put: (path: string, body: unknown) => req(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (path: string) => req(path, { method: 'DELETE' }),
 };

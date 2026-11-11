@@ -21,6 +21,16 @@ export function extractText(description: any): string {
   return (description.content ?? []).map(collectText).join('\n').trim()
 }
 
+const KIND_LABELS: Record<string, string> = { IMAGE: 'Image', FILE: 'Fichier', LINK: 'Lien', DIAGRAM: 'Schéma' }
+
+/** Contenus d'un item (images, fichiers, liens, schémas), un par ligne avec leur id (outils *_item_content) ;
+ *  '' s'il n'en a pas */
+export function formatContents(contents: any[] | undefined): string {
+  return (contents ?? [])
+    .map((c) => `- [${c.id}] ${KIND_LABELS[c.kind] ?? c.kind} : ${[c.name, c.url].filter(Boolean).join(' — ') || '(sans adresse)'}`)
+    .join('\n')
+}
+
 export function formatItemLine(item: any, opts: { excerpt?: number; withSpace?: boolean; withParent?: boolean } = {}): string {
   const parts = [`[${item.id}] [${item.type}] ${item.title}`]
   if (opts.withSpace && item.space?.name) parts.push(`espace: ${item.space.name}`)
@@ -29,7 +39,7 @@ export function formatItemLine(item: any, opts: { excerpt?: number; withSpace?: 
   if (item.startDate) parts.push(`début: ${item.startDate.slice(0, 10)}`)
   if (item.endDate) parts.push(`fin: ${item.endDate.slice(0, 10)}`)
   if (item.dueDate) parts.push(`échéance: ${item.dueDate.slice(0, 10)}`)
-  if (item.url) parts.push(`url: ${item.url}`)
+  if (item.contents?.length) parts.push(`contenus: ${item.contents.length}`)
   if (opts.withParent && item.parentId) parts.push(`parent: ${item.parentId}`)
   const max = opts.excerpt ?? 120
   const text = extractText(item.content ?? item.description)
