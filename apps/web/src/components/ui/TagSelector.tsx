@@ -1,8 +1,17 @@
 /* Sélecteur multi-tags d'un item : recherche, création à la volée.
- * Proposés : tags de la communauté de l'espace et tags globaux (badges « communauté » / « global », GET
- * /spaces/:id/tags). Un tag créé ici l'est dans la communauté de l'espace ; espace sans communauté : création refusée
- * par l'API (seuls les globaux, créés dans /admin/tags), message affiché sous le champ (2026-11-11). */
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+ * Proposés (GET /spaces/:id/tags) : tags globaux, de la communauté, de l'espace et de ses espaces parents, groupés
+ * par portée avec un badge (lib/tagScope.ts ; tags d'espace rétablis le 2026-11-12, décision Thomas). Un tag créé ici
+ * est un tag de L'ESPACE (proposé aussi dans ses sous-espaces) ; tags de communauté : paramètres de la communauté,
+ * globaux : /admin/tags. Création refusée (nom déjà pris…) : message de l'API affiché sous le champ. */
+import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { groupTagsByScope, tagScopeBadge, tagScopeOf, TAG_SCOPE_LABELS } from '../../lib/tagScope';
+import type { TagScope } from '@spok/shared';
+
+const BADGE_CLASS: Record<TagScope, string> = {
+  global: 'text-emerald-600 bg-emerald-500/10',
+  community: 'text-blue-500 bg-blue-500/10',
+  space: 'text-amber-600 bg-amber-500/10',
+};
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { tagsApi } from '../../lib/api';
@@ -50,11 +59,13 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
   // Filter suggestions: match input, exclude already selected
   const suggestions = useMemo(() => {
     const query = inputValue.toLowerCase().trim();
-    return spaceTags.filter(
+    const matching = spaceTags.filter(
       (t) =>
         !value.includes(t.id) &&
         (query === '' || t.name.toLowerCase().includes(query))
     );
+    // Ordre des groupes de portée (globaux, communauté, espace) : l'index clavier suit l'ordre affiché
+    return groupTagsByScope(matching).flatMap((g) => g.tags);
   }, [spaceTags, value, inputValue]);
 
   // Check if input matches exactly an existing tag name
@@ -178,8 +189,13 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
           className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
         >
           {suggestions.map((tag, index) => (
+            <Fragment key={tag.id}>
+            {(index === 0 || tagScopeOf(suggestions[index - 1]) !== tagScopeOf(tag)) && (
+              <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {TAG_SCOPE_LABELS[tagScopeOf(tag)]}
+              </div>
+            )}
             <button
-              key={tag.id}
               type="button"
               onClick={() => handleSelect(tag)}
               className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm text-left transition-colors ${
@@ -193,15 +209,12 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
                 />
               )}
               <span className="truncate">{tag.name}</span>
-              {(tag as any).isGlobalTag ? (
-                <span className="text-[10px] text-emerald-600 bg-emerald-500/10 px-1 rounded">global</span>
-              ) : (tag as any).isCommunityTag && (
-                <span className="text-[10px] text-blue-500 bg-blue-500/10 px-1 rounded">communauté</span>
-              )}
+              <span className={`text-[10px] px-1 rounded whitespace-nowrap ${BADGE_CLASS[tagScopeOf(tag)]}`}>{tagScopeBadge(tag)}</span>
               <span className="text-xs text-muted-foreground ml-auto">
                 {(tag as Tag & { itemCount?: number }).itemCount ?? 0}
               </span>
             </button>
+            </Fragment>
           ))}
 
           {canCreate && (
@@ -214,7 +227,7 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Créer « {inputValue.trim()} »</span>
+              <span>Créer « {inputValue.trim()} » dans cet espace</span>
             </button>
           )}
         </div>

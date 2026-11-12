@@ -2,7 +2,7 @@
  * Instructions serveur MCP envoyées à chaque client à l'initialisation : modèle de données SPOK et
  * règles d'écriture. Source unique — toute nouvelle convention métier exposée aux modèles s'ajoute ici.
  * Contenus : outils *_item_content décrits ici (lot 5 contenus multiples).
- * Tags : portée communauté ou global (2026-11-11).
+ * Tags : portée global, communauté ou espace hérité par les sous-espaces (2026-11-12).
  */
 export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informations.
 
@@ -21,7 +21,8 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
   d'un lien ou le xml d'un schéma, ou déplace un contenu dans sa sorte ; delete_item_content le retire (après
   confirmation de l'utilisateur). Images et fichiers ne s'envoient pas par MCP. Au plus 30 contenus par item.
   Il n'y a plus de type Note, Lien, Image, Document, Diagramme, Configuration ni Anomalie.
-- Tags = classement libre, propres à la communauté de l'espace ou globaux (proposés partout). Une anomalie est une
+- Tags = classement libre : globaux (proposés partout), de la communauté, ou d'un espace (proposés dans cet espace et
+  ses sous-espaces) ; list_tags donne ceux d'un espace. Une anomalie est une
   TASK taguée « bug » (la vue Bugs suit ce tag), une configuration un UNDEFINED tagué « config ».
 - Hiérarchie (parentId) : décomposition. Un PROJECT contient des TASK ; une TASK peut contenir des sous-TASK.
   Le parent doit être dans le même espace.

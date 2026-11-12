@@ -1,7 +1,7 @@
 /*
  * Administration des tags (/admin/tags, admin global — décision Thomas 2026-11-11). Portée : utils/tagScope.ts —
- * tags de communauté et tags globaux ; les anciens tags d'espace (avant scripts/migrate-space-tags.ts) sont listés
- * avec la portée « space » pour pouvoir être fusionnés ou rendus globaux.
+ * tags globaux, de communauté et d'espace (rétablis le 2026-11-12, hérités par les sous-espaces) ; portée « space »
+ * listée avec son espace, fusionnable et promouvable comme les autres.
  * - GET /            : tous les tags, portée, communauté / espace, nombre d'éléments.
  * - GET /duplicates  : tags de même nom (sans casse, espaces retirés), toutes portées réunies ; pour chaque tag, les
  *                      communautés des espaces de ses éléments (communityIds, null = espace sans communauté) — sert à
@@ -12,13 +12,14 @@
  * - POST /:id/promote: rend le tag global (refus 409 si un tag global du même nom existe : fusionner plutôt).
  * - POST /merge      : { targetId, sourceIds } — les éléments des sources reçoivent la cible (sans double), puis les
  *                      sources sont supprimées, en transaction. Refus 400 si la cible n'est pas visible depuis tous
- *                      les éléments concernés (cible de communauté C et élément hors de C) — rendre la cible globale.
+ *                      les éléments concernés (cible de communauté C et élément hors de C ; cible d'espace E et élément
+ *                      hors de E et de ses sous-espaces) — rendre la cible globale.
  * Chaque écriture est journalisée (entité 'Tag' ; fusion = action 'MERGE'), sans restauration.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../../utils/audit.js';
-import { findTagByName, GLOBAL_TAG_WHERE, isGlobalTag } from '../../utils/tagScope.js';
+import { communityScope, findTagByName, GLOBAL_TAG_WHERE, isGlobalTag, spaceTagScope, spaceWithDescendantIds } from '../../utils/tagScope.js';
 
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const createSchema = z.object({ name: z.string().trim().min(1), color: colorSchema.optional() });
@@ -96,7 +97,7 @@ export const adminTagsRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post<{ Body: z.infer<typeof createSchema> }>('/', async (request, reply) => {
     const body = createSchema.parse(request.body);
-    if (await findTagByName(fastify.prisma, null, body.name)) {
+    if (await findTagByName(fastify.prisma, communityScope(null), body.name)) {
       return reply.conflict('Un tag global de ce nom existe déjà');
     }
     const tag = await fastify.prisma.tag.create({ data: { name: body.name, color: body.color ?? null }, include: TAG_INCLUDE });
@@ -112,8 +113,9 @@ export const adminTagsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!tag) return reply.notFound('Tag not found');
     const body = updateSchema.parse(request.body);
 
-    if (body.name && duplicateKey(body.name) !== duplicateKey(tag.name) && !tag.spaceId) {
-      const existing = await findTagByName(fastify.prisma, tag.communityId, body.name);
+    if (body.name && duplicateKey(body.name) !== duplicateKey(tag.name)) {
+      const scope = tag.spaceId ? await spaceTagScope(fastify.prisma, tag.spaceId) : communityScope(tag.communityId);
+      const existing = await findTagByName(fastify.prisma, scope, body.name);
       if (existing && existing.id !== tag.id) return reply.conflict('Un tag de ce nom existe déjà dans cette portée');
     }
 
@@ -179,7 +181,7 @@ export const adminTagsRoutes: FastifyPluginAsync = async (fastify) => {
           tagId: { in: sourceIds },
           item: target.communityId
             ? { space: { OR: [{ communityId: null }, { communityId: { not: target.communityId } }] } }
-            : { spaceId: { not: target.spaceId! } },
+            : { spaceId: { notIn: await spaceWithDescendantIds(fastify.prisma, target.spaceId!) } },
         },
       });
       if (outside > 0) {

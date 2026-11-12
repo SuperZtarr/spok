@@ -1,5 +1,6 @@
-/* TNR des tags d'un espace (portée communauté + global, 2026-11-11) : liste, création dans la communauté, refus sans
-   communauté, doublon contre communauté et global, droits de gestion (propriétaire de communauté / admin). */
+/* TNR des tags d'un espace (portées global / communauté / espace hérité, 2026-11-12) : liste avec portée et héritage,
+   création en tag d'espace (même sans communauté), doublon contre les tags visibles, droits de gestion (propriétaire
+   de l'espace du tag, de la communauté, admin). */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -76,31 +77,40 @@ describe('Tags routes', () => {
   // ─── LIST TAGS ────────────────────────────────────────────────
 
   describe('GET /spaces/:spaceId/tags', () => {
-    it('tags de la communauté + globaux, portée indiquée', async () => {
+    it('tags globaux, de la communauté et des espaces (hérités des parents), portée indiquée', async () => {
       allowAccess()
-      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      // space-1 (com-1) → parent sp-parent
+      prisma.space.findUnique.mockImplementation(async ({ where }: any) =>
+        where.id === SPACE_ID ? { communityId: 'com-1', parentId: 'sp-parent' }
+          : where.id === 'sp-parent' ? { communityId: 'com-1', parentId: null } : null)
       prisma.tag.findMany.mockResolvedValue([
-        { id: 'tag-1', name: 'urgent', color: '#ff0000', communityId: 'com-1', spaceId: null, _count: { items: 3 } },
-        { id: 'tag-2', name: 'bug', color: null, communityId: null, spaceId: null, _count: { items: 1 } },
+        { id: 'tag-1', name: 'urgent', color: '#ff0000', communityId: 'com-1', spaceId: null, _count: { items: 3 }, space: null },
+        { id: 'tag-2', name: 'bug', color: null, communityId: null, spaceId: null, _count: { items: 1 }, space: null },
+        { id: 'tag-3', name: 'perso', color: null, communityId: null, spaceId: 'sp-parent', _count: { items: 0 }, space: { name: 'Parent' } },
+        { id: 'tag-4', name: 'ici', color: null, communityId: null, spaceId: SPACE_ID, _count: { items: 2 }, space: { name: 'Ici' } },
       ])
 
       const res = await inject('GET', `/spaces/${SPACE_ID}/tags`)
 
       expect(res.statusCode).toBe(200)
       const body = res.json()
-      expect(body[0]).toMatchObject({ itemCount: 3, isCommunityTag: true, isGlobalTag: false })
-      expect(body[1]).toMatchObject({ itemCount: 1, isCommunityTag: false, isGlobalTag: true })
-      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({ OR: [{ communityId: 'com-1' }, { communityId: null, spaceId: null }] })
+      expect(body[0]).toMatchObject({ itemCount: 3, scope: 'community', isCommunityTag: true, isGlobalTag: false })
+      expect(body[1]).toMatchObject({ itemCount: 1, scope: 'global', isCommunityTag: false, isGlobalTag: true })
+      expect(body[2]).toMatchObject({ scope: 'space', spaceName: 'Parent', inherited: true, isGlobalTag: false })
+      expect(body[3]).toMatchObject({ scope: 'space', spaceName: 'Ici', inherited: false })
+      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({
+        OR: [{ communityId: null, spaceId: null }, { communityId: 'com-1' }, { spaceId: { in: [SPACE_ID, 'sp-parent'] } }],
+      })
     })
 
-    it('espace sans communauté : globaux seulement', async () => {
+    it('espace sans communauté : globaux et tags d\'espace', async () => {
       allowAccess()
-      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      prisma.space.findUnique.mockResolvedValue({ communityId: null, parentId: null })
       prisma.tag.findMany.mockResolvedValue([])
 
       await inject('GET', `/spaces/${SPACE_ID}/tags`)
 
-      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({ communityId: null, spaceId: null })
+      expect(prisma.tag.findMany.mock.calls[0][0].where).toEqual({ OR: [{ communityId: null, spaceId: null }, { spaceId: { in: [SPACE_ID] } }] })
     })
 
     it('should return 404 when no access', async () => {
@@ -113,26 +123,28 @@ describe('Tags routes', () => {
   // ─── CREATE TAG ───────────────────────────────────────────────
 
   describe('POST /spaces/:spaceId/tags', () => {
-    it('tag créé dans la communauté de l\'espace', async () => {
+    it('tag créé dans l\'espace (proposé aussi dans ses sous-espaces)', async () => {
       allowAccess()
-      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1' })
+      prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1', parentId: null })
       prisma.tag.findMany.mockResolvedValue([]) // pas de doublon
-      prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'bug', communityId: 'com-1' })
+      prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'bug', spaceId: SPACE_ID })
 
       const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: ' bug ', color: '#00ff00' })
 
       expect(res.statusCode).toBe(201)
-      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'bug', color: '#00ff00', communityId: 'com-1' } })
+      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'bug', color: '#00ff00', spaceId: SPACE_ID } })
     })
 
-    it('espace sans communauté : création refusée (400)', async () => {
+    it('espace sans communauté : création permise (tag d\'espace)', async () => {
       allowAccess()
-      prisma.space.findUnique.mockResolvedValue({ communityId: null })
+      prisma.space.findUnique.mockResolvedValue({ communityId: null, parentId: null })
+      prisma.tag.findMany.mockResolvedValue([])
+      prisma.tag.create.mockResolvedValue({ id: 'tag-new', name: 'perso', spaceId: SPACE_ID })
 
       const res = await inject('POST', `/spaces/${SPACE_ID}/tags`, { name: 'perso' })
 
-      expect(res.statusCode).toBe(400)
-      expect(prisma.tag.create).not.toHaveBeenCalled()
+      expect(res.statusCode).toBe(201)
+      expect(prisma.tag.create).toHaveBeenCalledWith({ data: { name: 'perso', color: undefined, spaceId: SPACE_ID } })
     })
 
     it('nom déjà pris en global ou dans la communauté : 409', async () => {
@@ -211,6 +223,17 @@ describe('Tags routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(prisma.tag.delete).toHaveBeenCalledWith({ where: { id: 'tag-1' } })
+    })
+
+    it('tag d\'espace : géré par le propriétaire de son espace, refusé à un simple membre', async () => {
+      prisma.tag.findFirst.mockResolvedValue({ id: 'ts', name: 'old', communityId: null, spaceId: SPACE_ID })
+      prisma.tag.update.mockResolvedValue({ id: 'ts', name: 'new' })
+      prisma.tag.findMany.mockResolvedValue([])
+      expect((await inject('PATCH', `/spaces/${SPACE_ID}/tags/ts`, { name: 'new' })).statusCode).toBe(403)
+
+      prisma.spaceMembership.findUnique.mockResolvedValue(mockMembership('OWNER'))
+      expect((await inject('PATCH', `/spaces/${SPACE_ID}/tags/ts`, { name: 'new' })).statusCode).toBe(200)
+      expect(prisma.tag.update).toHaveBeenCalledWith({ where: { id: 'ts' }, data: { name: 'new' } })
     })
 
     it('tag absent ou hors de portée : 404', async () => {

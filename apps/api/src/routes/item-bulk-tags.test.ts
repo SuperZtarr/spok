@@ -1,6 +1,7 @@
 /*
  * TNR de POST /spaces/:spaceId/items/bulk-tags (vue Tags, sélection multiple, 2026-11-11) : ajout et retrait en une
- * transaction, sans double, éléments déjà conformes ignorés, tag hors de la communauté refusé, lecteur refusé, audit,
+ * transaction, sans double, éléments déjà conformes ignorés, tag hors de portée refusé (autre communauté, tag d'un
+ * espace non parent ; tag d'un espace parent accepté), lecteur refusé, audit,
  * membre limité à ses éléments (auteur ou assigné) sauf copie de séance verrouillée.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -54,6 +55,7 @@ describe('POST /bulk-tags', () => {
     prisma = r.prisma
     token = getTestToken(app)
     prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER', spaceId: SPACE })
+    prisma.space.findUnique.mockResolvedValue({ communityId: 'com-1', parentId: null })
   })
 
   const post = (payload: object) => app.inject({
@@ -90,11 +92,24 @@ describe('POST /bulk-tags', () => {
   })
 
   it('tag d\'une autre communauté : refusé (400), rien écrit', async () => {
+    prisma.space.findUnique.mockResolvedValue({ communityId: 'com-2', parentId: null })
     prisma.item.findMany.mockResolvedValue([item('a', [], 'com-2')])
     prisma.tag.findMany.mockResolvedValue([{ id: 'bug', name: 'bug', communityId: 'com-1', spaceId: null }])
 
     expect((await post({ itemIds: ['a'], addTagIds: ['bug'] })).statusCode).toBe(400)
     expect(prisma.itemTag.createMany).not.toHaveBeenCalled()
+  })
+
+  it('tag d\'espace : accepté dans l\'espace et ses sous-espaces, refusé ailleurs', async () => {
+    prisma.item.findMany.mockResolvedValue([item('a', [])])
+    // SPACE a pour parent « parent » : un tag de « parent » y est hérité
+    prisma.space.findUnique.mockImplementation(async ({ where }: any) =>
+      where.id === SPACE ? { communityId: 'com-1', parentId: 'parent' } : where.id === 'parent' ? { communityId: 'com-1', parentId: null } : null)
+    prisma.tag.findMany.mockResolvedValue([{ id: 'p', name: 'perso', communityId: null, spaceId: 'parent' }])
+    expect((await post({ itemIds: ['a'], addTagIds: ['p'] })).statusCode).toBe(200)
+
+    prisma.tag.findMany.mockResolvedValue([{ id: 's', name: 'autre', communityId: null, spaceId: 'sibling' }])
+    expect((await post({ itemIds: ['a'], addTagIds: ['s'] })).statusCode).toBe(400)
   })
 
   it('membre : élément d\'un autre (ni auteur ni assigné) refusé (403), rien écrit ; copie de séance verrouillée permise', async () => {

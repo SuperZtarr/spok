@@ -14,10 +14,23 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-12 — Tags : lot « Tags d'espace rétablis » codé, inscrit PRÊT POUR MEP, NON COMMITÉ. Specs SPOK (Tags [Tag], Vue Tags, Filtre Tags, Gestion des tags) et les 4 éléments de l'espace bugs en to_validate. Spec de la modale d'édition non touchée (session fiche-element active).
+- 2026-11-12 — Vue Assignations (session thème Assignations) : lot « colonnes des noms saisis sans compte » terminé, NON COMMITÉ, inscrit PRÊT POUR MEP. Tâche et spec SPOK passées to_validate.
+
+- 2026-11-12 — Questions (session thème Questions) : lot « modèles de réponse » terminé, NON COMMITÉ, inscrit PRÊT POUR MEP. Point ergonomie (`cmw9emo8n002if3cswdm1st9h`) : à trancher avec Thomas.
+
+- 2026-11-12 — Nouveautés (session thème Nouveautés) : lots 1/2 (vignettes /news) et 2/2 (/admin/news) terminés, NON COMMITÉS, inscrits PRÊT POUR MEP. Éléments SPOK regroupés sous « Nouveautés » `cmwdtua730136dpvm4f8x1tyl`, passés to_validate.
+
+- 2026-11-12 — Fiche élément (session thème fiche) : lots « Enregistrer et quitter », « vote gardé par chaque contribution », « historique de l'élément », « saisie retrouvée » et « références externes » terminés, NON COMMITÉS, inscrits PRÊT POUR MEP (schéma local poussé). Repéré hors lot : croix / Échap / clic à côté ferment la fiche sans confirmation (Modal onClose = closeWithoutSaving).
+
+- 2026-11-12 — Tags (session thème Tags) : diagnostic bug « JDR, mdp » — JDR = tag de GBK Team JDR, mdp = tag de Thomas Perso, bien filtrés par /spaces/:id/tags. Cause probable : éléments portant un tag d'une autre communauté (affiché sur la carte et en colonne de la vue Tags, buildTagColumns). Trous : PATCH /spaces/:id changeant de communauté ne remappe pas les tags des éléments (spaces.ts ~720) ; POST/PATCH items et merge acceptent tout tagId sans contrôle de portée. Données prod non vérifiées (MCP n'affiche pas les tags d'un élément). Question tags d'espace soumise à Thomas.
 - 2026-11-11 — Aperçus fichiers, CAUSE TROUVÉE du 0 image : `--prod --check` (tunnel ouvert par Thomas, port 25500) → 10/14 images calculables (6 PDF sans texte, 4 pptx ; 3 xlsx + 1 pptx sans miniature intégrée). `--prod --apply` → R2 refuse chaque envoi « request signature … does not match … Check your secret access key » : **R2_SECRET_ACCESS_KEY du .env racine périmée** (rotation 2026-07-11 ?). Rien écrit. À faire : Thomas recopie R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY depuis Railway (service API → Variables) dans le .env racine, puis relancer `--prod --apply` (tunnel). L'API de prod n'est pas concernée (ses propres variables).
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-12 (2)
+- 10 lots, un commit chacun ; ItemEditModal.tsx, item-modal.help.ts, items.ts, businessRules.ts entiers avec le dernier lot qui les touche (tags). Schéma additif : contributions.reactionType, table item_external_refs. 10 annonces datées. db:generate, typecheck OK, TNR 2751/2752 puis suite API relancée 1105/1105 (item-contents « envoi d'un fichier » instable sous charge, passe seul). APRÈS push, sur accord de Thomas : migrate-space-tags --prod --restore (sauvegarde du 2026-11-11) puis repair-tag-scope --prod
 
 ### MEP — 2026-11-12
 - 5 lots en 4 commits : « réponses possibles enregistrées au fil de la saisie » sans fichier propre, parti dans le commit « réponse liée à un élément » (QuestionPanel, test et aide communs) ; infobulle des règles ; un « ? » par section de la fiche ; indice du type Tâche. Schéma : question_options.refItemId (additif, db push au démarrage). Annonces item-section-help et question-option-item-ref datées. db:generate, typecheck OK, TNR 2659/2659, en-têtes OK

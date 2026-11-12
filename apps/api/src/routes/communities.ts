@@ -27,7 +27,7 @@ import { createNotification, sendInvitationEmail } from '../utils/notifications.
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
 import { communityReferentielsRoutes } from './community-referentiels.js';
-import { findTagByName } from '../utils/tagScope.js';
+import { communityScope, findTagByName } from '../utils/tagScope.js';
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
@@ -1112,7 +1112,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
       if (!name || name.trim().length === 0) return reply.badRequest('Tag name is required');
 
       // Nom unique sans casse parmi les tags de la communauté et les tags globaux (utils/tagScope.ts)
-      const existing = await findTagByName(fastify.prisma, request.params.id, name);
+      const existing = await findTagByName(fastify.prisma, communityScope(request.params.id), name);
       if (existing) return reply.conflict('Tag with this name already exists');
 
       const tag = await fastify.prisma.tag.create({
@@ -1139,7 +1139,7 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
 
       const { name, color } = request.body;
       if (name && name !== tag.name) {
-        const existing = await findTagByName(fastify.prisma, request.params.id, name);
+        const existing = await findTagByName(fastify.prisma, communityScope(request.params.id), name);
         if (existing && existing.id !== tag.id) return reply.conflict('Tag with this name already exists');
       }
 

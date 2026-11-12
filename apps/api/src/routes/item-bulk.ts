@@ -1,7 +1,7 @@
 /* Opérations en masse sur les items : duplication/déplacement multi-items vers un autre espace.
    Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue.
-   Tags des copies : tagMapping (utils/tagScope.ts, 2026-11-11) — tous les tags (communauté, globaux) suivent, plus
-   seulement les anciens tags d'espace.
+   Tags des copies : tagMapping (utils/tagScope.ts) — un tag encore visible dans l'espace d'arrivée est gardé, sinon
+   repris par nom, sinon recréé en tag de l'espace d'arrivée.
    POST /bulk-tags (2026-11-11) : ajout / retrait de tags sur plusieurs éléments en une transaction (vue Tags). */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { createAuditLog, createAuditLogs, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { shiftItemDates } from '../utils/dateShift.js';
-import { isGlobalTag, tagMapping } from '../utils/tagScope.js';
+import { isTagVisible, spaceTagScope, tagMapping, type TagScope } from '../utils/tagScope.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 
 const bulkDuplicateSchema = z.object({
@@ -31,7 +31,7 @@ const bulkTagsSchema = z.object({
 export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
   // Tags de plusieurs éléments en une fois (vue Tags, sélection multiple — 2026-11-11). Éléments de cet espace ou de
   // ses sous-espaces affichés (droit d'écriture vérifié par espace) ; un tag ajouté doit être visible depuis l'espace
-  // de chaque élément (global ou de sa communauté, utils/tagScope.ts). Tags seuls : permis sur une copie de séance
+  // de chaque élément (global, de sa communauté, ou de son espace / d'un espace parent — utils/tagScope.ts). Tags seuls : permis sur une copie de séance
   // verrouillée, comme PATCH tagIds. Une transaction ; une entrée d'audit UPDATE par élément changé (même batchId).
   fastify.post<{ Params: { spaceId: string }; Body: z.infer<typeof bulkTagsSchema> }>('/bulk-tags', async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
@@ -65,9 +65,11 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
       ? await fastify.prisma.tag.findMany({ where: { id: { in: addTagIds } }, select: { id: true, name: true, communityId: true, spaceId: true } })
       : [];
     if (addTags.length !== new Set(addTagIds).size) return reply.notFound('Tag not found');
-    const outOfScope = items.filter((i) => addTags.some((t) => !isGlobalTag(t) && t.communityId !== i.space?.communityId));
+    const scopeOf = new Map<string, TagScope>();
+    for (const spaceId of new Set(items.map((i) => i.spaceId))) scopeOf.set(spaceId, await spaceTagScope(fastify.prisma, spaceId));
+    const outOfScope = items.filter((i) => addTags.some((t) => !isTagVisible(t, scopeOf.get(i.spaceId)!)));
     if (outOfScope.length > 0) {
-      return reply.badRequest(`${outOfScope.length} élément(s) hors de la communauté d'un tag ajouté : seuls les tags globaux s'appliquent partout`);
+      return reply.badRequest(`${outOfScope.length} élément(s) hors de la portée d'un tag ajouté (autre communauté, ou espace qui n'hérite pas de ce tag)`);
     }
 
     const changed = items.filter((i) => {

@@ -6,6 +6,11 @@
    Lot 5 contenus multiples : copySheet et annonce copy-sheet-all-contents (élément actions) — tous les contenus copiés.
    hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
    hints.print : Imprimer du mode Afficher.
+   hints.unsavedLeave / unsavedSaveAndLeave : boutons de la confirmation de fermeture (useUnsavedGuard) ; annonce unsaved-save-and-leave sans date.
+   Élément references + fields.externalRefs : champ Références externes (ExternalRefsField) ; annonce item-external-refs sans date.
+   Élément brouillon + hints.draftExplain / draftChangedSince / draftResume / draftDiscard : bandeau ItemDraftBanner (lib/itemDraft.ts) ; annonce item-draft-local sans date.
+   Élément historique + hints.historyToggle / historyEmpty : section Historique (ItemHistorySection) ; annonce item-history-members sans date.
+   hints.contributionVote / contributionVotePending : vote gardé par chaque contribution (ContributionVoteBadge) ; annonce contribution-vote-kept sans date.
    Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans ItemEditModal — sauf
    insertion, déjà expliqué par les infobulles de la barre d'insertion répétée entre les blocs) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête.
    Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
@@ -91,10 +96,44 @@ export const elements = {
   contributions: {
     title: 'Contributions',
     short: 'Discussions sur cet élément.',
-    text: 'Discussions et commentaires sur cet élément. Chaque contribution a ses propres réactions.',
+    text: 'Discussions et commentaires sur cet élément. Pour contribuer, choisissez d\'abord votre vote (Contribution, Pertinent, Trollage…) : la contribution le garde et l\'affiche après votre nom, même si vous votez autrement ensuite. Chaque contribution a aussi ses propres réactions.',
     target: '[data-tour="item-contributions"]',
     noZone: true,
     side: 'top',
+    changes: [{
+      id: 'contribution-vote-kept',
+      kind: 'evolution',
+      text: 'Chaque contribution garde le vote avec lequel elle a été écrite (Pertinent, Trollage…), affiché après le nom de son auteur.',
+      date: '2026-11-12',
+    }],
+  },
+  brouillon: {
+    title: 'Saisie retrouvée',
+    short: 'Vos modifications non enregistrées, gardées par le navigateur.',
+    text: 'Tant qu\'une fiche a des modifications non enregistrées (champs, contribution en cours), le navigateur en garde une copie. Si la session expire, si le réseau coupe ou si la fiche se ferme sans enregistrer (croix, Échap), un bandeau la propose à la prochaine ouverture : « Reprendre » remet la saisie, à enregistrer ensuite ; « Ignorer » l\'efface. La copie est propre à votre compte et à ce navigateur, effacée après enregistrement, « Quitter sans enregistrer » ou au bout de 7 jours.',
+    target: '[data-tour="item-draft"]',
+    noZone: true,
+    side: 'bottom',
+    changes: [{
+      id: 'item-draft-local',
+      kind: 'new',
+      text: 'Une saisie non enregistrée n\'est plus perdue (session expirée, coupure, fiche fermée) : à la réouverture, la fiche propose de la reprendre.',
+      date: '2026-11-12',
+    }],
+  },
+  historique: {
+    title: 'Historique',
+    short: 'Qui a changé quoi, et quand.',
+    text: 'Dépliez « Historique » pour voir les changements de l\'élément, du plus récent au plus ancien : création, titre, type, statut, priorité, dates, parent, assigné, tags, description, contenus (images, fichiers, liens, schémas) et relations, avec leur auteur et leur date. Visible par toute personne qui peut lire l\'élément ; rien ne s\'y modifie. Les tags, l\'assigné et les contenus y figurent depuis le 12/11/2026.',
+    target: '[data-tour="item-history"]',
+    noZone: true,
+    side: 'top',
+    changes: [{
+      id: 'item-history-members',
+      kind: 'new',
+      text: 'Nouvelle section « Historique » en bas de la fiche : qui a changé le statut, les dates, les tags, les contenus… et quand.',
+      date: '2026-11-12',
+    }],
   },
   statut: {
     title: 'Statut',
@@ -123,11 +162,28 @@ export const elements = {
   tags: {
     title: 'Tags',
     short: 'Les étiquettes de l\'élément.',
-    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés les tags de la communauté de l\'espace et les tags globaux (badge « global », communs à tout SPOK) ; un tag créé en tapant rejoint la communauté de l\'espace et devient disponible dans tous ses espaces. Un espace sans communauté n\'a que les tags globaux, créés par un administrateur.',
-    changes: [{ id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' }],
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés, groupés par portée : les tags globaux (communs à tout SPOK), ceux de la communauté, et ceux de l\'espace et de ses espaces parents (badge « cet espace » ou nom de l\'espace parent). Un tag créé en tapant appartient à l\'espace de l\'élément : il est proposé dans cet espace et tous ses sous-espaces, pas ailleurs.',
+    changes: [
+      { id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' },
+      { id: 'item-tags-space-scope', kind: 'evolution', text: 'Tags d\'espace de retour : un tag créé depuis la fiche appartient à l\'espace et à ses sous-espaces. Le sélecteur range les tags par portée : globaux, communauté, espace.', date: '2026-11-12' },
+    ],
     target: '[data-tour="item-tags"]',
     noZone: true,
     side: 'left',
+  },
+  references: {
+    title: 'Références externes',
+    short: 'Les identifiants de l\'élément dans d\'autres outils.',
+    text: 'Notez où l\'élément existe ailleurs, sur une ligne : « Appli1 : Réf1 | appli2 : réf2 » — le nom de l\'outil, deux-points, la référence, et une barre verticale entre deux références (ex. « Jira : PROJ-12 | Salesforce : 0000575747 »). Enregistrées avec « Enregistrer », affichées avec le nom de l\'outil en gras, reprises dans le mode Afficher et « Copier la fiche », et retrouvées par la recherche (une partie suffit).',
+    target: '[data-tour="item-external-refs"]',
+    noZone: true,
+    side: 'left',
+    changes: [{
+      id: 'item-external-refs',
+      kind: 'new',
+      text: 'Nouveau champ « Références externes » (fiche complète) : notez les identifiants de l\'élément dans d\'autres outils, « Jira : PROJ-12 | Salesforce : 0000575747 », et retrouvez-le par la recherche.',
+      date: '2026-11-12',
+    }],
   },
   enfants: {
     title: 'Éléments enfants',
@@ -140,7 +196,7 @@ export const elements = {
   actions: {
     title: 'Actions',
     short: 'Enregistrer, fermer et autres actions.',
-    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion), avec tous ses contenus, ou copier sa vignette en image.',
+    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. « Fermer » avec des modifications en attente demande quoi faire : rester, quitter sans enregistrer ou enregistrer et quitter. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion), avec tous ses contenus, ou copier sa vignette en image.',
     target: '[data-tour="item-actions"]',
     noZone: true,
     side: 'top',
@@ -149,6 +205,11 @@ export const elements = {
       kind: 'evolution',
       text: '« Copier la fiche » reprend désormais tous les contenus de l\'élément (images, fichiers, liens, schémas), et non plus le seul média principal.',
       date: '2026-11-11',
+    }, {
+      id: 'unsaved-save-and-leave',
+      kind: 'evolution',
+      text: 'En fermant une fiche modifiée, la confirmation propose aussi « Enregistrer et quitter » : plus besoin de revenir à la fiche pour enregistrer.',
+      date: '2026-11-12',
     }],
   },
 } satisfies HelpElements;
@@ -164,6 +225,16 @@ export const help: HelpEntry = {
     sectionHelp: 'Chaque section de la fiche a son petit « ? » : cliquez-le pour savoir à quoi elle sert et comment s\'en servir.',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
+    contributionVote: 'Le vote choisi par l\'auteur en écrivant cette contribution. Il ne change plus, même si l\'auteur vote autrement ensuite.',
+    contributionVotePending: 'Ce vote sera enregistré avec votre contribution et affiché après votre nom. Pour en changer, annulez et choisissez un autre vote.',
+    draftExplain: 'Reprendre remet cette saisie dans la fiche ; rien n\'est enregistré tant que vous ne cliquez pas sur Enregistrer. Ignorer l\'efface définitivement.',
+    draftChangedSince: 'Attention : l\'élément a été modifié depuis par ailleurs. Après Reprendre, vérifiez les champs avant d\'enregistrer : votre saisie remplacerait ces changements.',
+    draftResume: 'Reprendre : remplit la fiche avec la saisie retrouvée (champs et contribution en cours). Rien n\'est enregistré avant Enregistrer.',
+    draftDiscard: 'Ignorer : efface la saisie retrouvée de ce navigateur. La fiche garde la version enregistrée.',
+    historyToggle: 'Historique : affiche ou masque les changements de l\'élément (auteur, date, avant → après). Consultation seule : rien n\'est modifié.',
+    historyEmpty: 'Aucun changement enregistré pour cet élément.',
+    unsavedLeave:'Quitter sans enregistrer : ferme la fiche et abandonne les modifications en attente. Ce qui était déjà enregistré ne change pas.',
+    unsavedSaveAndLeave: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche. Si l\'enregistrement échoue (élément modifié entre-temps par quelqu\'un d\'autre), la fiche reste ouverte.',
     openArticleUnsaved: 'Enregistrement de l\'article… Le mode Composer (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, tous les contenus (images, fichiers, liens, schémas), la description, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et ses images ; un fichier joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
@@ -184,6 +255,7 @@ export const help: HelpEntry = {
     dueDate: 'La date limite à respecter : elle classe l\'élément dans le Planning et le signale en retard une fois dépassée.',
     priority: 'De P1 (urgente) à P4 (basse) : sert au tri et à la vue Priorité.',
     parent: 'L\'élément sous lequel celui-ci se range, dans le même espace : il en devient un sous-élément.',
+    externalRefs: 'Format : « Outil : référence », une barre « | » entre deux références. Ex. : Jira : PROJ-12 | Salesforce : 0000575747.',
     assignee: 'La personne chargée de l\'élément. Un membre de l\'espace le voit dans ses tâches (« Mes tâches », « Ma journée ») et peut le modifier. Vous pouvez aussi saisir le nom d\'une personne sans compte SPOK : elle n\'est que nommée, sans droit ni notification.',
   },
   tour: elementTourSteps('item-modal', elements),

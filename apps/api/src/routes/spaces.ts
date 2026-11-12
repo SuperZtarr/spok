@@ -16,6 +16,8 @@
  * PATCH /:id : isSpaceOwnerOrAdmin comme le reste de la gestion — un admin global hors mode admin est refusé.
  * Changement de communauté (explicite ou hérité du nouveau parent) : appliqué à tous les sous-espaces
  * descendants, dans la même transaction que l'espace (membre de la communauté cible requis hors mode admin).
+ * Espace déplacé (parent ou communauté) : les tags devenus invisibles sur les éléments de l'arbre sont remappés
+ * ensuite (remapOutOfScopeItemTags, utils/tagScope.ts) — sinon un tag d'une autre communauté y resterait affiché.
  * Espace PRIVATE (visibilité effective) : réservé aux membres directs et à l'admin — GET /:id et
  * /:id/members passent par checkSpaceAccess (READONLY → rôle VIEWER), /:id/join réservé aux espaces
  * OUVERTS (hors propriétaire de communauté / mode admin), création d'un sous-espace ou rattachement
@@ -43,6 +45,7 @@ import { SPACE_ORDER_BY, compareSpaceOrder, nextSiblingPosition, reorderSiblings
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
 import { createItemTree } from '../utils/itemTree.js';
+import { remapOutOfScopeItemTags } from '../utils/tagScope.js';
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
@@ -718,8 +721,9 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       // Si la communauté change réellement, embarquer tous les sous-espaces descendants —
       // sinon un enfant reste rattaché à l'ancienne communauté alors que son parent a bougé.
       const communityIsChanging = communityIdOverride !== undefined && communityIdOverride !== (space.communityId ?? null);
+      const locationIsChanging = communityIsChanging || newParentId !== (space.parentId ?? null);
       let descendantIds: string[] = [];
-      if (communityIsChanging) {
+      if (locationIsChanging) {
         async function collectDescendantSpaces(parentId: string): Promise<string[]> {
           const children = await fastify.prisma.space.findMany({
             where: { parentId },
@@ -756,7 +760,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
 
-        if (descendantIds.length > 0) {
+        if (communityIsChanging && descendantIds.length > 0) {
           await tx.space.updateMany({
             where: { id: { in: descendantIds } },
             data: { communityId: communityIdOverride },
@@ -765,6 +769,12 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
 
         return updated;
       });
+
+      // Arbre déplacé (autre parent ou autre communauté) : les tags de ses éléments qui ne sont plus visibles (tag de
+      // l'ancienne communauté, d'un ancien espace parent) sont repris par nom ou recréés (utils/tagScope.ts)
+      if (locationIsChanging) {
+        await remapOutOfScopeItemTags(fastify.prisma, [request.params.id, ...descendantIds]);
+      }
 
       return updatedSpace;
     }

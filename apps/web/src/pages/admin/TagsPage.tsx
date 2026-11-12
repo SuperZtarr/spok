@@ -4,7 +4,8 @@
      supprimer (confirmation, irréversible : le tag est retiré de tous ses éléments).
    - Onglet « Doublons » : tags de même nom (sans casse) ; on choisit le tag gardé, « Fusionner » reporte les éléments
      des autres sur lui puis les supprime. Une cible n'est proposée que si elle est visible depuis tous les éléments
-     (global, ou communauté de tous les éléments) — l'API refuse sinon ; un ancien tag d'espace n'est jamais une cible.
+     (global, ou communauté de tous les éléments) — l'API refuse sinon ; un tag d'espace (rétabli le 2026-11-12, proposé
+     dans l'espace et ses sous-espaces) n'est pas proposé comme cible ici : le rendre global d'abord.
    Aide utilisateur : fiche pages/help/admin-tags.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint),
    phrase d'explication visible sous le titre des doublons (bloc de décision).
    Couleur : TagColorPicker (pastilles, « Aucune » = sans couleur — demande Thomas 2026-11-11, plus d'input type=color). */
@@ -25,7 +26,7 @@ type TabKey = 'all' | 'duplicates';
 type ScopeFilter = 'all' | AdminTag['scope'];
 type DuplicateTag = AdminTag & { communityIds: Array<string | null> };
 
-const SCOPE_LABEL: Record<AdminTag['scope'], string> = { global: 'Global', community: 'Communauté', space: 'Espace (ancien)' };
+const SCOPE_LABEL: Record<AdminTag['scope'], string> = { global: 'Global', community: 'Communauté', space: 'Espace' };
 
 function scopeDetail(tag: AdminTag): string {
   if (tag.scope === 'community') return tag.communityName ?? tag.communityId ?? '';
@@ -181,7 +182,7 @@ export function TagsPage() {
               <option value="all">Toutes les portées</option>
               <option value="global">Globaux</option>
               <option value="community">Communautés</option>
-              <option value="space">Espaces (anciens)</option>
+              <option value="space">Espaces</option>
             </select>
             <input
               value={search}

@@ -279,6 +279,7 @@ describe('Items routes', () => {
       allowSpaceAccess()
       const created = mockItem({ tags: [{ tag: { id: 'tag-1', name: 'urgent' } }] })
       prisma.item.create.mockResolvedValue(created)
+      prisma.tag.findMany.mockResolvedValue([{ id: 'tag-1' }]) // visible depuis l'espace (utils/tagScope.ts)
 
       const res = await app.inject({
         method: 'POST',
@@ -483,6 +484,7 @@ describe('Items routes', () => {
       allowSpaceAccess()
       prisma.item.findFirst.mockResolvedValue(mockItem())
       prisma.item.update.mockResolvedValue(mockItem({ tags: [{ tag: { id: 'tag-2', name: 'new' } }] }))
+      prisma.tag.findMany.mockResolvedValue([{ id: 'tag-2' }])
 
       const res = await app.inject({
         method: 'PATCH',
@@ -493,6 +495,22 @@ describe('Items routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(prisma.itemTag.deleteMany).toHaveBeenCalledWith({ where: { itemId: 'item-1' } })
+    })
+
+    it('tag hors de portée de l\'espace (autre communauté) : 400, rien écrit', async () => {
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem())
+      prisma.tag.findMany.mockResolvedValue([]) // tag-x non visible
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/spaces/${SPACE_ID}/items/item-1`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { tagIds: ['tag-x'] },
+      })
+
+      expect(res.statusCode).toBe(400)
+      expect(prisma.itemTag.deleteMany).not.toHaveBeenCalled()
     })
 
     it('should detect optimistic locking conflict', async () => {

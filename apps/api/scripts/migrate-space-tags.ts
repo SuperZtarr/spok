@@ -9,12 +9,16 @@
  *     listé — à traiter dans /admin/tags (rendre global, fusionner ou supprimer), décision d'admin.
  * La colonne tags.spaceId reste en base (inutilisée).
  *
+ * DÉCISION ANNULÉE le 2026-11-12 (Thomas) : les tags d'espace sont rétablis, hérités par les sous-espaces. Ne plus
+ * lancer la migration ; seul --restore sert désormais (retour complet des tags d'espace, tolérant — voir restore()).
+ *
  * Sauvegarde : chaque --apply écrit backups/migrate-space-tags-<env>-<date>.json (racine du dépôt, ignoré par git).
  * --restore <fichier> : tags convertis rendus à leur espace, tags fondus recréés (même id) avec leurs éléments, liens
  * ajoutés aux tags gardés retirés.
  *
  * Exécuter : npx tsx apps/api/scripts/migrate-space-tags.ts [--prod] [--apply] [--restore <fichier>]
- * Sans --apply : bilan seulement. --prod : base de prod, sur demande explicite de Thomas seulement.
+ * Sans --apply : bilan seulement (restauration comprise). --prod : base de prod, sur demande explicite de Thomas
+ * seulement, APRÈS le déploiement du code qui rétablit les tags d'espace.
  * Rejouable : ne traite que les tags d'espace restants.
  */
 import * as fs from 'fs';
@@ -101,16 +105,56 @@ async function migrate() {
   console.log(`Sauvegarde : ${file}`);
 }
 
+/**
+ * Retour des tags d'espace (décision Thomas 2026-11-12). Tolérant aux changements faits depuis la migration : tag ou
+ * espace supprimé → sauté et listé ; tag déjà rendu / recréé → sauté (rejouable) ; éléments supprimés ignorés ; tag
+ * de même nom déjà présent dans l'espace → les éléments le reçoivent au lieu d'un doublon. Sans --apply : bilan seul.
+ * Ensuite : scripts/repair-tag-scope.ts (éléments déplacés depuis, dont l'espace ne voit plus le tag rendu).
+ */
 async function restore(file: string) {
   const b: Backup = JSON.parse(fs.readFileSync(file, 'utf8'));
-  console.log(`[${isProd ? 'PROD' : 'local'}] RESTAURATION de ${file} (sauvegarde ${b.env} du ${b.at})`);
-  for (const c of b.converted) await prisma.tag.update({ where: { id: c.id }, data: { spaceId: c.spaceId, communityId: null } });
-  for (const m of b.merged) {
-    await prisma.tag.create({ data: { id: m.id, name: m.name, color: m.color, spaceId: m.spaceId } });
-    await prisma.itemTag.createMany({ data: m.itemIds.map((itemId) => ({ itemId, tagId: m.id })), skipDuplicates: true });
-    await prisma.itemTag.deleteMany({ where: { tagId: m.targetId, itemId: { in: m.addedItemIds } } });
+  console.log(`[${isProd ? 'PROD' : 'local'}] RESTAURATION de ${file} (sauvegarde ${b.env} du ${b.at}) — ${apply ? 'ÉCRITURE' : 'BILAN (sans --apply, rien n\'est écrit)'}`);
+  const spaceIds = [...new Set([...b.converted.map((c) => c.spaceId), ...b.merged.map((m) => m.spaceId)])];
+  const liveSpaces = new Set((await prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true } })).map((s) => s.id));
+  const skipped: string[] = [];
+  let converted = 0, recreated = 0, reused = 0, links = 0, unlinked = 0;
+
+  for (const c of b.converted) {
+    const tag = await prisma.tag.findUnique({ where: { id: c.id }, select: { id: true, name: true, spaceId: true } });
+    if (!tag) { skipped.push(`converti ${c.id} : tag supprimé depuis`); continue; }
+    if (tag.spaceId === c.spaceId) continue; // déjà rendu
+    if (!liveSpaces.has(c.spaceId)) { skipped.push(`converti « ${tag.name} » [${c.id}] : espace ${c.spaceId} supprimé — laissé en tag de communauté`); continue; }
+    converted++;
+    if (apply) await prisma.tag.update({ where: { id: c.id }, data: { spaceId: c.spaceId, communityId: null } });
   }
-  console.log(`Restauré : ${b.converted.length} tags rendus à leur espace, ${b.merged.length} tags recréés.`);
+
+  for (const m of b.merged) {
+    if (!liveSpaces.has(m.spaceId)) { skipped.push(`fondu « ${m.name} » [${m.id}] : espace ${m.spaceId} supprimé`); continue; }
+    let tagId = m.id;
+    if (!(await prisma.tag.findUnique({ where: { id: m.id }, select: { id: true } }))) {
+      const sameName = await prisma.tag.findFirst({
+        where: { spaceId: m.spaceId, name: { equals: m.name, mode: 'insensitive' } }, select: { id: true },
+      });
+      if (sameName) { tagId = sameName.id; reused++; }
+      else { recreated++; if (apply) await prisma.tag.create({ data: { id: m.id, name: m.name, color: m.color, spaceId: m.spaceId } }); }
+    }
+    const liveItems = m.itemIds.length
+      ? (await prisma.item.findMany({ where: { id: { in: m.itemIds } }, select: { id: true } })).map((i) => i.id)
+      : [];
+    links += liveItems.length;
+    unlinked += m.addedItemIds.length;
+    if (apply) {
+      if (liveItems.length) await prisma.itemTag.createMany({ data: liveItems.map((itemId) => ({ itemId, tagId })), skipDuplicates: true });
+      if (m.addedItemIds.length) await prisma.itemTag.deleteMany({ where: { tagId: m.targetId, itemId: { in: m.addedItemIds } } });
+    }
+  }
+
+  console.log(`  Tags rendus à leur espace : ${converted}`);
+  console.log(`  Tags fondus recréés : ${recreated} (tag de même nom déjà dans l'espace, réutilisé : ${reused})`);
+  console.log(`  Liens élément ↔ tag d'espace posés : ${links} ; liens ajoutés par la migration retirés : jusqu'à ${unlinked}`);
+  console.log(`  Sautés : ${skipped.length}`);
+  for (const s of skipped) console.log(`     - ${s}`);
+  if (apply) console.log('Suite : npx tsx apps/api/scripts/repair-tag-scope.ts' + (isProd ? ' --prod' : '') + ' (bilan), puis --apply');
 }
 
 (restoreFile ? restore(restoreFile) : migrate()).finally(() => prisma.$disconnect());

@@ -18,6 +18,11 @@
  * Plus de champ url (lot 4 contenus multiples, 2026-11-11) : un url envoyé est ignoré — médias = contenus. Le HTML des
  * descriptions n'est PAS nettoyÃ© ici : il l'est Ã  l'affichage (web, lib/sanitizeHtml.ts).
  * parentId : un parent qui change doit être dans le même espace (utils/itemParent.ts), refus en 400 sinon.
+ * tagIds : chaque tag doit être visible depuis l'espace (utils/tagScope.ts, invisibleTagIds), refus en 400 sinon.
+ * externalRefs (règle item-external-refs, 2026-11-12) : POST/PATCH les remplacent en bloc (cleanExternalRefs, limites
+ * externalRefsError → 400), le détail les renvoie en chaînes « Application : référence », dans l'ordre.
+ * Audit de PATCH /:id : en plus de serializeItemForAudit, assignedToId/assignedToName et tags (noms, si tagIds envoyé)
+ * avant/après (et externalRefs si envoyées), lus par l'historique de la fiche (item-history.ts, 2026-11-12) ; la restauration admin les ignore.
  * Personnes (auteur, assigné, auteurs de contributions) : id et nom seulement, jamais l'e-mail — ces routes sont
  * ouvertes aux visiteurs (règle members-email-scope, décision Thomas 2026-11-06).
  * contents (contenus multiples, 2026-11-08) : renvoyés triés par sorte puis position ; le détail les donne complets,
@@ -47,6 +52,7 @@ import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
 import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
 import { itemContentRoutes } from './item-contents.js';
+import { itemHistoryRoutes } from './item-history.js';
 
 // Contenus renvoyés avec l'élément : ordre d'affichage (enum Prisma déclaré IMAGE, FILE, LINK, DIAGRAM)
 const CONTENTS_ORDER = [{ kind: 'asc' as const }, { position: 'asc' as const }, { createdAt: 'asc' as const }];
@@ -56,10 +62,20 @@ const CONTENTS_LIST_SELECT = {
   position: true, createdById: true, createdAt: true, updatedAt: true,
 };
 import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
-import { ITEM_TYPES, isItemType, statusAllowedForType } from '@spok/shared';
+import { invisibleTagIds } from '../utils/tagScope.js';
+import { ITEM_TYPES, isItemType, statusAllowedForType, cleanExternalRefs, externalRefsError } from '@spok/shared';
 
 // Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
+
+/** Références externes envoyées → liste propre (normalisée, sans vide ni doublon) ou message de refus (règle item-external-refs) */
+function externalRefsInput(raw: string[] | undefined): { refs?: string[]; error?: string } {
+  if (raw === undefined) return {};
+  const refs = cleanExternalRefs(raw);
+  const error = externalRefsError(refs);
+  return error ? { error } : { refs };
+}
+const EXTERNAL_REFS_ORDER = { orderBy: { position: 'asc' as const }, select: { value: true } };
 
 const createItemSchema = z.object({
   type: z.enum(ITEM_TYPES),
@@ -75,6 +91,7 @@ const createItemSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   assignedToName: z.string().max(120).nullable().optional(),
   tagIds: z.array(z.string()).optional(),
+  externalRefs: z.array(z.string().max(1000)).max(100).optional(),
 });
 
 const updateItemSchema = z.object({
@@ -92,6 +109,7 @@ const updateItemSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   assignedToName: z.string().max(120).nullable().optional(),
   tagIds: z.array(z.string()).optional(),
+  externalRefs: z.array(z.string().max(1000)).max(100).optional(),
   updatedAt: z.string().datetime().optional(),
   propagateToChildren: z.boolean().optional(),
 });
@@ -347,6 +365,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemArticleWriteRoutes);
     await authInstance.register(itemQuestionWriteRoutes);
     await authInstance.register(itemContentRoutes);
+    await authInstance.register(itemHistoryRoutes);
   });
 
   // Lecture d'un article (authentification facultative : un article public se lit en anonyme)
@@ -490,7 +509,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = createItemSchema.parse(request.body);
-      const { tagIds, ...itemData } = body;
+      const { tagIds, externalRefs: rawExternalRefs, ...itemData } = body;
+      const createRefs = externalRefsInput(rawExternalRefs);
+      if (createRefs.error) return reply.badRequest(createRefs.error);
+      // Tags hors de portée de l'espace refusés (utils/tagScope.ts : un tag d'une autre communauté ne s'y pose pas)
+      if (tagIds?.length && (await invisibleTagIds(fastify.prisma, request.params.spaceId, tagIds)).length > 0) {
+        return reply.badRequest('Tag non disponible dans cet espace');
+      }
       // Statut réservé à un autre type → retiré ; une question démarre « Ouverte » (utils/question.ts)
       itemData.status = statusForType(itemData.type, itemData.status);
 
@@ -513,6 +538,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             ? {
                 create: tagIds.map((tagId) => ({ tagId })),
               }
+            : undefined,
+          externalRefs: createRefs.refs?.length
+            ? { create: createRefs.refs.map((value, position) => ({ value, position })) }
             : undefined,
         } as any,
         include: {
@@ -611,6 +639,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         createdBy: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
         contents: { orderBy: CONTENTS_ORDER },
+        externalRefs: EXTERNAL_REFS_ORDER,
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
         },
@@ -653,6 +682,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       ...item,
       tags: item.tags.map((t) => t.tag),
+      externalRefs: (item.externalRefs ?? []).map((r) => r.value),
       children: item.children.map((c) => ({
         ...c,
         tags: c.tags.map((t) => t.tag),
@@ -703,7 +733,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const body = updateItemSchema.parse(request.body);
-      const { tagIds, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
+      const { tagIds, externalRefs: rawExternalRefs, updatedAt: clientUpdatedAt, propagateToChildren, ...updateData } = body;
+      const updateRefs = externalRefsInput(rawExternalRefs);
+      if (updateRefs.error) return reply.badRequest(updateRefs.error);
+      if (tagIds?.length && (await invisibleTagIds(fastify.prisma, existingItem.spaceId, tagIds)).length > 0) {
+        return reply.badRequest('Tag non disponible dans cet espace');
+      }
       // Statut cohérent avec le type (changement de type ou de statut) : statut réservé à un autre type retiré,
       // question remise à « Ouverte » si son statut n'est pas une issue (utils/question.ts)
       const finalType = updateData.type ?? existingItem.type;
@@ -780,8 +815,23 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Save state before update for audit
-      const beforeState = serializeItemForAudit(existingItem);
+      // Save state before update for audit — plus assigné et tags (noms) pour l'historique de la fiche
+      // (utils/itemHistory.ts, 2026-11-12) ; serializeItemForAudit reste celui de la restauration
+      const beforeState: Record<string, unknown> = {
+        ...serializeItemForAudit(existingItem),
+        assignedToId: existingItem.assignedToId,
+        assignedToName: existingItem.assignedToName,
+      };
+      if (tagIds !== undefined) {
+        const beforeTags = await fastify.prisma.itemTag.findMany({ where: { itemId: request.params.id }, select: { tag: { select: { name: true } } } });
+        beforeState.tags = beforeTags.map((t: { tag: { name: string } }) => t.tag.name);
+      }
+      // Références externes : remplacées en bloc (règle item-external-refs), anciennes valeurs pour l'historique
+      if (updateRefs.refs) {
+        const beforeRefs = await fastify.prisma.itemExternalRef.findMany({ where: { itemId: request.params.id }, ...EXTERNAL_REFS_ORDER });
+        beforeState.externalRefs = beforeRefs.map((r: { value: string }) => r.value);
+        await fastify.prisma.itemExternalRef.deleteMany({ where: { itemId: request.params.id } });
+      }
 
       // Handle tag updates
       if (tagIds !== undefined) {
@@ -822,6 +872,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
                 create: tagIds.map((tagId) => ({ tagId })),
               }
             : undefined,
+          externalRefs: updateRefs.refs?.length
+            ? { create: updateRefs.refs.map((value, position) => ({ value, position })) }
+            : undefined,
         } as any,
         include: {
           tags: { include: { tag: true } },
@@ -837,7 +890,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         spaceId: request.params.spaceId,
         changes: {
           before: beforeState,
-          after: serializeItemForAudit(item),
+          after: {
+            ...serializeItemForAudit(item),
+            assignedToId: item.assignedToId,
+            assignedToName: item.assignedToName,
+            ...(tagIds !== undefined ? { tags: item.tags.map((t: { tag: { name: string } }) => t.tag.name) } : {}),
+            ...(updateRefs.refs ? { externalRefs: updateRefs.refs } : {}),
+          },
         },
       });
 

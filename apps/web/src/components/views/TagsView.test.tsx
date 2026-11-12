@@ -32,10 +32,13 @@ describe('colonnes, palette, cibles', () => {
   it('colonnes : tous les tags proposés, même non portés, plus un tag porté hors propositions, triés', () => {
     expect(buildTagColumns([item('a', [old])], [ux, bug, perf]).map((t) => t.id)).toEqual(['old', 'bug', 'perf', 'ux']);
   });
-  it('palette : globaux d\'abord, communauté ensuite', () => {
-    const p = splitPalette([ux, bug, perf]);
-    expect(p.global.map((t) => t.id)).toEqual(['bug']);
-    expect(p.community.map((t) => t.id)).toEqual(['perf', 'ux']);
+  it('palette : globaux, communauté, puis espace (tags de l\'espace avant ceux hérités)', () => {
+    const inherited = { id: 'h', name: 'a-hérité', color: null, scope: 'space', spaceId: 'parent', inherited: true } as Tag;
+    const own = { id: 'o', name: 'z-ici', color: null, scope: 'space', spaceId: 'here', inherited: false } as Tag;
+    const p = splitPalette([ux, inherited, bug, own, perf]);
+    expect(p.map((g) => [g.label, g.tags.map((t) => t.id)])).toEqual([
+      ['Globaux', ['bug']], ['Communauté', ['perf', 'ux']], ['Espace', ['o', 'h']],
+    ]);
   });
   it('cibles : toute la sélection si l\'élément en fait partie, sinon lui seul', () => {
     expect(targetsOf('a', new Set(['a', 'b']))).toEqual(['a', 'b']);

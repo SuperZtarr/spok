@@ -1,9 +1,11 @@
 /* Vue Tags (décision Thomas 2026-11-11, refonte le même jour après essai) : classer les éléments par tag sans ouvrir
  * leur fiche, comme un Kanban sur les tags.
- * Colonnes : « Sans tag », puis TOUS les tags proposés dans l'espace (tagOptions : communauté + globaux), même vides,
+ * Colonnes : « Sans tag », puis TOUS les tags proposés dans l'espace (tagOptions : globaux, communauté, espace et
+ * espaces parents), même vides,
  * plus un tag porté qui n'y serait pas ; « Masquer les tags vides » les retire de l'affichage (non mémorisé). Un élément
  * à plusieurs tags a une carte dans chacune de ses colonnes.
- * Palette en haut : une pastille par tag, globaux sur la 1re ligne, ceux de la communauté dessous (demande Thomas).
+ * Palette en haut : une pastille par tag, une ligne par portée — globaux, communauté, espace (tags de l'espace puis
+ *   ceux hérités d'un espace parent) — via lib/tagScope.ts (demandes Thomas 2026-11-11 et 2026-11-12).
  * Gestes (règle tags-view-drop de businessRules.ts) :
  * - pastille glissée sur une carte → ce tag ajouté à l'élément (à toute la sélection si la carte est cochée) ;
  * - carte glissée sur une colonne de tag → tag ajouté (elle reste dans sa colonne d'origine) ; sur « Sans tag » → tag
@@ -11,7 +13,7 @@
  * - × d'une carte → tag de sa colonne retiré ; barre de sélection → Ajouter un tag / Retirer un tag / Désélectionner.
  * Accès visibles : cases à cocher, ×, barre de sélection — le glisser n'est jamais le seul moyen.
  * Props clés :
- * - items : éléments affichés (filtrés par la barre d'espace) ; tagOptions : tags proposés (isGlobalTag pour la palette)
+ * - items : éléments affichés (filtrés par la barre d'espace) ; tagOptions : tags proposés (portée pour la palette)
  * - onSetTags(itemId, tags) : liste COMPLÈTE des tags d'un élément ; onBulkTags(itemIds, add, removeIds) : plusieurs
  *   éléments en une requête (SpacePage → useSpaceActions)
  * - canEdit : faux → lecture seule (ni palette, ni cases, ni glisser, ni ×)
@@ -48,6 +50,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { HelpHint } from '../../help/HelpHint';
 import { help as tagsHelp } from './help/tags.help';
+import { groupTagsByScope } from '../../lib/tagScope';
 
 /** Identifiant de la colonne « Sans tag » */
 export const NO_TAG_COLUMN = '__none__';
@@ -112,12 +115,9 @@ export function buildTagColumns(items: Item[], tagOptions: Tag[]): Tag[] {
   return [...byId.values()].sort(byName);
 }
 
-/** Palette : tags globaux d'abord, puis ceux de la communauté (demande Thomas 2026-11-11) */
-export function splitPalette(tagOptions: ViewTag[]): { global: ViewTag[]; community: ViewTag[] } {
-  return {
-    global: tagOptions.filter((t) => t.isGlobalTag).sort(byName),
-    community: tagOptions.filter((t) => !t.isGlobalTag).sort(byName),
-  };
+/** Palette : une ligne par portée — globaux, communauté, espace (demandes Thomas 2026-11-11 et 2026-11-12) */
+export function splitPalette(tagOptions: ViewTag[]) {
+  return groupTagsByScope(tagOptions);
 }
 
 /** Éléments visés par un geste sur un élément : toute la sélection s'il en fait partie, sinon lui seul */
@@ -390,8 +390,8 @@ export function TagsView({
         onDragEnd={handleDragEnd} onDragCancel={() => { setActive(null); setOverColumn(null); }}>
         {canEdit && tagOptions.length > 0 && (
           <div className="px-4 pt-3 space-y-1.5 flex-shrink-0" data-help-zone="tags:palette" data-tour="tags-palette">
-            {([['Globaux', palette.global], ['Communauté', palette.community]] as const).map(([label, list]) => list.length > 0 && (
-              <div key={label} className="flex flex-wrap items-center gap-1.5">
+            {palette.map(({ scope, label, tags: list }) => (
+              <div key={scope} className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground w-24 flex-shrink-0">{label}</span>
                 {list.map((t) => <PaletteChip key={t.id} tag={t} />)}
               </div>

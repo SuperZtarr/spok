@@ -7,8 +7,9 @@
  * pendant qu'on coche. Bloc toujours déplié à partir de xl (1280 px) ; en dessous, le bouton Filtre/Aperçu le déplie.
  * Critère posé (type, statut, tag ou texte) : bouton Filtre/Aperçu en ambre et bouton « Effacer » rouge à droite des
  * composants de filtre (2026-11-11), hors du bloc dépliable pour rester accessible, qui vide les quatre critères.
- * Tags (2026-11-11) : choix multiple parmi tagOptions (tags de la communauté + globaux, fournis par SpacePage) et
- * « Sans tag » (NO_TAG) ; la comparaison est faite par SpacePage (lib/itemHighlight matchesTags), jamais ici.
+ * Tags (2026-11-11) : choix multiple parmi tagOptions (tags proposés dans l'espace, fournis par SpacePage, groupés
+ * par portée — globaux, communauté, espace — via lib/tagScope.ts, 2026-11-12) et « Sans tag » (NO_TAG) ; la
+ * comparaison est faite par SpacePage (lib/itemHighlight matchesTags), jamais ici.
  * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
  * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
  * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
@@ -32,7 +33,7 @@
  * (textes : help/shellZones.ts).
  * Bouton Historique : en mode admin seulement (règle space-history-admin-only).
  */
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useAdminMode } from '../components/DevDbStatus';
@@ -50,7 +51,8 @@ import {
   ArrowUpDown,
   type LucideIcon,
 } from 'lucide-react';
-import type { ItemType, MenuItemConfig, StatusConfig } from '@spok/shared';
+import type { ItemType, MenuItemConfig, StatusConfig, Tag } from '@spok/shared';
+import { groupTagsByScope } from '../lib/tagScope';
 import { DEFAULT_REFERENTIELS, ITEM_TYPES, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY, statusesForItems } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
@@ -173,7 +175,7 @@ export interface SpaceToolbarProps {
   tagFilter: string[];
   onTagFilterChange: (tagIds: string[]) => void;
   /** Tags proposés dans l'espace (communauté + globaux, GET /spaces/:id/tags) */
-  tagOptions?: Array<{ id: string; name: string; color?: string | null }>;
+  tagOptions?: Tag[];
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   /** true : la vue affichée met en évidence sans masquer — le bloc s'appelle « Aperçu » */
@@ -583,15 +585,20 @@ export function SpaceToolbar({
                                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${tagFilter.length === 0 ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                                     <span className="flex-1 text-left">Tous les tags</span>
                                   </button>
-                                  {[{ id: NO_TAG, name: 'Sans tag', color: null as string | null | undefined }, ...options].map((t) => {
+                                  {[{ id: NO_TAG, name: 'Sans tag', color: null as string | null | undefined, header: null as string | null },
+                                    // Groupes de portée (lib/tagScope.ts) : un intertitre avant le premier tag de chaque groupe
+                                    ...groupTagsByScope(options).flatMap((g) => g.tags.map((t, i) => ({ ...t, header: i === 0 ? g.label : null })))].map((t) => {
                                     const isActive = tagFilter.includes(t.id);
                                     return (
-                                      <button key={t.id} aria-pressed={isActive} onClick={() => onTagFilterChange(toggleValue(tagFilter, t.id))}
+                                      <Fragment key={t.id}>
+                                      {t.header && <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t.header}</div>}
+                                      <button aria-pressed={isActive} onClick={() => onTagFilterChange(toggleValue(tagFilter, t.id))}
                                         className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}>
                                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.color ? '' : 'bg-muted-foreground/40'}`} style={t.color ? { backgroundColor: t.color } : undefined} />
                                         <span className={`flex-1 text-left truncate ${t.id === NO_TAG ? 'italic' : ''}`}>{t.name}</span>
                                         {isActive && <span className="text-primary text-xs">✓</span>}
                                       </button>
+                                      </Fragment>
                                     );
                                   })}
                                   {options.length === 0 && <p className="px-3 py-1.5 text-xs text-muted-foreground">Aucun tag dans cet espace</p>}

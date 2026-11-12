@@ -694,6 +694,8 @@ describe('Spaces routes', () => {
       })
       // Espace + descendants écrits dans la même transaction (tout ou rien)
       expect(prisma.$transaction).toHaveBeenCalledTimes(1)
+      // Puis tags devenus invisibles remappés sur les éléments de tout l'arbre (utils/tagScope.ts)
+      expect(prisma.itemTag.findMany.mock.calls.map((c: any[]) => c[0].where.item.spaceId)).toEqual([SPACE_ID, 'child-1', 'grandchild-1'])
     })
 
     it('cascade la communauté héritée du nouveau parent aux descendants', async () => {
@@ -759,6 +761,7 @@ describe('Spaces routes', () => {
 
       expect(res.statusCode).toBe(200)
       expect(prisma.space.updateMany).not.toHaveBeenCalled()
+      expect(prisma.itemTag.findMany).not.toHaveBeenCalled() // pas de déplacement : pas de remappage des tags
     })
 
     it('should reject community on PERSONAL space', async () => {

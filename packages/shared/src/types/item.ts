@@ -4,7 +4,9 @@
  * contents (2026-11-08, contenus multiples) : contenus de l'élément, triés ; xml absent dans les listes (types/itemContent.ts).
  * Plus de champ url (lot 4, 2026-11-11) : images, fichiers, liens et schémas sont TOUS des contenus. La colonne
  * items.url reste en base, inutilisée (sauvegarde), jusqu'à son retrait.
- * ItemType : tiré du registre des types (constants/typeRegistry.ts), jamais réécrit ici. */
+ * ItemType : tiré du registre des types (constants/typeRegistry.ts), jamais réécrit ici.
+ * Tag (2026-11-12) : portée global / communauté / espace (TagScope) et champs de GET /spaces/:id/tags (spaceName,
+ * inherited) — tags d'espace rétablis, hérités par les sous-espaces. */
 import type { ContributionWithAuthor } from './contribution.js';
 import type { ItemType } from '../constants/typeRegistry.js';
 import type { ReactionSummary } from './reaction.js';
@@ -21,6 +23,9 @@ export interface Item {
   content?: Record<string, unknown> | null;
   /** Contenus de l'élément (images, fichiers, liens, schémas), dans l'ordre d'affichage */
   contents?: ItemContent[];
+  /** Références externes (règle item-external-refs) : une entrée par application, « Application : réf1 | réf2 » ;
+   *  renvoyées par le détail d'un élément, mises en forme par parseExternalRef (constants/externalRefs.ts) */
+  externalRefs?: string[];
   status?: string | null;
   priority?: number | null;
   position: number;
@@ -94,6 +99,8 @@ export interface CreateItemInput {
   assignedToId?: string | null;
   assignedToName?: string | null;
   tagIds?: string[];
+  /** Remplace toutes les références externes (règle item-external-refs) */
+  externalRefs?: string[];
 }
 
 export interface UpdateItemInput {
@@ -111,6 +118,8 @@ export interface UpdateItemInput {
   assignedToId?: string | null;
   assignedToName?: string | null;
   tagIds?: string[];
+  /** Remplace toutes les références externes (règle item-external-refs) */
+  externalRefs?: string[];
   updatedAt?: string;
   propagateToChildren?: boolean;
 }
@@ -129,11 +138,22 @@ export interface CreateRelationInput {
   label?: string;
 }
 
+/** Portée d'un tag (apps/api/src/utils/tagScope.ts) : global, communauté, ou espace (hérité par ses sous-espaces) */
+export type TagScope = 'global' | 'community' | 'space';
+
 export interface Tag {
   id: string;
   name: string;
   color?: string | null;
-  spaceId: string;
+  /** Renseigné pour un tag d'espace seulement */
+  spaceId?: string | null;
+  communityId?: string | null;
+  /** Champs de GET /spaces/:id/tags : portée, nom de l'espace d'un tag d'espace, tag hérité d'un espace parent */
+  scope?: TagScope;
+  isGlobalTag?: boolean;
+  isCommunityTag?: boolean;
+  spaceName?: string | null;
+  inherited?: boolean;
 }
 
 export interface CreateTagInput {

@@ -4,7 +4,8 @@
    qu'ils disent doit rester vrai de useSpaceActions.handleSetTags / handleBulkTags (enregistré aussitôt, sans
    « Enregistrer » ; plusieurs éléments en une requête POST bulk-tags).
    Annonces `tags-view` et `bugs-view-removed` datées (MEP du 2026-11-11) ; `tags-view-palette` (refonte : colonnes de
-   tous les tags, palette, sélection multiple) sans date, datée par la session MEP. */
+   tous les tags, palette, sélection multiple) sans date, datée par la session MEP ; `tags-space-scope` (tags d'espace
+   rétablis, palette à trois lignes, 2026-11-12) sans date. */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
@@ -13,7 +14,7 @@ const elements: HelpElements = {
   contenu: {
     title: 'Tags',
     short: 'Classer les éléments par tag, sans ouvrir leur fiche.',
-    text: 'Une colonne par tag disponible dans l\'espace (tags de la communauté et tags globaux), et « Sans tag » pour ce qui n\'est pas encore classé. Un élément qui porte plusieurs tags apparaît dans chacune de leurs colonnes. Les filtres de la barre (types, statuts, tags, texte) s\'appliquent.',
+    text: 'Une colonne par tag disponible dans l\'espace (tags globaux, de la communauté, de l\'espace et de ses espaces parents), et « Sans tag » pour ce qui n\'est pas encore classé. Un élément qui porte plusieurs tags apparaît dans chacune de leurs colonnes. Les filtres de la barre (types, statuts, tags, texte) s\'appliquent.',
     side: 'top',
     changes: [
       { id: 'tags-view', kind: 'new', text: 'Nouvelle vue Tags : classez vos éléments en les glissant d\'une colonne de tag à l\'autre, et voyez d\'un coup d\'œil ce qui n\'est pas encore classé.', date: '2026-11-11' },
@@ -24,9 +25,10 @@ const elements: HelpElements = {
   palette: {
     title: 'Palette de tags',
     short: 'Glissez un tag sur un élément pour le lui ajouter.',
-    text: 'Tous les tags disponibles : les tags globaux sur la première ligne, ceux de la communauté dessous. Glissez une pastille sur une carte pour ajouter ce tag à l\'élément — à tous les éléments cochés si la carte fait partie de la sélection.',
+    text: 'Tous les tags disponibles, une ligne par portée : globaux (tous les espaces), communauté, puis espace — ceux de cet espace, puis ceux hérités d\'un espace parent. Un tag créé depuis la fiche d\'un élément est un tag de l\'espace, proposé aussi dans ses sous-espaces. Glissez une pastille sur une carte pour ajouter ce tag à l\'élément — à tous les éléments cochés si la carte fait partie de la sélection.',
     target: '[data-tour="tags-palette"]',
     side: 'bottom',
+    changes: [{ id: 'tags-space-scope', kind: 'evolution', text: 'Les tags d\'espace sont de retour : un tag créé depuis la fiche appartient à l\'espace et à ses sous-espaces. La palette les montre sur une troisième ligne « Espace ».', date: '2026-11-12' }],
   },
   selection: {
     title: 'Sélection',
