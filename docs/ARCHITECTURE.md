@@ -76,6 +76,7 @@ const mutation = useMutation({
 | `useProcessNodes(spaceId)` | `['process-nodes', spaceId]` | Positions du canevas de la vue Process ; `place` / `remove` optimistes (retirer ≠ supprimer l'item) |
 | `useItemLinks(spaceId, itemId)` | `['item-links', spaceId, itemId]` | Parent, enfants et relations d'un item avec leur espace (vue Loupe) ; relations vers un espace illisible retirées par l'API ; cache de 30 s |
 | `useArticle(spaceId, articleId)` | `['article', spaceId, articleId]` | Blocs d'un article (table `article_blocks`, routes `item-article.ts`) ; `updateBlock` / `reorder` optimistes, `removeBlock` retire la référence (≠ supprimer l'élément) ; 409 `LESS_VISIBLE` renvoyé à l'appelant |
+| `useItemHistory(spaceId, itemId, version, enabled)` | `['item-history', spaceId, itemId, version]` | Historique d'un élément pour sa fiche (`useInfiniteQuery`, page suivante par `before`) ; `version` = `updatedAt` de l'élément, relu sans invalidation ; chargé seulement à l'ouverture de la section |
 | `useLiveSession(spaceId, { stream })` | `['live-session', spaceId]` | Séance live d'un espace de séance (404 = pas une séance). Flux SSE (`lib/liveStream.ts`) seulement avec `stream: true` — réservé à `LiveSessionHost` (un flux par onglet) ; événements appliqués sur le cache, refetch à chaque reconnexion |
 
 ---

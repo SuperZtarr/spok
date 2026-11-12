@@ -1,5 +1,6 @@
 /* Types AuditLog : actions, entités, aperçu de suppression (delete preview).
- * Entité 'Tag' et action 'MERGE' (2026-11-11) : gestion des tags dans /admin/tags (routes/admin/tags.ts). */
+ * Entité 'Tag' et action 'MERGE' (2026-11-11) : gestion des tags dans /admin/tags (routes/admin/tags.ts).
+ * ItemHistory* (2026-11-12) : historique d'un élément lu par ses membres dans la fiche (règle item-history-members). */
 export type AuditAction =
   | 'CREATE'
   | 'UPDATE'
@@ -68,4 +69,28 @@ export interface CommunityDeletePreview {
   spaces: Array<{ id: string; name: string; itemCount: number }>;
   totalItemCount: number;
   totalMemberCount: number;
+}
+
+/** Historique d'un élément dans sa fiche (GET /spaces/:spaceId/items/:id/history, 2026-11-12) : lignes déjà
+ *  libellées par l'API (utils/itemHistory.ts), jamais l'état brut du journal. label = ce qui a changé ; before /
+ *  after = valeurs lisibles (absentes quand la ligne se suffit : « Description modifiée »). */
+export interface ItemHistoryLine {
+  label: string;
+  before?: string | null;
+  after?: string | null;
+}
+
+export interface ItemHistoryEntry {
+  id: string;
+  createdAt: string;
+  user: { id: string; name: string } | null;
+  /** Écriture faite par le MCP (jeton personnel) */
+  viaMcp: boolean;
+  lines: ItemHistoryLine[];
+}
+
+export interface ItemHistoryResponse {
+  entries: ItemHistoryEntry[];
+  /** createdAt de la dernière entrée lue, à repasser en ?before= ; null = plus rien */
+  nextCursor: string | null;
 }

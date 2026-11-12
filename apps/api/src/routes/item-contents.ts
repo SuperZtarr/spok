@@ -21,6 +21,10 @@
  * Lecture : les contenus sont renvoyés avec l'élément (items.ts — détail avec xml, liste sans xml).
  * Seule source des médias d'un élément depuis le lot 4 (2026-11-11) : plus de pont vers Item.url / content.xml.
  * Règles de gestion : apps/web/src/lib/businessRules.ts (item-contents-*).
+ * Journal (2026-11-12) : chaque ajout, modification, retrait et réordonnancement écrit une entrée UPDATE de l'ÉLÉMENT
+ * (entity Item, entityId = élément) avec changes.after.contentChange = { op, kind, name, previousName?, … } — lue par
+ * l'historique de la fiche (utils/itemHistory.ts). Clé ignorée par la restauration admin : pas d'entité ItemContent,
+ * que la restauration (auditLogs.ts) traiterait comme un élément. L'aperçu PNG d'un schéma (previewOf) n'est pas tracé.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -29,6 +33,7 @@ import { isR2Configured, isR2Url, isItemStorageUrl, processImage, uploadImageToR
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { storeFilePreview } from '../utils/filePreview.js';
+import { createAuditLog } from '../utils/audit.js';
 
 type P = { spaceId: string; id: string };
 type PC = P & { contentId: string };
@@ -88,6 +93,18 @@ async function nextPosition(prisma: any, itemId: string, kind: string): Promise<
   return typeof max === 'number' ? max + 1 : 0;
 }
 
+type ContentChange = { op: 'add' | 'update' | 'remove' | 'reorder'; kind: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean };
+
+/** Entrée de journal d'un changement de contenus, rattachée à l'élément (voir en-tête) */
+const logContentChange = (prisma: any, request: any, itemId: string, change: ContentChange) =>
+  createAuditLog(prisma, {
+    action: 'UPDATE', entity: 'Item', entityId: itemId, userId: request.user.userId,
+    spaceId: (request.params as P).spaceId, changes: { after: { contentChange: change } },
+  });
+
+/** Nom affichable d'un contenu : son nom, sinon son adresse */
+const contentLabel = (c: { name?: string | null; url?: string | null }) => c.name || c.url || null;
+
 /** Après toute écriture de contenus : élément marqué modifié */
 const touchItem = async (prisma: any, itemId: string, userId: string) => {
   await prisma.item.update({ where: { id: itemId }, data: { updatedAt: new Date(), updatedById: userId } });
@@ -115,6 +132,7 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
     await touchItem(fastify.prisma, item.id, request.user.userId);
+    await logContentChange(fastify.prisma, request, item.id, { op: 'add', kind: content.kind, name: contentLabel(content) });
     return reply.status(201).send(content);
   });
 
@@ -171,6 +189,7 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
     await touchItem(fastify.prisma, item.id, request.user.userId);
+    await logContentChange(fastify.prisma, request, item.id, { op: 'add', kind: content.kind, name: contentLabel(content) });
     return reply.status(201).send(content);
   });
 
@@ -192,6 +211,16 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.xml !== undefined) data.xml = body.xml;
     const updated = await fastify.prisma.itemContent.update({ where: { id: content.id }, data });
     await touchItem(fastify.prisma, item.id, request.user.userId);
+    const renamed = body.name !== undefined && (body.name ?? null) !== (content.name ?? null);
+    const urlChanged = body.url !== undefined && body.url !== content.url;
+    const xmlChanged = body.xml !== undefined && body.xml !== content.xml;
+    if (renamed || urlChanged || xmlChanged) {
+      await logContentChange(fastify.prisma, request, item.id, {
+        op: 'update', kind: content.kind, name: contentLabel(updated),
+        ...(renamed ? { previousName: contentLabel(content) } : {}),
+        ...(urlChanged ? { urlChanged: true } : {}), ...(xmlChanged ? { xmlChanged: true } : {}),
+      });
+    }
     return updated;
   });
 
@@ -206,6 +235,7 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     await touchItem(fastify.prisma, item.id, request.user.userId);
     await deleteIfUnused(fastify.prisma, content.url, item.id);
     await deleteIfUnused(fastify.prisma, content.previewUrl, item.id);
+    await logContentChange(fastify.prisma, request, item.id, { op: 'remove', kind: content.kind, name: contentLabel(content) });
     return reply.status(204).send();
   });
 
@@ -226,6 +256,7 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.prisma.$transaction(ids.map((id, position) =>
       fastify.prisma.itemContent.update({ where: { id }, data: { position } })));
     await touchItem(fastify.prisma, item.id, request.user.userId);
+    await logContentChange(fastify.prisma, request, item.id, { op: 'reorder', kind });
     return fastify.prisma.itemContent.findMany({ where: { itemId: item.id }, orderBy: [{ kind: 'asc' }, { position: 'asc' }] });
   });
 };
