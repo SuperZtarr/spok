@@ -307,7 +307,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [convertingItem, resolveItemSpaceId, convertToSpaceMutation]);
 
-  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; assignedToId?: string | null; priority?: number | null }) => {
+  const handleInlineUpdate = useCallback((id: string, data: { status?: string; type?: ItemType; startDate?: string | null; endDate?: string | null; dueDate?: string | null; assignedToId?: string | null; assignedToName?: string | null; priority?: number | null }) => {
     const itemSpaceId = resolveItemSpaceId(id);
     const item = allItems.find(i => i.id === id);
     // Statut changé : mêmes règles de dates que la fiche (lib/statusChange.ts) — « Non défini » efface début et fin,

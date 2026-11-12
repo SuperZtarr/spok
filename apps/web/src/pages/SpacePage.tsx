@@ -1391,7 +1391,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               portalGroups={portalGroups}
               onEdit={openItemFromView}
               onDelete={actions.handleDelete}
-              onUpdateAssignee={(id, assignedToId) => actions.handleInlineUpdate(id, { assignedToId })}
+              onUpdateAssignee={(id, assignedToId, assignedToName) => actions.handleInlineUpdate(id, assignedToName === undefined ? { assignedToId } : { assignedToId, assignedToName })}
               onAddChild={handleAddChild}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}

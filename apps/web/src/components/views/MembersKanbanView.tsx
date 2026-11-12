@@ -1,7 +1,11 @@
 /* Vue Assignations : kanban par membre (colonnes = membres de l'espace). Icône œil barré sur une carte
  * quand l'assigné n'a pas encore ouvert l'item depuis son assignation (assignmentReceipt, 2026-09-29).
  * Visiteur non connecté : l'API ne donne pas la liste des membres (règle members-email-scope), les colonnes sont
- * alors les personnes assignées aux éléments affichés (assigneesFromItems), plus « Non assigné ». */
+ * alors les personnes assignées aux éléments affichés (assigneesFromItems), plus « Non assigné ».
+ * Noms saisis librement (assignedToName, personne sans compte, 2026-11-12) : une colonne « sans compte » par nom, après
+ * les membres, même si un membre porte le même nom (décision Thomas : deux colonnes). Deux saisies ne différant que par
+ * la casse ou les espaces vont dans la même colonne (freeNameKey) ; les accents comptent. Déposer une carte sur une
+ * colonne de nom libre enregistre ce nom (sans notification) ; sur « Non assigné », efface membre ET nom. */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +22,7 @@ import {
   useDraggable,
   pointerWithin,
 } from '@dnd-kit/core';
-import { GripVertical, User, Users, FolderKanban, GripHorizontal, EyeOff } from 'lucide-react';
+import { GripVertical, User, Users, UserRound, FolderKanban, GripHorizontal, EyeOff } from 'lucide-react';
 import type { Item, ItemWithRelations, SpaceReferentiels } from '@spok/shared';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
@@ -36,9 +40,34 @@ import { EmptyHelp } from '../../help/EmptyHelp';
 // ---------------------------------------------------------------------------
 
 interface MemberColumn {
-  id: string;       // 'spaceId::member-<userId>' or 'spaceId::member-unassigned'
+  id: string;       // 'spaceId::member-<userId>', 'spaceId::name-<freeNameKey>' or 'spaceId::member-unassigned'
   userId: string | null;
   name: string;
+  /** Nom saisi librement que la colonne représente (personne sans compte) ; absent pour un membre et « Non assigné ». */
+  freeName?: string;
+}
+
+/** Clé de regroupement d'un nom libre : casse et espaces (début, fin, doublés) ignorés ; les accents comptent, comme la fiche. */
+export function freeNameKey(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/** Noms saisis librement sur les éléments sans membre assigné, un par clé (première orthographe rencontrée), triés par nom. */
+export function freeNamesFromItems(items: Pick<Item, 'assignedToId' | 'assignedToName'>[]): { key: string; name: string }[] {
+  const byKey = new Map<string, string>();
+  for (const item of items) {
+    if (item.assignedToId || !item.assignedToName?.trim()) continue;
+    const key = freeNameKey(item.assignedToName);
+    if (!byKey.has(key)) byKey.set(key, item.assignedToName.trim().replace(/\s+/g, ' '));
+  }
+  return Array.from(byKey, ([key, name]) => ({ key, name })).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+}
+
+/** Colonne d'un élément dans une section d'espace : membre, nom libre ou « Non assigné ». */
+function columnIdOf(item: Pick<Item, 'assignedToId' | 'assignedToName'>, sid: string): string {
+  if (item.assignedToId) return `${sid}::member-${item.assignedToId}`;
+  if (item.assignedToName?.trim()) return `${sid}::name-${freeNameKey(item.assignedToName)}`;
+  return `${sid}::member-unassigned`;
 }
 
 /** Personnes assignées aux éléments, triées par nom : colonnes de la vue pour un visiteur, qui n'a pas la liste des membres. */
@@ -62,7 +91,8 @@ interface MembersKanbanViewProps {
   portalGroups?: PortalGroup[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onUpdateAssignee: (id: string, assignedToId: string | null) => void;
+  /** assignedToName : nom libre à enregistrer (colonne « sans compte »), null pour l'effacer (« Non assigné »), absent pour un membre. */
+  onUpdateAssignee: (id: string, assignedToId: string | null, assignedToName?: string | null) => void;
   onAddChild: (parentId: string) => void;
   onMoveToSpace?: (id: string) => void;
   onDuplicateToSpace?: (id: string) => void;
@@ -245,12 +275,13 @@ function MemberColumnComponent({
   draggedItemId: string | null;
 }) {
   const { setNodeRef } = useDroppable({ id: column.id });
-  const isUnassigned = column.userId === null;
+  const isFreeName = !!column.freeName;
+  const isUnassigned = column.userId === null && !isFreeName;
 
   return (
     <div data-help-zone="members:colonne"
       className={`flex-1 min-w-[200px] bg-muted/50 rounded-lg border-t-4 flex flex-col transition-colors ${
-        isUnassigned ? 'border-gray-300' : 'border-blue-400'
+        isUnassigned ? 'border-gray-300' : isFreeName ? 'border-dashed border-gray-400' : 'border-blue-400'
       } ${isOver ? 'bg-primary/5' : ''}`}
     >
       <div className="p-3 border-b border-border sticky top-0 z-10 bg-muted/95 backdrop-blur-sm rounded-t-lg">
@@ -258,10 +289,13 @@ function MemberColumnComponent({
           <div className="flex items-center gap-2 min-w-0">
             {isUnassigned ? (
               <Users className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            ) : isFreeName ? (
+              <UserRound className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             ) : (
               <User className="w-4 h-4 text-blue-500 flex-shrink-0" />
             )}
             <h3 className="font-medium truncate">{column.name}</h3>
+            {isFreeName && <span data-help-zone="members:sanscompte" className="text-[10px] italic text-muted-foreground flex-shrink-0">sans compte</span>}
           </div>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">
             {items.length}
@@ -430,6 +464,9 @@ export function MembersKanbanView({
         userId: m.userId,
         name: m.name,
       }));
+      for (const f of freeNamesFromItems(spaceSections[i].items)) {
+        cols.push({ id: `${sid}::name-${f.key}`, userId: null, name: f.name, freeName: f.name });
+      }
       cols.push({ id: `${sid}::member-unassigned`, userId: null, name: 'Non assigné' });
       result[sid] = cols;
     }
@@ -445,10 +482,7 @@ export function MembersKanbanView({
         map.set(col.id, []);
       }
       for (const item of section.items) {
-        const colId = item.assignedToId
-          ? `${section.spaceId}::member-${item.assignedToId}`
-          : `${section.spaceId}::member-unassigned`;
-        const arr = map.get(colId);
+        const arr = map.get(columnIdOf(item, section.spaceId));
         if (arr) {
           arr.push(item);
         } else {
@@ -487,10 +521,16 @@ export function MembersKanbanView({
     const item = items.find(i => i.id === active.id);
     if (!item) return;
 
-    const currentAssignee = item.assignedToId || null;
-    if (currentAssignee === targetCol.userId) return;
+    // Même colonne (membre, nom libre de même clé ou « Non assigné ») : rien à faire
+    const sameColumn = targetCol.userId
+      ? item.assignedToId === targetCol.userId
+      : !item.assignedToId && (targetCol.freeName
+        ? freeNameKey(item.assignedToName ?? '') === freeNameKey(targetCol.freeName)
+        : !item.assignedToName?.trim());
+    if (sameColumn) return;
 
-    onUpdateAssignee(item.id, targetCol.userId);
+    if (targetCol.userId) onUpdateAssignee(item.id, targetCol.userId);           // membre : l'API efface le nom libre
+    else onUpdateAssignee(item.id, null, targetCol.freeName ?? null);           // nom libre, ou « Non assigné » : tout effacer
   }, [allColumns, items, onUpdateAssignee]);
 
   const handleDragCancel = useCallback(() => {
