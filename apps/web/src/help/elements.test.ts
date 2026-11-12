@@ -1,8 +1,8 @@
 /* Tests du format « élément d'aide » : un texte unique dérivé vers tous les affichages, règle de publication des annonces
-   (sans date = local seulement) et destination de « Montrer ». Fiches d'annonces de test : pas de dépendance aux vraies annonces. */
+   (sans date = local seulement), réglages de /admin/news (applyOverrides) et destination de « Montrer ». Fiches d'annonces de test : pas de dépendance aux vraies annonces. */
 import { describe, it, expect } from 'vitest';
 import { help as kanban } from '../components/views/help/kanban.help';
-import { announcementHref, announcementsFrom } from './announcements';
+import { announcementHref, announcementsFrom, applyOverrides } from './announcements';
 import { ANNOUNCEMENT_SOURCES } from './announcementSources';
 import { SPACE_TOOLBAR_STEPS } from './commonTourSteps';
 import { elementTourSteps, helpFromElements, toDriveStep, zoneSelector } from './elements';
@@ -117,6 +117,19 @@ describe('annonces', () => {
     expect(announcementHref(byId('barre'), 's1')).toBe('/spaces/s1');
     expect(announcementHref(byId('page'), undefined)).toBe('/search');
     expect(announcementHref(byId('modale'), 's1')).toBeUndefined();
+  });
+
+  it('publication (/admin/news) : masquée retirée, date réglée appliquée et reclassée, date future programmée', () => {
+    const all = announcementsFrom(sources, false);
+    const result = applyOverrides(all, [
+      { id: 'page', hidden: true },
+      { id: 'modale', date: '2026-11-05' },
+      { id: 'barre', date: '2026-12-01' },
+    ], '2026-11-12');
+    expect(result.map((a) => a.id)).toEqual(['modale']);
+    expect(result[0].date).toBe('2026-11-05');
+    expect(applyOverrides(all, [{ id: 'barre', date: '2026-12-01' }], '2026-12-01').map((a) => a.id)).toContain('barre');
+    expect(applyOverrides(all, [])).toEqual(all);
   });
 
   it('sans espace, une fonction d\'espace ne peut pas être montrée', () => {

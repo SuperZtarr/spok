@@ -5,16 +5,23 @@
  * une annonce déjà traitée. clear : à la déconnexion, pour que le compte suivant ne reçoive pas ce suivi.
  * markHandled / unmarkHandled : modifient l'écran tout de suite, le serveur suit ; un échec d'enregistrement est silencieux
  * (l'annonce reviendrait à la prochaine visite, sans perte de données). markManyHandled : réponse au tutoriel d'accueil.
+ * Publication (2026-11-12) : `overrides` = réglages de /admin/news (masquée, date), communs à tous ; load les charge avec le
+ * suivi, loadOverrides seul pour /news sans connexion, setOverrides après un enregistrement admin. Un échec de lecture vaut
+ * « aucun réglage » : les annonces du code s'affichent telles quelles. Appliqués par help/announcements.ts.
  * L'état des tours par vue et du clignotement du « ? » reste dans le navigateur (useOnboarding) : aucun suivi par vue en base.
  */
 import { create } from 'zustand';
-import { userApi } from '../lib/api';
+import { newsApi, userApi, type NewsOverride } from '../lib/api';
 
 interface HelpAnnouncementsState {
   loaded: boolean;
   onboardingDone: boolean | null;
   handled: string[];
+  overrides: NewsOverride[];
+  overridesLoaded: boolean;
   load: () => Promise<void>;
+  loadOverrides: () => Promise<void>;
+  setOverrides: (overrides: NewsOverride[]) => void;
   clear: () => void;
   markHandled: (id: string) => void;
   unmarkHandled: (id: string) => void;
@@ -26,18 +33,28 @@ const save = (data: Parameters<typeof userApi.updateHelpState>[0]) => {
   userApi.updateHelpState(data).catch(() => {});
 };
 
+const fetchOverrides = () => newsApi.getOverrides().catch((): NewsOverride[] => []);
+
 export const useHelpAnnouncementsStore = create<HelpAnnouncementsState>()((set, get) => ({
   loaded: false,
   onboardingDone: null,
   handled: [],
+  overrides: [],
+  overridesLoaded: false,
   load: async () => {
     try {
-      const { onboardingDone, handled } = await userApi.getHelpState();
-      set({ loaded: true, onboardingDone, handled });
+      const [{ onboardingDone, handled }, overrides] = await Promise.all([userApi.getHelpState(), fetchOverrides()]);
+      set({ loaded: true, onboardingDone, handled, overrides, overridesLoaded: true });
     } catch {
       // Sans réponse du serveur : ni proposition ni annonce, plutôt que de les montrer à tort
     }
   },
+  loadOverrides: async () => {
+    if (get().overridesLoaded) return;
+    const overrides = await fetchOverrides();
+    set({ overrides, overridesLoaded: true });
+  },
+  setOverrides: (overrides) => set({ overrides, overridesLoaded: true }),
   clear: () => set({ loaded: false, onboardingDone: null, handled: [] }),
   markHandled: (id) => {
     if (get().handled.includes(id)) return;

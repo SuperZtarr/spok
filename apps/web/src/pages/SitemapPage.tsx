@@ -155,6 +155,8 @@ function buildSitePages(viewNodes: SiteNode[], viewCount: number): SiteNode[] {
           description: 'Points d\'accès de l\'API, niveaux d\'authentification, logique d\'accès' },
         { label: 'Performances', path: '/admin/perf', component: 'PerfPage', auth: 'admin',
           description: 'Requêtes récentes de l\'API : temps de réponse, taille, points d\'accès les plus lents' },
+        { label: 'Nouveautés', path: '/admin/news', component: 'NewsAdminPage', auth: 'admin',
+          description: 'Publication des nouveautés : masquer une annonce, corriger sa date ou la programmer' },
       ],
     },
     {

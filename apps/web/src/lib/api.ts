@@ -1195,6 +1195,10 @@ export const itemsApi = {
       method: 'DELETE',
     }),
 
+  // Historique de la fiche (règle item-history-members) : lignes libellées par l'API, page suivante via before = nextCursor
+  history: (spaceId: string, itemId: string, before?: string) =>
+    fetchApi<import('@spok/shared').ItemHistoryResponse>(`/spaces/${spaceId}/items/${itemId}/history${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+
   move: (spaceId: string, id: string, data: { parentId?: string | null; position: number }) =>
     fetchApi<{ success: boolean }>(`/spaces/${spaceId}/items/${id}/move`, {
       method: 'PATCH',
@@ -2163,6 +2167,15 @@ export const adminMenuApi = {
     fetchApi<{ overrides: import('@spok/shared').MenuOverride[] }>('/admin/menu/overrides', { method: 'PUT', body: JSON.stringify({ overrides }) }),
 };
 
+/** Surcharge de publication d'une annonce (AppConfig 'news_overrides') : masquée et/ou date qui remplace celle du code. */
+export interface NewsOverride { id: string; hidden?: boolean; date?: string }
+
+// Publication des nouveautés — lecture publique (/news se lit sans connexion), écriture admin (/admin/news)
+export const newsApi = {
+  getOverrides: () => fetchApi<NewsOverride[]>('/news/overrides'),
+  saveOverrides: (overrides: NewsOverride[]) =>
+    fetchApi<{ overrides: NewsOverride[] }>('/admin/news/overrides', { method: 'PUT', body: JSON.stringify({ overrides }) }),
+};
 
 export interface PerfEntry {
   timestamp: string;

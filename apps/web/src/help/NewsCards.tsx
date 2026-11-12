@@ -6,12 +6,13 @@
  * l'utilisateur n'a pas répondu.
  * Prop : spaces (espaces accessibles de l'utilisateur, déjà chargés par HomeView).
  * spok_recent_spaces : liste écrite par Layout, lue ici sans modification.
+ * Annonces masquées ou programmées dans /admin/news : absentes (help/announcements.ts, applyOverrides).
  * Textes : help/newsTexts.ts, fiche home (hints, zones).
  */
 import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHelpAnnouncementsStore } from '../stores/helpAnnouncements';
-import { announcementHref, listAnnouncements, usePendingAnnouncements } from './announcements';
+import { announcementHref, useAnnouncements, usePendingAnnouncements } from './announcements';
 import { HelpHint } from './HelpHint';
 import { NEWS_TEXTS } from './newsTexts';
 import { pageHint } from './pageHint';
@@ -32,9 +33,10 @@ export function targetSpaceId(spaceIds: string[]): string | undefined {
 
 export function NewsCards({ spaces }: { spaces: { id: string }[] }) {
   const pending = usePendingAnnouncements();
+  const published = useAnnouncements();
   const markHandled = useHelpAnnouncementsStore((state) => state.markHandled);
   if (pending.length === 0) {
-    if (listAnnouncements().length === 0) return null;
+    if (published.length === 0) return null;
     return <div className="mb-8 text-center"><Link to="/news" className="text-xs text-primary hover:underline">{NEWS_TEXTS.all}</Link></div>;
   }
   const spaceId = targetSpaceId(spaces.map((space) => space.id));

@@ -28,6 +28,7 @@ export * from './statusCategory.js';
 export * from './spaceTemplates.js';
 export * from './retiredTypes.js';
 export * from './viewRegistry.js';
+export * from './externalRefs.js';
 export {
   ITEM_TYPE_REGISTRY, DEFAULT_ITEM_TYPE, getItemTypeDef, isItemType, itemTypesWhere, isComposedType,
 } from './typeRegistry.js';

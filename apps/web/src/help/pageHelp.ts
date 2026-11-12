@@ -48,6 +48,7 @@ import { help as adminAuditHelp } from '../pages/help/admin-audit.help';
 import { help as adminApiDocHelp } from '../pages/help/admin-api-doc.help';
 import { help as adminPerfHelp } from '../pages/help/admin-perf.help';
 import { help as adminViewsHelp } from '../pages/help/admin-views.help';
+import { help as adminNewsHelp } from '../pages/help/admin-news.help';
 
 export const PAGE_HELP = {
   dashboard,
@@ -93,6 +94,7 @@ export const PAGE_HELP = {
   'admin-api-doc': adminApiDocHelp,
   'admin-perf': adminPerfHelp,
   'admin-views': adminViewsHelp,
+  'admin-news': adminNewsHelp,
 } satisfies Record<string, HelpEntry>;
 
 export type PageHelpKey = keyof typeof PAGE_HELP;

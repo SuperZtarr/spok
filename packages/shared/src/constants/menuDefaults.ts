@@ -2,6 +2,7 @@
    Une icône nouvelle doit être ajoutée aux deux NAV_ICONS (GlobalNavBar.tsx et Layout.tsx), sinon le bouton s'affiche sans icône.
    news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site.
    admin-tags (2026-11-11) : tags globaux et doublons de tags (/admin/tags, icône Tag).
+   admin-news (2026-11-12) : publication des nouveautés (/admin/news, icône Sparkles déjà déclarée pour news).
    Section itemTypes libellée « Contenus » (2026-11-11 : ses vues montrent des contenus, la vue Bugs est retirée). */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY } from './viewRegistry.js';
@@ -61,6 +62,8 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'admin-api-doc',     label: 'Documentation API',icon: 'FileText',    section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/api-doc',      viewMode: null, order: 9, visible: true, access: 'admin' },
   { id: '', key: 'admin-views',       label: 'Vues',            icon: 'LayoutDashboard', section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/views',     viewMode: null, order: 10, visible: true, access: 'admin' },
   { id: '', key: 'admin-perf',        label: 'Performances',    icon: 'Activity',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/perf',         viewMode: null, order: 11, visible: true, access: 'admin' },
+  // Publication des nouveautés (2026-11-12) : masquer, dater ou programmer une annonce (NewsAdminPage)
+  { id: '', key: 'admin-news',        label: 'Nouveautés',      icon: 'Sparkles',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/news',         viewMode: null, order: 12, visible: true, access: 'admin' },
 
   // ── misc ──
   { id: '', key: 'search',  label: 'Recherche',    icon: 'Search',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/search',  viewMode: null, order: 0, visible: true, access: 'user'   },

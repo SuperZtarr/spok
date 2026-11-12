@@ -10,12 +10,13 @@
  * HelpButton (TOUR_ANCHOR_ATTR) — pas de sélecteur global, une modale ouverte sur une vue affiche deux « ? ».
  * Clignotement du « ? » : une fois par vue ou page et par navigateur, à la première visite, tour lancé ou non.
  * Nouveautés : une étape montre le changement de sa fonction tant qu'il n'est pas traité, et le voir le traite (toDriveStep).
+ * Un changement masqué ou programmé dans /admin/news n'est pas montré (withheldAnnouncementIds).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import type { TourStep } from '../help/types';
-import { listAnnouncements } from '../help/announcements';
+import { listAnnouncements, withheldAnnouncementIds } from '../help/announcements';
 import { toDriveStep } from '../help/elements';
 import { ONBOARDING_STEPS } from '../help/onboarding.elements';
 import { VIEW_HELP } from '../components/views/help';
@@ -38,9 +39,11 @@ function runTour(steps: TourStep[], storageKey: string) {
   const anchor = document.querySelector(`[${TOUR_ANCHOR_ATTR}]`);
   anchor?.removeAttribute(TOUR_ANCHOR_ATTR);
   const { handled, markHandled } = useHelpAnnouncementsStore.getState();
+  // Annonce masquée ou programmée dans /admin/news : l'étape garde son explication, sans le badge de nouveauté
+  const notShown = [...handled, ...withheldAnnouncementIds()];
   const validSteps: DriveStep[] = steps
     .filter(step => !step.element || document.querySelector(step.element))
-    .map(step => toDriveStep(step, handled, markHandled));
+    .map(step => toDriveStep(step, notShown, markHandled));
   // Rappel final sur le « ? » qui a lancé le tour (absent pour le guide de démarrage, qui a sa propre fin)
   if (anchor) validSteps.push({ element: anchor, popover: HELP_BUTTON_POPOVER });
 

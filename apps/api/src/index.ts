@@ -51,6 +51,7 @@ import { adminTestsRoutes } from './routes/admin/tests.js';
 import { adminStatsRoutes } from './routes/admin/stats.js';
 import { adminAuditLogsRoutes } from './routes/admin/auditLogs.js';
 import { publicMenuRoutes, adminMenuRoutes } from './routes/admin/menu.js';
+import { publicNewsRoutes, adminNewsRoutes } from './routes/admin/news.js';
 import { adminBackupRoutes } from './routes/admin/backup.js';
 import { adminPerfRoutes } from './routes/admin/perf.js';
 import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
@@ -331,6 +332,8 @@ async function buildApp() {
   await app.register(adminDuplicatesRoutes, { prefix: '/admin/duplicates' });
   await app.register(adminTagsRoutes, { prefix: '/admin/tags' });
   await app.register(publicMenuRoutes, { prefix: '/menu' });
+  await app.register(adminNewsRoutes, { prefix: '/admin/news' });
+  await app.register(publicNewsRoutes, { prefix: '/news' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });
   // Stockage local de dev (pas de R2, hors production) : sert les fichiers envoyés — absent en prod

@@ -1,18 +1,19 @@
 /*
  * Page « Toutes les nouveautés » (/news) : l'historique des annonces (help/announcements.ts), pour revoir une annonce ou
- * marquer comme vue celle qu'on a prise en compte. Accès : bouton « Nouveautés » du bandeau (MENU_REGISTRY, clé news),
+ * marquer comme vue celle qu'on a prise en compte. Présentation (2026-11-12) : vignettes en grille sur toute la largeur
+ * de la vue (1 à 4 colonnes selon la largeur), boutons alignés en bas de chaque vignette. Accès : bouton « Nouveautés » du bandeau (MENU_REGISTRY, clé news),
  * lien de la section Nouveautés de l'accueil (NewsCards) et plan du site. Lisible sans connexion.
  * Compte connecté et suivi chargé : une annonce non traitée porte « C'est noté » (markHandled), une annonce traitée la
  * mention « Vue ». Sans connexion, ni bouton ni mention : il n'y a pas de suivi.
  * Montrer ne s'affiche que si un écran peut être ouvert (un espace accessible pour une fonction d'espace) ; il remet
  * l'annonce à traiter (unmarkHandled) : NewFeatureOverlay rallume alors sa zone sur l'écran ouvert.
+ * Liste : annonces publiées (useAnnouncements), réglages de /admin/news appliqués — masquées et programmées absentes.
  * Les textes viennent des éléments d'aide et de la fiche pages/help/news.help.ts, jamais d'ici.
  */
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Check, Sparkles } from 'lucide-react';
-import { announcementHref, listAnnouncements } from '../help/announcements';
+import { announcementHref, useAnnouncements } from '../help/announcements';
 import { HelpHint } from '../help/HelpHint';
 import { NEWS_TEXTS } from '../help/newsTexts';
 import { targetSpaceId } from '../help/NewsCards';
@@ -29,7 +30,8 @@ export function NewsPage() {
   const handled = useHelpAnnouncementsStore((state) => state.handled);
   const markHandled = useHelpAnnouncementsStore((state) => state.markHandled);
   const unmarkHandled = useHelpAnnouncementsStore((state) => state.unmarkHandled);
-  const announcements = useMemo(() => listAnnouncements(), []);
+  const announcements = useAnnouncements();
+  const overridesLoaded = useHelpAnnouncementsStore((state) => state.overridesLoaded);
   const { data: spaces } = useQuery({
     queryKey: ['spaces', 'all'],
     queryFn: () => spacesApi.list(),
@@ -39,7 +41,7 @@ export function NewsPage() {
   const tracked = !!user && loaded;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6 flex-1 overflow-auto">
+    <div className="w-full p-6 space-y-6 flex-1 overflow-auto">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-violet-500" />
         <h1 className="text-2xl font-bold">{NEWS_TEXTS.all}</h1>
@@ -47,8 +49,8 @@ export function NewsPage() {
       </div>
       <p className="text-sm text-muted-foreground">{PAGE_HELP.news.summary}</p>
 
-      <div className="space-y-3" data-tour="news-list" data-help-zone="news:liste">
-        {announcements.length === 0 && <p className="text-sm text-muted-foreground">{PAGE_HELP.news.empty}</p>}
+      {overridesLoaded && announcements.length === 0 && <p className="text-sm text-muted-foreground">{PAGE_HELP.news.empty}</p>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" data-tour="news-list" data-help-zone="news:liste">
         {announcements.map((announcement, index) => {
           const href = announcementHref(announcement, spaceId);
           const seen = handled.includes(announcement.id);
@@ -57,7 +59,7 @@ export function NewsPage() {
               key={announcement.id}
               {...(index === 0 ? { 'data-tour': 'news-entry' } : {})}
               data-help-zone="news:annonce"
-              className={`rounded-lg border bg-card p-4 ${tracked && !seen ? 'border-violet-500/60' : 'border-border'}`}
+              className={`flex flex-col rounded-lg border bg-card p-4 ${tracked && !seen ? 'border-violet-500/60' : 'border-border'}`}
             >
               <div className="mb-1 flex items-center gap-2 text-xs">
                 <span className="font-medium text-violet-600 dark:text-violet-400">{NEWS_TEXTS.kind[announcement.kind]}</span>
@@ -72,9 +74,9 @@ export function NewsPage() {
               </div>
               <h2 className="text-sm font-semibold text-foreground">{announcement.title}</h2>
               <p className="mt-1 text-sm leading-relaxed text-foreground">{announcement.text}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{announcement.explanation}</p>
+              <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">{announcement.explanation}</p>
               {((tracked && !seen) || href) && (
-                <div className="mt-3 flex items-center gap-2 text-xs">
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                   {tracked && !seen && (
                     <HelpHint text={pageHint('home', 'newsIgnore')}>
                       <button
