@@ -1,6 +1,8 @@
 /*
  * Contributions (commentaires threadés) d'un item : CRUD + réactions, notifications
  * des participants et des @mentions. Auteur : id et nom seulement, jamais l'e-mail (règle members-email-scope).
+ * reactionType (création seulement) : vote de l'auteur qui a ouvert le champ (règle contribution-vote-kept), figé —
+ * la mise à jour ne le change pas. Facultatif : un appel sans vote (MCP) crée une contribution sans vote.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -12,6 +14,7 @@ import { checkSpaceAccess } from './items.js';
 const createContributionSchema = z.object({
   content: z.string().min(1),
   parentId: z.string().optional(),
+  reactionType: z.string().min(1).max(50).optional(),
 });
 
 const updateContributionSchema = z.object({
@@ -86,6 +89,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
         itemId: request.params.id,
         authorId: request.user.userId,
         ...(body.parentId ? { parentId: body.parentId } : {}),
+        ...(body.reactionType ? { reactionType: body.reactionType } : {}),
       },
       include: {
         author: {
@@ -108,7 +112,7 @@ export const itemContributionRoutes: FastifyPluginAsync = async (fastify) => {
       userId: request.user.userId,
       spaceId: request.params.spaceId,
       changes: {
-        after: { content: contribution.content, itemId: contribution.itemId },
+        after: { content: contribution.content, itemId: contribution.itemId, reactionType: contribution.reactionType },
       },
     });
 
