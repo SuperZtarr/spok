@@ -9,6 +9,7 @@
  * relatifs, Word ne les trouverait pas) — withAbsoluteMediaUrl, imageToPngDataUrl, itemSheetToClipboardHtml ;
  * fichier : lien nommé d'après le fichier (un fichier ne s'intègre pas dans un collage) ;
  * lien : reste un lien. Le Markdown ne contient que l'adresse (![titre](url) pour une image).
+ * Références externes (2026-11-12) : un champ « Références externes » au format « Appli : Réf | … » (formatExternalRefs).
  * - buildItemSheet : extrait les données de la fiche (labels résolus par l'appelant, référentiels de l'espace)
  * - itemSheetToMarkdown / itemSheetToHtml : rendus purs, testables sans DOM
  * - htmlToMarkdown : convertisseur volontairement limité au HTML produit par l'éditeur (p, br, gras,
@@ -20,6 +21,7 @@
  * scripts fix-confluence-split-images / fix-drawio-attachments) est retirée — l'image n'apparaît qu'une fois.
  * Impression et PDF restent dans itemExport.ts. */
 import type { Item, ItemRelation, ContributionWithAuthor } from '@spok/shared';
+import { formatExternalRefs } from '@spok/shared';
 import { sanitizeHtml, isSafeUrl } from './sanitizeHtml';
 
 export interface ItemSheetLabels {
@@ -134,6 +136,8 @@ export function buildItemSheet({ item, children = [], spaceName, parentTitle, la
   add('Espace', spaceName);
   add('Parent', item.parent?.title ?? parentTitle);
   add('Assigné à', item.assignedTo?.name || item.assignedToName);
+  // Références externes « Appli1 : Réf1 | appli2 : réf2 » (règle item-external-refs) — aussi affichées en mode Afficher
+  add('Références externes', formatExternalRefs(item.externalRefs));
   if (item.startDate) add('Début', labels.formatDate(item.startDate));
   if (item.endDate) add('Fin', labels.formatDate(item.endDate));
   if (item.dueDate) add('Échéance', labels.formatDate(item.dueDate));

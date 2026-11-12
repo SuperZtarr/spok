@@ -1,4 +1,5 @@
-/* Helpers d'ItemEditModal : payloads, diff des champs modifiés, fusion formulaire/serveur (mergeFormWithServer), résumé Forum (buildForumSummary). */
+/* Helpers d'ItemEditModal : payloads, diff des champs modifiés, fusion formulaire/serveur (mergeFormWithServer), résumé Forum (buildForumSummary,
+   qui compte aussi les références externes — règle item-external-refs, 2026-11-12). */
 import type { Item, ItemTemplateNode } from '@spok/shared';
 
 /** Extract a clean name from a filename (remove extension) */
@@ -89,6 +90,7 @@ export function buildForumSummary(
     assignedTo?: { name?: string | null } | null;
     assignedToName?: string | null;
     relationsFrom?: unknown[] | null; relationsTo?: unknown[] | null;
+    externalRefs?: string[] | null;
   },
   labels: {
     typeLabel: (type: string) => string | undefined;
@@ -111,5 +113,7 @@ export function buildForumSummary(
   if (item.assignedTo?.name || item.assignedToName) parts.push((item.assignedTo?.name || item.assignedToName)!);
   const links = (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0);
   if (links > 0) parts.push(`${links} lien${links > 1 ? 's' : ''}`);
+  const refs = item.externalRefs?.length ?? 0;
+  if (refs > 0) parts.push(`${refs} réf. externe${refs > 1 ? 's' : ''}`);
   return parts;
 }

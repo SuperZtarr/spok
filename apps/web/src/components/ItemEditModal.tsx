@@ -36,7 +36,9 @@
  * (itemThumbnail.ts, image PNG de la carte ; aussi dans le mode Afficher — hints.copyThumbnail).
  * Save explicite (2026-10-28) : « Enregistrer et quitter » (orange vif, submit — Entrée dans un champ) ferme après succès,
  * « Enregistrer » (orange clair, Ctrl+S) garde la fiche ouverte (closeAfterSaveRef lu par updateMutation.onSuccess), avec verrou
- * optimiste (updatedAt). Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
+ * optimiste (updatedAt). « Fermer » avec des modifications : confirmation useUnsavedGuard à trois choix (Rester / Quitter sans
+ * enregistrer / Enregistrer et quitter = doSubmit(true), proposé seulement si canEditTags ; hints.unsavedLeave / unsavedSaveAndLeave).
+ * Focus à l'ouverture : titre seulement si l'item n'a pas encore de titre (création
  * via « Nouveau ») ; item existant → focus sur la modale (useDialogFocus), une frappe ne modifie rien.
  * Accusé de lecture à l'assignation sous « Assigné à » (assignmentReceipt de l'API) : « Vu par X le … » ou
  * « Pas encore vu », seulement pour l'assigné enregistré. Écritures directes hors Enregistrer (contenus : envoi, lien,
@@ -58,7 +60,18 @@
  * Pied : boutons « Ajouter à la préparation » / « Présenter en séance » si la séance live active le permet (liveItemActions) ;
  * le premier est grisé (« Déjà dans la préparation de … ») quand l'élément y est, d'après le cache de la séance (useLiveSession).
  * Contributions affichées via sanitizeHtml (règle user-html-sanitized) ; liens des contenus : ItemContentsSection (safeHref).
- * Zone de contribution (ouverte, réponse en cours, texte) remise à zéro à chaque changement d'item (effet sur itemId).
+ * Zone de contribution (ouverte, réponse en cours, texte, vote) remise à zéro à chaque changement d'item (effet sur itemId).
+ * Vote de chaque contribution (2026-11-12, règle contribution-vote-kept) : le vote qui ouvre le champ (onReacted de la barre
+ * de l'élément ou de la contribution répondue) est gardé dans contributionVote, affiché « Votre vote : … » au-dessus du
+ * champ, envoyé à la création (reactionType) puis affiché après l'auteur (ContributionVoteBadge). Jamais modifié ensuite.
+ * Historique (2026-11-12, règle item-history-members) : ItemHistorySection sous les contributions, fiche réduite ou
+ * complète, pour toute personne connectée (pas le visiteur anonyme) ; hints.historyToggle / historyEmpty.
+ * Brouillon (2026-11-12, règle item-draft-local, lib/itemDraft.ts) : saisie non enregistrée (champs si canEditTags,
+ * contribution en cours) copiée dans le navigateur 1 s après la dernière frappe ; à l'ouverture, ItemDraftBanner propose
+ * Reprendre / Ignorer si elle diffère de l'enregistré. Effacé après enregistrement réussi, contribution envoyée,
+ * « Quitter sans enregistrer » (bouton Fermer) ou Ignorer ; croix / Échap / clic à côté le GARDENT (rien n'y est confirmé).
+ * Références externes (2026-11-12, règle item-external-refs) : externalRefsText, une ligne « Appli : Réf | … » (ExternalRefsField),
+ * comprise dans hasChanges, la fusion serveur et le brouillon ; envoyée découpée (splitExternalRefs) par doSubmit si elle a changé.
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
  * pas d'enregistrement « vu » (markViewed) à l'ouverture.
  * Type ARTICLE : en mode « Afficher », les blocs sont lus dans la fiche (ArticleReadBlocks) et Imprimer sort l'article
@@ -105,6 +118,12 @@ import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
+import { ContributionVoteBadge } from './ContributionVoteBadge';
+import { ItemHistorySection } from './ItemHistorySection';
+import { ItemDraftBanner } from './ItemDraftBanner';
+import { ExternalRefsInput, ExternalRefsList } from './ExternalRefsField';
+import { formatExternalRefs, splitExternalRefs } from '@spok/shared';
+import { saveItemDraft, loadItemDraft, clearItemDraft, purgeExpiredItemDrafts, draftHasChanges, type ItemDraft, type ItemDraftFields } from '../lib/itemDraft';
 import { HelpButton } from '../help/HelpButton';
 import { PAGE_HELP } from '../help/pageHelp';
 import { HelpHint } from '../help/HelpHint';
@@ -163,6 +182,26 @@ interface ItemEditModalProps {
   initialMode?: ItemOpenMode;
 }
 
+/** Champs du formulaire tirés d'un élément enregistré (dates en datetime-local, heure locale) — base du formulaire et
+ *  du brouillon (lib/itemDraft.ts) */
+function itemFormFields(it: Item): ItemDraftFields {
+  return {
+    title: it.title,
+    description: it.description || '',
+    parentId: it.parentId || '',
+    status: it.status || '',
+    priority: it.priority ?? null,
+    assignedToId: it.assignedToId || '',
+    assignedToName: it.assignedToName || '',
+    type: it.type as string,
+    dueDate: it.dueDate ? toDatetimeLocal(new Date(it.dueDate)) : '',
+    startDate: it.startDate ? toDatetimeLocal(new Date(it.startDate)) : '',
+    endDate: it.endDate ? toDatetimeLocal(new Date(it.endDate)) : '',
+    tagIds: it.tags?.map((t: Tag) => t.id) || [],
+    externalRefs: formatExternalRefs(it.externalRefs),
+  };
+}
+
 export function ItemEditModal({
   isOpen,
   onClose,
@@ -204,6 +243,8 @@ export function ItemEditModal({
   const [status, setStatus] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
   const [assignedToName, setAssignedToName] = useState(''); // saisie libre : personne sans compte SPOK
+  // Références externes, en ligne « Appli1 : Réf1 | appli2 : réf2 » (règle item-external-refs), découpées à l'enregistrement
+  const [externalRefsText, setExternalRefsText] = useState('');
   const [type, setType] = useState<ItemType>('UNDEFINED');
   // Statut non permis pour le nouveau type (issue d'une question sur un autre type, ou l'inverse) : remis à « Non
   // défini » — une question enregistrée sans statut repart « Ouverte » (API, utils/question.ts)
@@ -239,6 +280,9 @@ export function ItemEditModal({
   const [newContribution, setNewContribution] = useState('');
   const [showContributionField, setShowContributionField] = useState(false);
   const [replyToContributionId, setReplyToContributionId] = useState<string | null>(null);
+  // Vote qui a ouvert le champ de contribution (réaction sur l'élément ou sur la contribution répondue), envoyé avec
+  // la contribution et figé sur elle (règle contribution-vote-kept)
+  const [contributionVote, setContributionVote] = useState<string | null>(null);
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [editingContributionContent, setEditingContributionContent] = useState('');
 
@@ -340,6 +384,15 @@ export function ItemEditModal({
   const draftItemIdRef = useRef<string | null>(null);
   // Enregistrement en cours : fermer la fiche après succès (« Enregistrer et quitter ») ou non (« Enregistrer », Ctrl+S)
   const closeAfterSaveRef = useRef(true);
+  // Brouillon gardé dans le navigateur (règle item-draft-local) : brouillon retrouvé en attente de décision,
+  // écriture différée en cours, élément déjà vérifié à cette ouverture
+  const [pendingDraft, setPendingDraft] = useState<ItemDraft | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const draftCheckedRef = useRef<string | null>(null);
+  const clearDraft = useCallback(() => {
+    clearTimeout(draftTimerRef.current);
+    if (user && itemId) clearItemDraft(user.id, itemId);
+  }, [user, itemId]);
 
   // Capture viewedAt from the list snapshot BEFORE marking as viewed
   const viewedAtRef = useRef<string | null | undefined>(undefined);
@@ -361,6 +414,7 @@ export function ItemEditModal({
     setShowContributionField(false);
     setReplyToContributionId(null);
     setNewContribution('');
+    setContributionVote(null);
   }, [itemId]);
 
   // Défaut réduit/complet du mode, à chaque fiche ouverte et à chaque changement de mode
@@ -384,26 +438,15 @@ export function ItemEditModal({
     }
     initializedItemIdRef.current = initKey;
 
-    const toForm = (it: NonNullable<typeof item>) => ({
-      title: it.title,
-      description: it.description || '',
-      parentId: it.parentId || '',
-      status: it.status || '',
-      priority: it.priority ?? null,
-      assignedToId: it.assignedToId || '',
-      assignedToName: it.assignedToName || '',
-      type: it.type as string,
-      // datetime-local (YYYY-MM-DDTHH:mm) en heure locale
-      dueDate: it.dueDate ? toDatetimeLocal(new Date(it.dueDate)) : '',
-      startDate: it.startDate ? toDatetimeLocal(new Date(it.startDate)) : '',
-      endDate: it.endDate ? toDatetimeLocal(new Date(it.endDate)) : '',
-      tags: tagKey(it.tags?.map((t: Tag) => t.id) || []),
-    });
+    const toForm = (it: NonNullable<typeof item>) => {
+      const { tagIds, ...fields } = itemFormFields(it as Item);
+      return { ...fields, tags: tagKey(tagIds) };
+    };
     const base = loadedItemRef.current?.id === item.id ? toForm(loadedItemRef.current) : null;
     loadedItemRef.current = item;
     const next = toForm(item);
     const merged = mergeFormWithServer(
-      { title, description, parentId, status, priority, assignedToId, assignedToName, type: type as string, dueDate, startDate, endDate, tags: tagKey(selectedTagIds) },
+      { title, description, parentId, status, priority, assignedToId, assignedToName, type: type as string, dueDate, startDate, endDate, externalRefs: externalRefsText, tags: tagKey(selectedTagIds) },
       base,
       next,
     );
@@ -422,6 +465,7 @@ export function ItemEditModal({
     setDueDate(merged.dueDate);
     setStartDate(merged.startDate);
     setEndDate(merged.endDate);
+    setExternalRefsText(merged.externalRefs ?? '');
     const serverTagIds = item.tags?.map((t: Tag) => t.id) || [];
     if (merged.tags === next.tags) setSelectedTagIds(serverTagIds);
     setOriginalTagIds(serverTagIds);
@@ -436,6 +480,7 @@ export function ItemEditModal({
         queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] }),
       ]);
       setConflictData(null);
+      clearDraft();
       // « Enregistrer et quitter » ferme ; « Enregistrer » (et Ctrl+S) laisse la fiche ouverte, resynchronisée par la relecture
       if (closeAfterSaveRef.current) onClose();
     },
@@ -471,7 +516,7 @@ export function ItemEditModal({
   // La relecture est fusionnée champ par champ (mergeFormWithServer) : la saisie en cours est conservée.
 
   const createContributionMutation = useMutation({
-    mutationFn: (data: { content: string; parentId?: string }) =>
+    mutationFn: (data: { content: string; parentId?: string; reactionType?: string }) =>
       itemsApi.createContribution(spaceId, itemId!, data),
     onSuccess: (newContrib) => {
       // Injecter immédiatement la nouvelle contribution dans le cache
@@ -489,6 +534,8 @@ export function ItemEditModal({
       setNewContribution('');
       setShowContributionField(false);
       setReplyToContributionId(null);
+      setContributionVote(null);
+      clearDraft();
     },
   });
 
@@ -616,7 +663,7 @@ export function ItemEditModal({
 
   const handleAddContribution = () => {
     if (!isContributionEmpty(newContribution)) {
-      createContributionMutation.mutate({ content: newContribution, parentId: replyToContributionId || undefined });
+      createContributionMutation.mutate({ content: newContribution, parentId: replyToContributionId || undefined, reactionType: contributionVote ?? undefined });
     }
   };
 
@@ -670,10 +717,77 @@ export function ItemEditModal({
     const sortedCurrent = [...selectedTagIds].sort();
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) return true;
+    // Références externes : comparées découpées et normalisées (espaces, doublons ne comptent pas)
+    if (formatExternalRefs(splitExternalRefs(externalRefsText)) !== formatExternalRefs(item.externalRefs)) return true;
     return false;
-  }, [item, type, title, description, parentId, status, priority, assignedToId, assignedToName, dueDate, startDate, endDate, selectedTagIds, originalTagIds]);
+  }, [item, type, title, description, parentId, status, priority, assignedToId, assignedToName, dueDate, startDate, endDate, selectedTagIds, originalTagIds, externalRefsText]);
 
-  const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges);
+  // Confirmation de fermeture : « Enregistrer et quitter » seulement si l'utilisateur peut enregistrer (mêmes droits
+  // que les boutons du pied) ; doSubmit(true) ferme après succès, garde la fiche ouverte sur conflit.
+  const unsavedHints = PAGE_HELP['item-modal'].hints;
+  const { guard: guardClose, ConfirmDialog } = useUnsavedGuard(hasChanges, {
+    onSaveAndLeave: item && canEditTags ? () => doSubmit(true) : undefined,
+    hints: { leave: unsavedHints?.unsavedLeave, saveAndLeave: unsavedHints?.unsavedSaveAndLeave },
+  });
+
+  // Brouillon : à l'ouverture de la fiche, proposer une saisie retrouvée qui diffère de l'enregistré
+  useEffect(() => {
+    if (!isOpen) { draftCheckedRef.current = null; setPendingDraft(null); return; }
+    if (!item || !user || draftCheckedRef.current === item.id) return;
+    draftCheckedRef.current = item.id;
+    purgeExpiredItemDrafts();
+    const draft = loadItemDraft(user.id, item.id);
+    if (!draft || !draftHasChanges(draft, itemFormFields(item as Item))) {
+      if (draft) clearItemDraft(user.id, item.id);
+      setPendingDraft(null);
+      return;
+    }
+    const usable = (draft.fields && canEditTags) || (draft.contribution && canInteract);
+    setPendingDraft(usable ? draft : null);
+  }, [isOpen, item?.id, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Brouillon : saisie non enregistrée copiée dans le navigateur une seconde après la dernière frappe. Une nouvelle
+  // saisie alors qu'un brouillon attend une décision le remplace (le bandeau disparaît).
+  const contributionDirty = showContributionField && !isContributionEmpty(newContribution);
+  useEffect(() => {
+    if (!item || !user) return;
+    const fieldsDirty = hasChanges && canEditTags;
+    if (!fieldsDirty && !contributionDirty) return;
+    if (pendingDraft) setPendingDraft(null);
+    const timer = setTimeout(() => saveItemDraft(user.id, item.id, {
+      savedAt: Date.now(),
+      baseUpdatedAt: loadedItemRef.current?.updatedAt ?? null,
+      fields: fieldsDirty ? { title, description, parentId, status, priority, assignedToId, assignedToName, type, dueDate, startDate, endDate, tagIds: selectedTagIds, externalRefs: externalRefsText } : undefined,
+      contribution: contributionDirty ? { text: newContribution, vote: contributionVote, replyTo: replyToContributionId } : undefined,
+    }), 1000);
+    draftTimerRef.current = timer;
+    return () => clearTimeout(timer);
+  }, [item?.id, user?.id, hasChanges, canEditTags, contributionDirty, title, description, parentId, status, priority, assignedToId, assignedToName, type, dueDate, startDate, endDate, selectedTagIds, externalRefsText, newContribution, contributionVote, replyToContributionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // « Reprendre » : la saisie retrouvée remplace le formulaire (à enregistrer ensuite comme d'habitude)
+  const resumeDraft = () => {
+    const draft = pendingDraft;
+    if (!draft) return;
+    if (draft.fields && canEditTags) {
+      const f = draft.fields;
+      setTitle(f.title); setDescription(f.description); setParentId(f.parentId); setStatus(f.status); setPriority(f.priority);
+      setAssignedToId(f.assignedToId); setAssignedToName(f.assignedToName);
+      setType(f.type as ItemType); setAllDay(!getItemTypeDef(f.type)?.timed);
+      setDueDate(f.dueDate); setStartDate(f.startDate); setEndDate(f.endDate); setSelectedTagIds(f.tagIds);
+      if (f.externalRefs !== undefined) setExternalRefsText(f.externalRefs);
+      setExpanded(true);
+    }
+    if (draft.contribution && canInteract) {
+      const c = draft.contribution;
+      const replyExists = !!c.replyTo && !!item?.contributions?.some((x: { id: string }) => x.id === c.replyTo);
+      setReplyToContributionId(replyExists ? c.replyTo : null);
+      setContributionVote(c.vote);
+      setNewContribution(c.text);
+      setShowContributionField(true);
+    }
+    setPendingDraft(null);
+  };
+  const discardDraft = () => { clearDraft(); setPendingDraft(null); };
 
   // Fermeture SANS enregistrement (croix, Échap, clic à côté, Fermer / Quitter sans enregistrer) : un brouillon resté
   // vide côté serveur est supprimé — la création l'avait écrit en base avant d'ouvrir la fiche. Les fermetures après
@@ -697,7 +811,7 @@ export function ItemEditModal({
     closeAfterSaveRef.current = closeAfter;
     const closeIfAsked = () => { if (closeAfter) onClose(); };
 
-    const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; assignedToName?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; updatedAt?: string } = {};
+    const updates: { type?: ItemType; title?: string; description?: string | null; content?: Record<string, unknown>; url?: string | null; parentId?: string | null; status?: string | null; priority?: number | null; assignedToId?: string | null; assignedToName?: string | null; dueDate?: string | null; startDate?: string | null; endDate?: string | null; tagIds?: string[]; externalRefs?: string[]; updatedAt?: string } = {};
 
     // Include updatedAt for optimistic locking
     updates.updatedAt = item.updatedAt;
@@ -777,6 +891,12 @@ export function ItemEditModal({
     const sortedOriginal = [...originalTagIds].sort();
     if (sortedCurrent.length !== sortedOriginal.length || sortedCurrent.some((id, i) => id !== sortedOriginal[i])) {
       updates.tagIds = selectedTagIds;
+    }
+
+    // Références externes (règle item-external-refs) : liste complète envoyée si elle a changé
+    const nextRefs = splitExternalRefs(externalRefsText);
+    if (formatExternalRefs(nextRefs) !== formatExternalRefs(item.externalRefs)) {
+      updates.externalRefs = nextRefs;
     }
 
     // Cascade "Entraîne" : référence dueDate > startDate > endDate parmi les champs modifiés
@@ -1247,6 +1367,14 @@ export function ItemEditModal({
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto pr-1">
 
+            {/* Brouillon retrouvé (règle item-draft-local) : Reprendre / Ignorer */}
+            {pendingDraft && (
+              <ItemDraftBanner savedAt={pendingDraft.savedAt}
+                changedSince={!!pendingDraft.baseUpdatedAt && !!item?.updatedAt && pendingDraft.baseUpdatedAt !== item.updatedAt}
+                onResume={resumeDraft} onDiscard={discardDraft}
+                texts={{ explain: itemHints?.draftExplain, changedSince: itemHints?.draftChangedSince, resume: itemHints?.draftResume, discard: itemHints?.draftDiscard }} />
+            )}
+
             {/* Layout : 3 colonnes fiche complète, 1 colonne fiche réduite (colonne centrale supprimée) */}
             <div className={`grid grid-cols-1 gap-6 ${showAll ? 'lg:grid-cols-[1fr,0.85fr,380px]' : ''}`}>
 
@@ -1317,7 +1445,7 @@ export function ItemEditModal({
                         spaceId={spaceId}
                         itemId={item.id}
                         summary={(item as any).reactionSummary || []}
-                        onReacted={() => canInteract && setShowContributionField(true)}
+                        onReacted={(type) => { if (canInteract) { setContributionVote(type); setShowContributionField(true); } }}
                         label="Réagissez ou Contribuez à l'article"
                         readOnly={!user}
                       />
@@ -1329,6 +1457,7 @@ export function ItemEditModal({
                 {/* New contribution field (shown after reaction or manual click) */}
                 {canInteract && showContributionField && !replyToContributionId && (
                   <div className="space-y-2">
+                    <ContributionVoteBadge type={contributionVote} pending hint={itemHints?.contributionVotePending} />
                     <RichTextEditor key={`new-contrib-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Ajouter un commentaire..." spaceId={spaceId} autoFocus
                       mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
                     <div className="flex gap-2">
@@ -1381,6 +1510,10 @@ export function ItemEditModal({
                               {/* Author + date + reactions + actions — compact line below */}
                               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
                                 <span className="font-medium">{contribution.author.name}</span>
+                                {contribution.reactionType && (<>
+                                  <span>·</span>
+                                  <ContributionVoteBadge type={contribution.reactionType} hint={itemHints?.contributionVote} />
+                                </>)}
                                 <span>·</span>
                                 <span>{new Date(contribution.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                 {isNewContrib && (
@@ -1393,7 +1526,7 @@ export function ItemEditModal({
                                   summary={(contribution as any).reactionSummary || []}
                                   label="Réagissez ou Contribuez au commentaire"
                                   readOnly={!user}
-                                  onReacted={() => { if (canInteract) { setReplyToContributionId(contribution.id); setShowContributionField(true); setNewContribution(''); }}}
+                                  onReacted={(type) => { if (canInteract) { setReplyToContributionId(contribution.id); setContributionVote(type); setShowContributionField(true); setNewContribution(''); }}}
                                 />
                                 {canInteract && (contribution.authorId === user?.id) && (
                                   <>
@@ -1408,6 +1541,7 @@ export function ItemEditModal({
                           {/* Reply field inline */}
                           {canInteract && isReplying && showContributionField && (
                             <div className="mt-2 space-y-2">
+                              <ContributionVoteBadge type={contributionVote} pending hint={itemHints?.contributionVotePending} />
                               <RichTextEditor key={`reply-${contribution.id}-${contributionCount}`} content={newContribution} onChange={setNewContribution} placeholder="Répondre..." spaceId={spaceId} autoFocus
                                 mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))} />
                               <div className="flex gap-2">
@@ -1442,6 +1576,12 @@ export function ItemEditModal({
                   );
                 })()}
               </div>
+
+              {/* Historique (règle item-history-members) : personne connectée seulement, chargé à l'ouverture */}
+              {item && user && (
+                <ItemHistorySection spaceId={item.spaceId ?? spaceId} itemId={item.id} version={item.updatedAt}
+                  hints={{ toggle: itemHints?.historyToggle, empty: itemHints?.historyEmpty }} />
+              )}
 
           </div>{/* end left column */}
 
@@ -1774,6 +1914,17 @@ export function ItemEditModal({
                 </div>
               )}
 
+              {/* Références externes (règle item-external-refs) : fiche complète, saisie sur une ligne */}
+              {showAll && (canEdit || (item?.externalRefs?.length ?? 0) > 0) && (
+                <div className="space-y-2" data-tour="item-external-refs" data-devzone="item-references">
+                  <label className="text-sm font-medium flex items-center gap-1.5">Références externes <ElementHelp page="item-modal" element="references" /></label>
+                  {canEdit && <FieldHelp page="item-modal" field="externalRefs" className="text-xs text-muted-foreground" />}
+                  {canEdit
+                    ? <ExternalRefsInput value={externalRefsText} onChange={setExternalRefsText} placeholder="Appli1 : Réf1 | appli2 : réf2" />
+                    : <ExternalRefsList refs={item?.externalRefs} className="text-sm" />}
+                </div>
+              )}
+
               {/* Dépendances */}
               {showAll && <div className="space-y-3" data-tour="item-relations" data-devzone="item-relations">
                 <div className="flex items-center justify-between">
@@ -1938,7 +2089,7 @@ export function ItemEditModal({
                 </Button>
               </HelpHint>
             </>)}
-            <Button type="button" variant="bordered" onClick={() => guardClose(closeWithoutSaving)}>
+            <Button type="button" variant="bordered" onClick={() => guardClose(() => { clearDraft(); closeWithoutSaving(); })}>
               {canEdit ? 'Fermer' : 'Fermer'}
             </Button>
             {itemId && liveActions(itemId).map((a) => (

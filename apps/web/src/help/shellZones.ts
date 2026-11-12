@@ -49,6 +49,8 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   'item-relations': elementZone(I.relations),
   'item-tags': elementZone(I.tags),
   'item-enfants': elementZone(I.enfants),
+  'item-historique': elementZone(I.historique),
+  'item-references': elementZone(I.references),
   'item-pied': elementZone(I.actions),
   'item-lecture': { title: 'Mode Afficher', text: 'La fiche présentée comme un document à lire. On modifie en passant sur « Modifier ».' },
   'item-lecture-media': { title: 'Contenus', text: 'Les images et schémas de l\'élément en grand (cliquez pour le plein écran), puis ses fichiers et liens à ouvrir, regroupés par sorte.' },

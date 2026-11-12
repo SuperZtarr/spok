@@ -17,7 +17,8 @@
  *   partage un espace ou une communauté, réponse limitée à id, nom, avatar ; admin en mode admin = tous, nom et e-mail,
  *   réponse complète. Ne pas élargir sans décision : la colonne email ne se cherche jamais hors mode admin.
  * Items (les deux routes) : titre, description, et contenus de l'élément — noms de fichiers et adresses des liens
- * (contenus multiples, lot 3a, 2026-11-08 ; plus d'ancien champ url depuis le lot 4).
+ * (contenus multiples, lot 3a, 2026-11-08 ; plus d'ancien champ url depuis le lot 4), et références externes
+ * (« Application : référence », règle item-external-refs, 2026-11-12).
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
@@ -189,6 +190,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         { name: 'title' }, { name: 'description', nullable: true },
         // Contenus multiples (lot 3a) : noms des fichiers / contenus et adresses des liens
         { relation: 'contents', fields: ['name', 'url'] },
+        // Références externes « Application : référence » (règle item-external-refs)
+        { relation: 'externalRefs', fields: ['value'] },
       ]);
       if (effectiveSpaceFilter) itemWhere.spaceId = effectiveSpaceFilter;
       else if (spaceFilter) itemWhere.spaceId = spaceFilter;
@@ -387,6 +390,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
           { name: { contains: query, mode: 'insensitive' as const } },
           { url: { contains: query, mode: 'insensitive' as const } },
         ] } } },
+        { externalRefs: { some: { value: { contains: query, mode: 'insensitive' as const } } } },
       ],
     };
 

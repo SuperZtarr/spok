@@ -363,6 +363,7 @@ model Item {
   relationsTo   ItemRelation[] @relation("RelationTo")
 
   tags ItemTag[]
+  externalRefs ItemExternalRef[]
   contributions Contribution[]
   reactions     Reaction[]
   bookmarkedBy  ItemBookmark[]
@@ -540,6 +541,21 @@ model ItemContent {
   @@map("item_contents")
 }
 
+// Références externes d'un élément (règle item-external-refs, 2026-11-12) : une ligne par entrée, texte libre
+// « Application : réf1 | réf2 » (nom avant « : », références séparées par « | ») ; mise en forme à l'affichage
+// (shared/externalRefs.ts). Remplacées en bloc par POST/PATCH d'un élément (comme les tags), cherchées par la recherche.
+model ItemExternalRef {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  value     String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([itemId, position])
+  @@map("item_external_refs")
+}
+
 enum ItemContentKind {
   IMAGE
   FILE
@@ -608,6 +624,9 @@ model Contribution {
   itemId    String
   authorId  String
   parentId  String?
+  // Vote de l'auteur au moment d'écrire (id de DEFAULT_REACTION_TYPES : pertinent, trollage…), figé ; null = ancienne
+  // contribution ou création sans vote (MCP). Qualifie chaque contribution (règle contribution-vote-kept).
+  reactionType String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -48,6 +48,7 @@ export function createMockPrisma() {
     spaceFavorite: mockModel(),
     item: mockModel(),
     itemTag: mockModel(),
+    itemExternalRef: mockModel(),
     itemRelation: mockModel(),
     itemView: mockModel(),
     itemBookmark: mockModel(),
