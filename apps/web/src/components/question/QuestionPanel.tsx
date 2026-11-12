@@ -5,7 +5,8 @@
  * Fiche (2026-11-11) : trois étapes nommées dans l'ordre d'usage — 1. Réponses possibles (deux lignes vides au départ,
  * enregistrées au fil de l'eau par OptionsEditor ; retirer une réponse qui a des votes demande confirmation ; chaque
  * réponse peut être liée à un élément existant — ItemSearchPicker, 2026-11-12 —, dont le titre ouvre la fiche
- * (OptionLabel, sans navigation en séance ; élément non lisible par le lecteur : libellé seul, l'API ne l'envoie pas)), 2. Votes (une seule liste,
+ * (OptionLabel, sans navigation en séance ; élément non lisible par le lecteur : libellé seul, l'API ne l'envoie pas) ;
+ * tant qu'aucun vote n'existe, « Partir d'un modèle » remplace les réponses — questionTemplates.ts, 2026-11-12), 2. Votes (une seule liste,
  * « Retenir » sur chaque ligne pour qui peut trancher), 3. Issue (Reportée, Sans conclusion, autre réponse, précision,
  * Rouvrir). En séance, pas d'étapes : gros boutons de réponse dans l'issue.
  * Props : spaceId / itemId (la question — en séance, la copie verrouillée), variant ('sheet' | 'live').
@@ -22,6 +23,7 @@ import { Link } from 'react-router-dom';
 import { DEFAULT_STATUSES, QUESTION_STATUS, type QuestionOptionRef, type QuestionOptionView, type QuestionView } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { ItemSearchPicker, type ItemSearchHit } from '../ItemSearchPicker';
+import { QUESTION_TEMPLATES, type QuestionTemplate } from './questionTemplates';
 import { useQuestion } from '../../hooks/useQuestion';
 import { useReferentiels } from '../../hooks/useReferentiels';
 import { HelpHint } from '../../help/HelpHint';
@@ -385,6 +387,14 @@ function OptionsEditor({ spaceId, question, onSave }: {
     setRows([...rowsRef.current, row]);
     setFocusKey(row.key);
   };
+  // Modèles de réponse (2026-11-12) : proposés tant que la question est ouverte et sans vote ; un modèle remplace
+  // toutes les réponses (aucun vote à perdre)
+  const showTemplates = question.open && question.options.every((o) => o.voters.length === 0);
+  const applyTemplate = (t: QuestionTemplate) => {
+    setRows(t.options.map((label) => ({ ...newRow(), label })));
+    setMultiple(false);
+    persist();
+  };
   const onEnter = (i: number) => {
     persist();
     const next = rowsRef.current[i + 1];
@@ -394,6 +404,19 @@ function OptionsEditor({ spaceId, question, onSave }: {
 
   return (
     <div data-help-zone="question:options" className="space-y-1.5">
+      {showTemplates && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">{pageHint('question', 'templatesLead')}</span>
+          {QUESTION_TEMPLATES.map((t) => (
+            <HelpHint key={t.id} text={`${pageHint('question', 'template')} ${t.options.join(', ')}.`}>
+              <button type="button" onClick={() => applyTemplate(t)}
+                className="rounded-full border border-sky-300 bg-white px-2 py-0.5 hover:bg-sky-50 dark:bg-background dark:hover:bg-sky-950/30">
+                {t.label}
+              </button>
+            </HelpHint>
+          ))}
+        </div>
+      )}
       {rows.map((r, i) => (
         <div key={r.key} className="space-y-1">
           <div className="flex items-center gap-1">

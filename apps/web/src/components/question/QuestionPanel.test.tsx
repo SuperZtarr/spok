@@ -1,6 +1,6 @@
 /* Tests de QuestionPanel : vote (appel de l'API avec l'option cochée), décompte nominatif, badge « Unanimité », boutons d'issue réservés à
  * qui peut décider, vote figé une fois la question close, pas d'édition des options en séance (variant live),
- * réponses possibles enregistrées au fil de la saisie sans doublon, confirmation avant de retirer une réponse votée. */
+ * réponses possibles enregistrées au fil de la saisie sans doublon, modèles de réponse (question vide seulement), confirmation avant de retirer une réponse votée. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -91,6 +91,31 @@ describe('QuestionPanel', () => {
     fireEvent.blur(second)
     await waitFor(() => expect(api.saveOptions).toHaveBeenLastCalledWith('s1', 'q1', { multiple: false, options: [{ id: 'n0', label: 'Oui', refItemId: null }, { id: undefined, label: 'Non', refItemId: null }] }))
     expect(api.saveOptions).toHaveBeenCalledTimes(2)
+  })
+
+  it('modèle de réponse : crée et enregistre ses réponses, puis un autre modèle les remplace (aucun vote)', async () => {
+    api.get.mockResolvedValue(view({ options: [], canEditOptions: true, voterCount: 0, leadingOptionIds: [], unanimousOptionIds: [] }))
+    api.saveOptions.mockImplementation(async (_s: string, _i: string, body: { options: Array<{ id?: string; label: string }> }) =>
+      view({ options: body.options.map((o, i) => ({ id: o.id ?? `n${i}`, label: o.label, position: i, voters: [], refItemId: null, refItem: null })), canEditOptions: true }))
+    const { findByText, getByText, getByLabelText, queryByLabelText } = renderPanel()
+    fireEvent.click(await findByText('Go / No-go'))
+    await waitFor(() => expect(api.saveOptions).toHaveBeenCalledWith('s1', 'q1', {
+      multiple: false, options: [{ id: undefined, label: 'Go', refItemId: null }, { id: undefined, label: 'No-go', refItemId: null }],
+    }))
+    expect((getByLabelText('Réponse 2') as HTMLInputElement).value).toBe('No-go')
+    fireEvent.click(getByText('Oui / Non / NSP'))
+    await waitFor(() => expect(api.saveOptions).toHaveBeenLastCalledWith('s1', 'q1', {
+      multiple: false, options: ['Oui', 'Non', 'Ne sait pas'].map((label) => ({ id: undefined, label, refItemId: null })),
+    }))
+    expect((getByLabelText('Réponse 3') as HTMLInputElement).value).toBe('Ne sait pas')
+    expect(queryByLabelText('Réponse 4')).toBeNull()
+  })
+
+  it('modèles absents dès qu’un vote existe', async () => {
+    api.get.mockResolvedValue(view({ canEditOptions: true }))
+    const { findAllByLabelText, queryByText } = renderPanel()
+    await findAllByLabelText('Retirer')
+    expect(queryByText('Go / No-go')).toBeNull()
   })
 
   it('réponse liée : lien vers la fiche de l’élément ; sans élément lisible, libellé seul', async () => {
