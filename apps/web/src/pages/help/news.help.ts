@@ -7,7 +7,7 @@ const elements: HelpElements = {
   liste: {
     title: 'L\'historique',
     short: 'Toutes les nouveautés et évolutions, datées.',
-    text: 'Toutes les nouveautés et évolutions de SPOK, les plus récentes d\'abord, y compris celles que vous avez déjà vues. Accessible à tout moment par « Nouveautés » dans le bandeau.',
+    text: 'Toutes les nouveautés et évolutions de SPOK, une vignette chacune, les plus récentes d\'abord, y compris celles que vous avez déjà vues. Accessible à tout moment par « Nouveautés » dans le bandeau.',
     target: '[data-tour="news-list"]',
     side: 'top',
     changes: [{
