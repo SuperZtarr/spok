@@ -14,6 +14,13 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-13 — Tags, données prod (tunnel ouvert par Thomas, port 25499, accord explicite) : `migrate-space-tags --prod --restore --apply` → 10 tags rendus à leur espace, 463 recréés, 121 liens, 55 sautés (supprimés depuis). ERREUR du script : il a aussi rendu à leur espace 7 tags que Thomas avait rendus globaux depuis le 11/11 (Amélioration, Documentation, Evolution, idée, Personnel, Professionnel, Technique) → remis en global (accord Thomas). `repair-tag-scope --prod` : 0 lien hors de portée. Bug JDR/mdp passé done. Doublons global / espace possibles (Personnel…) : à fusionner dans /admin/tags si Thomas le souhaite.
+- 2026-11-13 — Tags : lot « Vue Tags - champ Nouveau tag » inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-13 — Références externes : lot « MCP, duplication et fusion » inscrit PRÊT POUR MEP, NON COMMITÉ ; spec SPOK to_validate.
+
+- 2026-11-13 — Tags : lot « Admin tags - liste rangée par portée » inscrit PRÊT POUR MEP, NON COMMITÉ. Lot « Tags d'espace rétablis » poussé (cee48c1f) : scripts prod (migrate-space-tags --restore puis repair-tag-scope) toujours à lancer sur accord de Thomas.
+
 - 2026-11-12 — Tags : lot « Tags d'espace rétablis » codé, inscrit PRÊT POUR MEP, NON COMMITÉ. Specs SPOK (Tags [Tag], Vue Tags, Filtre Tags, Gestion des tags) et les 4 éléments de l'espace bugs en to_validate. Spec de la modale d'édition non touchée (session fiche-element active).
 - 2026-11-12 — Vue Assignations (session thème Assignations) : lot « colonnes des noms saisis sans compte » terminé, NON COMMITÉ, inscrit PRÊT POUR MEP. Tâche et spec SPOK passées to_validate.
 
@@ -28,6 +35,9 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-13
+- 4 lots poussés : admin tags par portée, références externes (MCP, duplication, fusion), vue Tags champ Nouveau tag, carte de nouveauté. Lignes TODO écrites par les lots. Annonces tags-view-new-tag et admin-tags-grouped datées. Typecheck OK, TNR 2766/2767 (NewSessionDialog instable sous charge, passe seul 4/4, hors lots)
 
 ### MEP — 2026-11-12 (2)
 - 10 lots, un commit chacun ; ItemEditModal.tsx, item-modal.help.ts, items.ts, businessRules.ts entiers avec le dernier lot qui les touche (tags). Schéma additif : contributions.reactionType, table item_external_refs. 10 annonces datées. db:generate, typecheck OK, TNR 2751/2752 puis suite API relancée 1105/1105 (item-contents « envoi d'un fichier » instable sous charge, passe seul). APRÈS push, sur accord de Thomas : migrate-space-tags --prod --restore (sauvegarde du 2026-11-11) puis repair-tag-scope --prod

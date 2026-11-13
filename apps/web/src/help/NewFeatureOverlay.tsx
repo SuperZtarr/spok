@@ -7,8 +7,10 @@
  * située DANS une modale passe au-dessus (z-[60]).
  * L'annonce compte comme traitée sur « C'est noté » ou Compris, pas sur Expliquez-moi : quitter l'écran sans répondre ne la
  * perd pas. Textes : help/newsTexts.ts, fiche home (hints), éléments d'aide. Aucune prop.
+ * Carte mesurée (cardHeight) et remontée pour tenir entière dans la fenêtre : une zone en bas d'écran (pied de la fiche)
+ * la laissait écrasée et défilante (2026-11-13) ; elle ne défile que si elle dépasse la hauteur de la fenêtre.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useHelpAnnouncementsStore } from '../stores/helpAnnouncements';
 import { useHelpModeStore } from '../stores/helpMode';
@@ -45,6 +47,13 @@ export function NewFeatureOverlay() {
   const markHandled = useHelpAnnouncementsStore((state) => state.markHandled);
   const [shown, setShown] = useState<Shown | null>(null);
   const [explainedId, setExplainedId] = useState<string | null>(null);
+  // Hauteur réelle de la carte : remontée pour tenir entière dans la fenêtre (zone en bas d'écran, ex. pied de la fiche)
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardHeight, setCardHeight] = useState(0);
+  useLayoutEffect(() => {
+    const h = cardRef.current?.scrollHeight ?? 0;
+    if (h && h !== cardHeight) setCardHeight(h);
+  });
 
   useEffect(() => {
     if (pending.length === 0 || helpMode) { setShown(null); return; }
@@ -66,6 +75,7 @@ export function NewFeatureOverlay() {
   const layer = inModal ? 'z-[60]' : 'z-40';
   const explained = explainedId === announcement.id;
   const pos = cardPosition(rect, CARD_MARGIN);
+  const top = Math.max(CARD_MARGIN, Math.min(pos.top, window.innerHeight - CARD_MARGIN - cardHeight));
   const close = () => { setExplainedId(null); markHandled(announcement.id); };
 
   return createPortal(
@@ -76,9 +86,9 @@ export function NewFeatureOverlay() {
           {NEWS_TEXTS.kind[announcement.kind]}
         </span>
       </div>
-      <div role="dialog" aria-label={NEWS_TEXTS.kind[announcement.kind]} aria-live="polite"
+      <div ref={cardRef} role="dialog" aria-label={NEWS_TEXTS.kind[announcement.kind]} aria-live="polite"
         className={`fixed ${layer} rounded-lg border border-violet-500 bg-card p-3 text-xs shadow-xl overflow-y-auto`}
-        style={{ top: pos.top, left: pos.left, width: CARD_W, maxHeight: window.innerHeight - pos.top - CARD_MARGIN }}>
+        style={{ top, left: pos.left, width: CARD_W, maxHeight: window.innerHeight - 2 * CARD_MARGIN }}>
         <p className="mb-1 text-sm font-semibold text-foreground">{announcement.title}</p>
         <p className="leading-relaxed text-muted-foreground">{announcement.text}</p>
         {explained && <p className="mt-2 leading-relaxed text-foreground">{announcement.explanation}</p>}
