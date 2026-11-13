@@ -13,7 +13,8 @@
  * révèle Type/Statut/Priorité/Dates/Assigné/Dépendances/Parent/Enfants en layout 3 colonnes. Tags (tagsSection)
  * toujours visibles (2026-11-11) : fiche réduite au-dessus de la Description, fiche complète en colonne droite. Une fois réduite,
  * une ligne de résumé cliquable (buildForumSummary) sous le titre liste les champs avancés renseignés.
- * Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet / Tous (décision Thomas 2026-10-22), non mémorisé.
+ * Défaut à l'ouverture : réduite ou complète selon le mode (itemModalCollapsed de MODE_REGISTRY, @spok/shared ;
+ * décision Thomas 2026-10-22, registre 2026-11-13), non mémorisé.
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
  * Schéma, Article) au-dessus de la Description. Les types de pilotage, dates, priorité et statut restent dans la fiche
  * complète ; un élément d'un tel type voit son type, non modifiable ici.
@@ -113,7 +114,7 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusAllowedForType, statusesForType } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusAllowedForType, statusesForType, getInterfaceMode } from '@spok/shared';
 import { statusChangeFields } from '../lib/statusChange';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -241,9 +242,9 @@ export function ItemEditModal({
   const { pulseHelp: itemPulse, startTour: startItemTour } = usePageTourPulse('item-modal', PAGE_HELP['item-modal'].tour);
   const { mode: interfaceMode } = useInterfaceModeStore();
   // Fiche réduite (titre + description + médias + contributions) ou complète, dans tous les modes, via le bouton
-  // « Plus de champs / Moins de champs ». Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet / Tous.
-  // Non mémorisé : chaque fiche ouverte (ou changement de mode) repart du défaut.
-  const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'loisirs';
+  // « Plus de champs / Moins de champs ». Défaut à l'ouverture : champ itemModalCollapsed du mode dans MODE_REGISTRY
+  // (@spok/shared, 2026-11-13). Non mémorisé : chaque fiche ouverte (ou changement de mode) repart du défaut.
+  const collapsedByDefault = getInterfaceMode(interfaceMode).itemModalCollapsed;
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
   const [idCopied, setIdCopied] = useState(false);

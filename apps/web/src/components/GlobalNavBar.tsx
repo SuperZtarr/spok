@@ -5,18 +5,11 @@
  * row 1 du header (Layout.tsx, 2026-08-31) — ce bandeau ne gère plus que la navigation.
  * Badge d'activité : GET /activity seulement si connecté — le bandeau s'affiche aussi aux visiteurs anonymes
  * (/communities, /search…) et un 401 y renvoyait vers /login (bug 2026-10-21).
- * NAV_ICONS doublée dans Layout.tsx (grille mobile) : toute icône ajoutée ici l'est aussi là-bas (Sparkles : Nouveautés ;
- * Tag : admin Tags ; Share2 : carte mentale globale, 2026-11-13).
+ * Icônes : getNavIcon de constants/viewIcons.ts, source unique (2026-11-13) — plus de carte NAV_ICONS ici ni dans Layout.
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
-  LayoutDashboard, ClipboardList, Activity, Sun,
-  Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Map as MapIconLucide, Copy, Search, Sparkles, Tag,
-  type LucideIcon,
-} from 'lucide-react';
+import { getNavIcon } from '../constants/viewIcons';
 import { activityApi } from '../lib/api';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { resolveMenuRoute } from '../lib/searchScope';
@@ -24,14 +17,7 @@ import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED } from '../stores/interface
 import { useAuthStore } from '../stores/auth';
 import { SPACE_VIEW_SECTION_IDS, type MenuItemConfig } from '@spok/shared';
 
-const NAV_ICONS: Record<string, LucideIcon> = {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
-  LayoutDashboard, ClipboardList, Activity, Sun,
-  Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, MapIcon: MapIconLucide, Copy, Search, Sparkles, Tag,
-};
-
-const getIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
+const getIcon = getNavIcon;
 
 /** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici (liste partagée, 5 catégories depuis 2026-11-13) */
 const SPACE_SECTIONS = SPACE_VIEW_SECTION_IDS;

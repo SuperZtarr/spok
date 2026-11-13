@@ -2,31 +2,21 @@
  * Favoris de vues par mode d'interface et rangement par catégorie, pour le sélecteur de vues d'un espace
  * (SpaceViewSelector). Réorganisation 2026-11-13 (décision Thomas) : un mode ne fait plus qu'une chose, donner sa
  * liste ordonnée de favoris, affichés en boutons directs. Plus de familles ni d'ajustements par mode.
- * - favoriteViews(views, mode) : favoris accessibles du mode, dans l'ordre de la liste (vue inaccessible ignorée).
+ * Les favoris sont définis dans MODE_REGISTRY (@spok/shared, champ favorites) — jamais ici.
+ * - favoriteViews(views, mode) : favoris accessibles du mode, dans l'ordre du registre (vue inaccessible ignorée).
  * - viewsByCategory(views) : toutes les vues accessibles, par catégorie (SPACE_VIEW_SECTIONS), favoris compris —
  *   contenu du panneau « Toutes les vues ». Aucune vue n'est jamais masquée par un mode.
  * - matchesViewQuery(label, short, query) : recherche du panneau (sans accents ni casse).
  * Ne pas recopier ces listes dans un composant : SpaceViewSelector et les tests lisent celles-ci.
  */
-import { SPACE_VIEW_SECTIONS, VIEW_REGISTRY, type ViewCategoryId } from '@spok/shared';
-import type { InterfaceMode } from '../stores/interfaceMode';
-
-/** Favoris de chaque mode, dans l'ordre d'affichage. Documentation et Exploration : 2026-11-13. */
-export const MODE_FAVORITE_VIEWS: Record<InterfaceMode, string[]> = {
-  forum:       ['thread', 'text', 'recent', 'images', 'calendar', 'loupe'],
-  projet:      ['tree', 'todo', 'kanban', 'timeline', 'pert', 'calendar', 'planning', 'priority', 'process', 'mindmap', 'loupe'],
-  loisirs:     ['thread', 'mindmap', 'images', 'documents', 'recent', 'loupe'],
-  documentation: ['tree', 'text', 'articles', 'documents', 'links', 'tags', 'mindmap', 'loupe'],
-  exploration: ['links', 'recent', 'tags', 'graph', 'loupe', 'mindmap', 'images'],
-  tous:        ['list', 'tree', 'thread', 'kanban', 'timeline', 'calendar', 'mindmap'],
-};
+import { SPACE_VIEW_SECTIONS, VIEW_REGISTRY, getInterfaceMode, type ViewCategoryId } from '@spok/shared';
 
 const CATEGORY_OF = new Map(VIEW_REGISTRY.map((v) => [v.id, v.category]));
 const ORDER_OF = new Map(VIEW_REGISTRY.map((v) => [v.id, v.order]));
 
-/** Favoris accessibles d'un mode, dans l'ordre de MODE_FAVORITE_VIEWS. */
+/** Favoris accessibles d'un mode, dans l'ordre du registre des modes (mode inconnu → Tous). */
 export function favoriteViews<T extends { viewMode?: string | null }>(views: T[], mode: string): T[] {
-  const ids = MODE_FAVORITE_VIEWS[mode as InterfaceMode] ?? MODE_FAVORITE_VIEWS.tous;
+  const ids = getInterfaceMode(mode).favorites;
   return ids.map((id) => views.find((v) => v.viewMode === id)).filter((v): v is T => !!v);
 }
 

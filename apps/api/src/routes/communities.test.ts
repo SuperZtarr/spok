@@ -5,6 +5,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildCommunitiesTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 import type { FastifyInstance } from 'fastify'
+import { COMMUNITY_CONTEXTS } from '@spok/shared'
+import { CommunityContext as PrismaCommunityContext } from '@prisma/client'
+
+// Centralisation des référentiels (2026-11-13) : les contextes du registre des modes (@spok/shared) doivent être
+// exactement les valeurs de l'enum Prisma CommunityContext — sinon un mode serait refusé ou stocké sans existence.
+describe('COMMUNITY_CONTEXTS ↔ enum Prisma', () => {
+  it('mêmes valeurs', () => {
+    expect([...COMMUNITY_CONTEXTS].sort()).toEqual(Object.values(PrismaCommunityContext).sort())
+  })
+})
 
 vi.mock('../utils/audit.js', () => ({
   createAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -365,8 +375,8 @@ describe('Communities routes', () => {
       expect(prisma.community.update.mock.calls[0][0].data.context).toBe('JDR')
     })
 
-    // Modes Documentation et Exploration (2026-11-13)
-    it.each(['DOCUMENTATION', 'EXPLORATION'])('should accept the %s context', async (context) => {
+    // Tous les contextes du registre des modes (COMMUNITY_CONTEXTS, 2026-11-13)
+    it.each([...COMMUNITY_CONTEXTS])('should accept the %s context', async (context) => {
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
       prisma.community.update.mockResolvedValue(mockCommunity({ context }))
 

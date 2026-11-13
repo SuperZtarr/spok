@@ -4,12 +4,13 @@
    Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+import { contextsList, openingViewsSentence } from '../../lib/modeTexts';
 
 const elements: HelpElements = {
   general: {
     title: 'Général',
     short: 'Nom, description, visibilité et contexte.',
-    text: 'Nom, description, visibilité et contexte (Forum, Projet, Loisirs, Documentation, Exploration) de la communauté.',
+    text: 'Nom, description, visibilité et contexte (' + contextsList() + ') de la communauté.',
     changes: [{ id: 'community-context-doc-exploration', kind: 'new', text: 'Deux nouveaux contextes de communauté : Documentation (wiki, procédures : ouverture sur l\'Arborescence) et Exploration (veille, sources reliées : ouverture sur les Récents), chacun avec ses vues favorites.', date: '2026-11-13' }],
     target: '[data-tour="community-tab-general"]',
     noZone: true,
@@ -90,7 +91,7 @@ export const help: HelpEntry = {
     spacesOpenSettings: 'Cliquer un espace ouvre ses paramètres (pas l\'espace lui-même) — pour y entrer, passez par la barre latérale ou la page de la communauté.',
     spacesOrder:'Glissez un espace sur le haut ou le bas d\'une ligne pour le placer avant ou après (ordre vu par tous les membres), sur son milieu pour en faire un sous-espace, ou sur le bandeau du haut pour le remettre au premier niveau.',
     visibilityRequest: 'Rendre la communauté visible par tous nécessite la validation d\'un administrateur : une demande sera envoyée à l\'enregistrement.',
-    context: 'Le contexte adapte l\'interface pour tous les visiteurs de la communauté : vues favorites de la barre de vues (les autres restent dans « Toutes les vues »), champs de la fiche, navigation. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale, Documentation → Arborescence, Exploration → Récents, Neutre → Liste. Chacun peut ensuite changer de mode pour soi dans l\'en-tête.',
+    context: 'Le contexte adapte l\'interface pour tous les visiteurs de la communauté : vues favorites de la barre de vues (les autres restent dans « Toutes les vues »), champs de la fiche, navigation. Il choisit aussi la vue d\'ouverture des espaces sans vue par défaut : ' + openingViewsSentence() + '. Chacun peut ensuite changer de mode pour soi dans l\'en-tête.',
     statusCategory: 'La catégorie dit ce que veut dire le statut, dans toutes les vues et pour tous les membres : Terminé ou Annulé ferme l’élément (il sort des listes à faire et des retards, sa date de fin se remplit, il compte comme fait) ; En cours, À valider et En retard alimentent les indicateurs du tableau de bord. Un statut que vous créez commence en À faire.',
     reservedStatus: 'Issue d’une question (Ouverte, Tranchée, Reportée, Sans conclusion) : proposée seulement pour les éléments Question, qui n’utilisent qu’elles. Libellé, couleur, ordre et visibilité se modifient ; elle ne se supprime pas.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',

@@ -7,6 +7,7 @@
  * Sélecteur de vues (2026-11-13, SpaceViewSelector) : presentation, vues (favoris du mode), toutesVues (panneau).
  */
 import type { HelpElements } from './elements';
+import { modesList } from '../lib/modeTexts';
 
 export const SPACE_TOOLBAR_ELEMENTS = {
   presentation: {
@@ -18,9 +19,9 @@ export const SPACE_TOOLBAR_ELEMENTS = {
   },
   vues: {
     title: 'Vues favorites',
-    short: 'Les vues mises en avant pour le mode affiché devant (Forum, Projet, Loisirs, Documentation, Exploration, Tous).',
-    text: 'Les vues favorites du mode d\'interface, en accès direct ; le nom du mode est affiché devant. On change de mode avec les boutons de l\'en-tête : seuls les favoris changent, aucune vue n\'est retirée. Une vue ouverte depuis « Toutes les vues » s\'ajoute en bout de ligne, en pointillé, le temps de son affichage. Le contenu reste le même, seule la présentation change.',
-    changes: [{ id: 'toolbar-views-favorites-2026-11', kind: 'evolution', text: 'Vues réorganisées : les favoris de votre mode en accès direct, et toutes les vues rangées en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration) dans « Toutes les vues », avec ce que fait chacune. « Todo » s\'appelle désormais « À faire ».', date: '2026-11-13' }],
+    short: 'Les vues mises en avant pour le mode affiché devant (' + modesList() + ').',
+    text: 'Les vues favorites du mode d\'interface, en accès direct ; le nom du mode est affiché devant. On change de mode avec les boutons de l\'en-tête : seuls les favoris changent, aucune vue n\'est retirée. Une vue ouverte depuis « Toutes les vues » s\'ajoute en bout de ligne, en pointillé, le temps de son affichage. La vue choisie vous suit d\'un espace à l\'autre dans la même communauté ; en arrivant d\'une autre communauté, l\'espace s\'ouvre sur sa vue d\'ouverture (point bleu). Le contenu reste le même, seule la présentation change.',
+    changes: [{ id: 'toolbar-views-favorites-2026-11', kind: 'evolution', text: 'Vues réorganisées : les favoris de votre mode en accès direct, et toutes les vues rangées en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration) dans « Toutes les vues », avec ce que fait chacune. « Todo » s\'appelle désormais « À faire ».', date: '2026-11-13' }, { id: 'space-view-kept-in-community', kind: 'evolution', text: 'Votre vue vous suit : en passant d\'un espace à l\'autre dans la même communauté, la vue affichée est conservée. La vue d\'ouverture de l\'espace (point bleu) s\'applique en arrivant d\'une autre communauté.', date: '2026-11-13' }],
     target: '[data-tour="toolbar-views"]',
     side: 'bottom',
   },

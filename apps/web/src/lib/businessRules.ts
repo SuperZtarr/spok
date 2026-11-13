@@ -1,8 +1,11 @@
 /* Registre des règles de gestion implicites (type/statut/priorité), consulté par RuleHint (UI dev) et par Claude comme documentation vivante.
    Règles de statut : appliesToValues dérivés des catégories (statusIdsIn), jamais une liste de statuts recopiée.
    Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents.
-   Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune. */
+   Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune.
+   Modes d'interface (2026-11-13) : listes de modes, favoris, vues d'ouverture et catégories générées par lib/modeTexts
+   depuis MODE_REGISTRY — jamais recopiées en clair dans une règle. */
 import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, statusIdsIn } from '@spok/shared';
+import { collapsedModesLabel, contextModeSentence, favoritesByModeSentence, modesList, openingViewsSentence, viewCategoriesList } from './modeTexts';
 
 export interface ItemBusinessRule {
   id: string;
@@ -336,7 +339,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'space-default-view-by-context',
     page: 'Espace (ouverture) ; paramètres de l\'espace ; barre latérale ; cartes d\'espace',
     trigger: "Ouverture d'un espace dont la vue par défaut n'est pas réglée (« Selon la communauté »)",
-    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale, Documentation → Arborescence, Exploration → Récents), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
+    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (" + openingViewsSentence() + " ; Neutre = communauté neutre ou espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture (2026-11-13, openingView) : ?view= de l'adresse, puis la vue en cours si l'espace précédent était dans la même communauté (personnel → personnel compris), puis cette vue — elle s'applique donc au premier espace ouvert dans l'onglet et en changeant de communauté. Les liens de la barre latérale n'imposent plus de vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
     location: 'apps/web/src/lib/spaceDefaultView.ts, apps/web/src/pages/SpacePage.tsx, apps/web/src/pages/SpaceSettingsPage.tsx, apps/web/src/components/Layout.tsx, apps/web/src/components/ui/SpaceCard.tsx',
   },
   {
@@ -378,7 +381,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'forum-modal-reduced-with-summary',
     page: 'Modale item (tous modes)',
     trigger: "Ouverture d'un item / clic sur « Plus de champs » – « Moins de champs »",
-    effect: "Fiche réduite (titre, description, média, réactions/contributions) ou complète, bouton « Plus de champs / Moins de champs » présent dans tous les modes. Défaut à l'ouverture : réduite en Forum et Loisirs, complète en Projet et Tous ; non mémorisé (chaque fiche ouverte et chaque changement de mode repartent du défaut). Fiche réduite : ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic = fiche complète",
+    effect: "Fiche réduite (titre, description, média, réactions/contributions) ou complète, bouton « Plus de champs / Moins de champs » présent dans tous les modes. Défaut à l'ouverture : réduite en " + collapsedModesLabel() + ", complète dans les autres modes (itemModalCollapsed de MODE_REGISTRY) ; non mémorisé (chaque fiche ouverte et chaque changement de mode repartent du défaut). Fiche réduite : ligne de résumé cliquable sous le titre : type (hors Note/Non défini) · statut · priorité · période/début · échéance · assigné · N liens ; clic = fiche complète",
     location: 'apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/item-edit-helpers.ts (buildForumSummary)',
   },
   {
@@ -545,8 +548,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
-    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Loisirs-Documentation-Exploration-Tous du header",
-    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→Loisirs, DOCUMENTATION→Documentation, EXPLORATION→Exploration, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Le mode ne choisit que les vues favorites, en boutons directs dans cet ordre (2026-11-13) : Forum = Discussions, Texte, Récents, Images, Calendrier, Loupe ; Projet = Arborescence, À faire, Kanban, Gantt, PERT, Calendrier, Planning, Priorités, Process, Carte mentale, Loupe ; Loisirs = Discussions, Carte mentale, Images, Documents, Récents, Loupe ; Documentation = Arborescence, Texte, Articles, Documents, Liens, Tags, Carte mentale, Loupe ; Exploration = Liens, Récents, Tags, Graphe, Loupe, Carte mentale, Images ; Tous = Liste, Arborescence, Discussions, Kanban, Gantt, Calendrier, Carte mentale. Vue affichée hors favoris : bouton temporaire en bout de ligne. Toutes les vues accessibles restent dans le panneau « Toutes les vues », en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration), jamais masquées",
+    trigger: "Entrée dans une communauté / clic sur un bouton de mode du header (" + modesList() + ")",
+    effect: "Mode = contexte de la communauté (" + contextModeSentence() + ") ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Le mode ne choisit que les vues favorites, en boutons directs dans cet ordre (MODE_REGISTRY, 2026-11-13) : " + favoritesByModeSentence() + ". Vue affichée hors favoris : bouton temporaire en bout de ligne. Toutes les vues accessibles restent dans le panneau « Toutes les vues », en catégories (" + viewCategoriesList() + "), jamais masquées",
     location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode), apps/web/src/lib/viewFavorites.ts, apps/web/src/pages/SpaceViewSelector.tsx',
   },
   {

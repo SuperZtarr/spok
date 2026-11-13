@@ -5,8 +5,8 @@
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
    message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
-   Contexte : Neutre / Forum / Projet / Loisirs (valeur JDR en base et dans l'API) / Documentation / Exploration (2026-11-13) —
-   donne le mode d'interface par défaut de la communauté (Layout) ; options et libellés : CONTEXT_OPTIONS ci-dessous.
+   Contexte : donne le mode d'interface par défaut de la communauté (Layout) ; options, libellés et descriptions
+   dérivés du registre des modes (MODE_REGISTRY, via lib/modeTexts.contextOptions, 2026-11-13).
    Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
    Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
    PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine.
@@ -46,17 +46,10 @@ import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
 import type { StatusConfig, TypeLabelConfig, CommunityVisibility, CommunityContext } from '@spok/shared';
+import { contextOptions, type ContextChoice } from '../lib/modeTexts';
 
-/** Choix du contexte ('NONE' = neutre, null en base). Seule liste des options et de leurs libellés sur cette page. */
-type ContextChoice = 'NONE' | CommunityContext;
-const CONTEXT_OPTIONS: { value: ContextChoice; label: string; description: string }[] = [
-  { value: 'NONE', label: 'Neutre', description: 'Usage général — favoris Liste, Arborescence, Discussions, Kanban, Gantt…' },
-  { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
-  { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
-  { value: 'JDR', label: 'Loisirs', description: 'Jeux, passions et activités ludiques — fiches, cartes, images' },
-  { value: 'DOCUMENTATION', label: 'Documentation', description: 'Wiki, procédures, savoir partagé — arborescence, textes, articles' },
-  { value: 'EXPLORATION', label: 'Exploration', description: 'Veille et sources reliées — liens, récents, tags, graphe' },
-];
+/** Choix du contexte : dérivés du registre des modes (lib/modeTexts.contextOptions, 2026-11-13) — jamais de liste ici. */
+const CONTEXT_OPTIONS = contextOptions();
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 function formatRelativeDate(dateStr: string): string {

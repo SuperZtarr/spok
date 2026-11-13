@@ -20,6 +20,7 @@
    Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+import { collapsedModesLabel } from '../../lib/modeTexts';
 
 export const elements = {
   chemin: {
@@ -60,7 +61,7 @@ export const elements = {
   champs: {
     title: 'Plus de champs',
     short: 'Déplie ou replie la fiche.',
-    text: 'Dépliez la fiche (« Plus de champs ») pour ouvrir à droite le panneau Pilotage : type, statut, priorité, dates, assignation, parent, références externes, dépendances, enfants et historique. « Moins de champs » le referme. La colonne de gauche ne change pas : tags, description, contenus et contributions restent au même endroit. La fiche s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
+    text: 'Dépliez la fiche (« Plus de champs ») pour ouvrir à droite le panneau Pilotage : type, statut, priorité, dates, assignation, parent, références externes, dépendances, enfants et historique. « Moins de champs » le referme. La colonne de gauche ne change pas : tags, description, contenus et contributions restent au même endroit. La fiche s\'ouvre réduite en mode ' + collapsedModesLabel() + ', complète dans les autres modes.',
     target: '[data-tour="item-more-fields"]',
     noZone: true,
     side: 'bottom',

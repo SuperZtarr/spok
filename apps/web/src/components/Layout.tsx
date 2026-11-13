@@ -16,6 +16,8 @@
  * Indicateur process (2026-10-28) : icône Workflow après le nom d'un espace dont processNodeCount > 0 (GET /spaces) ;
  * la liste n'est rafraîchie que quand un process apparaît ou disparaît (useProcessNodes), jamais par polling.
  * Grille de navigation mobile : sections hors catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 2026-11-13).
+ * Référentiels (2026-11-13) : icônes via getNavIcon (constants/viewIcons, plus de NAV_ICONS local) ; boutons de mode
+ * dérivés de MODE_REGISTRY (@spok/shared), infobulles générées (lib/modeTexts).
  * Titre de l'onglet (2026-11-04) : élément ouvert (useOpenItemStore, jamais l'adresse : ?item= n'y reste pas) = icône de
  * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
  */
@@ -26,10 +28,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2,
   HelpCircle, Clock, Star, Plus, ArrowLeft,
-  Home, Users, CircleDot, GitBranch, Share2, Network, ExternalLink, LayoutDashboard, ClipboardList,
-  Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
-  Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow, Sparkles, Tag,
-  type LucideIcon,
+  LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
 import { TYPE_EMOJI } from '../constants/ui';
@@ -64,31 +63,21 @@ import { GlobalNavBar } from './GlobalNavBar';
 import { CommunityBadge, isNonMemberRole } from './CommunityBadge';
 import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { useOpenItemStore } from '../stores/openItem';
-import { getViewIcon } from '../constants/viewIcons';
+import { getViewIcon, getNavIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, INTERFACE_MODE_LABELS, modeForContext, type InterfaceMode } from '../stores/interfaceMode';
-import { SPACE_VIEW_SECTION_IDS, type SpaceWithRole } from '@spok/shared';
+import { SPACE_VIEW_SECTION_IDS, MODE_REGISTRY, type SpaceWithRole } from '@spok/shared';
+import { modeHint } from '../lib/modeTexts';
 
-/** Boutons d'option du mode d'interface (header) — Documentation et Exploration ajoutés le 2026-11-13.
- *  Libellés : INTERFACE_MODE_LABELS (stores/interfaceMode). Le mode choisit les vues favorites de la barre de vues
- *  (lib/viewFavorites) ; les autres restent dans « Toutes les vues » (2026-11-13). */
-const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = [
-  { value: 'forum',  label: INTERFACE_MODE_LABELS.forum,  hint: 'Sujets et discussions : favoris Discussions, Texte, Récents, Images, Calendrier, Loupe' },
-  { value: 'projet', label: INTERFACE_MODE_LABELS.projet, hint: 'Pilotage : favoris Arborescence, À faire, Kanban, Gantt, PERT, Calendrier, Planning, Priorités, Process, Carte mentale, Loupe' },
-  { value: 'loisirs', label: INTERFACE_MODE_LABELS.loisirs, hint: 'Activités ludiques et de loisirs : favoris Discussions, Carte mentale, Images, Documents, Récents, Loupe' },
-  { value: 'documentation', label: INTERFACE_MODE_LABELS.documentation, hint: 'Wiki et procédures : favoris Arborescence, Texte, Articles, Documents, Liens, Tags, Carte mentale, Loupe' },
-  { value: 'exploration', label: INTERFACE_MODE_LABELS.exploration, hint: 'Veille et sources reliées : favoris Liens, Récents, Tags, Graphe, Loupe, Carte mentale, Images' },
-  { value: 'tous',   label: INTERFACE_MODE_LABELS.tous,   hint: 'Usage général : favoris Liste, Arborescence, Discussions, Kanban, Gantt, Calendrier, Carte mentale' },
-];
+/** Boutons d'option du mode d'interface (header) : dérivés du registre des modes (MODE_REGISTRY, @spok/shared,
+ *  2026-11-13), infobulle générée (description + favoris, lib/modeTexts). Jamais de liste de modes ici. */
+const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = MODE_REGISTRY.map((m) => ({
+  value: m.id as InterfaceMode,
+  label: m.label,
+  hint: modeHint(m.id),
+}));
 
-const NAV_ICONS: Record<string, LucideIcon> = {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
-  LayoutDashboard, ClipboardList, Activity,
-  Building2, BarChart3, History, AlertTriangle, Settings, FileText,
-  MessageSquare, Search, MapIcon: MapIconLucide, Copy, Sparkles, Tag,
-};
-const getNavIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
 /** Icône d'un espace : son image, sinon l'icône de sa vue d'ouverture — vue propre, sinon celle du contexte de sa
  *  communauté (resolveSpaceDefaultView, même règle que SpaceCard, 2026-10-29) ; dossier si rien n'en décide. */

@@ -66,7 +66,7 @@ Piste "Dense technique" choisie par Thomas via mockups Claude Design : la "chrom
 
 - **Logo** : importé depuis `src/assets/logo.png` (pas `public/`) — `834ae71` a déplacé le fichier pour que Vite hash le nom au build et invalide le cache navigateur au déploiement. Ne pas repasser par `/public`.
 - **Chargement sidebar** : requêtes espaces/communautés en `staleTime: Infinity`, **pas de `refetchInterval`, pas de refetch keyé sur `location.pathname`** — `619205a` a supprimé un polling 30s + un refetch à chaque navigation qui entraient en course et faisaient flickerer la liste. Les mutations invalident déjà les queries au bon endroit ; ne pas réintroduire de polling ou de refetch sur navigation.
-- **`NAV_ICONS`** : deux maps *dupliquées indépendamment* (une dans `Layout.tsx`, une dans `GlobalNavBar.tsx`) — pas de source commune. Ajouter une icône des deux côtés si elle doit apparaître dans les deux endroits (menu sidebar mobile + bandeau desktop).
+- **Icônes de navigation** : source unique `apps/web/src/constants/viewIcons.ts` (`getNavIcon`), lue par `GlobalNavBar.tsx` et la grille mobile de `Layout.tsx` (2026-11-13 — les deux cartes `NAV_ICONS` recopiées ont été supprimées ; celle de Layout avait perdu `Sun`). Ne jamais recréer de carte d'icônes locale.
 - **`SidebarDropContext`** (exporté par `Layout.tsx`) : contexte React pour le drag & drop item→espace, consommé par `SpaceTreeItem`. D'autres vues posent `dataTransfer` avec le type `application/x-spok-item` pour interopérer — ne pas renommer ce type MIME sans grep global.
 
 ## GlobalNavBar — logique de filtrage
@@ -87,6 +87,6 @@ Une section qui n'a plus aucun item après filtrage ne rend rien (`return null`)
 | Dropdown passe derrière `SpaceToolbar` | Stacking context `isolate` sur row 1 mal géré avec le z-index de la cover image | Vérifier `isolate` + `-z-10` sur la cover, cf. `015eb92` |
 | Bouton toggle sidebar mal aligné passé une certaine largeur | `max-w-[...]` sans préfixe `md:` sur l'`<aside>` | Utiliser `md:max-w-none` |
 | Sidebar qui flickers / liste d'espaces qui se recharge sans raison | Polling ou refetch keyé sur la route réintroduit | `staleTime: Infinity`, compter sur l'invalidation des mutations |
-| Icône absente dans un seul des deux emplacements (sidebar mobile vs bandeau desktop) | `NAV_ICONS` mis à jour d'un seul côté | Ajouter l'entrée dans les deux maps (`Layout.tsx` ET `GlobalNavBar.tsx`) |
+| Icône absente dans la navigation | Nom d'icône non déclaré dans `constants/viewIcons.ts` | L'y ajouter (test `viewIcons.test.ts` couvre `MENU_REGISTRY`) |
 | Fix appliqué à Layout/GlobalNavBar ne s'applique pas à `/admin/*` | `AdminLayout.tsx` est indépendant, ne partage aucune logique | Reporter le fix manuellement si le même bug s'y produit |
 | Sidebar et header pas assortis en mode sombre alors qu'ils le sont en clair | Classe `dark:` explicite sur un seul des deux éléments qui override la cascade normale | Retirer les overrides `dark:` ponctuels sur `bg-*`, laisser `--muted`/`--background` (`index.css`) porter la différence entre thèmes |

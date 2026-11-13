@@ -4,13 +4,9 @@ export type CommunityRole = 'OWNER' | 'MEMBER';
 
 export type CommunityVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 
-/** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »).
- *  JDR : affiché « Loisirs » dans l'interface, nom historique conservé en base et dans l'API. */
-export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR' | 'DOCUMENTATION' | 'EXPLORATION';
-
-/** Valeurs du contexte, dans l'ordre des choix (validation API, paramètres de la communauté). DOCUMENTATION et
- *  EXPLORATION ajoutés le 2026-11-13. */
-export const COMMUNITY_CONTEXTS = ['FORUM', 'PROJECT', 'JDR', 'DOCUMENTATION', 'EXPLORATION'] as const satisfies readonly CommunityContext[];
+/* Contexte d'usage d'une communauté (CommunityContext, COMMUNITY_CONTEXTS) : dérivé du registre des modes
+ * (constants/modeRegistry.ts, 2026-11-13), exporté par lui — jamais redéclaré ici. */
+import type { CommunityContext } from '../constants/modeRegistry.js';
 
 export interface Community {
   id: string;

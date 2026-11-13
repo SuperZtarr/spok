@@ -3,6 +3,7 @@
    Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+import { openingViewsSentence } from '../../lib/modeTexts';
 
 const elements: HelpElements = {
   general: {
@@ -56,7 +57,7 @@ export const help: HelpEntry = {
     parent: 'Range cet espace sous un autre espace de la même communauté : il en devient un sous-espace.',
     defaultRole: 'Quand quelqu\'un rejoint la communauté, il est ajouté automatiquement à cet espace avec ce rôle.',
     visibility: 'Ce que peuvent faire les membres de la communauté qui ne sont pas membres de cet espace. « Héritée » suit l\'espace parent ou la communauté.',
-    defaultView: 'La vue affichée à l\'ouverture de l\'espace, pour tout le monde. « Selon la communauté » suit le contexte de sa communauté : Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale, Documentation → Arborescence, Exploration → Récents, sinon Liste.',
+    defaultView: 'La vue affichée à l\'ouverture de l\'espace, pour tout le monde. « Selon la communauté » suit le contexte de sa communauté : ' + openingViewsSentence() + '. Elle s\'applique quand on arrive d\'une autre communauté ; entre espaces d\'une même communauté, la vue en cours est gardée.',
     avatar: '256 × 256 px, affiché en rond. Cliquez sur l\'image pour la changer.',
   },
   tour: elementTourSteps('space-settings', elements),

@@ -7,6 +7,7 @@
 import { elements as I } from '../components/help/item-modal.help';
 import { SPACE_TOOLBAR_ELEMENTS as E } from './spaceToolbar.elements';
 import type { HelpElement, HelpZone } from './types';
+import { modesList } from '../lib/modeTexts';
 
 const elementZone = ({ title, text }: HelpElement): HelpZone => ({ title, text });
 
@@ -27,7 +28,7 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   'sidebar-autres-espaces': { title: 'Autres espaces', text: 'Des espaces visibles hors de vos communautés : vous pouvez les consulter ou les rejoindre.' },
   'sidebar-arbre': { title: 'Communauté courante', text: 'La communauté où vous êtes et l\'arbre de ses espaces. « Toutes les communautés » revient à la liste complète. Au survol d\'un espace, « ⋯ » permet de créer un sous-espace, de le déplacer, de changer son ordre ou de le supprimer.' },
   'sidebar-footer': { title: 'Pied de barre', text: 'Les pages d\'administration quand le mode admin est actif, et la date de la dernière mise en ligne de SPOK.' },
-  header: { title: 'En-tête', text: 'Où vous êtes, le mode d\'affichage (Forum, Projet, Loisirs, Documentation, Exploration, Tous), la création rapide, les séances en direct, les notifications et votre compte.' },
+  header: { title: 'En-tête', text: 'Où vous êtes, le mode d\'affichage (' + modesList() + '), la création rapide, les séances en direct, les notifications et votre compte.' },
   bandeau: { title: 'Navigation globale', text: 'Les pages qui couvrent toutes vos communautés (accueil, communautés, espaces, graphes, liens), puis vos pages personnelles.' },
   toolbar: { title: 'Barre de l\'espace', text: 'Commune à toutes les vues de l\'espace : choix de la vue, ordre, filtre ou aperçu selon la vue, et actions de l\'espace.' },
   'toolbar-vues': elementZone(E.vues),

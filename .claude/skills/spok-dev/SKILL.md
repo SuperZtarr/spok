@@ -1,6 +1,6 @@
 ---
 name: spok-dev
-description: Cycle de développement SPOK — à invoquer à CHAQUE demande de modification de code (fonctionnalité, correctif, retouche d'interface, refactor, route API, vue, page, modale, bouton), avant de lire ou toucher le code. Distingue micro-correction (sans plan à valider) et changement (spec, plan validé, trois couches de documentation via spok-doc), tests ciblés, liste de contrôle « terminé » ; ne commite jamais — le lot fini est inscrit « PRÊT POUR MEP » pour la session MEP. Ne pas utiliser pour une simple question sans modification, ni pour le déploiement (spok-deploy).
+description: Cycle de développement SPOK — à invoquer à CHAQUE demande de modification de code (fonctionnalité, correctif, retouche d'interface, refactor, route API, vue, page, modale, bouton), avant de lire ou toucher le code. Distingue micro-correction (sans plan à valider) et changement (spec, plan validé, trois couches de documentation via spok-doc), tests ciblés, liste de contrôle « terminé » ; ne commite jamais — le lot fini est inscrit « PRÊT POUR MEP » pour la session MEP. Impose la centralisation des référentiels (une seule source par liste de valeurs, tout le reste dérivé). Ne pas utiliser pour une simple question sans modification, ni pour le déploiement (spok-deploy).
 ---
 
 # spok-dev — Cycle de développement SPOK
@@ -33,9 +33,39 @@ dans l'interface. Cette skill est la seule porte d'entrée du code : elle appell
 3. **Plan** : exposer ce qui va être fait et pourquoi, **y compris l'aide utilisateur prévue** (éléments d'aide, rappels
    fonctionnels, annonce si le comportement visible change), puis attendre la validation de Thomas. Pas de code avant.
 
+## 1 bis. Centralisation des référentiels (décision Thomas 2026-11-13)
+
+Constat qui l'a motivée : les modes d'interface étaient décrits par 7 listes dans 5 fichiers, et leurs favoris
+étaient recopiés en texte dans les infobulles, `businessRules.ts` et l'aide. Changer un favori obligeait à toucher
+7 endroits, et l'interface devenait incompréhensible.
+
+**Règle : toute liste de valeurs a UNE seule source ; tout le reste en est dérivé.**
+Vues, catégories, modes, contextes de communauté, types, statuts, menus, icônes, rôles, visibilités…
+
+- **Où vit la source** : un registre dans `packages/shared/src/constants/` (un fichier par référentiel, une entrée
+  par valeur portant TOUTES ses propriétés : libellé, description, options, valeurs liées). Exception : ce qui
+  dépend de React (icônes Lucide) vit dans UN module web (`apps/web/src/constants/`), jamais recopié par composant.
+- **Avant d'ajouter une constante, une union de types ou un `Record` de valeurs** : chercher le registre existant
+  (`Grep` sur les valeurs, ex. `'FORUM'`, `'kanban'`). Il existe → l'étendre. Il n'existe pas → le créer dans
+  shared et y brancher les usages, pas une liste locale de plus.
+- **Dérivés, jamais recopiés** : types TypeScript (`typeof REGISTRY[number]['id']`, `as const satisfies`), schémas
+  zod de l'API (`z.enum(LISTE)`), options des formulaires, boutons, libellés, tables de correspondance.
+- **Textes qui énumèrent des valeurs** (infobulles, aide, `businessRules.ts`, en-têtes) : générés depuis le registre
+  par une fonction, jamais une énumération écrite à la main. Le texte écrit à la main dit le principe, pas la liste.
+  Exception : la spec SPOK, qui énonce l'intention (elle peut lister).
+- **Enum Prisma** : la base reste la source des valeurs stockées ; le registre shared les reprend, et un test API
+  vérifie qu'ils correspondent (pas de dérive silencieuse).
+- **Un test de cohérence par registre** : chaque référence d'un registre à un autre existe (ex. favori d'un mode
+  → vue du registre des vues, clé de menu masquée → `MENU_REGISTRY`).
+- **Code existant dupliqué** : toucher un fichier qui recopie une liste → le signaler à Thomas et proposer de le
+  brancher sur le registre dans le même lot (ou un lot dédié), au lieu d'ajouter la nouvelle valeur aux copies.
+- **Plan** (§ 1.3) : dire quel registre porte chaque nouvelle valeur. Un plan qui ajoute une liste locale n'est
+  pas présentable.
+
 ## 2. Pendant
 
 - En-tête `/* ... */` sur tout fichier créé ou modifié (raison d'être, params clés, règles d'usage).
+- Référentiels : aucune liste de valeurs ajoutée hors de son registre (§ 1 bis).
 - Règle de gestion implicite introduite → `apps/web/src/lib/businessRules.ts`.
 - Vérifications **ciblées seulement** : test du fichier concerné, typecheck du seul paquet touché
   (`cd apps/web && npx tsc --noEmit -p .`). Tests de l'aide : `pnpm exec vitest run --project web apps/web/src/help`
@@ -52,6 +82,7 @@ Rappeler `spok-doc` et dérouler, pour chaque composant touché :
 | Doc technique | En-têtes à jour ; `businessRules.ts` si règle de gestion |
 | Aide utilisateur | Élément d'aide de chaque fonction touchée, dans la fiche du composant (créée si elle n'existait pas — même pour un composant ancien), « ? » branché, repères à l'écran, **rappels fonctionnels sur chaque action à effet et chaque bloc de décision**, `fields` / `empty` si concernés |
 | Nouveauté | Comportement visible changé → annonce sans date dans `changes` de l'élément (règles : `spok-doc`) ; choix d'annoncer ou non signalé à Thomas dans le compte rendu du lot |
+| Référentiels | Aucune liste de valeurs recopiée : chaque valeur ajoutée ou modifiée l'est dans son registre, ses usages en dérivent ; textes énumératifs générés ; test de cohérence du registre vert (§ 1 bis) |
 | Contrôle | `apps/web/src/help` vert ; test ciblé vert ; typecheck du paquet |
 
 Puis :
