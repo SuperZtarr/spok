@@ -12,6 +12,7 @@
  *   rendus en grand APRÈS la description et articleContent (ItemContentsRead), regroupés Images, Fichiers, Liens,
  *   Schémas ; le média unique de la fiche (sheet.media) n'est alors plus affiché. Absent (undefined) : ancien média
  *   unique en tête. La copie (« Copier la fiche », sheet) garde le média unique jusqu'au lot 3.
+ * - hideTitle : titre non répété — la fiche l'affiche déjà dans son en-tête commun (réorganisation, lot 2, 2026-11-13)
  * - tags : tags de l'élément, affichés en couleur (TagBadge, comme dans les vues — 2026-11-11) ; absent : noms en gris.
  * Règles : aucun champ modifiable ici — l'édition reste dans la fiche (ItemEditModal, sélecteur Afficher / Modifier).
  * Zones data-devzone item-lecture, item-lecture-media, item-lecture-contenu : DevZoneInspector et mode Aide (textes : help/shellZones.ts).
@@ -35,6 +36,8 @@ interface ItemReadViewProps {
   contents?: ItemContent[];
   /** Tags de l'élément avec leur couleur (TagBadge) ; absent : noms seuls de la fiche (sheet.tags) */
   tags?: Tag[];
+  /** Titre déjà affiché par l'en-tête de la fiche */
+  hideTitle?: boolean;
 }
 
 const PROSE = 'prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground';
@@ -43,7 +46,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border pb-1 mb-3">{children}</h2>;
 }
 
-export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent, contents, tags }: ItemReadViewProps) {
+export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent, contents, tags, hideTitle = false }: ItemReadViewProps) {
   const [zoomed, setZoomed] = useState(false);
   // item.url n'est pas filtré par l'API : un schéma hors liste blanche (javascript:…) n'est ni affiché ni cliquable
   const media = contents === undefined && sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
@@ -51,10 +54,12 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
   return (
     <article className="w-full space-y-8 pb-8" data-tour="item-read-view" data-devzone="item-lecture">
       <header className="space-y-3">
-        <div className="flex items-start gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold leading-tight flex-1 min-w-0 break-words">{sheet.title}</h1>
-          {toolbar && <div className="flex items-center gap-1 flex-shrink-0">{toolbar}</div>}
-        </div>
+        {(!hideTitle || toolbar) && (
+          <div className="flex items-start gap-3">
+            {!hideTitle && <h1 className="text-2xl sm:text-3xl font-bold leading-tight flex-1 min-w-0 break-words">{sheet.title}</h1>}
+            {toolbar && <div className="flex items-center gap-1 flex-shrink-0 ml-auto">{toolbar}</div>}
+          </div>
+        )}
         {sheet.fields.length > 0 && (
           <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {sheet.fields.map((f) => (
