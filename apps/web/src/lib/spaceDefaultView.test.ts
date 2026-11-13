@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { resolveSpaceDefaultView, contextDefaultView, spaceHref, knownViewOr } from './spaceDefaultView';
 
 describe('knownViewOr', () => {
-  it('garde une vue du registre et la présentation de l\'espace', () => {
+  it('garde une vue du registre ; l\'ancienne vue Présentation (overview, supprimée le 2026-11-13) ouvre la Liste', () => {
     expect(knownViewOr('tags')).toBe('tags');
-    expect(knownViewOr('overview')).toBe('overview');
+    expect(knownViewOr('overview')).toBe('list');
   });
   it('vue retirée (bugs) ou absente : la Liste', () => {
     expect(knownViewOr('bugs')).toBe('list');
@@ -22,6 +22,8 @@ describe('resolveSpaceDefaultView', () => {
     expect(resolveSpaceDefaultView(null, 'FORUM')).toBe('thread');
     expect(resolveSpaceDefaultView(undefined, 'PROJECT')).toBe('timeline');
     expect(resolveSpaceDefaultView('', 'JDR')).toBe('mindmap');
+    expect(resolveSpaceDefaultView('', 'DOCUMENTATION')).toBe('tree');
+    expect(resolveSpaceDefaultView('', 'EXPLORATION')).toBe('recent');
   });
 
   it('communauté neutre, espace personnel ou contexte inconnu : Liste', () => {

@@ -1,7 +1,8 @@
 /**
  * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
  * Vue d'ouverture : ?view= > vue en cours > vue de l'espace > vue du contexte de sa communauté > Liste
- * (lib/spaceDefaultView.ts) — attend le chargement de la communauté avant de choisir.
+ * (lib/spaceDefaultView.ts) — attend le chargement de la communauté avant de choisir. Plus de vue « overview »
+ * (supprimée le 2026-11-13) : la présentation est la page SpaceOverviewPage, bouton « Présentation » de la barre.
  * Vue Process : reçoit les seuls items de l'espace courant (pas ceux des sous-espaces inclus — les positions
  * process_nodes sont par espace) et onCreateNote (double-clic sur le canevas = NOTE vide + modale).
  * Vues plein cadre (canevas, Gantt, PERT, Process…) : listées dans les 3 conteneurs (h-full / overflow-hidden) —
@@ -101,7 +102,6 @@ import { TagsView } from '../components/views/TagsView';
 import { TodoView } from '../components/views/TodoView';
 import { PertView } from '../components/views/PertView';
 import { ProcessView } from '../components/views/ProcessView';
-import { OverviewView } from '../components/views/OverviewView';
 import { RecentChangesView } from '../components/views/RecentChangesView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { StatusPropagationModal } from '../components/StatusPropagationModal';
@@ -667,14 +667,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   // Espace non chargeable (privé pour un visiteur, accès retiré, supprimé) : jamais d'« Espace » vide
   if (spaceUnavailable && !space) return <SpaceUnavailable anonymous={!user} />;
 
-  // Overview mode — full page, no toolbar
-  if (viewMode === 'overview') {
-    return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <OverviewView spaceId={spaceId!} space={space} />
-      </div>
-    );
-  }
 
   return (
     <div className={`px-0 py-2 sm:p-4 flex flex-col${viewMode === 'list' || viewMode === 'kanban' || viewMode === 'tags' || viewMode === 'types' || viewMode === 'graph' || viewMode === 'mindmap' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'calendar' || viewMode === 'pert' || viewMode === 'process' || viewMode === 'thread' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'tree' ? ' h-full overflow-hidden' : ''}`}>

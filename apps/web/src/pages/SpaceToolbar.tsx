@@ -10,16 +10,10 @@
  * Tags (2026-11-11) : choix multiple parmi tagOptions (tags proposés dans l'espace, fournis par SpacePage, groupés
  * par portée — globaux, communauté, espace — via lib/tagScope.ts, 2026-11-12) et « Sans tag » (NO_TAG) ; la
  * comparaison est faite par SpacePage (lib/itemHighlight matchesTags), jamais ici.
- * Les vues (spaceViews, filtrées par niveau d'accès via useMenuItems) sont réparties en 3 familles
- * fixes — Discussion/Pilotage/Exploration (cf. getViewGroup) — le mode d'interface courant
- * (forum/projet/tous) choisit la famille affichée en boutons directs (MODE_PRIMARY_GROUP) ; toutes les autres vues
- * restent accessibles dans « Autres vues », un menu par catégorie (Basique, Contenus, Planification, Exploration), jamais masquées.
- * Catégorie itemTypes libellée « Contenus » depuis le 2026-11-11 (Images, Liens, Documents montrent des contenus ; vue Bugs retirée).
+ * Sélecteur de vues (ligne 1) : composant SpaceViewSelector (2026-11-13) — favoris du mode d'interface, bouton
+ * « Présentation », panneau « Toutes les vues » par catégorie ; logique dans lib/viewFavorites.ts. Les familles,
+ * ajustements par mode et menus « Autres vues » sont supprimés (décision Thomas 2026-11-13).
  * Le rôle ne retire aucune vue, lecture seule comprise (décision Thomas 2026-11-06).
- * Listes de vues : toujours dérivées de VIEW_REGISTRY (catégorie, MOBILE_HIDDEN_VIEWS), jamais recopiées ici. Marge basse seulement hors registre (overview).
- * Mode Loisirs : liste de vues choisie (MODE_PRIMARY_VIEWS, ordre imposé) au lieu d'une famille ; le reste par
- * catégorie dans « Autres vues ». Famille ajustable par mode (MODE_PRIMARY_ADJUST — Forum : + Images, Calendrier, Loupe ; Projet : sans Liste/Types/Images/
- * Liens/Documents, avec Carte mentale et Loupe). Loisirs liste aussi la Loupe (décision Thomas 2026-11-06). Répartition calculée par splitViewsForMode, seule source des deux affichages.
  * liveSessionsSlot : bouton « Séances » (ParentSessionsButton) fourni par SpacePage, rendu avant le compteur ;
  * liveSessionBarSlot : bandeau de séance (LiveSessionBar) fourni par SpacePage dans un espace de séance, rendu en
  * 3e ligne sous les filtres (décision Thomas 2026-10-11 : dans la toolbar, pas entre la toolbar et la vue) ;
@@ -34,7 +28,6 @@
  * Bouton Historique : en mode admin seulement (règle space-history-admin-only).
  */
 import { Fragment, useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useAdminMode } from '../components/DevDbStatus';
 import {
@@ -44,124 +37,21 @@ import {
   Settings,
   History,
   SlidersHorizontal,
-  List,
-  CalendarCheck,
-  LayoutGrid,
-  Network,
   ArrowUpDown,
-  type LucideIcon,
 } from 'lucide-react';
 import type { ItemType, MenuItemConfig, StatusConfig, Tag } from '@spok/shared';
 import { groupTagsByScope } from '../lib/tagScope';
-import { DEFAULT_REFERENTIELS, ITEM_TYPES, MOBILE_HIDDEN_VIEWS, VIEW_REGISTRY, statusesForItems } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, ITEM_TYPES, statusesForItems } from '@spok/shared';
 import { Button } from '../components/ui/Button';
 import { NewItemButton } from '../components/ui/NewItemButton';
 import { InsertTemplateButton } from '../components/ui/InsertTemplateButton';
 import { TYPE_LABELS, getTypeColor } from '../constants/ui';
-import { getViewIcon } from '../constants/viewIcons';
 import type { ViewMode } from '../stores/viewMode';
-import { useInterfaceModeStore } from '../stores/interfaceMode';
 import type { TreeSort } from '../lib/treeSort';
 import { HelpHint } from '../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS as H } from '../help/spaceToolbar.hints';
 import { NO_TAG } from '../lib/itemHighlight';
-import { VIEW_HELP } from '../components/views/help';
-
-/**
- * Vues d'espace groupées en 3 familles fixes (Discussion/Pilotage/Exploration).
- * Le mode d'interface (forum/projet/tous) choisit quelle famille s'affiche en boutons directs (MODE_PRIMARY_GROUP) ;
- * le reste va dans les menus « Autres vues » par catégorie (OTHER_MENU_KEYS).
- * `exploration` reprend telle quelle la catégorie `exploration` de VIEW_REGISTRY.
- */
-type ViewGroupKey = 'discussion' | 'pilotage' | 'exploration';
-
-const DISCUSSION_VIEWS = new Set(['thread', 'recent', 'text']);
-const EXPLORATION_VIEWS = new Set(VIEW_REGISTRY.filter((v) => v.category === 'exploration').map((v) => v.id));
-
-function getViewGroup(viewMode: string): ViewGroupKey {
-  if (DISCUSSION_VIEWS.has(viewMode)) return 'discussion';
-  if (EXPLORATION_VIEWS.has(viewMode)) return 'exploration';
-  return 'pilotage';
-}
-
-/**
- * Menus « Autres vues » : un menu par catégorie de VIEW_REGISTRY (Basique, Types, Planification, Exploration),
- * avec les vues de la catégorie qui ne sont pas déjà en boutons directs (décision Thomas 2026-10-21 — auparavant
- * un menu par famille). Les familles ne servent plus qu'à choisir les boutons directs d'un mode.
- */
-type OtherMenuKey = 'basic' | 'itemTypes' | 'planning' | 'exploration';
-const OTHER_MENU_KEYS: OtherMenuKey[] = ['basic', 'itemTypes', 'planning', 'exploration'];
-const VIEW_CATEGORY_OF = new Map(VIEW_REGISTRY.map((v) => [v.id, v.category as OtherMenuKey]));
-
-const OTHER_MENU_LABELS: Record<OtherMenuKey, string> = {
-  basic: 'Basique',
-  itemTypes: 'Contenus',
-  planning: 'Planification',
-  exploration: 'Exploration',
-};
-
-const OTHER_MENU_ICONS: Record<OtherMenuKey, LucideIcon> = {
-  basic: List,
-  itemTypes: LayoutGrid,
-  planning: CalendarCheck,
-  exploration: Network,
-};
-
-/** Famille affichée en direct par mode — null = aucune restriction (toutes les vues à plat, comme aujourd'hui) */
-const MODE_PRIMARY_GROUP: Record<string, ViewGroupKey | null> = {
-  forum:       'discussion',
-  projet:      'pilotage',
-  exploration: null,
-  tous:        null,
-};
-
-/**
- * Modes à liste de vues choisie (au lieu d'une famille) : ces vues, dans cet ordre, en boutons directs ;
- * toutes les autres restent dans « Autres vues » (par catégorie). Loisirs : décision Thomas 2026-10-13.
- */
-export const MODE_PRIMARY_VIEWS: Record<string, string[]> = {
-  loisirs: ['thread', 'mindmap', 'images', 'documents', 'recent', 'loupe'],
-};
-export const MODE_PRIMARY_VIEWS_LABEL: Record<string, string> = { loisirs: 'Vues Loisirs' };
-
-/**
- * Ajustements de la famille principale d'un mode : vues retirées des boutons directs (elles restent dans
- * « Autres vues ») et vues d'une autre famille ajoutées en boutons directs. Forum et Projet : décisions Thomas 2026-10-21.
- */
-export const MODE_PRIMARY_ADJUST: Record<string, { remove: string[]; add: string[] }> = {
-  forum:  { remove: [], add: ['images', 'calendar', 'loupe'] },
-  projet: { remove: ['list', 'types', 'images', 'links', 'documents'], add: ['mindmap', 'loupe'] },
-};
-
-/**
- * Répartition des vues accessibles pour un mode : boutons directs (primary) et menus « Autres vues » par catégorie
- * (secondary, uniquement les vues qui ne sont pas déjà en direct). Source unique de la ligne de boutons ET du panneau
- * déroulant — ne pas recalculer l'un sans l'autre. Mode sans famille ni liste (tous, exploration) : tout en direct.
- */
-export function splitViewsForMode<T extends { viewMode?: string | null }>(views: T[], mode: string): { curated: boolean; primary: T[]; secondary: { key: OtherMenuKey; views: T[] }[] } {
-  const curated = curatedPrimaryViews(views, mode);
-  const group = curated ? null : MODE_PRIMARY_GROUP[mode] ?? null;
-  if (!curated && !group) return { curated: false, primary: views, secondary: [] };
-  const adjust = MODE_PRIMARY_ADJUST[mode];
-  const primary = curated ?? views.filter((v) => (getViewGroup(v.viewMode!) === group && !adjust?.remove.includes(v.viewMode!)) || !!adjust?.add.includes(v.viewMode!));
-  const direct = new Set(primary.map((v) => v.viewMode));
-  const secondary = OTHER_MENU_KEYS
-    .map((key) => ({ key, views: views.filter((v) => VIEW_CATEGORY_OF.get(v.viewMode!) === key && !direct.has(v.viewMode)) }))
-    .filter((g) => g.views.length > 0);
-  return { curated: !!curated, primary, secondary };
-}
-
-/** Vues en boutons directs pour un mode à liste choisie, dans l'ordre de la liste (vues inaccessibles ignorées). */
-export function curatedPrimaryViews<T extends { viewMode?: string | null }>(views: T[], mode: string): T[] | null {
-  const ids = MODE_PRIMARY_VIEWS[mode];
-  if (!ids) return null;
-  return ids.map((id) => views.find((v) => v.viewMode === id)).filter((v): v is T => !!v);
-}
-
-// Bouton de la vue Process en couleur (demande Thomas 2026-10-29) : violet, distinct du bleu des créations et de
-// l'orange des séances. Repos = fond clair, vue active = violet plein.
-const PROCESS_VIEW_IDLE = 'bg-violet-100 text-violet-800 hover:bg-violet-200';
-const PROCESS_VIEW_ACTIVE = 'bg-violet-600 text-white shadow-sm';
+import { SpaceViewSelector } from './SpaceViewSelector';
 
 export interface SpaceToolbarProps {
   // Bloc Filtre ou Aperçu
@@ -239,31 +129,15 @@ export function SpaceToolbar({
   liveSessionsSlot,
   liveSessionBarSlot,
 }: SpaceToolbarProps) {
-  const { mode: interfaceMode } = useInterfaceModeStore();
   const adminMode = useAdminMode();
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filtreOpen, setFiltreOpen] = useState(false);
-  const [otherGroupOpen, setOtherGroupOpen] = useState<OtherMenuKey | null>(null);
-  const [otherGroupPos, setOtherGroupPos] = useState<{ top: number; left: number } | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
-  const otherGroupsRef = useRef<HTMLDivElement>(null);
-  const otherGroupPanelRef = useRef<HTMLDivElement>(null);
-  const otherGroupBtnRefs = useRef<Partial<Record<OtherMenuKey, HTMLButtonElement | null>>>({});
-
-  const toggleOtherGroup = (key: OtherMenuKey) => {
-    if (otherGroupOpen === key) { setOtherGroupOpen(null); setOtherGroupPos(null); return; }
-    const btn = otherGroupBtnRefs.current[key];
-    if (btn) {
-      const r = btn.getBoundingClientRect();
-      setOtherGroupPos({ top: r.bottom + 4, left: r.left });
-    }
-    setOtherGroupOpen(key);
-  };
 
   const activeTypeFilter = filter.length > 0;
   const activeStatusFilter = statusFilter.length > 0;
@@ -274,174 +148,26 @@ export function SpaceToolbar({
 
   // Close all dropdowns on click outside or Escape
   useEffect(() => {
-    if (!typeDropdownOpen && !statusDropdownOpen && !tagDropdownOpen && !otherGroupOpen) return;
+    if (!typeDropdownOpen && !statusDropdownOpen && !tagDropdownOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (typeDropdownOpen && typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) setTypeDropdownOpen(false);
       if (statusDropdownOpen && statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) setStatusDropdownOpen(false);
       if (tagDropdownOpen && tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) setTagDropdownOpen(false);
-      if (
-        otherGroupOpen
-        && otherGroupsRef.current && !otherGroupsRef.current.contains(e.target as Node)
-        && otherGroupPanelRef.current && !otherGroupPanelRef.current.contains(e.target as Node)
-      ) { setOtherGroupOpen(null); setOtherGroupPos(null); }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setTagDropdownOpen(false); setOtherGroupOpen(null); setOtherGroupPos(null); }
+      if (e.key === 'Escape') { setTypeDropdownOpen(false); setStatusDropdownOpen(false); setTagDropdownOpen(false); }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
-  }, [typeDropdownOpen, statusDropdownOpen, tagDropdownOpen, otherGroupOpen]);
+  }, [typeDropdownOpen, statusDropdownOpen, tagDropdownOpen]);
 
 
   return (
-    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative ${VIEW_CATEGORY_OF.has(viewMode) ? '' : 'mb-3 pb-2'}`}>
+    <div data-devzone="toolbar" className={`flex flex-col gap-2 z-20 bg-muted/60 flex-shrink-0 relative`}>
 
-      {/* View mode buttons row */}
-      {(() => {
-        const baseViews = spaceViews.filter((v) => v.viewMode);
-        // Mode à liste choisie (Loisirs) : une seule section ordonnée ; sinon famille principale ajustée (forum/projet) ou tout
-        const { curated, primary: primaryViews, secondary: secondaryGroups } = splitViewsForMode(baseViews, interfaceMode);
-
-        const sectionMap = new Map<string, { sectionOrder: number; label?: string; views: typeof primaryViews }>();
-        if (curated) {
-          sectionMap.set('curated', { sectionOrder: 0, label: MODE_PRIMARY_VIEWS_LABEL[interfaceMode], views: primaryViews });
-        } else {
-          for (const v of primaryViews) {
-            if (!sectionMap.has(v.section)) {
-              sectionMap.set(v.section, { sectionOrder: v.sectionOrder, views: [] });
-            }
-            sectionMap.get(v.section)!.views.push(v);
-          }
-        }
-        const sections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
-
-        if (sections.length === 0 && secondaryGroups.length === 0) return null;
-        return (
-          <div data-tour="toolbar-views" data-devzone="toolbar-vues" className="flex items-start gap-3 overflow-x-auto pb-0.5 scrollbar-none">
-            {sections.map((section, idx) => (
-              <div key={idx} className="flex flex-col gap-0.5 flex-shrink-0">
-                <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
-                  {section.label ?? section.views[0]?.sectionLabel}
-                </span>
-                <div className="flex items-center gap-0.5">
-                  {section.views.map((v) => {
-                    const Icon = getViewIcon(v.icon);
-                    const isActive = viewMode === v.viewMode;
-                    const isDefault = defaultView && v.viewMode === defaultView;
-                    const showPulse = isDefault && !isActive;
-                    const short = VIEW_HELP[v.viewMode as ViewMode]?.short;
-                    return (
-                      <HelpHint key={v.key} text={`${v.label}${isDefault ? ` (${H.defaultView})` : ''}${short ? ` : ${short}` : ''}`} className={`inline-flex flex-shrink-0 ${v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode) ? 'hidden sm:inline-flex' : ''}`}>
-                      <button
-                        onClick={() => onSetMode(v.viewMode as ViewMode)}
-                        aria-label={v.label}
-                        className={`relative inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-                          v.viewMode === 'process'
-                            ? (isActive ? PROCESS_VIEW_ACTIVE : PROCESS_VIEW_IDLE)
-                            : isActive
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                        } ${v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode) ? 'hidden sm:inline-flex' : ''}`}
-                      >
-                        {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                        <span className="hidden sm:inline">{v.label}</span>
-                        {showPulse && (
-                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        )}
-                      </button>
-                      </HelpHint>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {secondaryGroups.length > 0 && (
-              <div className="flex flex-col gap-0.5 flex-shrink-0">
-                <span className="hidden sm:block text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">
-                  Autres vues
-                </span>
-                <div ref={otherGroupsRef} className="flex items-center gap-1">
-                {secondaryGroups.map((group) => {
-                  const GroupIcon = OTHER_MENU_ICONS[group.key];
-                  const isOpen = otherGroupOpen === group.key;
-                  const containsActive = group.views.some((v) => v.viewMode === viewMode);
-                  return (
-                    <HelpHint key={group.key} text={`${OTHER_MENU_LABELS[group.key]} : ${H.otherViews}`}>
-                    <button
-                      ref={(el) => { otherGroupBtnRefs.current[group.key] = el; }}
-                      onClick={() => toggleOtherGroup(group.key)}
-                      aria-label={`Autres vues — ${OTHER_MENU_LABELS[group.key]}`}
-                      className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-                        containsActive ? 'bg-accent text-foreground font-semibold' : isOpen ? 'bg-accent/60 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      }`}
-                    >
-                      <GroupIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="hidden sm:inline">{OTHER_MENU_LABELS[group.key]}</span>
-                      <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    </HelpHint>
-                  );
-                })}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Panneau "Autres vues" — en portal (fixed) pour échapper au overflow-x-auto de la barre de vues */}
-      {otherGroupOpen && otherGroupPos && (() => {
-        // Même répartition que la ligne de boutons : les vues déjà en boutons directs ne sont pas répétées ici
-        const group = splitViewsForMode(
-          spaceViews.filter((v) => v.viewMode),
-          interfaceMode,
-        ).secondary.find((g) => g.key === otherGroupOpen);
-        if (!group) return null;
-
-        const sectionMap = new Map<string, { sectionOrder: number; sectionLabel: string; views: typeof group.views }>();
-        for (const v of group.views) {
-          if (!sectionMap.has(v.section)) {
-            sectionMap.set(v.section, { sectionOrder: v.sectionOrder, sectionLabel: v.sectionLabel, views: [] });
-          }
-          sectionMap.get(v.section)!.views.push(v);
-        }
-        const panelSections = [...sectionMap.values()].sort((a, b) => a.sectionOrder - b.sectionOrder);
-
-        return createPortal(
-          <div
-            ref={otherGroupPanelRef}
-            className="fixed bg-card border border-border rounded-md shadow-xl py-1 w-[190px]"
-            style={{ top: otherGroupPos.top, left: otherGroupPos.left, zIndex: 9999 }}
-          >
-            {panelSections.map((section, idx) => (
-              <div key={section.sectionLabel}>
-                {idx > 0 && <div className="h-px bg-border mx-2 my-1" />}
-                <div className="px-3 pt-1 pb-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                  {section.sectionLabel}
-                </div>
-                {section.views.map((v) => {
-                  const Icon = getViewIcon(v.icon);
-                  const isActive = viewMode === v.viewMode;
-                  return (
-                    <button
-                      key={v.key}
-                      onClick={() => { onSetMode(v.viewMode as ViewMode); setOtherGroupOpen(null); setOtherGroupPos(null); }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent text-foreground font-medium' : 'text-foreground/80 hover:bg-accent hover:text-foreground'}`}
-                    >
-                      {Icon && <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${v.viewMode === 'process' ? 'text-violet-600' : ''}`} />}
-                      <span className="flex-1 text-left">{v.label}</span>
-                      {isActive && <span className="text-primary text-xs">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>,
-          document.body
-        );
-      })()}
+      {/* Ligne 1 : sélecteur de vues (favoris du mode, Présentation, « Toutes les vues ») */}
+      <SpaceViewSelector viewMode={viewMode} onSetMode={onSetMode} spaceViews={spaceViews} defaultView={defaultView} spaceId={spaceId} />
 
       {/* GlobalToolbar */}
       <div id="global-toolbar" className="flex gap-1.5 flex-wrap items-center pb-1">

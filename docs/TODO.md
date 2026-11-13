@@ -236,6 +236,7 @@
 - [x] Fiche élément - panneau compact — 2026-11-13
 - [x] Menu des vues - 5 catégories, favoris par mode, panneau « Toutes les vues » — 2026-11-13
 - [x] Modes d'interface Documentation et Exploration — 2026-11-13
+- [x] Vue Présentation en double supprimée — 2026-11-13
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

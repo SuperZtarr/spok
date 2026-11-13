@@ -32,7 +32,7 @@ const viewHelp = VIEW_HELP as Record<string, HelpEntry | undefined>
 const pageHelp = PAGE_HELP as Record<string, HelpEntry>
 /** Vues sans état vide : leur cadre reste utile vide (grille du calendrier et de la heatmap, nœud racine de la carte
     mentale) ou elles ne sont jamais vides (présentation de l'espace). */
-const NO_EMPTY_STATE = new Set(['overview', 'calendar', 'heatmap', 'mindmap'])
+const NO_EMPTY_STATE = new Set(['calendar', 'heatmap', 'mindmap'])
 
 // Code source (.tsx) pour vérifier l'existence des repères
 const code = (() => {

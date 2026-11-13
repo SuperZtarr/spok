@@ -1,9 +1,9 @@
 /* Registre de l'aide des vues : une fiche par ViewMode (Record strict — TS échoue si une vue manque).
    Fiches dans ./<vue>.help.ts, à côté des vues. Couverture (tour non vide) contrôlée par help/coverage.test.ts.
-   tags (2026-11-11) : vue Tags (TagsView) ; bugs retirée le même jour. */
+   tags (2026-11-11) : vue Tags (TagsView) ; bugs retirée le même jour. overview (vue Présentation) supprimée le 2026-11-13 :
+   la présentation d'un espace est la page SpaceOverviewPage (/spaces/:id/overview, fiche pages/help/space-overview.help.ts). */
 import type { ViewMode } from '../../../stores/viewMode';
 import type { HelpEntry } from '../../../help/types';
-import { help as overview } from './overview.help';
 import { help as list } from './list.help';
 import { help as tree } from './tree.help';
 import { help as kanban } from './kanban.help';
@@ -40,7 +40,6 @@ import { help as processHelp } from './process.help';
 import { help as tagsHelp } from './tags.help';
 
 export const VIEW_HELP: Record<ViewMode, HelpEntry> = {
-  overview: overview,
   list: list,
   tree: tree,
   kanban: kanban,

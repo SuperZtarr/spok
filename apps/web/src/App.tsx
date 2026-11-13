@@ -115,7 +115,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/spaces\/[^/]+\/settings$/, 'pages/SpaceSettingsPage.tsx'],
   [/^\/spaces\/[^/]+\/history$/, 'pages/SpaceHistoryPage.tsx'],
   [/^\/spaces\/[^/]+\/articles\/[^/]+$/, 'pages/ArticlePage.tsx'],
-  [/^\/spaces\/[^/]+$/, 'pages/SpacePage.tsx \u2192 views/OverviewView.tsx'],
+  [/^\/spaces\/[^/]+$/, 'pages/SpacePage.tsx'],
   [/^\/communities\/[^/]+\/settings$/, 'pages/CommunitySettingsPage.tsx'],
   [/^\/communities\/[^/]+$/, 'pages/CommunityPage.tsx'],
   [/^\/admin\/users$/, 'pages/admin/UsersPage.tsx'],
