@@ -2,21 +2,25 @@
  * Registre central des vues d'espace (id, libellé, icône, catégorie, ordre, niveau d'accès, masquage mobile).
  * Source unique : toute liste de vues se dérive d'ici (MOBILE_HIDDEN_VIEWS, catégories…), jamais de copie dans une page.
  * `access` contrôle la visibilité via useMenuItems (public < user < admin) — ne pas confondre avec
- * les modes d'interface (forum/projet/exploration, cf. stores/interfaceMode.ts) qui filtrent en plus
- * les vues déjà accessibles selon le contexte d'usage courant.
+ * les modes d'interface (forum/projet/loisirs/tous, cf. stores/interfaceMode.ts) qui choisissent seulement les vues
+ * favorites affichées en boutons directs (SpaceToolbar, MODE_PRIMARY_VIEWS) ; aucune vue n'est masquée par un mode.
  * Un visiteur non connecté a les mêmes vues qu'un connecté (décision Thomas 2026-11-06) : seul 'admin' reste réservé.
  * Surcharges possibles dans /admin/views (AppConfig menu_overrides), qui priment sur ce registre.
  * `mobileHidden` : bouton de vue masqué sous 640 px dans les barres de vues (SpaceToolbar, ViewSelectorBar).
- * tags (2026-11-11) : tableau des tags — une colonne par tag, glisser une carte lui ajoute le tag (TagsView).
  * bugs retirée le 2026-11-11 (remplacée par le filtre Tags et la vue Tags) : une vue absente du registre ouvre la
  * Liste (apps/web/src/lib/spaceDefaultView.ts, knownViewOr).
- * Catégorie `itemTypes` : libellé « Contenus » (Images, Liens, Documents montrent des contenus, plus des types).
+ * Catégories (réorganisation 2026-11-13, une seule taxonomie) : Contenus (lire, échanger, médias), Organisation
+ * (classer), Suivi (avancement), Planification (temps, enchaînements), Exploration (relations). Libellés et ordre des
+ * catégories : SPACE_VIEW_SECTIONS (menuDefaults.ts), seule liste des catégories — ne jamais la recopier dans le web.
+ * « Todo » renommée « À faire » et Documents en icône Paperclip (distincte de Texte) le 2026-11-13.
  */
+export type ViewCategoryId = 'content' | 'organize' | 'tracking' | 'planning' | 'exploration';
+
 export interface ViewDefinition {
   id: string;
   label: string;
   icon: string;
-  category: 'basic' | 'itemTypes' | 'planning' | 'exploration';
+  category: ViewCategoryId;
   order: number; // within-category
   visible: boolean;
   access: 'public' | 'user' | 'admin';
@@ -24,36 +28,38 @@ export interface ViewDefinition {
 }
 
 export const VIEW_REGISTRY: ViewDefinition[] = [
-  // ── basic ──
-    { id: 'list',       label: 'Liste',          icon: 'List',         category: 'basic',     order: 0, visible: true, access: 'public' },
-    { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare',category: 'basic',     order: 2, visible: true, access: 'public'   },
-    { id: 'text',       label: 'Texte',          icon: 'FileText',     category: 'basic',     order: 3, visible: true, access: 'public' },
-    { id: 'tree',       label: 'Arborescence',   icon: 'GitBranch',    category: 'basic',     order: 4, visible: true, access: 'public' },
-  { id: 'members',    label: 'Assignations',        icon: 'Users',        category: 'basic',     order: 5, visible: true, access: 'admin', mobileHidden: true },
-  { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2',       category: 'basic',     order: 6, visible: true, access: 'admin', mobileHidden: true },
-    { id: 'recent',     label: 'Récents',        icon: 'Clock',        category: 'basic',     order: 7, visible: true, access: 'public'   },
+  // ── Contenus : lire, échanger, médias ──
+  { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare', category: 'content',     order: 0, visible: true, access: 'public' },
+  { id: 'text',       label: 'Texte',          icon: 'FileText',      category: 'content',     order: 1, visible: true, access: 'public' },
+  { id: 'articles',   label: 'Articles',       icon: 'Newspaper',     category: 'content',     order: 2, visible: true, access: 'public' },
+  { id: 'recent',     label: 'Récents',        icon: 'Clock',         category: 'content',     order: 3, visible: true, access: 'public' },
+  { id: 'images',     label: 'Images',         icon: 'Image',         category: 'content',     order: 4, visible: true, access: 'public' },
+  { id: 'links',      label: 'Liens',          icon: 'ExternalLink',  category: 'content',     order: 5, visible: true, access: 'public' },
+  { id: 'documents',  label: 'Documents',      icon: 'Paperclip',     category: 'content',     order: 6, visible: true, access: 'public' },
 
-  // ── itemTypes ──
-  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',   category: 'itemTypes',     order: 0, visible: true, access: 'public', mobileHidden: true },
-  { id: 'links',     label: 'Liens',      icon: 'ExternalLink', category: 'itemTypes', order: 1, visible: true, access: 'public' },
-  { id: 'images',    label: 'Images',     icon: 'Image',        category: 'itemTypes', order: 2, visible: true, access: 'public' },
-  { id: 'documents', label: 'Documents',  icon: 'FileText',     category: 'itemTypes', order: 3, visible: true, access: 'public'   },
-  { id: 'articles',  label: 'Articles',   icon: 'Newspaper',    category: 'itemTypes', order: 4, visible: true, access: 'public'   },
-  { id: 'todo',      label: 'Todo',       icon: 'CheckSquare',  category: 'itemTypes', order: 6, visible: true, access: 'public'   },
-  { id: 'tags',      label: 'Tags',       icon: 'Tags',         category: 'itemTypes', order: 7, visible: true, access: 'public', mobileHidden: true },
+  // ── Organisation : classer ──
+  { id: 'list',       label: 'Liste',          icon: 'List',          category: 'organize',    order: 0, visible: true, access: 'public' },
+  { id: 'tree',       label: 'Arborescence',   icon: 'GitBranch',     category: 'organize',    order: 1, visible: true, access: 'public' },
+  { id: 'types',      label: 'Types',          icon: 'LayoutGrid',    category: 'organize',    order: 2, visible: true, access: 'public', mobileHidden: true },
+  { id: 'tags',       label: 'Tags',           icon: 'Tags',          category: 'organize',    order: 3, visible: true, access: 'public', mobileHidden: true },
+  { id: 'crossTable', label: 'Tableau croisé', icon: 'Table2',        category: 'organize',    order: 4, visible: true, access: 'admin', mobileHidden: true },
 
-  // ── planning ──
-  { id: 'kanban',   label: 'Kanban',         icon: 'Columns3',    category: 'planning', order: 0, visible: true, access: 'public', mobileHidden: true },
-  { id: 'timeline', label: 'Gantt',          icon: 'GanttChart',  category: 'planning', order: 1, visible: true, access: 'public', mobileHidden: true },
-  { id: 'pert',     label: 'PERT',           icon: 'GitMerge',    category: 'planning', order: 2, visible: true, access: 'public'   },
-  { id: 'calendar', label: 'Calendrier',     icon: 'Calendar',    category: 'planning', order: 3, visible: true, access: 'public' },
-  { id: 'planning', label: 'Planning',       icon: 'CalendarCheck',category: 'planning', order: 4, visible: true, access: 'public', mobileHidden: true },
-  { id: 'burndown', label: 'Burndown',       icon: 'TrendingDown',category: 'planning', order: 5, visible: true, access: 'admin', mobileHidden: true },
-  { id: 'cfd',      label: 'Flux cumulatif', icon: 'Layers',      category: 'planning', order: 6, visible: true, access: 'admin', mobileHidden: true },
-  { id: 'priority', label: 'Priorités',      icon: 'Flame',       category: 'planning', order: 7, visible: true, access: 'public'   },
-  { id: 'process',  label: 'Process',        icon: 'Workflow',    category: 'planning', order: 8, visible: true, access: 'public', mobileHidden: true },
+  // ── Suivi : avancement ──
+  { id: 'todo',       label: 'À faire',        icon: 'CheckSquare',   category: 'tracking',    order: 0, visible: true, access: 'public' },
+  { id: 'kanban',     label: 'Kanban',         icon: 'Columns3',      category: 'tracking',    order: 1, visible: true, access: 'public', mobileHidden: true },
+  { id: 'priority',   label: 'Priorités',      icon: 'Flame',         category: 'tracking',    order: 2, visible: true, access: 'public' },
+  { id: 'members',    label: 'Assignations',   icon: 'Users',         category: 'tracking',    order: 3, visible: true, access: 'admin', mobileHidden: true },
+  { id: 'burndown',   label: 'Burndown',       icon: 'TrendingDown',  category: 'tracking',    order: 4, visible: true, access: 'admin', mobileHidden: true },
+  { id: 'cfd',        label: 'Flux cumulatif', icon: 'Layers',        category: 'tracking',    order: 5, visible: true, access: 'admin', mobileHidden: true },
 
-  // ── exploration ──
+  // ── Planification : temps et enchaînements ──
+  { id: 'timeline',   label: 'Gantt',          icon: 'GanttChart',    category: 'planning',    order: 0, visible: true, access: 'public', mobileHidden: true },
+  { id: 'pert',       label: 'PERT',           icon: 'GitMerge',      category: 'planning',    order: 1, visible: true, access: 'public' },
+  { id: 'calendar',   label: 'Calendrier',     icon: 'Calendar',      category: 'planning',    order: 2, visible: true, access: 'public' },
+  { id: 'planning',   label: 'Planning',       icon: 'CalendarCheck', category: 'planning',    order: 3, visible: true, access: 'public', mobileHidden: true },
+  { id: 'process',    label: 'Process',        icon: 'Workflow',      category: 'planning',    order: 4, visible: true, access: 'public', mobileHidden: true },
+
+  // ── Exploration : relations ──
   { id: 'mindmap',    label: 'Carte mentale', icon: 'Share2',     category: 'exploration', order: 0, visible: true, access: 'public' },
   { id: 'graph',      label: 'Graphe',        icon: 'Network',    category: 'exploration', order: 1, visible: true, access: 'public', mobileHidden: true },
   { id: 'sunburst',   label: 'Sunburst',      icon: 'CircleDot',  category: 'exploration', order: 2, visible: true, access: 'admin', mobileHidden: true },

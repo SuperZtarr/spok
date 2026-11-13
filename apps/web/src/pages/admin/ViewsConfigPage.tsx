@@ -2,13 +2,13 @@
    vue d'espace, pour tout SPOK — surcharges AppConfig 'menu_overrides' du registre MENU_REGISTRY (GET /admin/menu,
    PUT /admin/menu/overrides), lues par useMenuItems (navigation globale, sélecteur de vues). Rebranchée le
    2026-10-21 : l'ancienne page éditait un système parallèle (useViewConfig) qu'aucun écran ne lisait.
-   La section admin n'est pas modifiable (refus API). Les familles et modes d'interface restent dans le code
-   (SpaceToolbar) : ici on ne décide que « visible » et « qui y a accès ».
+   La section admin n'est pas modifiable (refus API). Catégories et favoris des modes d'interface restent dans le code
+   (SPACE_VIEW_SECTIONS, SpaceToolbar) : ici on ne décide que « visible » et « qui y a accès ».
    Aide utilisateur : fiche pages/help/admin-views.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, RotateCcw, Loader2, Eye, EyeOff, Undo2 } from 'lucide-react';
-import type { MenuAccess, MenuOverride } from '@spok/shared';
+import { SPACE_VIEW_SECTIONS, type MenuAccess, type MenuOverride } from '@spok/shared';
 import { adminMenuApi, type AdminMenuEntry } from '../../lib/api';
 import { useCtrlS } from '../../hooks/useCtrlS';
 import { Button } from '../../components/ui/Button';
@@ -23,7 +23,7 @@ const ACCESS_OPTIONS = (Object.keys(ACCESS_LABELS) as MenuAccess[]).map((value) 
 /** Onglets : sections du registre (les vues d'espace d'un côté, la navigation globale de l'autre). */
 const TABS = [
   { id: 'pages', label: 'Pages globales', sections: ['global', 'personal', 'misc'] },
-  { id: 'views', label: 'Vues d\'espace', sections: ['basic', 'itemTypes', 'planning', 'exploration'] },
+  { id: 'views', label: 'Vues d\'espace', sections: SPACE_VIEW_SECTIONS.map((s) => s.id) },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 

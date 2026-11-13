@@ -21,14 +21,16 @@ describe('VIEW_MODES constants', () => {
 })
 
 describe('VIEW_CATEGORIES constants', () => {
-  it('should have 5 categories', () => {
-    expect(VIEW_CATEGORIES).toHaveLength(5)
+  it('should have 6 categories (dashboard + 5 catégories de vues)', () => {
+    expect(VIEW_CATEGORIES).toHaveLength(6)
   })
 
-  it('should include dashboard, basic, planning, exploration', () => {
+  it('should include dashboard and the 5 view categories', () => {
     const values = VIEW_CATEGORIES.map(c => c.value)
     expect(values).toContain('dashboard')
-    expect(values).toContain('basic')
+    expect(values).toContain('content')
+    expect(values).toContain('organize')
+    expect(values).toContain('tracking')
     expect(values).toContain('planning')
     expect(values).toContain('exploration')
   })

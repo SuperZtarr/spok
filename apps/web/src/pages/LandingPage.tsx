@@ -1,4 +1,5 @@
-/* Page d'accueil publique (/) pour visiteur non connecté : présentation + communautés publiques. */
+/* Page d'accueil publique (/) pour visiteur non connecté : présentation + communautés publiques.
+   Vues présentées par catégorie, dans l'ordre de SPACE_VIEW_SECTIONS (partagé, 5 catégories depuis 2026-11-13). */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -9,6 +10,7 @@ import { communitiesApi } from '../lib/api';
 import logoUrl from '../assets/logo.png';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { VIEW_HELP } from '../components/views/help';
+import { SPACE_VIEW_SECTIONS } from '@spok/shared';
 
 const features = [
   {
@@ -177,7 +179,7 @@ export function LandingPage() {
             {views.length} vues pour explorer vos données
           </h3>
           <div className="space-y-8">
-            {['basic', 'planning', 'exploration'].map((sectionId) => {
+            {SPACE_VIEW_SECTIONS.map(({ id: sectionId }) => {
               const sectionViews = views.filter(v => v.section === sectionId);
               if (sectionViews.length === 0) return null;
               const sectionLabel = sectionViews[0]?.sectionLabel || sectionId;

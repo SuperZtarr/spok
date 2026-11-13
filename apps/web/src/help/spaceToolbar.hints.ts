@@ -31,6 +31,11 @@ export const SPACE_TOOLBAR_HINTS = {
   sessions: E.seances.short,
   dismissImport: 'Fermer le bilan de l\'import',
   export: E.exporter.short,
-  otherViews: E.vues.short,
+  presentation: E.presentation.short,
+  modeFavorites: 'Vues favorites de ce mode. Changez de mode avec les boutons de l\'en-tête : seuls les favoris changent, toutes les vues restent dans « Toutes les vues ».',
+  allViews: E.toutesVues.short,
+  allViewsEmpty: 'Aucune vue ne correspond à cette recherche.',
+  outsideFavorites: 'vue hors favoris, affichée tant qu\'elle est ouverte',
+  wideScreenOnly: 'Écran plus large nécessaire',
   defaultView: 'vue par défaut de l\'espace',
 } satisfies Record<string, string>;

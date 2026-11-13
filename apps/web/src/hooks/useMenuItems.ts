@@ -1,10 +1,11 @@
 /*
  * Hook : items de menu (MENU_REGISTRY + overrides AppConfig via GET /menu-items), filtrés par
  * niveau d'accès (public/user/admin) et groupés en sections. Source unique du menu et des vues.
+ * spaceViewSections : catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 5 catégories depuis 2026-11-13).
  */
 import { useQuery } from '@tanstack/react-query';
 import { menuApi } from '../lib/api';
-import { MENU_REGISTRY } from '@spok/shared';
+import { MENU_REGISTRY, SPACE_VIEW_SECTION_IDS } from '@spok/shared';
 import type { MenuItemConfig, MenuAccess, MenuSection } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 import { useAdminMode } from '../components/DevDbStatus';
@@ -48,8 +49,8 @@ export function useMenuItems() {
   // Convenience: space views only (items with viewMode)
   const spaceViews = visibleItems.filter(item => item.viewMode);
 
-  // Convenience: space view sections (basic, planning, exploration)
-  const spaceViewSections = sections.filter(s => ['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id));
+  // Convenience: space view sections (catégories de SPACE_VIEW_SECTIONS)
+  const spaceViewSections = sections.filter(s => SPACE_VIEW_SECTION_IDS.has(s.id));
 
   // Convenience: global pages (items with route in global section)
   const globalPages = visibleItems.filter(item => item.section === 'global');

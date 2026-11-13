@@ -6,12 +6,12 @@
  * Badge d'activité : GET /activity seulement si connecté — le bandeau s'affiche aussi aux visiteurs anonymes
  * (/communities, /search…) et un 401 y renvoyait vers /login (bug 2026-10-21).
  * NAV_ICONS doublée dans Layout.tsx (grille mobile) : toute icône ajoutée ici l'est aussi là-bas (Sparkles : Nouveautés ;
- * Tag : admin Tags).
+ * Tag : admin Tags ; Share2 : carte mentale globale, 2026-11-13).
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
+  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
   MessageSquare, Map as MapIconLucide, Copy, Search, Sparkles, Tag,
@@ -22,10 +22,10 @@ import { useMenuItems } from '../hooks/useMenuItems';
 import { resolveMenuRoute } from '../lib/searchScope';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED } from '../stores/interfaceMode';
 import { useAuthStore } from '../stores/auth';
-import type { MenuItemConfig } from '@spok/shared';
+import { SPACE_VIEW_SECTION_IDS, type MenuItemConfig } from '@spok/shared';
 
 const NAV_ICONS: Record<string, LucideIcon> = {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
+  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity, Sun,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
   MessageSquare, MapIcon: MapIconLucide, Copy, Search, Sparkles, Tag,
@@ -33,8 +33,8 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 
 const getIcon = (name: string): LucideIcon | null => NAV_ICONS[name] || null;
 
-/** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici */
-const SPACE_SECTIONS = new Set(['basic', 'itemTypes', 'planning', 'exploration']);
+/** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici (liste partagée, 5 catégories depuis 2026-11-13) */
+const SPACE_SECTIONS = SPACE_VIEW_SECTION_IDS;
 /** Clés gérées ailleurs : profil (modale header), déconnexion (row 1 du header) */
 const EXCLUDED_KEYS = new Set(['profile', 'logout']);
 

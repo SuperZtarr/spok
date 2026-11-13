@@ -3,16 +3,28 @@
    news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site.
    admin-tags (2026-11-11) : tags globaux et doublons de tags (/admin/tags, icône Tag).
    admin-news (2026-11-12) : publication des nouveautés (/admin/news, icône Sparkles déjà déclarée pour news).
-   Section itemTypes libellée « Contenus » (2026-11-11 : ses vues montrent des contenus, la vue Bugs est retirée). */
+   Vues d'espace en 5 catégories (2026-11-13) : SPACE_VIEW_SECTIONS ci-dessous, seule liste des catégories.
+   Carte mentale globale en icône Share2, comme la vue d'espace (2026-11-13). */
 import type { MenuItemConfig } from '../types/menuItem.js';
-import { VIEW_REGISTRY } from './viewRegistry.js';
+import { VIEW_REGISTRY, type ViewCategoryId } from './viewRegistry.js';
 
-const SECTION_META: Record<string, { sectionLabel: string; sectionOrder: number }> = {
-  basic:       { sectionLabel: 'Basique',        sectionOrder: 2 },
-  itemTypes:   { sectionLabel: 'Contenus',        sectionOrder: 3 },
-  planning:    { sectionLabel: 'Planification',   sectionOrder: 4 },
-  exploration: { sectionLabel: 'Exploration',     sectionOrder: 5 },
-};
+/** Catégories des vues d'espace, dans l'ordre d'affichage (réorganisation 2026-11-13) : seule liste des catégories.
+ *  GlobalNavBar, Layout, useMenuItems, ViewsConfigPage, LandingPage et SpaceToolbar la lisent — ne jamais la recopier.
+ *  sectionOrder 2 à 6 : entre « personal » (1) et « misc » (7). */
+export const SPACE_VIEW_SECTIONS: { id: ViewCategoryId; label: string; sectionOrder: number }[] = [
+  { id: 'content',     label: 'Contenus',      sectionOrder: 2 },
+  { id: 'organize',    label: 'Organisation',  sectionOrder: 3 },
+  { id: 'tracking',    label: 'Suivi',         sectionOrder: 4 },
+  { id: 'planning',    label: 'Planification', sectionOrder: 5 },
+  { id: 'exploration', label: 'Exploration',   sectionOrder: 6 },
+];
+
+/** Identifiants des catégories de vues d'espace (sections du menu rendues par SpaceToolbar, pas par le bandeau). */
+export const SPACE_VIEW_SECTION_IDS: ReadonlySet<string> = new Set(SPACE_VIEW_SECTIONS.map((s) => s.id));
+
+const SECTION_META: Record<string, { sectionLabel: string; sectionOrder: number }> = Object.fromEntries(
+  SPACE_VIEW_SECTIONS.map((s) => [s.id, { sectionLabel: s.label, sectionOrder: s.sectionOrder }]),
+);
 
 const VIEW_MENU_ITEMS: MenuItemConfig[] = VIEW_REGISTRY.map(v => ({
   id: '',
@@ -35,7 +47,7 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'communities',   label: 'Communautés',     icon: 'Users',         section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/communities',         viewMode: null, order: 1, visible: true, access: 'public' },
   { id: '', key: 'spaces',        label: 'Espaces',         icon: 'FolderKanban',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/spaces',              viewMode: null, order: 2, visible: true, access: 'public' },
   { id: '', key: 'global-sunburst',label: 'Sunburst',       icon: 'CircleDot',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/sunburst',            viewMode: null, order: 3, visible: true, access: 'public' },
-  { id: '', key: 'global-mindmap', label: 'Carte mentale',  icon: 'GitBranch',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/mindmap',             viewMode: null, order: 4, visible: true, access: 'user'   },
+  { id: '', key: 'global-mindmap', label: 'Carte mentale',  icon: 'Share2',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/mindmap',             viewMode: null, order: 4, visible: true, access: 'user'   },
   { id: '', key: 'global-graph',   label: 'Graphe global',  icon: 'Network',       section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/graph',               viewMode: null, order: 5, visible: true, access: 'user'   },
   { id: '', key: 'global-links',   label: 'Liens',          icon: 'ExternalLink',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/links',               viewMode: null, order: 6, visible: true, access: 'user'   },
 

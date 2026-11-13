@@ -3,11 +3,11 @@
  * Utilisée par la barre de vues, la barre latérale, les cartes d'espace, la présentation d'un espace, l'accueil public
  * et l'administration des espaces. Nouvelle vue = son icône ajoutée ici, jamais de liste locale dans une page :
  * viewIcons.test.ts échoue si une vue du registre n'y est pas. Icône inconnue : getViewIcon renvoie List.
- * Tags (2026-11-11) : vue Tags ; Bug retirée avec la vue Bugs.
+ * Tags (2026-11-11) : vue Tags ; Bug retirée avec la vue Bugs. Paperclip (2026-11-13) : Documents, distincte de Texte.
  */
 import {
   List, GitBranch, GitMerge, FileText, LayoutGrid, Users, MessageSquare, Table2, Clock,
-  ExternalLink, Image, Newspaper, CheckSquare, Tags,
+  ExternalLink, Image, Newspaper, CheckSquare, Tags, Paperclip,
   Columns3, CalendarCheck, GanttChart, Calendar, TrendingDown, Layers, Flame,
   Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, Grid3x3, Focus, Workflow, ZoomIn,
   type LucideIcon,
@@ -15,7 +15,7 @@ import {
 
 const ICON_MAP: Record<string, LucideIcon> = {
   List, GitBranch, GitMerge, FileText, LayoutGrid, Users, MessageSquare, Table2, Clock,
-  ExternalLink, Image, Newspaper, CheckSquare, Tags,
+  ExternalLink, Image, Newspaper, CheckSquare, Tags, Paperclip,
   Columns3, CalendarCheck, GanttChart, Calendar, TrendingDown, Layers, Flame,
   Share2, Network, CircleDot, Waypoints, Circle, Orbit, SquareStack, Disc, Grid3x3, Focus, Workflow, ZoomIn,
 };
