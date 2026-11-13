@@ -17,8 +17,7 @@ import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { RelationCreateDialog } from '../relations/RelationCreateDialog';
 import { RelationEditDialog } from '../relations/RelationEditDialog';
-import type { Item, ItemType, ItemRelation, SpaceReferentiels, MenuItemConfig } from '@spok/shared';
-import type { ViewMode } from '../../stores/viewMode';
+import type { Item, ItemType, ItemRelation, SpaceReferentiels } from '@spok/shared';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { buildTree, flattenTree } from './timeline-tree';
@@ -88,9 +87,6 @@ interface PertViewProps {
   highlightStatus?: string[];
   highlightColor?: { border: string; bg: string };
   searchMatchIds?: Set<string>;
-  spaceViews?: MenuItemConfig[];
-  onSetMode?: (mode: ViewMode) => void;
-  defaultView?: ViewMode;
   spaceRole?: string;
   onStartTour?: () => void;
   pulseHelp?: boolean;
@@ -128,7 +124,6 @@ export function PertView({
   highlightColor,
   searchMatchIds,
   spaceName = '',
-  spaceViews: _spaceViews, onSetMode: _onSetMode, defaultView: _defaultView,
   spaceRole: _spaceRole, onStartTour, pulseHelp,
   treeSort: treeSortProp,
 }: PertViewProps) {

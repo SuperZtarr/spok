@@ -52,9 +52,7 @@ import {
   Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole, MenuItemConfig } from '@spok/shared';
-import type { ViewMode } from '../../stores/viewMode';
-import { ViewSelectorBar } from '../ui/ViewSelectorBar';
+import type { ItemWithRelations, SpaceReferentiels, SpaceWithRole } from '@spok/shared';
 import { SidebarDropContext } from '../Layout';
 import { DEFAULT_REFERENTIELS } from '@spok/shared';
 import { ChevronRight, FolderOpen, ExternalLink, Link2, Maximize2, RotateCcw, Share2 } from 'lucide-react';
@@ -133,9 +131,6 @@ interface MindMapViewProps {
   referentiels?: SpaceReferentiels;
   canEdit?: boolean;
   canEditItem?: (item: { createdById?: string }) => boolean;
-  spaceViews?: MenuItemConfig[];
-  onSetMode?: (mode: ViewMode) => void;
-  defaultView?: ViewMode;
   // Toolbar props
   onStartTour?: () => void;
   pulseHelp?: boolean;
@@ -1704,19 +1699,10 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
   onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
-  spaceViews, onSetMode, defaultView,
   onStartTour, pulseHelp,
 }, ref) {
   return (
     <div className="h-full w-full flex flex-col">
-      {spaceViews && onSetMode && (
-        <ViewSelectorBar
-          viewMode="mindmap"
-          onSetMode={onSetMode}
-          spaceViews={spaceViews}
-          defaultView={defaultView}
-        />
-      )}
       <ReactFlowProvider>
         <MindMapViewInner
           items={items} spaceName={spaceName} spaceId={spaceId} communitySpaces={communitySpaces}

@@ -14,87 +14,70 @@ description: Use when adding, modifying or understanding any menu or toolbar in 
 
 Format : bloc `/* ... */` avant les imports. Non négociable, au même titre que le TS check.
 
-## Architecture réelle
+## Architecture réelle (référentiels centralisés, 2026-11-13)
 
-Il n'y a **pas de table MenuItem** en base. Le menu est défini en code par **`MENU_REGISTRY`** (`@spok/shared`), avec des overrides (visible/access) stockés en JSON dans **`AppConfig`** (clé `menu_overrides`).
+Il n'y a **pas de table MenuItem** en base. Chaque liste de valeurs a UNE source (skill `spok-dev`, § 1 bis) :
+
+| Référentiel | Source unique | Dérivés |
+|---|---|---|
+| Vues d'espace | `VIEW_REGISTRY` (`packages/shared/src/constants/viewRegistry.ts`) | `ViewId` / `ViewMode`, `MOBILE_HIDDEN_VIEWS`, entrées de menu, `VIEW_MODES` |
+| Catégories de vues | `SPACE_VIEW_SECTIONS` (`menuDefaults.ts`) : Contenus, Organisation, Suivi, Planification, Exploration | `SPACE_VIEW_SECTION_IDS`, panneau « Toutes les vues », `VIEW_CATEGORIES` |
+| Menu (pages globales + vues) | `MENU_REGISTRY` (`menuDefaults.ts`, vues générées depuis `VIEW_REGISTRY`) + surcharges `menu_overrides` (AppConfig, `/admin/views`) | `useMenuItems()` |
+| Modes d'interface | `MODE_REGISTRY` (`packages/shared/src/constants/modeRegistry.ts`) : libellé, contexte en base, description, favoris, vue d'ouverture, pages masquées, fiche réduite | `InterfaceMode`, `CommunityContext`, `COMMUNITY_CONTEXTS` (zod API), `MODE_GLOBAL_EXCLUDED`, favoris (`lib/viewFavorites`), vue d'ouverture (`lib/spaceDefaultView`), boutons de l'en-tête, options du contexte, textes (`lib/modeTexts`) |
+| Icônes nommées | `apps/web/src/constants/viewIcons.ts` (`getViewIcon`, `getNavIcon`) | barre de vues, bandeau, grille mobile, cartes |
 
 ```
-MENU_REGISTRY (shared/constants/menuDefaults.ts, généré depuis VIEW_REGISTRY)
-    + overrides AppConfig "menu_overrides" (routes/admin/menu.ts)
-    ↓ GET /menu-items
-useMenuItems() hook
-    ↓
-GlobalNavBar.tsx → bandeau de navigation (sections global/personal/admin/misc)
-SpaceToolbar    → sélecteur de vues d'espace (sections basic/itemTypes/planning/exploration)
+MENU_REGISTRY + menu_overrides → GET /menu-items → useMenuItems()
+    ├─ GlobalNavBar.tsx  → bandeau (sections global/personal/misc ; admin dans la sidebar), masquage par mode
+    └─ SpaceViewSelector → barre de vues d'espace : Présentation | « Mode · » favoris | Toutes les vues (5 catégories)
 ```
 
-⚠️ **Constaté 2026-07-12** : `MainMenu.tsx` n'existe plus — remplacé par `GlobalNavBar.tsx` (bandeau, map d'icônes `NAV_ICONS`, masquage par mode d'interface via `MODE_GLOBAL_EXCLUDED`). Les sections d'espace (`basic`/`itemTypes`/`planning`/`exploration`) sont rendues par SpaceToolbar, plus par le menu. Les mentions `MainMenu.tsx` plus bas dans cette skill (structure `__espaces__`, dropdown multi-colonnes) décrivent l'ancienne architecture — à vérifier contre le code avant usage.
+- Le mode ne choisit que les **favoris** (boutons directs) ; aucune vue n'est masquée par un mode.
+- Textes qui énumèrent modes, favoris, vues d'ouverture ou catégories : **générés** par `lib/modeTexts.ts`, jamais écrits.
+- Tests de cohérence : `apps/web/src/lib/modeRegistry.test.ts`, `constants/viewIcons.test.ts` (vues ET menu),
+  `apps/api/src/routes/communities.test.ts` (contextes = enum Prisma).
 
-⚠️ Supprimés le 2026-10-21 : `ViewModeSelector.tsx`, `useViewConfig`, `useGlobalPages`, `viewDefaults.ts`, `types/viewConfig.ts` et les routes `/config/*` et `/admin/config/*` (système parallèle qu'aucun écran ne lisait). Ne pas les réintroduire : la seule configuration du menu est `MENU_REGISTRY` + `menu_overrides`.
+⚠️ N'existent plus : `MainMenu.tsx` (→ `GlobalNavBar.tsx`), les cartes `NAV_ICONS` de GlobalNavBar/Layout (→ `viewIcons.ts`),
+l'union `ViewMode` écrite à la main (→ `ViewId`), les familles/« Autres vues » de SpaceToolbar (→ `SpaceViewSelector` +
+`lib/viewFavorites`), la vue `overview` (→ page `SpaceOverviewPage`), `ViewSelectorBar` (code mort : jamais
+affiché, supprimé le 2026-11-13). `SpaceViewSelector` est la SEULE barre de vues. Supprimés le 2026-10-21 : `ViewModeSelector.tsx`, `useViewConfig`,
+`useGlobalPages`, `viewDefaults.ts`, `types/viewConfig.ts`, routes `/config/*` et `/admin/config/*`.
 
 ## Fichiers clés
 
 | Rôle | Fichier |
 |------|---------|
-| Items de menu par défaut | `packages/shared/src/constants/menuDefaults.ts` |
+| Vues d'espace | `packages/shared/src/constants/viewRegistry.ts` |
+| Catégories, menu | `packages/shared/src/constants/menuDefaults.ts` |
+| Modes d'interface | `packages/shared/src/constants/modeRegistry.ts` |
 | Types MenuItem | `packages/shared/src/types/menuItem.ts` |
-| Rendu du menu principal | `apps/web/src/components/GlobalNavBar.tsx` (icônes : map `NAV_ICONS`) |
+| Icônes | `apps/web/src/constants/viewIcons.ts` |
+| Bandeau global | `apps/web/src/components/GlobalNavBar.tsx` |
+| Sélecteur de vues d'espace | `apps/web/src/pages/SpaceViewSelector.tsx` (+ `lib/viewFavorites.ts`) |
+| Textes générés (modes) | `apps/web/src/lib/modeTexts.ts` |
 | Hook de chargement | `apps/web/src/hooks/useMenuItems.ts` |
 | Rendu de la vue dans l'espace | `apps/web/src/pages/SpacePage.tsx` |
-| Type `ViewMode` | `apps/web/src/stores/viewMode.ts` |
 | Aide utilisateur des vues (fiche + tour) | `apps/web/src/components/views/help/<vue>.help.ts` (+ `help/`) |
 | Aide utilisateur des pages et modales | `apps/web/src/pages/help/<page>.help.ts`, `components/help/<modale>.help.ts`, registre `help/pageHelp.ts` |
-| Infobulles de la barre d'espace | `apps/web/src/help/spaceToolbar.hints.ts` (lues par `HelpHint`) |
-
-## Structure du menu espace (desktop)
-
-Quand l'utilisateur est dans un espace (`/spaces/:id/*`), `MainMenu` affiche :
-
-1. **Global** — dropdown : Accueil, Communautés, Espaces, Sunburst, Carte mentale, Graphe global, Liens
-2. **Personnel** — dropdown : Tableau de bord, Tâches, Profil
-3. **Espaces** — dropdown multi-colonnes (bouton unique remplaçant les 4 anciens) :
-   - Lien "Présentation" → `/spaces/:id`
-   - 4 colonnes : Basique | Types | Planification | Exploration
-4. **Administration** — dropdown admin (visible si adminMode actif)
-5. **Divers** — dropdown : Recherche, Contact, Plan du site, Déconnexion
-
-Hors espace (homepage, etc.) : les sections `basic`, `itemTypes`, `planning`, `exploration` sont masquées.
-
-### Implémentation clés dans `MainMenu.tsx`
-
-- `SPACE_SECTION_IDS = ['basic', 'itemTypes', 'planning', 'exploration']` — les 4 sections groupées
-- Bouton virtuel `'__espaces__'` — clé utilisée dans `sectionButtonRefs` et `openSection`
-- `openSectionDropdown('__espaces__')` → `menuWidth = 600` (vs 220 pour les autres)
-- `renderEspacesDropdownContent()` — génère le dropdown multi-colonnes avec "Présentation"
-- Portal conditionné par `openSection && (currentSection || openSection === '__espaces__')`
+| Infobulles et éléments de la barre d'espace | `apps/web/src/help/spaceToolbar.elements.ts`, `spaceToolbar.hints.ts` (lues par `HelpHint`) |
 
 ## Ajouter une nouvelle vue — checklist complète
 
-### 1. Shared — déclarer le menu item
+### 1. Shared — une entrée dans `VIEW_REGISTRY`
 
 ```ts
-// packages/shared/src/constants/menuDefaults.ts (MENU_REGISTRY) — ou viewRegistry.ts si c'est une vue
-{ id: '', key: 'ma-vue', label: 'Ma Vue', icon: 'IconName',
-  section: 'basic',           // basic | itemTypes | planning | exploration
-  sectionLabel: 'Basique',
-  sectionOrder: 2,            // 0=global 1=personal 2=basic 3=itemTypes 4=planning 5=exploration 6=admin 7=misc
-  route: null, viewMode: 'ma-vue',
-  order: 8, visible: true, access: 'user' },
+// packages/shared/src/constants/viewRegistry.ts
+{ id: 'ma-vue', label: 'Ma Vue', icon: 'IconName', category: 'organize', order: 5, visible: true, access: 'public' },
 ```
 
-**Sections valides :** `basic` | `itemTypes` | `planning` | `exploration`
-**access :** `public` | `user` | `admin`
-**Icons :** noms Lucide. Vérifier que l'icône est importée dans `MainMenu.tsx` (ICONS map).
+**Catégories :** `content` | `organize` | `tracking` | `planning` | `exploration` (libellés : `SPACE_VIEW_SECTIONS`).
+**access :** `public` | `user` | `admin`. Le menu, `ViewId`/`ViewMode` et `VIEW_MODES` en dérivent : rien d'autre à déclarer.
+**Icône :** nom Lucide, à ajouter dans `apps/web/src/constants/viewIcons.ts` s'il n'y est pas (test `viewIcons.test.ts`).
+**Favori d'un mode :** l'ajouter au champ `favorites` de ce mode dans `MODE_REGISTRY` (jamais ailleurs).
 
-### 2. Web — type TypeScript
+### 2. Web — rien à typer à la main
 
-```ts
-// apps/web/src/stores/viewMode.ts
-export type ViewMode = '...' | 'ma-vue';
-
-// Dans VIEW_MODES :
-{ value: 'ma-vue', label: 'Ma Vue', icon: 'IconName', category: 'basic' },
-```
+`ViewMode` est `ViewId`, dérivé du registre. `pnpm --filter @spok/shared build` puis typecheck web.
 
 ### 3. Web — fiche d'aide utilisateur de la vue (OBLIGATOIRE)
 
@@ -398,7 +381,7 @@ Bouton Paramètres dans les toolbars : icône `Settings`, visible uniquement si 
 |--------|-------|-----|
 | Vue absente du menu | Pas dans `DEFAULT_MENU_ITEMS` ou accès insuffisant | Ajouter + `pnpm build:packages` |
 | TS error sur `VIEW_HELP` / test coverage rouge | Fiche d'aide manquante | Créer `components/views/help/<vue>.help.ts` + l'enregistrer dans l'index |
-| Icône absente (fallback List) | Icône non dans `ICONS` map de `MainMenu.tsx` | Ajouter import + entrée dans ICONS |
+| Icône absente (fallback List) | Icône non déclarée dans `constants/viewIcons.ts` | L'y ajouter (source unique, `viewIcons.test.ts`) |
 | Vue non rendue | Cas manquant dans SpacePage | Ajouter le ternaire |
 | Dropdown Espaces ne s'ouvre pas | `spaceRenderSections` vide (accès public, items user-only) | Normal pour utilisateurs non connectés |
 | Menu contextuel hors écran | Portal mal positionné | `ItemActionMenu` gère ça automatiquement — ne pas recréer un menu custom |

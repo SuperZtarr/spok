@@ -6,13 +6,15 @@
  * favorites affichées en boutons directs (SpaceToolbar, MODE_PRIMARY_VIEWS) ; aucune vue n'est masquée par un mode.
  * Un visiteur non connecté a les mêmes vues qu'un connecté (décision Thomas 2026-11-06) : seul 'admin' reste réservé.
  * Surcharges possibles dans /admin/views (AppConfig menu_overrides), qui priment sur ce registre.
- * `mobileHidden` : bouton de vue masqué sous 640 px dans les barres de vues (SpaceToolbar, ViewSelectorBar).
+ * `mobileHidden` : bouton de vue masqué sous 640 px dans la barre de vues (SpaceViewSelector), grisé dans « Toutes les vues ».
  * bugs retirée le 2026-11-11 (remplacée par le filtre Tags et la vue Tags) : une vue absente du registre ouvre la
  * Liste (apps/web/src/lib/spaceDefaultView.ts, knownViewOr).
  * Catégories (réorganisation 2026-11-13, une seule taxonomie) : Contenus (lire, échanger, médias), Organisation
  * (classer), Suivi (avancement), Planification (temps, enchaînements), Exploration (relations). Libellés et ordre des
  * catégories : SPACE_VIEW_SECTIONS (menuDefaults.ts), seule liste des catégories — ne jamais la recopier dans le web.
  * « Todo » renommée « À faire » et Documents en icône Paperclip (distincte de Texte) le 2026-11-13.
+ * ViewId (2026-11-13, centralisation des référentiels) : type des identifiants dérivé du registre — le web
+ * (stores/viewMode.ts, ViewMode) l'utilise au lieu d'une union écrite à la main. Ajouter une vue = une entrée ici.
  */
 export type ViewCategoryId = 'content' | 'organize' | 'tracking' | 'planning' | 'exploration';
 
@@ -27,7 +29,7 @@ export interface ViewDefinition {
   mobileHidden?: boolean;
 }
 
-export const VIEW_REGISTRY: ViewDefinition[] = [
+const VIEW_DEFINITIONS = [
   // ── Contenus : lire, échanger, médias ──
   { id: 'thread',     label: 'Discussions',    icon: 'MessageSquare', category: 'content',     order: 0, visible: true, access: 'public' },
   { id: 'text',       label: 'Texte',          icon: 'FileText',      category: 'content',     order: 1, visible: true, access: 'public' },
@@ -71,7 +73,12 @@ export const VIEW_REGISTRY: ViewDefinition[] = [
   { id: 'heatmap',    label: 'Heatmap',       icon: 'Grid3x3',    category: 'exploration', order: 8, visible: true, access: 'admin', mobileHidden: true },
   { id: 'ego',        label: 'Réseau ego',    icon: 'Focus',      category: 'exploration', order: 9, visible: true, access: 'admin', mobileHidden: true },
   { id: 'loupe',      label: 'Loupe',         icon: 'ZoomIn',     category: 'exploration', order: 10, visible: true, access: 'public', mobileHidden: true },
-];
+] as const satisfies readonly ViewDefinition[];
+
+/** Identifiant d'une vue d'espace, dérivé du registre (le ViewMode du web en est un alias — jamais d'union à la main). */
+export type ViewId = (typeof VIEW_DEFINITIONS)[number]['id'];
+
+export const VIEW_REGISTRY: readonly ViewDefinition[] = VIEW_DEFINITIONS;
 
 /** Vues dont le bouton est masqué sur mobile, dérivées du registre. */
 export const MOBILE_HIDDEN_VIEWS: ReadonlySet<string> = new Set(VIEW_REGISTRY.filter((v) => v.mobileHidden).map((v) => v.id));
