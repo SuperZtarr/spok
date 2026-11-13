@@ -1,7 +1,8 @@
 /**
  * Page principale d'un espace (vues : liste, kanban, timeline, mindmap, etc.).
- * Vue d'ouverture : ?view= > vue en cours > vue de l'espace > vue du contexte de sa communauté > Liste
- * (lib/spaceDefaultView.ts) — attend le chargement de la communauté avant de choisir. Plus de vue « overview »
+ * Vue d'ouverture (openingView, lib/spaceDefaultView.ts) : ?view= > vue en cours si l'espace précédent était dans la
+ * même communauté (2026-11-13) > vue de l'espace > vue du contexte de sa communauté > Liste — attend le chargement
+ * de la communauté avant de choisir. Plus de vue « overview »
  * (supprimée le 2026-11-13) : la présentation est la page SpaceOverviewPage, bouton « Présentation » de la barre.
  * Vue Process : reçoit les seuls items de l'espace courant (pas ceux des sous-espaces inclus — les positions
  * process_nodes sont par espace) et onCreateNote (double-clic sur le canevas = NOTE vide + modale).
@@ -128,7 +129,7 @@ import { recordSpaceVisit } from '../hooks/useRecentSpaces';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { EmptyHelp } from '../help/EmptyHelp';
 import { CollapseToggleButton } from '../components/ui/CollapseToggleButton';
-import { knownViewOr, resolveSpaceDefaultView } from '../lib/spaceDefaultView';
+import { getLastOpenedCommunityId, openingView, setLastOpenedCommunityId } from '../lib/spaceDefaultView';
 
 export function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
@@ -222,16 +223,24 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     viewReadyRef.current = false;
   }, [spaceId]);
 
-  // Apply space defaultView — priorité : URL ?view= > vue active en cours (sticky) > defaultView espace >
-  // vue du contexte de la communauté > list (resolveSpaceDefaultView, 2026-10-24)
-  // La vue active en cours (viewMode) persiste entre espaces : si l'utilisateur navigue en "images", tous les espaces suivants s'ouvrent en images
+  // Vue à l'ouverture — priorité : URL ?view= > vue en cours si même communauté que l'espace précédent >
+  // defaultView espace > vue du contexte de la communauté > list (openingView, 2026-11-13)
   useEffect(() => {
     if (!space || space.id !== spaceId) return;
     if (spaceCommunityLoading) return; // contexte de la communauté pas encore connu : attendre plutôt qu'ouvrir en Liste
-    const urlView = searchParams.get('view') as Parameters<typeof setMode>[0] | null;
-    // Vue retirée (ex. « bugs ») dans l'adresse, la vue mémorisée ou la vue de l'espace : la Liste (knownViewOr)
-    const targetMode = knownViewOr(urlView || viewMode
-      || resolveSpaceDefaultView(space.defaultView, spaceCommunity?.context)) as Parameters<typeof setMode>[0];
+    const urlView = searchParams.get('view');
+    // Vue gardée d'un espace à l'autre dans la même communauté, vue d'ouverture sinon (openingView, 2026-11-13) ;
+    // vue retirée (ex. « bugs ») : la Liste
+    const communityId = space.communityId ?? null;
+    const targetMode = openingView({
+      urlView,
+      currentView: viewMode,
+      previousCommunityId: getLastOpenedCommunityId(),
+      communityId,
+      defaultView: space.defaultView,
+      communityContext: spaceCommunity?.context,
+    }) as Parameters<typeof setMode>[0];
+    setLastOpenedCommunityId(communityId);
     setMode(targetMode);
     viewReadyRef.current = true;
     setSearchParams(prev => {
