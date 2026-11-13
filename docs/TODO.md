@@ -230,6 +230,7 @@
 - [x] Fiche élément - saisie retrouvée après déconnexion — 2026-11-12
 - [x] Fiche élément - références externes — 2026-11-12
 - [x] Références externes - MCP, duplication et fusion — 2026-11-13
+- [x] Fiche élément - pied commun et menu « Actions » — 2026-11-13
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

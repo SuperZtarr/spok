@@ -6,6 +6,9 @@
  * sien, sinon le tour d'une vue pointerait la barre latérale (premier élément du DOM).
  * onOpenChange : prévient la vue quand le menu s'ouvre ou se ferme (la Loupe y fige son zoom, le menu étant en portail).
  * Sous-menu : chevauche le menu (aucun trou) et tolère le survol d'autres éléments en chemin (SUBMENU_CLOSE_DELAY_MS).
+ * triggerText (2026-11-13) : libellé visible à côté de l'icône du déclencheur (pied de la fiche : « Actions »).
+ * hint d'une action (2026-11-13) : rappel fonctionnel affiché en bas du menu au survol / focus de l'entrée — pas en
+ * infobulle, que le menu (z 99999) recouvrirait. Sans hint sur aucune entrée, la zone n'existe pas.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, ChevronRight, Check } from 'lucide-react';
@@ -23,6 +26,8 @@ export interface ItemAction {
   disabled?: boolean;
   checked?: boolean;
   submenu?: ItemAction[];
+  /** Ce que fait l'action (rappel fonctionnel), affiché en bas du menu au survol */
+  hint?: string;
 }
 
 export interface ItemActionGroup {
@@ -39,13 +44,18 @@ interface ItemActionMenuProps {
   triggerLabel?: string;
   /** Appelé à chaque ouverture ou fermeture du menu */
   onOpenChange?: (open: boolean) => void;
+  /** Libellé visible à droite de l'icône du déclencheur */
+  triggerText?: string;
 }
 
-export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId, triggerLabel = 'Actions', onOpenChange }: ItemActionMenuProps) {
+export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId, triggerLabel = 'Actions', onOpenChange, triggerText }: ItemActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredHint, setHoveredHint] = useState<string | null>(null);
+  const hasHints = groups.some((g) => g.actions.some((a) => a.hint));
 
   useEffect(() => {
     onOpenChange?.(isOpen);
+    if (!isOpen) setHoveredHint(null);
   }, [isOpen, onOpenChange]);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -188,6 +198,7 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId
         {...(tourId ? { 'data-tour': tourId } : { 'data-tour': 'item-menu' })}
       >
         <MoreVertical className="w-4 h-4" />
+        {triggerText && <span>{triggerText}</span>}
       </button>
 
       {isOpen && createPortal(
@@ -212,7 +223,9 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId
                 return (
                   <button
                     key={action.id}
+                    onFocus={() => setHoveredHint(action.hint ?? null)}
                     onMouseEnter={(e) => {
+                      setHoveredHint(action.hint ?? null);
                       if (hasSubmenu) {
                         openSubmenu(action.id, (e.currentTarget as HTMLElement).getBoundingClientRect());
                       } else {
@@ -244,6 +257,9 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId
               })}
             </div>
           ))}
+          {hasHints && hoveredHint && (
+            <p role="note" className="border-t mt-1 px-3 pt-2 pb-1 text-xs leading-snug text-muted-foreground max-w-[280px]">{hoveredHint}</p>
+          )}
         </div>,
         document.body
       )}
