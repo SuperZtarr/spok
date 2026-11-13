@@ -233,6 +233,7 @@
 - [x] Fiche élément - pied commun et menu « Actions » — 2026-11-13
 - [x] Fiche élément - en-tête commun — 2026-11-13
 - [x] Fiche élément - deux colonnes et ordre commun — 2026-11-13
+- [x] Fiche élément - panneau compact — 2026-11-13
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

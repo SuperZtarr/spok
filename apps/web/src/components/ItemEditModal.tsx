@@ -70,6 +70,20 @@
  * contribution en cours) copiée dans le navigateur 1 s après la dernière frappe ; à l'ouverture, ItemDraftBanner propose
  * Reprendre / Ignorer si elle diffère de l'enregistré. Effacé après enregistrement réussi, contribution envoyée,
  * « Quitter sans enregistrer » (bouton Fermer) ou Ignorer ; croix / Échap / clic à côté le GARDENT (rien n'y est confirmé).
+ * Panneau compact (2026-11-13, réorganisation, lot 4) : dates résumées sur une ligne (datesOpen, dépliées au clic, repliées à
+ * chaque élément) ; aides des champs du panneau en rappel au survol du libellé (itemFields) au lieu de texte sous le champ ;
+ * fiche complète sur grand écran : colonne principale et panneau défilent séparément.
+ * Deux colonnes (2026-11-13, réorganisation, lot 3) : colonne principale commune (sélecteur de type « contenu » en fiche
+ * réduite, Tags, Description, Contenus, Contributions, Historique en fiche réduite) ; fiche complète = + panneau Pilotage
+ * (data-devzone item-pilotage) : Type, Statut, Priorité, Dates, Assigné, Parent, Références, Dépendances, Enfants,
+ * Historique. L'identifiant n'est plus affiché : « Copier l'identifiant » dans le menu Actions.
+ * En-tête commun (2026-11-13, réorganisation, lot 2) : chemin + auteur·date / icône du type + titre (champ en Modifier, titre
+ * en Afficher et Composer — ItemReadView hideTitle) / modes, Plus de champs (HelpHint moreFields / lessFields), un seul « ? »
+ * (HelpButton compact : aide et tutoriel). Plus de « ? » de section pour les modes et Plus de champs.
+ * Pied commun (2026-11-13, réorganisation de la fiche, lot 1) : Modifier, Afficher et Composer ont le même pied — à gauche
+ * Enregistrer et quitter / Enregistrer (Modifier seulement), Fermer, boutons de séance ; à droite statut de copie, « ? » et menu
+ * « Actions » (ItemActionMenu + itemSheetActions.ts : partage, organisation, structure, Supprimer). Plus d'icônes à côté du
+ * titre en mode Afficher.
  * Références externes (2026-11-12, règle item-external-refs) : externalRefsText, une ligne « Appli : Réf | … » (ExternalRefsField),
  * comprise dans hasChanges, la fusion serveur et le brouillon ; envoyée découpée (splitExternalRefs) par doSubmit si elle a changé.
  * Visiteur anonyme (lecture seule, spec « Sécurité & Accès ») : réactions en compteurs seuls (ReactionBar readOnly),
@@ -105,7 +119,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Printer, FileDown, ClipboardCopy, Check,Building2, Bookmark, Eye, FolderInput, Copy, Merge, Scissors, ArrowDownToLine, FolderPlus, LayoutTemplate, ListTree, EyeOff, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Building2, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { QuestionPanel } from './question/QuestionPanel';
@@ -121,6 +135,8 @@ import { ReactionBar } from './ReactionBar';
 import { ContributionVoteBadge } from './ContributionVoteBadge';
 import { ItemHistorySection } from './ItemHistorySection';
 import { ItemDraftBanner } from './ItemDraftBanner';
+import { ItemActionMenu } from './ui/ItemActionMenu';
+import { buildSheetActionGroups } from './itemSheetActions';
 import { ExternalRefsInput, ExternalRefsList } from './ExternalRefsField';
 import { formatExternalRefs, splitExternalRefs } from '@spok/shared';
 import { saveItemDraft, loadItemDraft, clearItemDraft, purgeExpiredItemDrafts, draftHasChanges, type ItemDraft, type ItemDraftFields } from '../lib/itemDraft';
@@ -230,6 +246,10 @@ export function ItemEditModal({
   const collapsedByDefault = interfaceMode === 'forum' || interfaceMode === 'loisirs';
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
+  // Dates du panneau Pilotage : résumé sur une ligne, dépliées au clic (réorganisation, lot 4) ; repliées à chaque élément
+  const [datesOpen, setDatesOpen] = useState(false);
+  useEffect(() => { setDatesOpen(false); }, [itemId]);
   const [thumbnailState, setThumbnailState] = useState<'idle' | 'busy' | 'copied' | 'downloaded' | 'error'>('idle');
   // Mode Afficher (ItemReadView), Modifier / Fiche ou Composer : fixé à chaque ouverture, conservé en naviguant d'item en item
   const [displayMode, setDisplayMode] = useState<ItemOpenMode>('edit');
@@ -1067,6 +1087,8 @@ export function ItemEditModal({
     setTimeout(() => setSheetCopied(false), 2000);
   };
   const itemHints = PAGE_HELP['item-modal'].hints;
+  // Aides des champs du panneau : rappel au survol du libellé (lot 4), plus de texte sous chaque champ
+  const itemFields = PAGE_HELP['item-modal'].fields;
   // « Copier la vignette » : image PNG de l'item (lib/itemThumbnail.ts) ; message visible si téléchargée ou en échec
   const copyThumbnail = async () => {
     setThumbnailState('busy');
@@ -1079,20 +1101,6 @@ export function ItemEditModal({
     setThumbnailState(next);
     setTimeout(() => setThumbnailState('idle'), next === 'copied' ? 2000 : 6000);
   };
-  const thumbnailButton = (
-    <>
-      <HelpHint text={itemHints?.[thumbnailState === 'copied' ? 'copyThumbnailDone' : 'copyThumbnail']}>
-        <Button type="button" variant="ghost" size="sm" aria-label="Copier la vignette" disabled={thumbnailState === 'busy'} onClick={copyThumbnail}>
-          {thumbnailState === 'copied' ? <Check className="w-4 h-4 text-green-600" /> : <ImageIcon className="w-4 h-4" />}
-        </Button>
-      </HelpHint>
-      {(thumbnailState === 'downloaded' || thumbnailState === 'error') && (
-        <span role="status" className={`self-center text-xs ${thumbnailState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>
-          {itemHints?.[thumbnailState === 'error' ? 'copyThumbnailError' : 'copyThumbnailDownloaded']}
-        </span>
-      )}
-    </>
-  );
   const printSheet = () => {
     if (!item) return;
     if (item.type === 'ARTICLE' && articlePrintRef.current) {
@@ -1101,6 +1109,57 @@ export function ItemEditModal({
     }
     printItem({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName });
   };
+
+  // Menu « Actions » du pied (itemSheetActions.ts), le même dans Modifier, Afficher et Composer : mêmes conditions
+  // que les anciennes icônes (réorganisation et suppression si canEdit, épingle si connecté)
+  const sheetActionGroups = item && itemId ? buildSheetActionGroups({
+    print: printSheet,
+    exportPdf: () => exportItemPDF({ item: item as any, children: allItems.filter(i => i.parentId === item.id), spaceName }),
+    copySheet,
+    copyThumbnail,
+    copyId: () => { void navigator.clipboard?.writeText(item.id).then(() => { setIdCopied(true); setTimeout(() => setIdCopied(false), 2000); }).catch(() => {}); },
+    toggleBookmark: user ? toggleBookmark : undefined,
+    markUnread: () => { void markItemUnread(itemId); onClose(); },
+    duplicate: () => setShowDuplicateModal(true),
+    move: () => setShowMoveModal(true),
+    convertToSpace: onConvertToSpace ? () => { onConvertToSpace(itemId); onClose(); } : undefined,
+    absorbChildren: onAbsorbChildren && allItems.some(i => i.parentId === itemId) ? () => { onAbsorbChildren(itemId); onClose(); } : undefined,
+    splitDescription: onSplitDescription && hasHeadings(item.description) ? () => { onSplitDescription(itemId); onClose(); } : undefined,
+    merge: onMerge ? () => { onMerge(itemId); onClose(); } : undefined,
+    saveAsTemplate: () => setShowSaveAsTemplateModal(true),
+    insertTemplate: () => setShowInsertTemplateModal(true),
+    delete: onDelete ? () => { onDelete(itemId); onClose(); } : undefined,
+  }, {
+    canEdit,
+    isBookmarked,
+    thumbnailBusy: thumbnailState === 'busy',
+    hints: {
+      print: itemHints?.print, exportPdf: itemHints?.actionExportPdf, copyId: itemHints?.actionCopyId, copySheet: itemHints?.copySheet, copyThumbnail: itemHints?.copyThumbnail,
+      bookmark: itemHints?.actionBookmark, markUnread: itemHints?.actionMarkUnread, duplicate: itemHints?.actionDuplicate,
+      move: itemHints?.actionMove, convertToSpace: itemHints?.actionConvert, absorbChildren: itemHints?.actionAbsorb,
+      splitDescription: itemHints?.actionSplit, merge: itemHints?.actionMerge, saveAsTemplate: itemHints?.actionSaveTemplate,
+      insertTemplate: itemHints?.actionInsertTemplate, delete: itemHints?.actionDelete,
+    },
+  }) : [];
+  // Retour d'une copie (fiche, vignette), affiché dans le pied : le menu s'est refermé
+  const copyStatus = sheetCopied ? itemHints?.copySheetDone
+    : idCopied ? itemHints?.copyIdDone
+    : thumbnailState === 'copied' ? itemHints?.copyThumbnailDone
+    : thumbnailState === 'downloaded' ? itemHints?.copyThumbnailDownloaded
+    : thumbnailState === 'error' ? itemHints?.copyThumbnailError
+    : undefined;
+  const footerActions = (
+    <div className="ml-auto flex items-center gap-2">
+      {copyStatus && (
+        <span role="status" className={`text-xs ${thumbnailState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>{copyStatus}</span>
+      )}
+      <ElementHelp page="item-modal" element="actions" />
+      {sheetActionGroups.length > 0 && (
+        <ItemActionMenu groups={sheetActionGroups} tourId="item-actions-menu" triggerLabel="Actions de l'élément" triggerText="Actions"
+          triggerClassName="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input text-sm hover:bg-accent transition-colors" />
+      )}
+    </div>
+  );
 
   // Blocs sous la Description : phrase d'un Article non enregistré, bloc Question, puis zone Contenus (tout type sauf
   // Article). Fiche complète : rendus dans la colonne centrale. Fiche réduite (colonne centrale supprimée) :
@@ -1164,9 +1223,11 @@ export function ItemEditModal({
               Copie de séance — présentée le {new Date(item!.lockedAt!).toLocaleString('fr-FR')}. Contenu verrouillé ; commentaires et tags possibles.
             </div>
           )}
-          {/* Breadcrumb */}
-          {(communityName || spaceName || breadcrumb.length > 0) && (
-            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3 px-1 flex-wrap" data-tour="item-breadcrumb" data-devzone="item-chemin">
+          {/* En-tête commun (réorganisation, lot 2, 2026-11-13) — même structure dans Modifier, Afficher et Composer :
+              1. chemin + auteur · date ; 2. icône du type + titre pleine largeur ; 3. modes, Plus de champs, un seul « ? » */}
+          <div className="flex items-start gap-3 mb-2 px-1">
+            {(communityName || spaceName || breadcrumb.length > 0) ? (
+              <nav className="flex flex-1 min-w-0 items-center gap-1.5 text-sm text-muted-foreground flex-wrap" data-tour="item-breadcrumb" data-devzone="item-chemin">
               {communityName && (
                 <>
                   <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
@@ -1192,30 +1253,39 @@ export function ItemEditModal({
                   )}
                 </span>
               ))}
-            </nav>
-          )}
+              </nav>
+            ) : <div className="flex-1" />}
+            {item?.createdBy && (
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0 pt-0.5">
+                <User className="w-3 h-3" />
+                <span>{item.createdBy.name}</span>
+                <span>•</span>
+                <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+            )}
+          </div>
 
-          {/* Header with type icon + title */}
-          <div className="flex items-center gap-3 mb-4" data-devzone="item-entete">
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
-              {TypeIcon && <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
+          <div className="mb-3" data-devzone="item-entete">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${typeConfig?.bgHover || 'bg-muted'}`}>
+                {TypeIcon && <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeConfig?.color || 'text-muted-foreground'}`} />}
+              </div>
+              <div className="flex-1 min-w-0" data-tour="item-title">
+                {formMode && canEdit ? (
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Titre de l'élément"
+                    className="text-lg sm:text-xl font-bold px-2 py-1 h-auto bg-muted/30 hover:bg-muted/60 focus:bg-background transition-colors"
+                    autoFocus={!item?.title}
+                  />
+                ) : (
+                  <h1 className="text-lg sm:text-2xl font-bold leading-tight break-words">{item.title || title}</h1>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0" data-tour="item-title">
-              {!formMode ? (
-                <span className="text-sm text-muted-foreground">{typeConfig?.labelShort || type}</span>
-              ) : canEdit ? (
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Titre de l'élément"
-                  className="text-lg sm:text-xl font-bold px-2 py-1 h-auto bg-muted/30 hover:bg-muted/60 focus:bg-background transition-colors"
-                  autoFocus={!item?.title}
-                />
-              ) : (
-                <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
-              )}
-            </div>
-            {/* Sélecteur Afficher / Modifier (Fiche sans droit d'édition) / Composer (article) — item existant seulement */}
+
+            <div className="flex flex-wrap items-center gap-2 mt-3">
             {!isNewItem && (
               <div className="flex items-center rounded-md bg-muted p-0.5 flex-shrink-0" role="group" aria-label="Mode d'affichage" data-tour="item-mode-switch">
                 <HelpHint text={itemHints?.[!readMode && hasChanges ? 'readModeUnsaved' : 'readMode']}>
@@ -1227,7 +1297,7 @@ export function ItemEditModal({
                     className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <BookOpen className="w-3 h-3" />
-                    <span className="hidden sm:inline">Afficher</span>
+                    <span>Afficher</span>
                   </button>
                 </HelpHint>
                 <HelpHint text={itemHints?.[canEdit ? 'editMode' : 'sheetMode']}>
@@ -1238,7 +1308,7 @@ export function ItemEditModal({
                     className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${formMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <Pencil className="w-3 h-3" />
-                    <span className="hidden sm:inline">{canEdit ? 'Modifier' : 'Fiche'}</span>
+                    <span>{canEdit ? 'Modifier' : 'Fiche'}</span>
                   </button>
                 </HelpHint>
                 {(canCompose || (type === 'ARTICLE' && !savedArticle && canEdit)) && (
@@ -1252,34 +1322,28 @@ export function ItemEditModal({
                       className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${composing ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                       <PenLine className="w-3 h-3" />
-                      <span className="hidden sm:inline">Composer</span>
+                      <span>Composer</span>
                     </button>
                   </HelpHint>
                 )}
               </div>
             )}
-            {!isNewItem && <ElementHelp page="item-modal" element="modes" />}
-            {formMode && <button
-              type="button"
-              onClick={() => setExpanded(v => !v)}
-              data-tour="item-more-fields"
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
-              title={expanded ? 'Masquer les champs avancés' : 'Afficher tous les champs (type, statut, dates, tags…)'}
-            >
-              {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              <span className="hidden sm:inline">{expanded ? 'Moins de champs' : 'Plus de champs'}</span>
-            </button>}
-            {formMode && <ElementHelp page="item-modal" element="champs" />}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {item?.createdBy && (
-                <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <User className="w-3 h-3" />
-                  <span>{item.createdBy.name}</span>
-                  <span>•</span>
-                  <span>{new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                </div>
+              {formMode && (
+                <HelpHint text={itemHints?.[expanded ? 'lessFields' : 'moreFields']}>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(v => !v)}
+                    data-tour="item-more-fields"
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors flex-shrink-0"
+                  >
+                    {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    <span>{expanded ? 'Moins de champs' : 'Plus de champs'}</span>
+                  </button>
+                </HelpHint>
               )}
-              <HelpButton help={PAGE_HELP['item-modal']} onStartTour={startItemTour} pulse={itemPulse} variant="page" buttonTitle="Aide" compact />
+              <div className="ml-auto">
+                <HelpButton help={PAGE_HELP['item-modal']} onStartTour={startItemTour} pulse={itemPulse} variant="page" buttonTitle="Aide" compact />
+              </div>
             </div>
           </div>
 
@@ -1289,6 +1353,7 @@ export function ItemEditModal({
               <div className="flex-1 overflow-y-auto pr-1">
                 <ItemReadView
                   sheet={buildSheet()}
+                  hideTitle
                   tags={item?.tags}
                   onOpenChild={onNavigate}
                   articleContent={item?.type === 'ARTICLE' && itemId ? (
@@ -1299,28 +1364,14 @@ export function ItemEditModal({
                     <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
                   ) : undefined}
                   contents={item?.type === 'ARTICLE' ? [] : (item?.contents ?? [])}
-                  toolbar={(
-                    <>
-                      <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>
-                        <Button type="button" variant="ghost" size="sm" aria-label="Copier la fiche" onClick={copySheet}>
-                          {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
-                        </Button>
-                      </HelpHint>
-                      {thumbnailButton}
-                      <HelpHint text={itemHints?.print}>
-                        <Button type="button" variant="ghost" size="sm" aria-label="Imprimer" onClick={printSheet}>
-                          <Printer className="w-4 h-4" />
-                        </Button>
-                      </HelpHint>
-                    </>
-                  )}
                   reactions={(
                     <ReactionBar spaceId={spaceId} itemId={item.id} summary={(item as any).reactionSummary || []} readOnly={!user} />
                   )}
                 />
               </div>
-              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-devzone="item-pied">
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
+                {footerActions}
               </div>
             </>
           )}
@@ -1329,14 +1380,14 @@ export function ItemEditModal({
           {composing && item && articleState.article && (
             <>
               <div className="flex-1 overflow-y-auto pr-1" data-devzone="item-composer">
-                <h2 className="text-2xl font-bold leading-tight">{item.title}</h2>
                 {item.description && (
                   <div className="prose dark:prose-invert max-w-none mt-2 mb-4 text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />
                 )}
                 <ArticleEditor spaceId={item.spaceId ?? spaceId} articleId={item.id} article={articleState.article} state={articleState} />
               </div>
-              <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-devzone="item-pied">
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
+                {footerActions}
               </div>
             </>
           )}
@@ -1364,8 +1415,9 @@ export function ItemEditModal({
             );
           })()}
 
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto pr-1">
+          {/* Contenu défilant ; fiche complète sur grand écran : la colonne principale et le panneau défilent chacun
+              de leur côté (lot 4), le panneau reste en place quand on lit une longue description */}
+          <div className={`flex-1 min-h-0 overflow-y-auto pr-1 ${showAll ? 'lg:overflow-hidden lg:flex lg:flex-col' : ''}`}>
 
             {/* Brouillon retrouvé (règle item-draft-local) : Reprendre / Ignorer */}
             {pendingDraft && (
@@ -1375,15 +1427,17 @@ export function ItemEditModal({
                 texts={{ explain: itemHints?.draftExplain, changedSince: itemHints?.draftChangedSince, resume: itemHints?.draftResume, discard: itemHints?.draftDiscard }} />
             )}
 
-            {/* Layout : 3 colonnes fiche complète, 1 colonne fiche réduite (colonne centrale supprimée) */}
-            <div className={`grid grid-cols-1 gap-6 ${showAll ? 'lg:grid-cols-[1fr,0.85fr,380px]' : ''}`}>
+            {/* Deux colonnes (réorganisation, lot 3, 2026-11-13) : colonne principale identique en fiche réduite et complète ;
+                la fiche complète ajoute seulement le panneau Pilotage à droite (« Plus de champs » l'ouvre / le ferme) */}
+            <div className={`grid grid-cols-1 gap-6 ${showAll ? 'lg:grid-cols-[minmax(0,1fr),400px] lg:grid-rows-[minmax(0,1fr)] lg:flex-1 lg:min-h-0' : ''}`}>
 
-          {/* === LEFT COLUMN: description + contributions === */}
-          <div className="space-y-6 min-w-0">
+          {/* === COLONNE PRINCIPALE : tags, description, contenus, contributions === */}
+          <div className={`space-y-6 min-w-0 ${showAll ? 'lg:overflow-y-auto lg:pr-2' : ''}`}>
+
 
               {/* Fiche réduite (Forum, Loisirs) : types « avec contenu » (CONTENT_TYPES) — choisir Image / Document / Lien…
                   fait apparaître son bloc (mediaSection) sous la Description. Types de pilotage : fiche complète. */}
-              {!showAll && canEdit && (() => {
+              {!showAll && canEdit && (CONTENT_TYPES as string[]).includes(type) && (() => {
                 const typeLabels = referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels;
                 const offered = CONTENT_TYPES.filter((t) => typeLabels[t]?.visible !== false);
                 const isContentType = (CONTENT_TYPES as string[]).includes(type);
@@ -1402,11 +1456,7 @@ export function ItemEditModal({
                             {config?.labelShort ?? TYPE_LABELS[key]}
                           </button>
                         );
-                      }) : (
-                        <span className="text-xs text-muted-foreground">
-                          Type : <span className="font-medium text-foreground">{typeConfig?.labelShort || TYPE_LABELS[type] || type}</span> — modifiable par « Plus de champs »
-                        </span>
-                      )}
+                      }) : null}
                     </div>
                   </HelpHint>
                   <ElementHelp page="item-modal" element="contentTypes" />
@@ -1414,8 +1464,8 @@ export function ItemEditModal({
                 );
               })()}
 
-              {/* Fiche réduite : tags toujours visibles, avant la Description */}
-              {!showAll && tagsSection}
+              {/* Tags, dans les deux fiches, avant la Description */}
+              {tagsSection}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
               <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
@@ -1432,8 +1482,8 @@ export function ItemEditModal({
                 />
               </div>
 
-              {/* Fiche réduite : blocs media sous la Description */}
-              {!showAll && mediaSection}
+              {/* Contenus (et bloc Question / phrase Article) sous la Description, dans les deux fiches */}
+              {mediaSection}
 
               {/* Reactions + Contributions */}
               <div className="space-y-3" data-tour="item-reactions" data-devzone="item-contributions">
@@ -1577,16 +1627,17 @@ export function ItemEditModal({
                 })()}
               </div>
 
-              {/* Historique (règle item-history-members) : personne connectée seulement, chargé à l'ouverture */}
-              {item && user && (
+              {/* Historique (règle item-history-members) — fiche réduite : en bas de la colonne ; complète : en bas du panneau */}
+              {!showAll && item && user && (
                 <ItemHistorySection spaceId={item.spaceId ?? spaceId} itemId={item.id} version={item.updatedAt}
                   hints={{ toggle: itemHints?.historyToggle, empty: itemHints?.historyEmpty }} />
               )}
 
-          </div>{/* end left column */}
+          </div>{/* fin colonne principale */}
 
-          {/* === CENTER COLUMN === — fiche réduite : supprimée (mediaSection sous la Description) */}
-          {showAll && <div className="space-y-6 min-w-0" data-devzone="item-champs">
+          {/* === PANNEAU PILOTAGE (fiche complète) : type, statut, priorité, dates, assigné, parent, références,
+              dépendances, enfants, historique === */}
+          {showAll && <div className="space-y-6 min-w-0 lg:border-l lg:border-border lg:pl-6 lg:pr-2 lg:overflow-y-auto" data-tour="item-details" data-devzone="item-pilotage">
 
               {/* Type */}
               {showAll && <div className="space-y-2" data-tour="item-type-selector" data-devzone="item-type">
@@ -1698,8 +1749,7 @@ export function ItemEditModal({
 
               {/* Priorité */}
               {showAll && <div className="space-y-2">
-                <label className="text-sm font-medium">Priorité</label>
-                {canEdit && <FieldHelp page="item-modal" field="priority" className="text-xs text-muted-foreground" />}
+                <HelpHint text={itemFields?.priority}><label className="text-sm font-medium">Priorité</label></HelpHint>
                 {canEdit ? (
                   <>
                     {/* Mobile: select */}
@@ -1739,8 +1789,8 @@ export function ItemEditModal({
 
               {/* Dates */}
               {showAll && <div data-tour="item-dates" data-devzone="item-dates" className="space-y-3">
-                {/* Toggle Jours pleins / Heures — pleine largeur ; le « ? » des dates reste visible sans droit d'édition */}
-                {canEdit ? (
+                {/* Toggle Jours pleins / Heures (dates dépliées seulement) ; le « ? » des dates reste visible sans droit d'édition */}
+                {canEdit && datesOpen ? (
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium flex items-center gap-1.5">Dates <ElementHelp page="item-modal" element="dates" /></span>
                     <div className="flex rounded-md border border-border overflow-hidden text-xs">
@@ -1759,12 +1809,12 @@ export function ItemEditModal({
                 ) : (
                   <span className="text-sm font-medium flex items-center gap-1.5">Dates <ElementHelp page="item-modal" element="dates" /></span>
                 )}
+                {datesOpen && (<>
                 {/* Champs de dates + sélecteur heures à droite */}
                 <div className="flex gap-4 items-start">
                   <div className="flex-1 min-w-0 space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Début</label>
-                    {canEdit && <FieldHelp page="item-modal" field="startEnd" className="text-xs text-muted-foreground" />}
+                    <HelpHint text={itemFields?.startEnd}><label className="text-sm font-medium">Début</label></HelpHint>
                     {canEdit ? (
                       <DateTimeField value={startDate} onChange={handleStartDateChange} showTime={!allDay} />
                     ) : (
@@ -1796,8 +1846,7 @@ export function ItemEditModal({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Échéance</label>
-                    {canEdit && <FieldHelp page="item-modal" field="dueDate" className="text-xs text-muted-foreground" />}
+                    <HelpHint text={itemFields?.dueDate}><label className="text-sm font-medium">Échéance</label></HelpHint>
                     {canEdit ? (
                       <div className="space-y-2">
                         {startDate && (
@@ -1831,43 +1880,35 @@ export function ItemEditModal({
                     </div>
                   )}
                 </div>
+                <button type="button" onClick={() => setDatesOpen(false)} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                  Replier les dates
+                </button>
+                </>)}
+                {!datesOpen && (() => {
+                  const fmt = (d: string) => (allDay ? formatDate(d) : formatDateTime(d));
+                  const parts = [
+                    startDate && `Début ${fmt(startDate)}`,
+                    endDate && `Fin ${fmt(endDate)}`,
+                    dueDate && `Échéance ${formatDate(dueDate)}`,
+                  ].filter(Boolean);
+                  return (
+                    <HelpHint text={itemHints?.datesSummary}>
+                      <button type="button" onClick={() => setDatesOpen(true)} data-tour="item-dates-summary"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left rounded-md border border-border hover:bg-accent transition-colors">
+                        <span className={`flex-1 min-w-0 ${parts.length ? '' : 'text-muted-foreground'}`}>
+                          {parts.length ? parts.join(' · ') : (canEdit ? 'Aucune date — cliquer pour en ajouter' : 'Aucune date')}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      </button>
+                    </HelpHint>
+                  );
+                })()}
               </div>}
-
-              {/* Blocs media (URL/Diagramme/Image/Fichier) — fiche complète uniquement (réduite : rendus sous la Description) */}
-              {mediaSection}
-
-          </div>}{/* end center column */}
-
-          {/* === RIGHT COLUMN === */}
-          <div className="space-y-6" data-tour="item-details" data-devzone="item-details">
-
-              {/* ID de l'item */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">ID :</span>
-                <span className="text-xs text-muted-foreground font-mono select-all">{item.id}</span>
-              </div>
-
-              {/* Parent (hidden in viewer mode ; sous le toggle « Plus de champs ») */}
-              {showAll && canEdit && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Parent</label>
-                    <button type="button" onClick={toggleParentSortMode}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
-                      {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
-                    </button>
-                </div>
-                  <FieldHelp page="item-modal" field="parent" className="text-xs text-muted-foreground" />
-                  <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
-              </div>
-              )}
 
               {/* Assigné à */}
               {showAll && spaceMembers && spaceMembers.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Assigné à</label>
-                  {canEdit && <FieldHelp page="item-modal" field="assignee" className="text-xs text-muted-foreground" />}
+                  <HelpHint text={itemFields?.assignee}><label className="text-sm font-medium">Assigné à</label></HelpHint>
                   {canEdit ? (
                     <div className="flex items-center gap-2">
                       {/* Menu + saisie libre : un nom identique à celui d'un membre l'assigne, tout autre nom reste un simple nom */}
@@ -1914,11 +1955,25 @@ export function ItemEditModal({
                 </div>
               )}
 
+              {/* Parent (masqué sans droit d'édition) */}
+              {showAll && canEdit && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <HelpHint text={itemFields?.parent}><label className="text-sm font-medium">Parent</label></HelpHint>
+                    <button type="button" onClick={toggleParentSortMode}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      title={parentSortMode === 'tree' ? 'Tri par arborescence' : 'Tri alphabétique'}>
+                      {parentSortMode === 'tree' ? <><GitBranch className="w-3 h-3" /><span>Arborescence</span></> : <><ArrowDownAZ className="w-3 h-3" /><span>A-Z</span></>}
+                    </button>
+                </div>
+                  <Select value={parentId} onChange={(e) => setParentId(e.target.value)} options={parentOptions} />
+              </div>
+              )}
+
               {/* Références externes (règle item-external-refs) : fiche complète, saisie sur une ligne */}
               {showAll && (canEdit || (item?.externalRefs?.length ?? 0) > 0) && (
                 <div className="space-y-2" data-tour="item-external-refs" data-devzone="item-references">
-                  <label className="text-sm font-medium flex items-center gap-1.5">Références externes <ElementHelp page="item-modal" element="references" /></label>
-                  {canEdit && <FieldHelp page="item-modal" field="externalRefs" className="text-xs text-muted-foreground" />}
+                  <label className="text-sm font-medium flex items-center gap-1.5"><HelpHint text={itemFields?.externalRefs}><span>Références externes</span></HelpHint> <ElementHelp page="item-modal" element="references" /></label>
                   {canEdit
                     ? <ExternalRefsInput value={externalRefsText} onChange={setExternalRefsText} placeholder="Appli1 : Réf1 | appli2 : réf2" />
                     : <ExternalRefsList refs={item?.externalRefs} className="text-sm" />}
@@ -2022,9 +2077,6 @@ export function ItemEditModal({
                 )}
               </div>}
 
-              {/* Tags — fiche complète ; en fiche réduite ils sont sous la ligne de type */}
-              {showAll && tagsSection}
-
               {/* Children items */}
               {showAll && item && (() => {
                 const children = allItems.filter(i => i.parentId === item.id);
@@ -2068,13 +2120,20 @@ export function ItemEditModal({
                 );
               })()}
 
-          </div>{/* end right column */}
+              {/* Historique, en dernier dans le panneau Pilotage */}
+              {item && user && (
+                <ItemHistorySection spaceId={item.spaceId ?? spaceId} itemId={item.id} version={item.updatedAt}
+                  hints={{ toggle: itemHints?.historyToggle, empty: itemHints?.historyEmpty }} />
+              )}
+
+          </div>}{/* fin panneau Pilotage */}
+
 
             </div>
           </div>
 
-          {/* Footer — always visible */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
+          {/* Pied commun (lot « pied », 2026-11-13) : enregistrer / fermer à gauche, menu « Actions » à droite */}
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
             {canEditTags && (<>
               <HelpHint text={itemHints?.saveAndClose}>
                 <Button type="submit" disabled={!hasChanges || updateMutation.isPending}
@@ -2090,117 +2149,14 @@ export function ItemEditModal({
               </HelpHint>
             </>)}
             <Button type="button" variant="bordered" onClick={() => guardClose(() => { clearDraft(); closeWithoutSaving(); })}>
-              {canEdit ? 'Fermer' : 'Fermer'}
+              Fermer
             </Button>
             {itemId && liveActions(itemId).map((a) => (
               <Button key={a.id} type="button" variant="bordered" onClick={a.onClick} disabled={a.disabled}>
                 <a.icon className="w-4 h-4 mr-1" />{a.label}
               </Button>
             ))}
-            {item && (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  title="Imprimer"
-                  onClick={printSheet}
-                >
-                  <Printer className="w-4 h-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  title="Export PDF"
-                  onClick={() => {
-                    const children = allItems.filter(i => i.parentId === item.id);
-                    exportItemPDF({ item: item as any, children, spaceName });
-                  }}
-                >
-                  <FileDown className="w-4 h-4" />
-                </Button>
-                <HelpHint text={itemHints?.[sheetCopied ? 'copySheetDone' : 'copySheet']}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Copier la fiche"
-                  onClick={copySheet}
-                >
-                  {sheetCopied ? <Check className="w-4 h-4 text-green-600" /> : <ClipboardCopy className="w-4 h-4" />}
-                </Button>
-                </HelpHint>
-                {thumbnailButton}
-                {user && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    title={isBookmarked ? 'Retirer des épingles' : 'Épingler'}
-                    onClick={toggleBookmark}
-                  >
-                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-blue-500 fill-blue-500' : ''}`} />
-                  </Button>
-                )}
-              </>
-            )}
-            <span className="inline-flex items-center"><ElementHelp page="item-modal" element="actions" /></span>
-            {/* Contextual actions */}
-            {item && canEdit && itemId && (
-              <div className="flex items-center gap-1 sm:ml-auto">
-                {onAbsorbChildren && allItems.some(i => i.parentId === itemId) && (
-                  <Button type="button" variant="ghost" size="sm" title="Absorber les enfants"
-                    onClick={() => { onAbsorbChildren(itemId); onClose(); }}>
-                    <ArrowDownToLine className="w-4 h-4" />
-                  </Button>
-                )}
-                {onSplitDescription && hasHeadings(item.description) && (
-                  <Button type="button" variant="ghost" size="sm" title="Éclater en sous-items"
-                    onClick={() => { onSplitDescription(itemId); onClose(); }}>
-                    <Scissors className="w-4 h-4" />
-                  </Button>
-                )}
-                {onMerge && (
-                  <Button type="button" variant="ghost" size="sm" title="Fusionner avec..."
-                    onClick={() => { onMerge(itemId); onClose(); }}>
-                    <Merge className="w-4 h-4" />
-                  </Button>
-                )}
-                {/* Personnel : la modale se ferme, sinon l'item serait aussitôt re-marqué lu */}
-                <Button type="button" variant="ghost" size="sm" title="Marquer comme non lu"
-                  onClick={() => { void markItemUnread(itemId); onClose(); }}>
-                  <EyeOff className="w-4 h-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="sm" title="Enregistrer comme modèle"
-                  onClick={() => setShowSaveAsTemplateModal(true)}>
-                  <LayoutTemplate className="w-4 h-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="sm" title="Ajouter une structure"
-                  onClick={() => setShowInsertTemplateModal(true)}>
-                  <ListTree className="w-4 h-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="sm" title="Dupliquer vers un espace"
-                  onClick={() => setShowDuplicateModal(true)}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button type="button" variant="ghost" size="sm" title="Déplacer vers un espace"
-                  onClick={() => setShowMoveModal(true)}>
-                  <FolderInput className="w-4 h-4" />
-                </Button>
-                {onConvertToSpace && (
-                  <Button type="button" variant="ghost" size="sm" title="Convertir en espace"
-                    onClick={() => { onConvertToSpace(itemId); onClose(); }}>
-                    <FolderPlus className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            )}
-            {canEdit && onDelete && itemId && (
-              <Button type="button" variant="destructive" onClick={() => { onDelete(itemId); onClose(); }}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
+            {footerActions}
           </div>
           </>)}
         </form>

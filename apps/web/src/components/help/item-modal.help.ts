@@ -7,6 +7,10 @@
    hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
    hints.print : Imprimer du mode Afficher.
    hints.unsavedLeave / unsavedSaveAndLeave : boutons de la confirmation de fermeture (useUnsavedGuard) ; annonce unsaved-save-and-leave sans date.
+   Lot 4 (panneau compact) : texte de l'élément dates, hints.datesSummary, annonce item-panel-compact (élément dates, sans date) ; fields lus en rappel au survol des libellés.
+   Lot 3 (deux colonnes) : textes champs et historique, hints.actionCopyId / copyIdDone, annonce item-two-columns (élément champs, sans date).
+   hints.moreFields / lessFields + annonce item-header-common (élément titre, sans date) : en-tête commun, lot 2 de la réorganisation.
+   Élément actions + hints.action* : pied commun et menu « Actions » (itemSheetActions.ts) ; annonce item-actions-menu sans date.
    Élément references + fields.externalRefs : champ Références externes (ExternalRefsField) ; annonce item-external-refs sans date.
    Élément brouillon + hints.draftExplain / draftChangedSince / draftResume / draftDiscard : bandeau ItemDraftBanner (lib/itemDraft.ts) ; annonce item-draft-local sans date.
    Élément historique + hints.historyToggle / historyEmpty : section Historique (ItemHistorySection) ; annonce item-history-members sans date.
@@ -30,6 +34,7 @@ export const elements = {
     title: 'Titre',
     short: 'Cliquez pour modifier le titre.',
     text: 'Cliquez pour modifier le titre. L\'icône à gauche indique le type de l\'élément.',
+    changes: [{ id: 'item-header-common', kind: 'evolution', text: 'En-tête de la fiche réorganisé, le même dans tous les modes : le chemin, puis le titre sur toute la largeur, puis les modes, « Plus de champs » et un seul « ? » pour l\'aide et le tutoriel.', date: '2026-11-13' }],
     target: '[data-tour="item-title"]',
     noZone: true,
     side: 'bottom',
@@ -55,10 +60,11 @@ export const elements = {
   champs: {
     title: 'Plus de champs',
     short: 'Déplie ou replie la fiche.',
-    text: 'Dépliez la fiche pour voir et modifier le type, le statut, les dates et les relations, ou repliez-la (« Moins de champs ») pour ne garder que le titre, les tags, la description et les contributions. Elle s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
+    text: 'Dépliez la fiche (« Plus de champs ») pour ouvrir à droite le panneau Pilotage : type, statut, priorité, dates, assignation, parent, références externes, dépendances, enfants et historique. « Moins de champs » le referme. La colonne de gauche ne change pas : tags, description, contenus et contributions restent au même endroit. La fiche s\'ouvre réduite en mode Forum et Loisirs, complète dans les autres modes.',
     target: '[data-tour="item-more-fields"]',
     noZone: true,
     side: 'bottom',
+    changes: [{ id: 'item-two-columns', kind: 'evolution', text: 'Fiche complète en deux colonnes : la colonne de gauche est la même qu\'en fiche réduite (tags, description, contenus, contributions), « Plus de champs » ajoute à droite le panneau Pilotage. L\'identifiant se copie depuis le menu Actions.', date: '2026-11-13' }],
   },
   type: {
     title: 'Type',
@@ -124,7 +130,7 @@ export const elements = {
   historique: {
     title: 'Historique',
     short: 'Qui a changé quoi, et quand.',
-    text: 'Dépliez « Historique » pour voir les changements de l\'élément, du plus récent au plus ancien : création, titre, type, statut, priorité, dates, parent, assigné, tags, description, contenus (images, fichiers, liens, schémas) et relations, avec leur auteur et leur date. Visible par toute personne qui peut lire l\'élément ; rien ne s\'y modifie. Les tags, l\'assigné et les contenus y figurent depuis le 12/11/2026.',
+    text: 'Dépliez « Historique » (en bas de la fiche réduite, en bas du panneau Pilotage de la fiche complète) pour voir les changements de l\'élément, du plus récent au plus ancien : création, titre, type, statut, priorité, dates, parent, assigné, tags, description, contenus (images, fichiers, liens, schémas) et relations, avec leur auteur et leur date. Visible par toute personne qui peut lire l\'élément ; rien ne s\'y modifie. Les tags, l\'assigné et les contenus y figurent depuis le 12/11/2026.',
     target: '[data-tour="item-history"]',
     noZone: true,
     side: 'top',
@@ -146,10 +152,11 @@ export const elements = {
   dates: {
     title: 'Dates',
     short: 'Début, fin et échéance.',
-    text: 'Date de début, de fin et d\'échéance. Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning. Dans le sélecteur, les flèches changent le mois et la liste à côté du mois choisit l\'année.',
+    text: 'Date de début, de fin et d\'échéance, résumées sur une ligne : cliquez dessus pour les déplier et les modifier (« Replier les dates » les referme). Elles déterminent l\'affichage dans le calendrier, le Gantt et le planning. Dans le sélecteur, les flèches changent le mois et la liste à côté du mois choisit l\'année. Survolez un libellé (Début, Échéance…) pour son explication.',
     target: '[data-tour="item-dates"]',
     noZone: true,
     side: 'left',
+    changes: [{ id: 'item-panel-compact', kind: 'evolution', text: 'Panneau Pilotage plus compact : les dates tiennent sur une ligne et se déplient au clic, les explications des champs apparaissent au survol de leur nom, et le panneau défile indépendamment de la description.', date: '2026-11-13' }],
   },
   relations: {
     title: 'Relations',
@@ -196,7 +203,7 @@ export const elements = {
   actions: {
     title: 'Actions',
     short: 'Enregistrer, fermer et autres actions.',
-    text: '« Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme. « Fermer » avec des modifications en attente demande quoi faire : rester, quitter sans enregistrer ou enregistrer et quitter. Ici aussi : annuler, supprimer, imprimer, exporter en PDF, copier la fiche pour la coller ailleurs (Word, mail, Notion), avec tous ses contenus, ou copier sa vignette en image.',
+    text: 'Le pied est le même dans tous les modes. À gauche : « Enregistrer » garde la fiche ouverte, « Enregistrer et quitter » la ferme, « Fermer » demande quoi faire s\'il reste des modifications. À droite, le menu « Actions » regroupe le reste, avec un libellé et un rappel pour chaque entrée : imprimer, exporter en PDF, copier la fiche ou sa vignette, épingler, dupliquer, déplacer, réorganiser (absorber, éclater, fusionner, modèles) et supprimer.',
     target: '[data-tour="item-actions"]',
     noZone: true,
     side: 'top',
@@ -210,6 +217,11 @@ export const elements = {
       kind: 'evolution',
       text: 'En fermant une fiche modifiée, la confirmation propose aussi « Enregistrer et quitter » : plus besoin de revenir à la fiche pour enregistrer.',
       date: '2026-11-12',
+    }, {
+      id: 'item-actions-menu',
+      kind: 'evolution',
+      text: 'Le pied de la fiche est simplifié : les icônes sans nom sont rangées dans un menu « Actions » (en bas à droite), avec un libellé et une explication pour chacune. Le même pied sert en mode Afficher.',
+      date: '2026-11-13',
     }],
   },
 } satisfies HelpElements;
@@ -225,6 +237,23 @@ export const help: HelpEntry = {
     sectionHelp: 'Chaque section de la fiche a son petit « ? » : cliquez-le pour savoir à quoi elle sert et comment s\'en servir.',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
+    datesSummary: 'Cliquez pour déplier les dates et les modifier. Rien n\'est modifié tant que vous n\'enregistrez pas.',
+    moreFields: 'Plus de champs : affiche aussi le type, le statut, la priorité, les dates, l\'assignation, les relations et l\'historique. Rien n\'est modifié.',
+    lessFields: 'Moins de champs : revient à la fiche réduite (titre, tags, description, contenus, contributions). Rien n\'est modifié.',
+    actionCopyId: 'Copier l\'identifiant : met l\'identifiant technique de l\'élément dans le presse-papier (utile pour le MCP ou un signalement). Rien n\'est modifié.',
+    copyIdDone: 'Identifiant copié',
+    actionExportPdf: 'Exporter en PDF : télécharge la fiche en PDF (champs, description, enfants). Rien n\'est modifié dans SPOK.',
+    actionBookmark: 'Épingler : ajoute l\'élément à vos épingles (ou l\'en retire). Personnel : les autres membres ne le voient pas.',
+    actionMarkUnread: 'Marquer comme non lu : l\'élément redevient « non lu » pour vous seul, et la fiche se ferme.',
+    actionDuplicate: 'Dupliquer vers un espace : choisissez l\'espace où créer une copie. L\'original ne change pas.',
+    actionMove: 'Déplacer vers un espace : choisissez l\'espace où l\'élément est déplacé.',
+    actionConvert: 'Convertir en espace : propose de transformer l\'élément en espace ; une confirmation est demandée.',
+    actionAbsorb: 'Absorber les enfants : verse le contenu des enfants dans cet élément puis les supprime, tout de suite, sans confirmation.',
+    actionSplit: 'Éclater en sous-éléments : crée un sous-élément par titre de la description, tout de suite, sans confirmation.',
+    actionMerge: 'Fusionner avec… : choisissez l\'élément à réunir avec celui-ci ; une confirmation est demandée.',
+    actionSaveTemplate: 'Enregistrer comme modèle : garde l\'élément et ses enfants (titres et types) comme modèle réutilisable.',
+    actionInsertTemplate: 'Ajouter une structure : crée sous cet élément les enfants d\'un modèle choisi.',
+    actionDelete: 'Supprimer : ouvre la confirmation de suppression (avec ou sans ses enfants).',
     contributionVote: 'Le vote choisi par l\'auteur en écrivant cette contribution. Il ne change plus, même si l\'auteur vote autrement ensuite.',
     contributionVotePending: 'Ce vote sera enregistré avec votre contribution et affiché après votre nom. Pour en changer, annulez et choisissez un autre vote.',
     draftExplain: 'Reprendre remet cette saisie dans la fiche ; rien n\'est enregistré tant que vous ne cliquez pas sur Enregistrer. Ignorer l\'efface définitivement.',
