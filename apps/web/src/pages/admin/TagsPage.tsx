@@ -1,7 +1,8 @@
 /* Admin tags (/admin/tags, décision Thomas 2026-11-11) : tags globaux (proposés dans tous les espaces) et doublons de
    tags entre communautés et global. Portée côté API : apps/api/src/utils/tagScope.ts ; routes : routes/admin/tags.ts.
    - Onglet « Tous les tags » : créer un tag global, filtrer par portée / nom, renommer et recolorer, « Rendre global »,
-     supprimer (confirmation, irréversible : le tag est retiré de tous ses éléments).
+     supprimer (confirmation, irréversible : le tag est retiré de tous ses éléments). Liste rangée par portée
+     (groupAdminTags, 2026-11-13) : sections Globaux / Communautés / Espaces, un intertitre par communauté ou espace.
    - Onglet « Doublons » : tags de même nom (sans casse) ; on choisit le tag gardé, « Fusionner » reporte les éléments
      des autres sur lui puis les supprime. Une cible n'est proposée que si elle est visible depuis tous les éléments
      (global, ou communauté de tous les éléments) — l'API refuse sinon ; un tag d'espace (rétabli le 2026-11-12, proposé
@@ -28,10 +29,42 @@ type DuplicateTag = AdminTag & { communityIds: Array<string | null> };
 
 const SCOPE_LABEL: Record<AdminTag['scope'], string> = { global: 'Global', community: 'Communauté', space: 'Espace' };
 
+/** Onglet Doublons et confirmations : portée + communauté / espace du tag */
 function scopeDetail(tag: AdminTag): string {
   if (tag.scope === 'community') return tag.communityName ?? tag.communityId ?? '';
   if (tag.scope === 'space') return tag.spaceName ?? tag.spaceId ?? '';
   return 'Tous les espaces';
+}
+
+const SECTION_LABEL: Record<AdminTag['scope'], string> = { global: 'Globaux', community: 'Communautés', space: 'Espaces' };
+const SCOPE_ORDER: AdminTag['scope'][] = ['global', 'community', 'space'];
+
+export interface AdminTagSection {
+  scope: AdminTag['scope'];
+  label: string;
+  count: number;
+  /** Globaux : un seul groupe sans titre (label null) ; sinon un groupe par communauté / par espace */
+  groups: Array<{ key: string; label: string | null; tags: AdminTag[] }>;
+}
+
+const byLabel = (a: string, b: string) => a.localeCompare(b, 'fr', { sensitivity: 'base' });
+
+/** Onglet « Tous les tags » : sections Globaux / Communautés / Espaces, sous-groupes par communauté ou espace, triés
+ *  par nom ; sections et groupes vides omis (demande Thomas 2026-11-13) */
+export function groupAdminTags(tags: AdminTag[]): AdminTagSection[] {
+  return SCOPE_ORDER.map((scope) => {
+    const list = tags.filter((t) => t.scope === scope).sort((a, b) => byLabel(a.name, b.name));
+    const byGroup = new Map<string, { key: string; label: string | null; tags: AdminTag[] }>();
+    for (const t of list) {
+      const key = scope === 'community' ? t.communityId ?? '' : scope === 'space' ? t.spaceId ?? '' : 'global';
+      const label = scope === 'community' ? t.communityName ?? t.communityId ?? '?'
+        : scope === 'space' ? t.spaceName ?? t.spaceId ?? '?' : null;
+      if (!byGroup.has(key)) byGroup.set(key, { key, label, tags: [] });
+      byGroup.get(key)!.tags.push(t);
+    }
+    const groups = [...byGroup.values()].sort((a, b) => byLabel(a.label ?? '', b.label ?? ''));
+    return { scope, label: SECTION_LABEL[scope], count: list.length, groups };
+  }).filter((s) => s.count > 0);
 }
 
 const badgeTag = (t: AdminTag) => ({ id: t.id, name: t.name, color: t.color }) as Tag;
@@ -101,6 +134,7 @@ export function TagsPage() {
     const q = search.trim().toLowerCase();
     return tags.filter((t) => (scopeFilter === 'all' || t.scope === scopeFilter) && (!q || t.name.toLowerCase().includes(q)));
   }, [tags, scopeFilter, search]);
+  const sections = useMemo(() => groupAdminTags(filtered), [filtered]);
   const isFetching = listQuery.isFetching || dupQuery.isFetching;
 
   return (
@@ -192,10 +226,25 @@ export function TagsPage() {
             />
           </div>
 
-          <div className="rounded-lg border border-border divide-y divide-border" data-tour="admin-tags-list" data-help-zone="admin-tags:liste">
+          <div className="space-y-4" data-tour="admin-tags-list" data-help-zone="admin-tags:liste">
             {listQuery.isLoading && <p className="p-4 text-sm text-muted-foreground">Chargement…</p>}
-            {!listQuery.isLoading && filtered.length === 0 && <p className="p-4 text-sm text-muted-foreground">Aucun tag.</p>}
-            {filtered.map((tag) => (
+            {!listQuery.isLoading && filtered.length === 0 && <p className="p-4 text-sm text-muted-foreground rounded-lg border border-border">Aucun tag.</p>}
+            {sections.map((section) => (
+              <section key={section.scope} className="rounded-lg border border-border overflow-hidden">
+                <h2 className="flex items-center gap-2 px-3 py-2 bg-muted/50 text-sm font-semibold">
+                  {section.label}
+                  <span className="text-xs rounded-full px-1.5 py-0.5 font-mono bg-muted text-muted-foreground">{section.count}</span>
+                </h2>
+                {section.groups.map((group) => (
+                  <div key={group.key}>
+                    {group.label !== null && (
+                      <h3 className="flex items-center gap-2 px-3 pt-2.5 pb-1 text-xs font-medium text-muted-foreground border-t border-border">
+                        {group.label}
+                        <span className="font-mono">({group.tags.length})</span>
+                      </h3>
+                    )}
+                    <div className="divide-y divide-border">
+            {group.tags.map((tag) => (
               <div key={tag.id} className="flex items-center gap-3 px-3 py-2 flex-wrap">
                 {editing?.id === tag.id ? (
                   <form
@@ -218,7 +267,6 @@ export function TagsPage() {
                   <>
                     <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                       <TagBadge tag={badgeTag(tag)} />
-                      <span className="text-xs text-muted-foreground">{SCOPE_LABEL[tag.scope]} · {scopeDetail(tag)}</span>
                     </div>
                     <span className="text-xs text-muted-foreground tabular-nums">{tag.itemCount} élément{tag.itemCount > 1 ? 's' : ''}</span>
                     <div className="flex items-center gap-1">
@@ -243,6 +291,11 @@ export function TagsPage() {
                   </>
                 )}
               </div>
+            ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
             ))}
           </div>
         </div>

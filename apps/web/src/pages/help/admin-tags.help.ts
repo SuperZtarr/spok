@@ -2,7 +2,8 @@
    (help/elements.ts) : un texte par fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide.
    Rappels fonctionnels (hints, via pageHint) décrivant l'effet réel côté API (apps/api/src/routes/admin/tags.ts) :
    à revérifier à chaque évolution de ces routes. duplicatesIntro : phrase visible sous l'onglet Doublons (bloc de
-   décision). Registre help/pageHelp.ts. */
+   décision). Registre help/pageHelp.ts. Annonce `admin-tags-grouped` (liste rangée par portée, 2026-11-13) sans date,
+   datée par la session MEP. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -25,8 +26,11 @@ const elements: HelpElements = {
   liste: {
     title: 'Tags',
     short: 'Renommer, recolorer, rendre global, supprimer.',
-    text: 'Filtrez par portée ou par nom. Pour chaque tag : nombre d\'éléments qui le portent, renommer ou changer la couleur, « Rendre global » (un tag de communauté ou d\'espace devient proposé partout), supprimer. Un tag « Espace » est créé depuis la fiche d\'un élément : il est proposé dans son espace et tous ses sous-espaces ; la colonne indique lequel.',
-    changes: [{ id: 'admin-tags-space-scope', kind: 'evolution', text: 'Les tags d\'espace sont de retour : la liste les montre avec leur espace, et le filtre Portée propose « Espaces ».', date: '2026-11-12' }],
+    text: 'Les tags sont rangés par portée : Globaux, Communautés (un intertitre par communauté), Espaces (un intertitre par espace), avec leur nombre. Filtrez par portée ou par nom. Pour chaque tag : nombre d\'éléments qui le portent, renommer ou changer la couleur, « Rendre global » (un tag de communauté ou d\'espace devient proposé partout), supprimer. Un tag « Espace » est créé depuis la fiche d\'un élément : il est proposé dans son espace et tous ses sous-espaces.',
+    changes: [
+      { id: 'admin-tags-space-scope', kind: 'evolution', text: 'Les tags d\'espace sont de retour : la liste les montre avec leur espace, et le filtre Portée propose « Espaces ».', date: '2026-11-12' },
+      { id: 'admin-tags-grouped', kind: 'evolution', text: 'La liste des tags est rangée par portée : Globaux, puis une rubrique par communauté et par espace, avec leur nombre.', date: '2026-11-13' },
+    ],
     target: '[data-tour="admin-tags-list"]',
     side: 'top',
   },
