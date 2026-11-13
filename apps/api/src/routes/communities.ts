@@ -15,12 +15,13 @@
  * communauté ou admin en mode admin → e-mails en plus.
  * Tags de communauté : nom unique sans casse parmi ceux de la communauté ET les tags globaux (utils/tagScope.ts).
  * isAdminModeActive / isOwnerOrAdmin exportés pour routes/tags.ts (même garde de gestion des tags).
+ * Contexte : valeurs de COMMUNITY_CONTEXTS (@spok/shared) — DOCUMENTATION et EXPLORATION ajoutés le 2026-11-13.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
-import { validateUpload } from '@spok/shared';
+import { validateUpload, COMMUNITY_CONTEXTS } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { runDeletion, deleteCommunityTree } from '../utils/spaceDeletion.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
@@ -34,7 +35,7 @@ const createCommunitySchema = z.object({
   description: z.string().min(1),
   isPublic: z.boolean().optional(), // alias d'entrée déprécié → visibility (jamais stocké)
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
-  context: z.enum(['FORUM', 'PROJECT', 'JDR']).nullable().optional(), // contexte d'usage, null = neutre
+  context: z.enum(COMMUNITY_CONTEXTS).nullable().optional(), // contexte d'usage (COMMUNITY_CONTEXTS), null = neutre
 });
 
 const updateCommunitySchema = z.object({
@@ -42,7 +43,7 @@ const updateCommunitySchema = z.object({
   description: z.string().optional(),
   isPublic: z.boolean().optional(), // alias d'entrée déprécié → visibility (jamais stocké)
   visibility: z.enum(['OPEN', 'READONLY', 'PRIVATE']).optional(),
-  context: z.enum(['FORUM', 'PROJECT', 'JDR']).nullable().optional(), // contexte d'usage, null = neutre
+  context: z.enum(COMMUNITY_CONTEXTS).nullable().optional(), // contexte d'usage (COMMUNITY_CONTEXTS), null = neutre
   coverPosition: z.number().int().min(0).max(100).optional(),
   coverPositionX: z.number().int().min(0).max(100).optional(),
   coverZoom: z.number().int().min(100).max(300).optional(),

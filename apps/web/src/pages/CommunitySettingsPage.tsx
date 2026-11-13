@@ -5,7 +5,8 @@
    (CommunityMembersManager reçoit 'OWNER'), ajout d'espaces. Ne jamais regarder community.role seul.
    Visibilité : quitter « Privée » crée une demande de publication (validation admin, cf. PATCH API) —
    message d'avertissement avant, « en attente » après (avec « Annuler la demande ») ; en mode admin, appliqué directement.
-   Contexte : Neutre / Forum / Projet / Loisirs (valeur JDR en base et dans l'API) — donne le mode d'interface par défaut de la communauté (Layout).
+   Contexte : Neutre / Forum / Projet / Loisirs (valeur JDR en base et dans l'API) / Documentation / Exploration (2026-11-13) —
+   donne le mode d'interface par défaut de la communauté (Layout) ; options et libellés : CONTEXT_OPTIONS ci-dessous.
    Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
    Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
    PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine.
@@ -44,7 +45,18 @@ import { useAdminMode } from '../components/DevDbStatus';
 import { StatusManager } from '../components/settings/StatusManager';
 import { TypeLabelsManager } from '../components/settings/TypeLabelsManager';
 import { useCommunityReferentiels, useUpdateCommunityReferentiels, useResetCommunityReferentiels, useCheckCommunityStatusUsage } from '../hooks/useReferentiels';
-import type { StatusConfig, TypeLabelConfig, CommunityVisibility } from '@spok/shared';
+import type { StatusConfig, TypeLabelConfig, CommunityVisibility, CommunityContext } from '@spok/shared';
+
+/** Choix du contexte ('NONE' = neutre, null en base). Seule liste des options et de leurs libellés sur cette page. */
+type ContextChoice = 'NONE' | CommunityContext;
+const CONTEXT_OPTIONS: { value: ContextChoice; label: string; description: string }[] = [
+  { value: 'NONE', label: 'Neutre', description: 'Usage général — favoris Liste, Arborescence, Discussions, Kanban, Gantt…' },
+  { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
+  { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
+  { value: 'JDR', label: 'Loisirs', description: 'Jeux, passions et activités ludiques — fiches, cartes, images' },
+  { value: 'DOCUMENTATION', label: 'Documentation', description: 'Wiki, procédures, savoir partagé — arborescence, textes, articles' },
+  { value: 'EXPLORATION', label: 'Exploration', description: 'Veille et sources reliées — liens, récents, tags, graphe' },
+];
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 function formatRelativeDate(dateStr: string): string {
@@ -212,7 +224,7 @@ export function CommunitySettingsPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editVisibility, setEditVisibility] = useState<string>('PRIVATE');
   // Contexte d'usage (spec 2026-07-15-community-context-mode) : 'NONE' = neutre (null en base)
-  const [editContext, setEditContext] = useState<'NONE' | 'FORUM' | 'PROJECT' | 'JDR'>('NONE');
+  const [editContext, setEditContext] = useState<ContextChoice>('NONE');
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
@@ -350,7 +362,7 @@ export function CommunitySettingsPage() {
 
   // Update community mutation
   const updateCommunityMutation = useMutation({
-    mutationFn: (data: { name?: string; description?: string; visibility?: CommunityVisibility; context?: 'FORUM' | 'PROJECT' | 'JDR' | null }) =>
+    mutationFn: (data: { name?: string; description?: string; visibility?: CommunityVisibility; context?: CommunityContext | null }) =>
       communitiesApi.update(communityId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', communityId] });
@@ -464,7 +476,7 @@ export function CommunitySettingsPage() {
   );
 
   const handleSaveInfo = () => {
-    const updates: { name?: string; description?: string; visibility?: CommunityVisibility; context?: 'FORUM' | 'PROJECT' | 'JDR' | null } = {};
+    const updates: { name?: string; description?: string; visibility?: CommunityVisibility; context?: CommunityContext | null } = {};
     if (editName !== community?.name) updates.name = editName;
     if (editDescription !== (community?.description || '')) updates.description = editDescription;
     const currentVisibility = community?.visibility || 'PRIVATE';
@@ -631,13 +643,8 @@ export function CommunitySettingsPage() {
                   {canEdit && (
                     <div>
                       <label className="block text-sm font-medium mb-2">Contexte</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {([
-                          { value: 'NONE', label: 'Neutre', description: 'Toutes les vues et tous les champs disponibles' },
-                          { value: 'FORUM', label: 'Forum', description: 'Sujets et discussions — vues et champs axés échange' },
-                          { value: 'PROJECT', label: 'Projet', description: 'Sous-projets et pilotage — tout l\'outillage projet' },
-                          { value: 'JDR', label: 'Loisirs', description: 'Jeux, passions et activités ludiques — fiches, cartes, images' },
-                        ] as const).map((opt) => (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {CONTEXT_OPTIONS.map((opt) => (
                           <button
                             key={opt.value}
                             type="button"
@@ -690,7 +697,7 @@ export function CommunitySettingsPage() {
                     {(community as any).visibility === 'OPEN' ? 'Ouverte' : (community as any).visibility === 'READONLY' ? 'Lecture seule' : 'Privée'}
                   </span></div>
                   <div><span className="text-muted-foreground">Contexte:</span> <span className="font-medium">
-                    {community.context === 'FORUM' ? 'Forum' : community.context === 'PROJECT' ? 'Projet' : community.context === 'JDR' ? 'Loisirs' : 'Neutre'}
+                    {CONTEXT_OPTIONS.find((o) => o.value === (community.context || 'NONE'))?.label ?? 'Neutre'}
                   </span></div>
                 </div>
               )}

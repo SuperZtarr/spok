@@ -8,7 +8,7 @@ const elements: HelpElements = {
   onglets: {
     title: 'Pages ou vues',
     short: 'Pages de la navigation globale, ou vues d\'un espace.',
-    text: 'Les pages de la navigation globale, ou les vues d\'un espace. Les modes Forum, Projet et Loisirs rangent ensuite les vues accessibles (boutons directs ou « Autres vues ») ; ils ne rendent jamais une vue accessible.',
+    text: 'Les pages de la navigation globale, ou les vues d\'un espace. Les modes d\'interface (Forum, Projet, Loisirs, Documentation, Exploration, Tous) choisissent ensuite les vues favorites parmi les vues accessibles, les autres restant dans « Toutes les vues » ; ils ne rendent jamais une vue accessible.',
     target: '[data-tour="admin-views-tabs"]',
     side: 'bottom',
   },
@@ -37,7 +37,7 @@ export const help: HelpEntry = {
   ...derived,
   hints: {
     ...derived.hints,
-    intro: 'Ces réglages s\'appliquent à tout SPOK, pour tous les utilisateurs, dès l\'enregistrement. Le mode d\'interface (Forum, Projet, Loisirs) range ensuite les vues accessibles ; il ne donne jamais accès à une vue masquée ou réservée.',
+    intro: 'Ces réglages s\'appliquent à tout SPOK, pour tous les utilisateurs, dès l\'enregistrement. Le mode d\'interface (Forum, Projet, Loisirs, Documentation, Exploration, Tous) choisit ensuite les favoris parmi les vues accessibles ; il ne donne jamais accès à une vue masquée ou réservée.',
     visible: 'Visible / masquée : une entrée masquée n\'apparaît plus dans les menus ni dans le sélecteur de vues, pour personne.',
     access: 'Qui voit cette entrée : Tous (y compris les visiteurs non connectés des espaces publics), Connectés (tout utilisateur connecté), Admins (seulement les administrateurs, en mode admin).',
     modified: 'Réglage modifié par rapport au code',

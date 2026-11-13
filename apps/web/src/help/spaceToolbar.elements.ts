@@ -4,15 +4,31 @@
  * Ordre de déclaration = ordre des étapes du tutoriel, celui de l'écran. `target` = repère existant de la commande.
  * Une commande ajoutée à la barre = son élément ici et son repère data-tour (contrôlé par help/coverage.test.ts).
  * Corriger un texte ici le corrige dans toutes les vues.
+ * Sélecteur de vues (2026-11-13, SpaceViewSelector) : presentation, vues (favoris du mode), toutesVues (panneau).
  */
 import type { HelpElements } from './elements';
 
 export const SPACE_TOOLBAR_ELEMENTS = {
+  presentation: {
+    title: 'Présentation',
+    short: 'Présentation : la carte d\'identité de l\'espace (description, chiffres, sous-espaces, membres).',
+    text: 'Ouvre la page de présentation de l\'espace : sa description, ses chiffres, ses sous-espaces et ses membres. Elle ne modifie rien.',
+    target: '[data-tour="toolbar-presentation"]',
+    side: 'bottom',
+  },
   vues: {
-    title: 'Vues',
-    short: 'D\'autres façons de voir le même contenu.',
-    text: 'Les vues du mode courant en accès direct ; les autres sont dans les menus « Autres vues », un par catégorie (Basique, Types, Planification, Exploration). Le contenu reste le même, seule la présentation change.',
+    title: 'Vues favorites',
+    short: 'Les vues mises en avant pour le mode affiché devant (Forum, Projet, Loisirs, Documentation, Exploration, Tous).',
+    text: 'Les vues favorites du mode d\'interface, en accès direct ; le nom du mode est affiché devant. On change de mode avec les boutons de l\'en-tête : seuls les favoris changent, aucune vue n\'est retirée. Une vue ouverte depuis « Toutes les vues » s\'ajoute en bout de ligne, en pointillé, le temps de son affichage. Le contenu reste le même, seule la présentation change.',
+    changes: [{ id: 'toolbar-views-favorites-2026-11', kind: 'evolution', text: 'Vues réorganisées : les favoris de votre mode en accès direct, et toutes les vues rangées en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration) dans « Toutes les vues », avec ce que fait chacune. « Todo » s\'appelle désormais « À faire ».', date: '2026-11-13' }],
     target: '[data-tour="toolbar-views"]',
+    side: 'bottom',
+  },
+  toutesVues: {
+    title: 'Toutes les vues',
+    short: 'Toutes les vues de l\'espace, rangées en 5 catégories, avec ce que fait chacune.',
+    text: 'Ouvre le panneau de toutes les vues, en 5 catégories : Contenus (lire, échanger, médias), Organisation (classer), Suivi (avancement), Planification (dates, enchaînements), Exploration (relations). Chaque vue dit à quoi elle sert ; l\'étoile marque les favoris du mode, « ouverture » la vue d\'ouverture de l\'espace. Tapez pour chercher une vue, Entrée ouvre la première trouvée, Échap ferme. Sur un petit écran, les vues qui demandent plus de place sont grisées.',
+    target: '[data-tour="toolbar-all-views"]',
     side: 'bottom',
   },
   nouveau: {

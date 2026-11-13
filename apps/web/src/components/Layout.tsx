@@ -1,6 +1,6 @@
 /*
  * Layout principal connecté : header (row 1 : séances live en cours (LiveSessionsButton), notifications, mode admin/dev compact, déconnexion,
- * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Loisirs/Tous à côté du
+ * "Retourner à", vignette profil, boutons d'option du mode d'interface Forum/Projet/Loisirs/Documentation/Exploration/Tous à côté du
  * titre ; row 2 : GlobalNavBar) + zone de contenu. Seul appelant de interfaceMode.applyContextMode.
  * Zone fragile (cf. CLAUDE.md) : pas d'overflow-hidden sur le header (clippe les dropdowns absolus).
  * Row 1 : le bloc titre est flex-1 min-w-0 (tronque) et le bloc droit flex-shrink-0 — jamais
@@ -15,6 +15,7 @@
  * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
  * Indicateur process (2026-10-28) : icône Workflow après le nom d'un espace dont processNodeCount > 0 (GET /spaces) ;
  * la liste n'est rafraîchie que quand un process apparaît ou disparaît (useProcessNodes), jamais par polling.
+ * Grille de navigation mobile : sections hors catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 2026-11-13).
  * Titre de l'onglet (2026-11-04) : élément ouvert (useOpenItemStore, jamais l'adresse : ?item= n'y reste pas) = icône de
  * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
  */
@@ -25,7 +26,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2,
   HelpCircle, Clock, Star, Plus, ArrowLeft,
-  Home, Users, CircleDot, GitBranch, Network, ExternalLink, LayoutDashboard, ClipboardList,
+  Home, Users, CircleDot, GitBranch, Share2, Network, ExternalLink, LayoutDashboard, ClipboardList,
   Activity, BarChart3, History, AlertTriangle, FileText, MessageSquare, Search,
   Map as MapIconLucide, Copy, LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow, Sparkles, Tag,
   type LucideIcon,
@@ -66,22 +67,23 @@ import { useOpenItemStore } from '../stores/openItem';
 import { getViewIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
-import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, type InterfaceMode } from '../stores/interfaceMode';
-import type { SpaceWithRole } from '@spok/shared';
+import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, INTERFACE_MODE_LABELS, modeForContext, type InterfaceMode } from '../stores/interfaceMode';
+import { SPACE_VIEW_SECTION_IDS, type SpaceWithRole } from '@spok/shared';
 
-/** Boutons d'option du mode d'interface (header). 'exploration' volontairement absent (réservé). */
+/** Boutons d'option du mode d'interface (header) — Documentation et Exploration ajoutés le 2026-11-13.
+ *  Libellés : INTERFACE_MODE_LABELS (stores/interfaceMode). Le mode choisit les vues favorites de la barre de vues
+ *  (lib/viewFavorites) ; les autres restent dans « Toutes les vues » (2026-11-13). */
 const INTERFACE_MODES: { value: InterfaceMode; label: string; hint: string }[] = [
-  { value: 'forum',  label: 'Forum',  hint: 'Interface axée sujets et discussions' },
-  { value: 'projet', label: 'Projet', hint: 'Interface de pilotage complète' },
-  { value: 'loisirs', label: 'Loisirs', hint: 'Activités ludiques et de loisirs : discussions, carte mentale, images, documents, récents, loupe' },
-  { value: 'tous',   label: 'Tous',   hint: 'Aucun filtrage' },
+  { value: 'forum',  label: INTERFACE_MODE_LABELS.forum,  hint: 'Sujets et discussions : favoris Discussions, Texte, Récents, Images, Calendrier, Loupe' },
+  { value: 'projet', label: INTERFACE_MODE_LABELS.projet, hint: 'Pilotage : favoris Arborescence, À faire, Kanban, Gantt, PERT, Calendrier, Planning, Priorités, Process, Carte mentale, Loupe' },
+  { value: 'loisirs', label: INTERFACE_MODE_LABELS.loisirs, hint: 'Activités ludiques et de loisirs : favoris Discussions, Carte mentale, Images, Documents, Récents, Loupe' },
+  { value: 'documentation', label: INTERFACE_MODE_LABELS.documentation, hint: 'Wiki et procédures : favoris Arborescence, Texte, Articles, Documents, Liens, Tags, Carte mentale, Loupe' },
+  { value: 'exploration', label: INTERFACE_MODE_LABELS.exploration, hint: 'Veille et sources reliées : favoris Liens, Récents, Tags, Graphe, Loupe, Carte mentale, Images' },
+  { value: 'tous',   label: INTERFACE_MODE_LABELS.tous,   hint: 'Usage général : favoris Liste, Arborescence, Discussions, Kanban, Gantt, Calendrier, Carte mentale' },
 ];
-const INTERFACE_MODE_LABELS: Record<InterfaceMode, string> = {
-  forum: 'Forum', projet: 'Projet', loisirs: 'Loisirs', exploration: 'Exploration', tous: 'Tous',
-};
 
 const NAV_ICONS: Record<string, LucideIcon> = {
-  Home, Users, FolderKanban, CircleDot, GitBranch, Network, ExternalLink,
+  Home, Users, FolderKanban, CircleDot, GitBranch, Share2, Network, ExternalLink,
   LayoutDashboard, ClipboardList, Activity,
   Building2, BarChart3, History, AlertTriangle, Settings, FileText,
   MessageSquare, Search, MapIcon: MapIconLucide, Copy, Sparkles, Tag,
@@ -760,10 +762,7 @@ export function Layout() {
     const pairKey = `${currentCommunityKey}|${currentCommunityContext}`;
     if (lastAppliedCommunityRef.current === pairKey) return;
     lastAppliedCommunityRef.current = pairKey;
-    const derived: InterfaceMode = currentCommunityContext === 'FORUM' ? 'forum'
-      : currentCommunityContext === 'PROJECT' ? 'projet'
-      : currentCommunityContext === 'JDR' ? 'loisirs'
-      : 'tous';
+    const derived: InterfaceMode = modeForContext(currentCommunityContext);
     useInterfaceModeStore.getState().applyContextMode(derived);
   }, [currentCommunityKey, currentCommunityContext, communityResolving]);
 
@@ -1018,7 +1017,7 @@ export function Layout() {
       <div className="md:hidden border-b border-border/50 px-2 py-2 flex-shrink-0">
         <div className="grid grid-cols-4 gap-1">
           {menuSections
-            .filter(s => !['basic', 'itemTypes', 'planning', 'exploration'].includes(s.id))
+            .filter(s => !SPACE_VIEW_SECTION_IDS.has(s.id))
             .flatMap(section => section.items.filter(
               // Même filtrage par mode que le bandeau desktop (MODE_GLOBAL_EXCLUDED partagé)
               item => item.key !== 'logout' && item.key !== 'profile' && (item.route || item.viewMode)

@@ -336,7 +336,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'space-default-view-by-context',
     page: 'Espace (ouverture) ; paramètres de l\'espace ; barre latérale ; cartes d\'espace',
     trigger: "Ouverture d'un espace dont la vue par défaut n'est pas réglée (« Selon la communauté »)",
-    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
+    effect: "Vue d'ouverture = vue réglée sur l'espace, sinon celle du contexte enregistré de sa communauté (Forum → Discussions, Projet → Gantt, Loisirs → Carte mentale, Documentation → Arborescence, Exploration → Récents), sinon Liste (communauté neutre, espace personnel). Le contexte enregistré fait foi, pas la bascule manuelle de l'en-tête. Priorité à l'ouverture inchangée : ?view= de l'adresse, puis vue en cours, puis cette vue. Aucun espace n'est modifié en base : changer le contexte d'une communauté change l'ouverture de tous ses espaces non réglés",
     location: 'apps/web/src/lib/spaceDefaultView.ts, apps/web/src/pages/SpacePage.tsx, apps/web/src/pages/SpaceSettingsPage.tsx, apps/web/src/components/Layout.tsx, apps/web/src/components/ui/SpaceCard.tsx',
   },
   {
@@ -545,9 +545,9 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'interface-mode-context-override',
     page: 'Toutes (header)',
-    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Loisirs-Tous du header",
-    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→Loisirs, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Boutons directs de la barre de vues : Forum = Discussions, Texte, Récents, Images, Calendrier, Loupe ; Projet = famille Pilotage sans Liste/Types/Images/Liens/Documents, plus Carte mentale et Loupe ; Loisirs = Discussions, Carte mentale, Images, Documents, Récents, Loupe (dans cet ordre) ; Tous = toutes. Les autres vues restent dans « Autres vues », un menu par catégorie (Basique, Types, Planification, Exploration), jamais masquées",
-    location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode)',
+    trigger: "Entrée dans une communauté / clic sur un bouton Forum-Projet-Loisirs-Documentation-Exploration-Tous du header",
+    effect: "Mode = contexte de la communauté (FORUM→Forum, PROJECT→Projet, JDR→Loisirs, DOCUMENTATION→Documentation, EXPLORATION→Exploration, sinon Tous) ; le choix manuel le surcharge tant qu'on reste dans la même communauté, remis au contexte au changement de communauté ou de contexte. Non persisté. Le mode ne choisit que les vues favorites, en boutons directs dans cet ordre (2026-11-13) : Forum = Discussions, Texte, Récents, Images, Calendrier, Loupe ; Projet = Arborescence, À faire, Kanban, Gantt, PERT, Calendrier, Planning, Priorités, Process, Carte mentale, Loupe ; Loisirs = Discussions, Carte mentale, Images, Documents, Récents, Loupe ; Documentation = Arborescence, Texte, Articles, Documents, Liens, Tags, Carte mentale, Loupe ; Exploration = Liens, Récents, Tags, Graphe, Loupe, Carte mentale, Images ; Tous = Liste, Arborescence, Discussions, Kanban, Gantt, Calendrier, Carte mentale. Vue affichée hors favoris : bouton temporaire en bout de ligne. Toutes les vues accessibles restent dans le panneau « Toutes les vues », en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration), jamais masquées",
+    location: 'apps/web/src/stores/interfaceMode.ts, apps/web/src/components/Layout.tsx (effet applyContextMode), apps/web/src/lib/viewFavorites.ts, apps/web/src/pages/SpaceViewSelector.tsx',
   },
   {
     id: 'gantt-due-date-gestures',

@@ -365,6 +365,35 @@ describe('Communities routes', () => {
       expect(prisma.community.update.mock.calls[0][0].data.context).toBe('JDR')
     })
 
+    // Modes Documentation et Exploration (2026-11-13)
+    it.each(['DOCUMENTATION', 'EXPLORATION'])('should accept the %s context', async (context) => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+      prisma.community.update.mockResolvedValue(mockCommunity({ context }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { context },
+      })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.community.update.mock.calls[0][0].data.context).toBe(context)
+    })
+
+    it('should reject an unknown context', async () => {
+      prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/communities/${COM_ID}`,
+        headers: { authorization: `Bearer ${token}` },
+        payload: { context: 'WIKI' },
+      })
+
+      expect(res.statusCode).toBe(400)
+    })
+
     it('should cancel a pending publication request when the OWNER keeps PRIVATE', async () => {
       prisma.community.findUnique.mockResolvedValue(mockCommunity({ pendingVisibility: 'READONLY' }))
       prisma.communityMembership.findUnique.mockResolvedValue(mockComMembership({ role: 'OWNER' }))

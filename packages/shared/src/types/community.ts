@@ -6,7 +6,11 @@ export type CommunityVisibility = 'OPEN' | 'READONLY' | 'PRIVATE';
 
 /** Contexte d'usage d'une communauté — dicte le mode d'interface dérivé (null = neutre « tous »).
  *  JDR : affiché « Loisirs » dans l'interface, nom historique conservé en base et dans l'API. */
-export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR';
+export type CommunityContext = 'FORUM' | 'PROJECT' | 'JDR' | 'DOCUMENTATION' | 'EXPLORATION';
+
+/** Valeurs du contexte, dans l'ordre des choix (validation API, paramètres de la communauté). DOCUMENTATION et
+ *  EXPLORATION ajoutés le 2026-11-13. */
+export const COMMUNITY_CONTEXTS = ['FORUM', 'PROJECT', 'JDR', 'DOCUMENTATION', 'EXPLORATION'] as const satisfies readonly CommunityContext[];
 
 export interface Community {
   id: string;

@@ -152,10 +152,13 @@ enum SpaceVisibility {
 // Contexte d'usage d'une communauté : dicte le mode d'interface dérivé
 // (FORUM → vues discussion, PROJECT → outillage projet, JDR → mode Loisirs, null → neutre « tous »).
 // JDR : nom historique conservé, le renommer ferait perdre des données (db push --accept-data-loss au démarrage de la prod).
+// DOCUMENTATION (wiki, procédures) et EXPLORATION (veille, sources reliées) ajoutés le 2026-11-13 : ajout pur, sans perte.
 enum CommunityContext {
   FORUM
   PROJECT
   JDR
+  DOCUMENTATION
+  EXPLORATION
 }
 
 // Horizon temporel manuel d'un item sans échéance — dérive automatiquement de dueDate
