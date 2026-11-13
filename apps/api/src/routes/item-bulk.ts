@@ -2,6 +2,7 @@
    Question dupliquée : options et réglage repris (copyQuestionData), statut « Ouverte », ni votes ni issue.
    Tags des copies : tagMapping (utils/tagScope.ts) — un tag encore visible dans l'espace d'arrivée est gardé, sinon
    repris par nom, sinon recréé en tag de l'espace d'arrivée.
+   Références externes (item-external-refs, 2026-11-13) : chaque copie reprend celles de l'original, dans leur ordre.
    POST /bulk-tags (2026-11-11) : ajout / retrait de tags sur plusieurs éléments en une transaction (vue Tags). */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
@@ -172,7 +173,10 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
     // Get all items to duplicate with their data
     const allItems = await fastify.prisma.item.findMany({
       where: { id: { in: allItemIds } },
-      include: { tags: { include: { tag: true } } },
+      include: {
+        tags: { include: { tag: true } },
+        externalRefs: { orderBy: { position: 'asc' }, select: { value: true, position: true } },
+      },
     });
 
     // Tags des copies : visibles dans l'espace cible (utils/tagScope.ts — global ou même communauté gardé, sinon tag de
@@ -207,6 +211,10 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
             spaceId: targetSpaceId,
             createdById: request.user.userId,
             parentId: null, // Will be set in second pass
+            // Références externes reprises telles quelles, dans leur ordre (règle item-external-refs)
+            ...(item.externalRefs?.length
+              ? { externalRefs: { create: item.externalRefs.map((r) => ({ value: r.value, position: r.position })) } }
+              : {}),
           },
         });
 

@@ -2,6 +2,7 @@
  * TNR des outils MCP SPOK via un client mémoire : sélection des outils par profil, validation des
  * conventions avant écriture (statut, type, dates, parent), conversion Markdown, erreurs renvoyées
  * en isError au lieu de faire planter le serveur. Contenus (lot 5) : add/update/delete_item_content.
+ * Références externes (2026-11-13) : externalRefs de create_item / update_item, ligne de get_item.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -132,6 +133,38 @@ describe('update_item', () => {
     const r = await mcp.callTool({ name: 'update_item', arguments: { spaceId: 's1', itemId: 'i1', status: 'à faire' } })
     expect(r.isError).toBeFalsy()
     expect(client.patch.mock.calls[0][1].status).toBe('todo')
+  })
+})
+
+describe('références externes (item-external-refs)', () => {
+  it('create_item : externalRefs envoyées telles quelles dans le POST', async () => {
+    const { mcp, client } = await connect('public')
+    const r = await mcp.callTool({ name: 'create_item', arguments: { spaceId: 's1', type: 'TASK', title: 'x', externalRefs: ['Jira : PROJ-12', 'Sf:0000575747'] } })
+    expect(r.isError).toBeFalsy()
+    expect(client.post.mock.calls[0][1].externalRefs).toEqual(['Jira : PROJ-12', 'Sf:0000575747'])
+  })
+
+  it('update_item : [] transmis (efface tout) ; absent → non envoyé', async () => {
+    const { mcp, client } = await connect('public')
+    await mcp.callTool({ name: 'update_item', arguments: { spaceId: 's1', itemId: 'i1', externalRefs: [] } })
+    expect(client.patch.mock.calls[0][1].externalRefs).toEqual([])
+    await mcp.callTool({ name: 'update_item', arguments: { spaceId: 's1', itemId: 'i1', title: 'y' } })
+    expect(client.patch.mock.calls[1][1]).not.toHaveProperty('externalRefs')
+  })
+
+  it('get_item : ligne « Références externes » seulement si l\'item en a', async () => {
+    const client = fakeClient()
+    const baseGet = client.get.getMockImplementation()!
+    client.get.mockImplementation(async (path: string) => {
+      if (path === '/spaces/s1/items/r1') return { id: 'r1', type: 'TASK', title: 'R', externalRefs: ['Jira : PROJ-12', 'Sf : 0000575747'] }
+      if (path === '/spaces/s1/items/r0') return { id: 'r0', type: 'TASK', title: 'R0', externalRefs: [] }
+      return baseGet(path)
+    })
+    const { mcp } = await connect('public-read', client)
+    const r1 = await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'r1' } })
+    expect(text(r1)).toContain('Références externes : Jira : PROJ-12 | Sf : 0000575747')
+    const r0 = await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'r0' } })
+    expect(text(r0)).not.toContain('Références externes')
   })
 })
 

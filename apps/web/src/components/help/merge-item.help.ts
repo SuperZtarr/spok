@@ -1,6 +1,7 @@
 /* Aide utilisateur de la modale « Fusionner avec… » (MergeItemModal), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le « ? »
    (PageHelpButton), le tour et le mode Aide. Rappels (`hints`, via pageHint) écrits d'après apps/api/src/routes/item-merge.ts : à revoir si la route change.
    Contenus (lot 5) : élément « contenus » (ligne Contenus de la comparaison, cumul sans doublon, plafond).
+   Références externes (2026-11-13) : cumulées sans doublon, plafond 20 — citées dans source, transfer et confirm.
    Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
@@ -9,7 +10,7 @@ const elements: HelpElements = {
   source: {
     title: 'Source',
     short: 'L\'élément de départ, supprimé après la fusion.',
-    text: 'L\'élément de départ : il sera supprimé après la fusion. Ses enfants, contributions, tags, relations et contenus (images, fichiers, liens, schémas) passent à la cible.',
+    text: 'L\'élément de départ : il sera supprimé après la fusion. Ses enfants, contributions, tags, relations, contenus (images, fichiers, liens, schémas) et références externes passent à la cible.',
     target: '[data-tour="merge-source"]',
     side: 'bottom',
   },
@@ -44,11 +45,11 @@ export const help: HelpEntry = {
     ...derived.hints,
     pickTarget: 'Sont proposés les éléments du même espace que vous pouvez modifier (ceux que vous avez créés ou qui vous sont assignés, ou tous si vous êtes propriétaire de l\'espace), hors source et ses sous-éléments, hors copies de séance verrouillées.',
     noTarget: 'Aucun élément ne peut servir de cible : il faut un autre élément du même espace que vous pouvez modifier.',
-    transfer: 'Les enfants, contributions, tags, relations et contenus de la source seront transférés à la cible (relations et contenus en double retirés, liens entre les deux éléments supprimés).',
+    transfer: 'Les enfants, contributions, tags, relations, contenus et références externes de la source seront transférés à la cible (relations, contenus et références en double retirés, liens entre les deux éléments supprimés). Au-delà de 20 références externes, la fusion est refusée.',
     contents: 'Source + cible → total sur la cible après fusion. Un doublon (même lien, même fichier ou même nom et même taille, même schéma) n\'est gardé qu\'une fois, dans sa version de la cible.',
     contentsTooMany: 'La cible porterait plus de {max} contenus : retirez-en d\'abord de la source ou de la cible.',
     sourceDeleted: 'La source sera supprimée après la fusion.',
-    confirm: 'Met à jour la cible avec les champs choisis, lui transfère enfants, contributions, tags, relations et contenus (sans doublon), puis supprime la source. Pas d\'annulation depuis cette fenêtre.',
+    confirm: 'Met à jour la cible avec les champs choisis, lui transfère enfants, contributions, tags, relations, contenus et références externes (sans doublon), puis supprime la source. Pas d\'annulation depuis cette fenêtre.',
   },
   tour: [
     {

@@ -10,6 +10,8 @@
  * Contenus (images, fichiers, liens, schémas — lot 5, décision Thomas 2026-11-11) : cumulés sur l'élément gardé (cible,
  * ou parent pour l'absorption), doublons retirés, refus 400 au-delà du plafond AVANT toute écriture
  * (utils/contentMerge.ts). GET /:id/merge-preview?targetItemId= renvoie le même calcul pour la modale.
+ * Références externes (règle item-external-refs, 2026-11-13) : cumulées de la même façon sur l'élément gardé (fusion et
+ * absorption), doublons sans casse retirés, refus 400 au-delà de 20 AVANT toute écriture (utils/externalRefsMerge.ts).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -18,6 +20,7 @@ import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { loadContentMergePlan, applyContentMergePlan, ContentMergeError } from '../utils/contentMerge.js';
+import { loadExternalRefsMerge, applyExternalRefsMerge } from '../utils/externalRefsMerge.js';
 
 const mergeItemSchema = z.object({
   targetItemId: z.string(),
@@ -86,6 +89,9 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     // Contenus : plan calculé et plafond vérifié avant toute écriture
     const contentPlan = await loadContentMergePlan(fastify.prisma, targetItemId, [sourceId]);
     if (contentPlan.tooMany) return reply.badRequest(new ContentMergeError(contentPlan).message);
+    // Références externes : même principe (cumul sans doublon, limites vérifiées avant écriture)
+    const refsPlan = await loadExternalRefsMerge(fastify.prisma, targetItemId, [sourceId]);
+    if (refsPlan.error) return reply.badRequest(refsPlan.error);
 
     const beforeSource = serializeItemForAudit(source);
     const beforeTarget = serializeItemForAudit(target);
@@ -134,6 +140,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Contenus de la source ajoutés à la cible, après les siens dans chaque sorte, doublons retirés
     await applyContentMergePlan(fastify.prisma, targetItemId, contentPlan);
+    await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
     // Move contributions from source to target
     await fastify.prisma.contribution.updateMany({
@@ -269,7 +276,10 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     // Contenus des enfants cumulés sur le parent (avant leur suppression, qui les emporterait) ; plafond vérifié d'abord
     const contentPlan = await loadContentMergePlan(fastify.prisma, parentId, children.map(c => c.id));
     if (contentPlan.tooMany) return reply.badRequest(new ContentMergeError(contentPlan).message);
+    const refsPlan = await loadExternalRefsMerge(fastify.prisma, parentId, children.map(c => c.id));
+    if (refsPlan.error) return reply.badRequest(refsPlan.error);
     await applyContentMergePlan(fastify.prisma, parentId, contentPlan);
+    await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
     const beforeParent = serializeItemForAudit(parent);
 

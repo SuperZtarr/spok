@@ -1,6 +1,7 @@
 /* Aide utilisateur de la modale « Dupliquer vers un espace » (DuplicateToSpaceModal), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
    le « ? » (PageHelpButton), le tour, le mode Aide et les rappels (pageHint : clés includeChildren, iterations et confirm, à ne pas renommer). Rappels écrits d'après
-   apps/api/src/routes/item-bulk.ts (bulk-duplicate) : à revoir si la route change. Registre help/pageHelp.ts. */
+   apps/api/src/routes/item-bulk.ts (bulk-duplicate) : à revoir si la route change. Registre help/pageHelp.ts.
+   Références externes (2026-11-13) : reprises par la copie (texte de confirm). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -30,8 +31,8 @@ const elements: HelpElements = {
   },
   confirm: {
     title: 'Dupliquer',
-    short: 'Crée les copies dans l\'espace choisi : titre, description, contenu, statut, priorité, dates (décalées en série) et tags repris par nom ; relations recopiées entre éléments copiés ensemble ; contributions non copiées. Dans le même espace, une copie sans son parent reste sous le parent d\'origine ; ailleurs, elle arrive à la racine. Pas d\'annulation automatique : supprimez les copies pour revenir en arrière.',
-    text: 'Crée les copies dans l\'espace choisi ; chacune apparaît comme une création dans l\'historique. Sont copiés le titre, la description, le contenu, le lien, le statut, la priorité, les dates et les tags (repris par nom, créés s\'ils n\'existent pas), pas les contributions. Les relations entre éléments copiés ensemble sont recopiées ; celles vers les autres éléments ne le sont pas.',
+    short: 'Crée les copies dans l\'espace choisi : titre, description, contenu, statut, priorité, dates (décalées en série), références externes et tags repris par nom ; relations recopiées entre éléments copiés ensemble ; contributions non copiées. Dans le même espace, une copie sans son parent reste sous le parent d\'origine ; ailleurs, elle arrive à la racine. Pas d\'annulation automatique : supprimez les copies pour revenir en arrière.',
+    text: 'Crée les copies dans l\'espace choisi ; chacune apparaît comme une création dans l\'historique. Sont copiés le titre, la description, les contenus (images, fichiers, liens, schémas), les références externes, le statut, la priorité, les dates et les tags (repris par nom, créés s\'ils n\'existent pas), pas les contributions. Les relations entre éléments copiés ensemble sont recopiées ; celles vers les autres éléments ne le sont pas.',
     target: '[data-tour="duplicate-confirm"]',
     noZone: true,
     side: 'top',

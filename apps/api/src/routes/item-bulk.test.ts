@@ -1,6 +1,7 @@
 /*
  * TNR de POST /spaces/:spaceId/items/bulk-duplicate : duplication simple (regression),
- * iterations + decalage de dates cumulatif, copie startDate/endDate (fix), enfants inclus.
+ * iterations + decalage de dates cumulatif, copie startDate/endDate (fix), enfants inclus,
+ * references externes reprises (item-external-refs, 2026-11-13).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
@@ -111,6 +112,36 @@ describe('POST /spaces/:spaceId/items/bulk-duplicate', () => {
     const createCall = prisma.item.create.mock.calls[0][0]
     expect(createCall.data.startDate).toEqual(new Date('2026-01-15T09:00:00.000Z'))
     expect(createCall.data.endDate).toEqual(new Date('2026-01-15T10:00:00.000Z'))
+  })
+
+  it('reprend les références externes de l\'original, dans leur ordre (item-external-refs)', async () => {
+    const refs = [{ value: 'Jira : PROJ-12', position: 0 }, { value: 'Sf : 0000575747', position: 1 }]
+    prisma.item.findMany
+      .mockResolvedValueOnce([mockSourceItem()])
+      .mockResolvedValueOnce([mockSourceItem({ externalRefs: refs })])
+
+    await app.inject({
+      method: 'POST', url: '/spaces/space-1/items/bulk-duplicate',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { itemIds: ['item-1'], targetSpaceId: 'space-1', includeChildren: false },
+    })
+
+    expect(prisma.item.findMany.mock.calls[1][0].include.externalRefs).toBeTruthy()
+    expect(prisma.item.create.mock.calls[0][0].data.externalRefs).toEqual({ create: refs })
+  })
+
+  it('sans référence externe : aucune création imbriquée', async () => {
+    prisma.item.findMany
+      .mockResolvedValueOnce([mockSourceItem()])
+      .mockResolvedValueOnce([mockSourceItem({ externalRefs: [] })])
+
+    await app.inject({
+      method: 'POST', url: '/spaces/space-1/items/bulk-duplicate',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { itemIds: ['item-1'], targetSpaceId: 'space-1', includeChildren: false },
+    })
+
+    expect(prisma.item.create.mock.calls[0][0].data).not.toHaveProperty('externalRefs')
   })
 
   it('avec iterations=3 et offsetUnit=week, cree 3 items avec des dates decalees cumulativement (copie 1 = +0, copie 2 = +1 semaine, copie 3 = +2 semaines)', async () => {

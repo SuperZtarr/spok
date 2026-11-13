@@ -3,6 +3,7 @@
  * règles d'écriture. Source unique — toute nouvelle convention métier exposée aux modèles s'ajoute ici.
  * Contenus : outils *_item_content décrits ici (lot 5 contenus multiples).
  * Tags : portée global, communauté ou espace hérité par les sous-espaces (2026-11-12).
+ * Références externes (règle item-external-refs, 2026-11-13) : format « Outil : référence », liste remplacée en entier.
  */
 export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informations.
 
@@ -24,6 +25,10 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 - Tags = classement libre : globaux (proposés partout), de la communauté, ou d'un espace (proposés dans cet espace et
   ses sous-espaces) ; list_tags donne ceux d'un espace. Une anomalie est une
   TASK taguée « bug » (la vue Bugs suit ce tag), une configuration un UNDEFINED tagué « config ».
+- Références externes (externalRefs) : identifiants de l'item dans d'autres outils, une entrée par outil au format
+  « Outil : référence » (ex. « Jira : PROJ-12 », « Salesforce : 0000575747 ») ; au plus 20 entrées de 200 caractères.
+  get_item les affiche ; dans create_item / update_item, externalRefs remplace toute la liste (reprendre celles à
+  conserver ; [] = aucune). La recherche (search_items) trouve un item par une partie d'une référence.
 - Hiérarchie (parentId) : décomposition. Un PROJECT contient des TASK ; une TASK peut contenir des sous-TASK.
   Le parent doit être dans le même espace.
 - Relations (create_relation), entre items qui ne sont pas parent/enfant :

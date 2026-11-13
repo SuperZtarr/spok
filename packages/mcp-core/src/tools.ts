@@ -12,6 +12,9 @@
  * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
  * Tags (2026-11-12) : portée global, communauté ou espace (tag d'espace proposé aussi dans ses sous-espaces) ;
  * list_tags affiche la portée (et l'espace d'un tag hérité) ; create_tag crée un tag de l'espace.
+ * Références externes (règle item-external-refs, 2026-11-13) : externalRefs de create_item / update_item = liste de
+ * chaînes « Outil : référence » transmise telle quelle à l'API (qui normalise, dédoublonne et plafonne : 400 → isError) ;
+ * elle REMPLACE toute la liste ([] = aucune). get_item affiche la ligne « Références externes : … | … ».
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z, type ZodRawShape } from 'zod'
@@ -75,6 +78,9 @@ interface ItemFieldsInput {
  */
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 const zId = () => z.string().regex(ID_PATTERN, 'Identifiant invalide (lettres, chiffres, _ et - uniquement)')
+
+/** Références externes « Outil : référence » : bornes larges, l'API applique les vraies (20 × 200, externalRefsError). */
+const zExternalRefs = () => z.array(z.string().max(1000)).max(100)
 
 /** Couleur de tag acceptée par l'API (routes/tags.ts). */
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/
@@ -224,6 +230,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
         item.dueDate ? `Échéance : ${item.dueDate.slice(0, 10)}` : null,
         item.parentId ? `Parent : ${item.parentId}` : null,
         item.spaceId ? `Espace : ${item.spaceId}` : null,
+        item.externalRefs?.length ? `Références externes : ${item.externalRefs.join(' | ')}` : null,
       ].filter(Boolean)
       const text = extractText(item.content ?? item.description)
       if (text) lines.push(`\nContenu :\n${text}`)
@@ -323,10 +330,12 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       dueDate: z.string().optional().describe('Échéance, AAAA-MM-JJ ou ISO 8601'),
       url: z.string().url().optional().describe('Adresse ajoutée comme contenu Lien de l\'item (http/https)'),
       tags: z.array(z.string()).optional().describe('Tags existants de l\'espace (noms ou ids, cf. get_space_conventions)'),
+      externalRefs: zExternalRefs().optional().describe('Références de l\'item dans d\'autres outils, une par entrée « Outil : référence » (ex. « Jira : PROJ-12 »)'),
     },
-    async ({ spaceId, title, priority, url, ...rest }) => {
+    async ({ spaceId, title, priority, url, externalRefs, ...rest }) => {
       const body: Record<string, unknown> = { title, ...(await prepareItemFields(client, spaceId, rest, conventionsCache)) }
       if (priority) body.priority = priority
+      if (externalRefs) body.externalRefs = externalRefs
       const item = await client.post(`/spaces/${spaceId}/items`, body)
       // Plus de champ url (lot 4 contenus multiples) : l'adresse devient un contenu Lien
       if (url) await client.post(`/spaces/${spaceId}/items/${item.id}/contents`, { kind: 'LINK', url })
@@ -349,11 +358,13 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       url: z.string().url().optional().describe('Adresse AJOUTÉE comme contenu Lien (n\'en retire aucun)'),
       parentId: zId().nullable().optional().describe('null = racine'),
       tags: z.array(z.string()).optional().describe('REMPLACE la liste complète des tags de l\'item (noms ou ids existants) ; [] = aucun tag'),
+      externalRefs: zExternalRefs().optional().describe('REMPLACE toute la liste des références externes (« Outil : référence ») : reprendre celles de get_item à conserver ; [] = aucune'),
     },
-    async ({ spaceId, itemId, title, priority, url, ...rest }) => {
+    async ({ spaceId, itemId, title, priority, url, externalRefs, ...rest }) => {
       const body: Record<string, unknown> = await prepareItemFields(client, spaceId, rest, conventionsCache)
       if (title !== undefined) body.title = title
       if (priority !== undefined) body.priority = priority
+      if (externalRefs !== undefined) body.externalRefs = externalRefs
       const item = await client.patch(`/spaces/${spaceId}/items/${itemId}`, body)
       if (url) await client.post(`/spaces/${spaceId}/items/${itemId}/contents`, { kind: 'LINK', url })
       return ok(`Item mis à jour : [${item.id}] ${item.title}${url ? ' (+ lien)' : ''}`)
