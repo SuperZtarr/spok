@@ -218,6 +218,8 @@
 - [x] Vue Tags - tous les tags, palette, sélection multiple — 2026-11-11
 - [x] Admin tags - couleur par pastilles — 2026-11-11
 - [x] Tags d'espace rétablis (hérités par les sous-espaces, regroupés par portée) + fuite de tags entre communautés — 2026-11-12 (après push : migrate-space-tags --restore puis repair-tag-scope en prod)
+- [x] Admin tags - liste rangée par portée — 2026-11-13
+- [x] Vue Tags - champ Nouveau tag (crée un tag de l'espace depuis la palette) — 2026-11-13
 - [x] Question - réponse liée à un élément — 2026-11-12
 - [x] Indice des règles de gestion - infobulle hors fenêtre — 2026-11-12
 - [x] Fiche élément - un « ? » par section — 2026-11-12
@@ -227,6 +229,7 @@
 - [x] Fiche élément - historique de l'élément — 2026-11-12
 - [x] Fiche élément - saisie retrouvée après déconnexion — 2026-11-12
 - [x] Fiche élément - références externes — 2026-11-12
+- [x] Références externes - MCP, duplication et fusion — 2026-11-13
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

@@ -24,7 +24,8 @@
  * Filtre Tags de la barre (tagFilter, 2026-11-11) : appliqué ici seulement — en Filtre par filterBySearch (élément
  * gardé s'il porte l'un des tags cochés), en Aperçu par searchMatchIds (correspond à la recherche ET aux tags) que
  * toutes les vues estompent déjà ; aucune vue ne compare les tags elle-même. Tags proposés : ['tags', spaceId].
- * Vue Tags (TagsView, 2026-11-11) : vue en Filtre (isFlatView), reçoit tagOptions, actions.handleSetTags et handleBulkTags.
+ * Vue Tags (TagsView, 2026-11-11) : vue en Filtre (isFlatView), reçoit tagOptions, actions.handleSetTags et handleBulkTags,
+ * et handleCreateTag (champ « Nouveau tag », tag de l'espace, 2026-11-13).
  * Vue Bugs retirée (2026-11-11) : une vue inconnue (?view=, vue mémorisée, vue de l'espace) ouvre la Liste (knownViewOr).
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -408,6 +409,11 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     queryFn: () => tagsApi.list(spaceId!),
     enabled: !!spaceId,
   });
+  // Champ « Nouveau tag » de la vue Tags : tag de l'espace (POST /spaces/:id/tags), liste relue ensuite
+  const handleCreateTag = async (name: string) => {
+    await tagsApi.create(spaceId!, { name });
+    await queryClient.invalidateQueries({ queryKey: ['tags', spaceId] });
+  };
 
   // --- Actions hook ---
   const actions = useSpaceActions({
@@ -1491,6 +1497,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               <TagsView
               items={filterBySearch(itemsData?.data)}
               tagOptions={tagOptions}
+              onCreateTag={handleCreateTag}
               onSetTags={actions.handleSetTags}
               onBulkTags={actions.handleBulkTags}
               onEdit={openItemFromView}

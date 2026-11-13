@@ -1,5 +1,6 @@
 /* Tests de la vue Tags (2026-11-11, refonte) : règle de dépôt d'une carte, colonnes = tous les tags proposés,
-   palette globaux puis communauté, cibles d'un geste (élément seul ou sélection), rendu, × et barre de sélection. */
+   palette par portée, cibles d'un geste (élément seul ou sélection), rendu, × et barre de sélection, champ « Nouveau
+   tag » (2026-11-13). */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { Item, Tag } from '@spok/shared';
@@ -81,5 +82,22 @@ describe('TagsView', () => {
     expect(screen.queryByLabelText("Retirer ce tag de l'élément")).toBeNull();
     expect(screen.queryByLabelText("Sélectionner l'élément")).toBeNull();
     expect(screen.queryByText('Globaux')).toBeNull();
+  });
+
+  it('« Nouveau tag » : visible même sans aucun tag, crée le tag ; nom déjà proposé refusé sans appel', async () => {
+    const onCreateTag = vi.fn().mockResolvedValue({});
+    const { unmount } = render(<TagsView {...base} items={[item('a', [])]} tagOptions={[]} onSetTags={vi.fn()} onBulkTags={vi.fn()} onCreateTag={onCreateTag} />);
+    expect(screen.getByText('Aucun tag dans cet espace : créez-en un ici, ou depuis la fiche d\'un élément.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Nom du nouveau tag'), { target: { value: ' perso ' } });
+    fireEvent.click(screen.getByLabelText('Créer le tag dans cet espace'));
+    expect(onCreateTag).toHaveBeenCalledWith('perso');
+    unmount();
+
+    onCreateTag.mockClear();
+    render(<TagsView {...base} items={[]} tagOptions={[bug]} onSetTags={vi.fn()} onBulkTags={vi.fn()} onCreateTag={onCreateTag} />);
+    fireEvent.change(screen.getByLabelText('Nom du nouveau tag'), { target: { value: 'BUG' } });
+    fireEvent.click(screen.getByLabelText('Créer le tag dans cet espace'));
+    expect(onCreateTag).not.toHaveBeenCalled();
+    expect(screen.getByText('Ce tag existe déjà')).toBeTruthy();
   });
 });

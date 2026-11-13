@@ -110,6 +110,8 @@ async function migrate() {
  * espace supprimé → sauté et listé ; tag déjà rendu / recréé → sauté (rejouable) ; éléments supprimés ignorés ; tag
  * de même nom déjà présent dans l'espace → les éléments le reçoivent au lieu d'un doublon. Sans --apply : bilan seul.
  * Ensuite : scripts/repair-tag-scope.ts (éléments déplacés depuis, dont l'espace ne voit plus le tag rendu).
+ * ⚠ Passé en prod le 2026-11-13. Limite constatée : un tag converti puis rendu GLOBAL depuis la migration est quand même
+ * rendu à son espace (7 tags, remis en global à la main) — vérifier la portée actuelle avant de rejouer une restauration.
  */
 async function restore(file: string) {
   const b: Backup = JSON.parse(fs.readFileSync(file, 'utf8'));

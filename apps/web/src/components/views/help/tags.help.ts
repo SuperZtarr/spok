@@ -5,7 +5,8 @@
    « Enregistrer » ; plusieurs éléments en une requête POST bulk-tags).
    Annonces `tags-view` et `bugs-view-removed` datées (MEP du 2026-11-11) ; `tags-view-palette` (refonte : colonnes de
    tous les tags, palette, sélection multiple) sans date, datée par la session MEP ; `tags-space-scope` (tags d'espace
-   rétablis, palette à trois lignes, 2026-11-12) sans date. */
+   rétablis, palette à trois lignes, 2026-11-12) sans date ; `tags-view-new-tag` (champ « Nouveau tag », 2026-11-13) sans
+   date. hints createTag / noTagYet : bouton Créer et phrase visible quand l'espace n'a aucun tag. */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
@@ -29,6 +30,14 @@ const elements: HelpElements = {
     target: '[data-tour="tags-palette"]',
     side: 'bottom',
     changes: [{ id: 'tags-space-scope', kind: 'evolution', text: 'Les tags d\'espace sont de retour : un tag créé depuis la fiche appartient à l\'espace et à ses sous-espaces. La palette les montre sur une troisième ligne « Espace ».', date: '2026-11-12' }],
+  },
+  nouveau: {
+    title: 'Nouveau tag',
+    short: 'Créer un tag de cet espace.',
+    text: 'Tapez un nom puis « Créer » : le tag est créé dans cet espace et proposé aussi dans ses sous-espaces ; il apparaît aussitôt dans la palette et en colonne. Un nom déjà proposé dans l\'espace est refusé. Les tags de communauté se créent dans les paramètres de la communauté, les tags globaux dans Administration → Tags.',
+    target: '[data-tour="tags-nouveau"]',
+    side: 'bottom',
+    changes: [{ id: 'tags-view-new-tag', kind: 'new', text: 'Vue Tags : créez un tag de l\'espace directement depuis la palette, même quand l\'espace n\'en a encore aucun.', date: '2026-11-13' }],
   },
   selection: {
     title: 'Sélection',
@@ -78,6 +87,8 @@ export const help: HelpEntry = {
   ...derived,
   hints: {
     ...derived.hints,
+    createTag: 'Crée un tag de cet espace (proposé aussi dans ses sous-espaces) ; il n\'est posé sur aucun élément tant que vous ne l\'y glissez pas.',
+    noTagYet: 'Aucun tag dans cet espace : créez-en un ici, ou depuis la fiche d\'un élément.',
     drag: 'Glisser vers une colonne de tag : ajoute ce tag (à toute la sélection si la carte est cochée), enregistré aussitôt. Vers « Sans tag » : retire le tag de la colonne d\'origine.',
     remove: 'Retirer ce tag de l\'élément : enregistré aussitôt ; l\'élément garde ses autres tags. Le tag lui-même n\'est pas supprimé.',
     select: 'Cocher cet élément : la barre de sélection agit alors sur tous les éléments cochés.',

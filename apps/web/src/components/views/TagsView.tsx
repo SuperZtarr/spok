@@ -5,7 +5,9 @@
  * plus un tag porté qui n'y serait pas ; « Masquer les tags vides » les retire de l'affichage (non mémorisé). Un élément
  * à plusieurs tags a une carte dans chacune de ses colonnes.
  * Palette en haut : une pastille par tag, une ligne par portée — globaux, communauté, espace (tags de l'espace puis
- *   ceux hérités d'un espace parent) — via lib/tagScope.ts (demandes Thomas 2026-11-11 et 2026-11-12).
+ *   ceux hérités d'un espace parent) — via lib/tagScope.ts (demandes Thomas 2026-11-11 et 2026-11-12). En tête, champ
+ *   « Nouveau tag » (onCreateTag, 2026-11-13) : crée un tag de l'espace, affiché même quand l'espace n'a aucun tag
+ *   (sinon la vue n'offrait que « Sans tag », sans moyen d'en obtenir).
  * Gestes (règle tags-view-drop de businessRules.ts) :
  * - pastille glissée sur une carte → ce tag ajouté à l'élément (à toute la sélection si la carte est cochée) ;
  * - carte glissée sur une colonne de tag → tag ajouté (elle reste dans sa colonne d'origine) ; sur « Sans tag » → tag
@@ -62,6 +64,8 @@ export interface TagsViewProps {
   tagOptions?: ViewTag[];
   onSetTags: (itemId: string, tags: Tag[]) => void;
   onBulkTags: (itemIds: string[], add: Tag[], removeIds?: string[]) => void;
+  /** Crée un tag de l'espace (champ « Nouveau tag » de la palette) ; rejette avec le message de l'API */
+  onCreateTag?: (name: string) => Promise<unknown>;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStatus: (id: string, status: string) => void;
@@ -138,6 +142,40 @@ function PaletteChip({ tag }: { tag: Tag }) {
     <span ref={setNodeRef} {...listeners} {...attributes} className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40' : ''}`}>
       <TagBadge tag={tag} />
     </span>
+  );
+}
+
+/** Champ « Nouveau tag » en tête de palette : crée un tag de l'espace (visible aussi quand l'espace n'a aucun tag) */
+function NewTagField({ onCreate, existing }: { onCreate: (name: string) => Promise<unknown>; existing: Tag[] }) {
+  const [name, setName] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || pending) return;
+    if (existing.some((t) => t.name.trim().toLowerCase() === trimmed.toLowerCase())) { setError('Ce tag existe déjà'); return; }
+    setPending(true);
+    setError(null);
+    try { await onCreate(trimmed); setName(''); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Tag non créé'); }
+    finally { setPending(false); }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" data-help-zone="tags:nouveau" data-tour="tags-nouveau">
+      <span className="text-[11px] uppercase tracking-wider text-muted-foreground w-24 flex-shrink-0">Nouveau</span>
+      <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+        <input value={name} onChange={(e) => { setName(e.target.value); setError(null); }} placeholder="Nouveau tag"
+          aria-label="Nom du nouveau tag" className="h-7 w-40 px-2 text-xs rounded border border-border bg-background" />
+        <HelpHint text={tagsHelp.hints?.createTag}>
+          <button type="submit" disabled={!name.trim() || pending} aria-label="Créer le tag dans cet espace"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-primary hover:bg-accent disabled:opacity-50">
+            <Plus className="w-3.5 h-3.5" /> Créer
+          </button>
+        </HelpHint>
+      </form>
+      {existing.length === 0 && !error && <span className="text-xs text-muted-foreground">{tagsHelp.hints?.noTagYet}</span>}
+      {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
+    </div>
   );
 }
 
@@ -270,7 +308,7 @@ function TagMenu({ label, icon: Icon, tags, onPick, hint }: { label: string; ico
 }
 
 export function TagsView({
-  items, tagOptions = [], onSetTags, onBulkTags, referentiels, canEdit = true, canEditItem,
+  items, tagOptions = [], onSetTags, onBulkTags, onCreateTag, referentiels, canEdit = true, canEditItem,
   spaceName, viewContainerRef, onStartTour, pulseHelp, ...handlers
 }: TagsViewProps) {
   const [hideEmpty, setHideEmpty] = useState(false);
@@ -388,8 +426,9 @@ export function TagsView({
       {items.length === 0 && <EmptyHelp mode="tags" title="Aucun élément" banner />}
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={handleDragStart} onDragOver={handleDragOver}
         onDragEnd={handleDragEnd} onDragCancel={() => { setActive(null); setOverColumn(null); }}>
-        {canEdit && tagOptions.length > 0 && (
+        {canEdit && (tagOptions.length > 0 || onCreateTag) && (
           <div className="px-4 pt-3 space-y-1.5 flex-shrink-0" data-help-zone="tags:palette" data-tour="tags-palette">
+            {onCreateTag && <NewTagField onCreate={onCreateTag} existing={tagOptions} />}
             {palette.map(({ scope, label, tags: list }) => (
               <div key={scope} className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground w-24 flex-shrink-0">{label}</span>
