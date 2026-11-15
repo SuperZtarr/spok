@@ -31,8 +31,10 @@ describe('validateUploadFile — document', () => {
   it('refuse un type MIME exécutable, même avec une extension anodine', () => {
     expect(validateUploadFile(fakeFile('rapport.pdf', 'application/x-msdownload', 10), 'document')).toMatch(/pas autorisé/);
   });
-  it('refuse un document au-dessus de 25 Mo', () => {
-    expect(validateUploadFile(fakeFile('a.zip', 'application/zip', DOCUMENT_MAX_SIZE + 1), 'document')).toMatch(/max 25 Mo/);
+  it('refuse un document au-dessus de 100 Mo, accepte 100 Mo pile', () => {
+    expect(DOCUMENT_MAX_SIZE).toBe(100 * 1024 * 1024);
+    expect(validateUploadFile(fakeFile('a.zip', 'application/zip', DOCUMENT_MAX_SIZE + 1), 'document')).toMatch(/max 100 Mo/);
+    expect(validateUploadFile(fakeFile('a.zip', 'application/zip', DOCUMENT_MAX_SIZE), 'document')).toBeNull();
   });
 });
 

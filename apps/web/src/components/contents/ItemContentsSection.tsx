@@ -13,7 +13,8 @@
  * vignettes alignées à gauche (flex-wrap), grande zone d'aperçu en haut (ContentTile / TilePreview), nom et détail
  * dessous ; en mode Modifier, actions en pied (renommer, ← → dans la sorte, retirer), toujours visibles ; en mode
  * Afficher, vignettes plus grandes. Fichier : 1re page ou début du texte (FilePreviewThumb), sinon icône + extension ;
- * schéma modifiable : DrawioEditor compact (clic = draw.io plein écran).
+ * schéma modifiable : DrawioEditor compact (clic = draw.io plein écran). Détail sous le nom (tileDetail) : poids d'un
+ * fichier ou d'une image envoyée (2026-11-15), site d'un lien.
  * Props clés : spaceId, itemId (absent = élément pas encore enregistré), contents (item.contents, détail complet avec
  * xml), canEdit, onTitleHint (titre suggéré par le premier fichier ou lien, appliqué par la fiche si le titre est vide).
  * Règles : zone masquée sur un Article (décidé par l'appelant) ; adresses toujours passées par safeHref / isSafeUrl
@@ -305,9 +306,9 @@ function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, 
   return <ContentTile content={c} preview={preview} caption={renameField || undefined} footer={actions || undefined} />;
 }
 
-/** Détail sous le nom : taille d'un fichier, site d'un lien */
+/** Détail sous le nom : poids d'un fichier ou d'une image envoyée (absent pour une image par adresse), site d'un lien */
 function tileDetail(c: ItemContent): string | null {
-  if (c.kind === 'FILE') return formatSize(c.size);
+  if (c.kind === 'FILE' || c.kind === 'IMAGE') return formatSize(c.size);
   if (c.kind === 'LINK') return hostOf(c.url) ?? c.url ?? null;
   return null;
 }

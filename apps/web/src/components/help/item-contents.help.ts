@@ -6,8 +6,10 @@
    propre, les contenus multiples ne sont pas encore en ligne (leur annonce item-contents couvre la présentation).
    hints : rappels fonctionnels de chaque action à effet (ajouter chaque sorte, renommer, réordonner, retirer), vérifiés
    dans apps/api/src/routes/item-contents.ts ; fields : phrases visibles (élément non enregistré, zone vide, lien).
+   Plafond d'un fichier : DOCUMENT_MAX_MB (jamais écrit en dur) ; annonce file-size-100 (2026-11-15, poids affiché).
    L'annonce `item-contents` est sans date : la session MEP la date au déploiement (règles : skill spok-doc). */
 import type { HelpEntry } from '../../help/types';
+import { DOCUMENT_MAX_MB } from '../../lib/uploadRules';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
 const elements: HelpElements = {
@@ -20,9 +22,12 @@ const elements: HelpElements = {
   contenus: {
     title: 'Contenus',
     short: 'Ce que porte l\'élément, rangé par sorte.',
-    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Schémas. Le haut de chaque vignette montre un aperçu. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
+    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Schémas. Le haut de chaque vignette montre un aperçu ; sous le nom, le poids d\'un fichier ou d\'une image envoyée, le site d\'un lien. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
     side: 'top',
-    changes: [{ id: 'item-contents', kind: 'evolution', text: 'Un élément porte maintenant plusieurs contenus (images, fichiers, liens, schémas), quel que soit son type : « + Ajouter » sous la description.', date: '2026-11-11' }],
+    changes: [
+      { id: 'item-contents', kind: 'evolution', text: 'Un élément porte maintenant plusieurs contenus (images, fichiers, liens, schémas), quel que soit son type : « + Ajouter » sous la description.', date: '2026-11-11' },
+      { id: 'file-size-100', kind: 'evolution', text: `Les fichiers joints peuvent maintenant peser jusqu'à ${DOCUMENT_MAX_MB} Mo, et le poids de chaque fichier ou image s'affiche sous son nom.`, date: '2026-11-15' },
+    ],
   },
   apercu: {
     title: 'Aperçu d\'un fichier',
@@ -42,7 +47,7 @@ export const help: HelpEntry = {
   hints: {
     ...derived.hints,
     add: 'Choisir la sorte de contenu à joindre : fichier, image, lien ou schéma.',
-    addFILE: 'Joint un fichier (PDF, bureautique…, 25 Mo au plus ; exécutables refusés). Il est enregistré dès l\'envoi.',
+    addFILE: `Joint un fichier (PDF, bureautique…, ${DOCUMENT_MAX_MB} Mo au plus ; exécutables refusés). Il est enregistré dès l'envoi.`,
     addIMAGE: 'Joint une image (déposée, choisie ou collée avec Ctrl+V), réduite si besoin. Elle est enregistrée dès l\'envoi.',
     addLINK: 'Joint une adresse web, avec un nom facultatif.',
     addDIAGRAM: 'Crée un schéma vide, enregistré tout de suite : cliquez « Modifier » pour le dessiner dans draw.io.',

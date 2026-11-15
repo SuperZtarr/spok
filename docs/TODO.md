@@ -241,6 +241,7 @@
 - [x] Référentiels centralisés - registre des modes, ViewMode dérivé, icônes uniques — 2026-11-13
 - [x] Modes d'interface - favoris et vues d'ouverture réglés — 2026-11-13
 - [x] Code mort ViewSelectorBar supprimé — 2026-11-13
+- [x] Contenus - fichiers jusqu'à 100 Mo, poids des images affiché — 2026-11-15
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

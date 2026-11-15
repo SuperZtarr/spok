@@ -12,6 +12,8 @@ export {
   IMAGE_MAX_SIZE,
   DOCUMENT_BLOCKED_EXTENSIONS,
   DOCUMENT_MAX_SIZE,
+  IMAGE_MAX_MB,
+  DOCUMENT_MAX_MB,
 } from '@spok/shared';
 
 export function validateUploadFile(file: File, kind: UploadKind): string | null {
