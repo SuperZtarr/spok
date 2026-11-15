@@ -14,6 +14,8 @@
  * d'échec, l'élément est posé sur une place libre (placeMovedRef, freeSpotAround) — il ne reste jamais à l'endroit du lâcher.
  * Espaces affichés (2026-11-11) : tous les sous-espaces descendants de l'espace courant, à toute profondeur (childSpaces),
  * chacun relié au nœud de son parent.
+ * Dépôt sous un élément d'un autre espace (2026-11-15) : onMoveUnderItem (branche déplacée dans l'espace de la cible puis
+ * rattachée, confirmation si des relations sont coupées) ; onMove ne sert qu'au reparentage dans un même espace.
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -116,6 +118,8 @@ interface MindMapViewProps {
   onMove?: (id: string, parentId: string | null, position: number) => void;
   onMoveToSpace?: (itemId: string) => void;
   onMoveToSpaceDirect?: (itemId: string, sourceSpaceId: string, targetSpaceId: string) => void;
+  /** Dépôt sous un élément d'un autre espace : déplace la branche dans cet espace et la rattache à la cible */
+  onMoveUnderItem?: (itemId: string, targetItemId: string) => void;
   onDuplicateToSpace?: (itemId: string) => void;
   onConvertToSpace?: (itemId: string) => void;
   onCreateRelation?: (fromItemId: string, toItemId: string, type: string, label?: string) => void;
@@ -154,6 +158,7 @@ function MindMapViewInner({
   onMove,
   onMoveToSpace,
   onMoveToSpaceDirect,
+  onMoveUnderItem,
   onDuplicateToSpace,
   onConvertToSpace,
   onCreateRelation,
@@ -1204,7 +1209,10 @@ function MindMapViewInner({
             return isDescendant(parentId, child.parentId);
           };
           if (!isDescendant(draggedNode.id, target.id)) {
-            onMove(draggedNode.id, target.id, 0);
+            const draggedSpace = items.find(i => i.id === draggedNode.id)?.spaceId || spaceId;
+            const targetSpace = items.find(i => i.id === target.id)?.spaceId || spaceId;
+            if (draggedSpace !== targetSpace) onMoveUnderItem?.(draggedNode.id, target.id);
+            else onMove(draggedNode.id, target.id, 0);
           }
         }
       } else {
@@ -1273,7 +1281,7 @@ function MindMapViewInner({
       dragDescendants.current = null;
       setDropTargetId(null);
     },
-    [getIntersectingNodes, onMove, onMoveToSpaceDirect, items, savePositions, setNodes, spaceId, portals, canEdit, onReorder, getSidebarSpaceAtPoint, setSidebarDropTargetId]
+    [getIntersectingNodes, onMove, onMoveToSpaceDirect, onMoveUnderItem, items, savePositions, setNodes, spaceId, portals, canEdit, onReorder, getSidebarSpaceAtPoint, setSidebarDropTargetId]
   );
 
   // Reset layout function
@@ -1697,7 +1705,7 @@ function MindMapViewInner({
 
 export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(function MindMapView({
   items, spaceName = 'Espace', spaceId, communitySpaces, highlightType, highlightStatus, searchMatchIds,
-  onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onDuplicateToSpace, onConvertToSpace,
+  onEdit, onDelete, onUpdateStatus, onAddChild, onMove, onMoveToSpace, onMoveToSpaceDirect, onMoveUnderItem, onDuplicateToSpace, onConvertToSpace,
   onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen, onOpenInNewTab, onReorder, onCreateRelation, onDeleteRelation, onUpdateRelation, referentiels, canEdit, canEditItem,
   onStartTour, pulseHelp,
 }, ref) {
@@ -1708,7 +1716,7 @@ export const MindMapView = forwardRef<MindMapViewHandle, MindMapViewProps>(funct
           items={items} spaceName={spaceName} spaceId={spaceId} communitySpaces={communitySpaces}
           highlightType={highlightType} highlightStatus={highlightStatus} searchMatchIds={searchMatchIds}
           onEdit={onEdit} onDelete={onDelete} onUpdateStatus={onUpdateStatus} onAddChild={onAddChild}
-          onMove={onMove} onMoveToSpace={onMoveToSpace} onMoveToSpaceDirect={onMoveToSpaceDirect} onDuplicateToSpace={onDuplicateToSpace}
+          onMove={onMove} onMoveToSpace={onMoveToSpace} onMoveToSpaceDirect={onMoveToSpaceDirect} onMoveUnderItem={onMoveUnderItem} onDuplicateToSpace={onDuplicateToSpace}
           onConvertToSpace={onConvertToSpace} onSelfAssign={onSelfAssign} onMerge={onMerge} onAbsorbChildren={onAbsorbChildren} onSplitDescription={onSplitDescription} onOpen={onOpen}
  onOpenInNewTab={onOpenInNewTab} onReorder={onReorder} onCreateRelation={onCreateRelation}
           onDeleteRelation={onDeleteRelation} onUpdateRelation={onUpdateRelation}

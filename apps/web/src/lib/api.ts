@@ -1211,7 +1211,8 @@ export const itemsApi = {
 
   bulkMove: (
     spaceId: string,
-    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean }
+    // targetParentId : un seul item, rattaché sous ce parent de l'espace cible (dépôt MindMap entre espaces)
+    data: { itemIds: string[]; targetSpaceId: string; includeChildren?: boolean; targetParentId?: string }
   ) =>
     fetchApi<{ success: boolean; movedCount: number; targetSpaceId: string }>(
       `/spaces/${spaceId}/items/bulk-move`,

@@ -8,6 +8,8 @@
  * Règle de déplacement vers un autre espace (spec MoveToSpaceModal) : aucune branche coupée entre deux espaces. Un item
  * dont le parent ne part pas arrive à la racine ; un enfant qui ne part pas remonte à la racine de son espace.
  * /move : un parent qui change doit être dans le même espace (utils/itemParent.ts).
+ * bulk-move + targetParentId (2026-11-15, dépôt MindMap sous un élément d'un autre espace) : un seul item, rattaché
+ * en position 0 sous ce parent, qui doit être dans l'espace cible et hors de la branche déplacée ; frères décalés.
  * Tags au bulk-move : tagMapping (utils/tagScope.ts, 2026-11-11) — tags de communauté et globaux suivent (avant :
  * seuls les tags d'espace étaient repris, les autres étaient perdus).
  */
@@ -30,6 +32,8 @@ const bulkMoveSchema = z.object({
   itemIds: z.array(z.string()).min(1),
   targetSpaceId: z.string(),
   includeChildren: z.boolean().default(true),
+  // Parent d'arrivée dans l'espace cible (un seul item) ; absent = l'item arrive à la racine
+  targetParentId: z.string().optional(),
 });
 
 export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
@@ -191,7 +195,10 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const body = bulkMoveSchema.parse(request.body);
-    const { itemIds, targetSpaceId, includeChildren } = body;
+    const { itemIds, targetSpaceId, includeChildren, targetParentId } = body;
+    if (targetParentId && itemIds.length !== 1) {
+      return reply.badRequest('targetParentId requires exactly one item');
+    }
 
     // Check access to target space
     const targetMembership = await checkSpaceAccess(fastify.prisma, request.user.userId, targetSpaceId, request.isAdminMode);
@@ -253,6 +260,16 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
 
       const descendantIds = await findDescendants(allItemIds);
       allItemIds = [...new Set([...allItemIds, ...descendantIds])];
+    }
+
+    if (targetParentId) {
+      if (allItemIds.includes(targetParentId)) {
+        return reply.badRequest('Cannot move an item under its own branch');
+      }
+      const targetParent = await fastify.prisma.item.findUnique({ where: { id: targetParentId }, select: { spaceId: true } });
+      if (!targetParent || targetParent.spaceId !== targetSpaceId) {
+        return reply.badRequest('Target parent must be in the target space');
+      }
     }
 
     // Tags : rendus visibles dans l'espace cible (utils/tagScope.ts — global ou même communauté gardé, sinon tag de même
@@ -323,6 +340,15 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
         where: { parentId: { in: allItemIds }, id: { notIn: allItemIds }, spaceId: request.params.spaceId },
         data: { parentId: null },
       });
+
+      // Rattachement sous le parent d'arrivée : en tête de ses enfants, les frères existants décalés d'un rang
+      if (targetParentId) {
+        await tx.item.updateMany({
+          where: { spaceId: targetSpaceId, parentId: targetParentId, id: { notIn: allItemIds } },
+          data: { position: { increment: 1 } },
+        });
+        await tx.item.update({ where: { id: itemIds[0] }, data: { parentId: targetParentId, position: 0 } });
+      }
 
       // Handle relations - keep only relations where both items are in target space
       // (either already there or being moved)

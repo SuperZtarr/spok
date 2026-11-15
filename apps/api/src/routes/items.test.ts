@@ -1,7 +1,8 @@
 /*
  * TNR des routes /spaces/:spaceId/items : accès (membership direct/communauté), CRUD
  * (titre optionnel, défaut ''), détail avec relations/tags/reactionSummary, URL d'item http(s) seulement,
- * parent dans le même espace à l'écriture, enfants restés sur place remontés à la racine par bulk-move.
+ * parent dans le même espace à l'écriture, enfants restés sur place remontés à la racine par bulk-move,
+ * bulk-move + targetParentId (rattachement sous un parent de l'espace cible).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
@@ -1067,6 +1068,44 @@ describe('POST /bulk-move : aucune branche coupée entre deux espaces', () => {
       where: { parentId: { in: ['P'] }, id: { notIn: ['P'] }, spaceId: 'space-1' },
       data: { parentId: null },
     })
+  })
+
+  const moveUnder = (targetParentId: string, itemIds = ['P']) => app.inject({
+    method: 'POST', url: '/spaces/space-1/items/bulk-move',
+    headers: { authorization: `Bearer ${getTestToken(app)}` },
+    payload: { itemIds, targetSpaceId: 'space-2', includeChildren: true, targetParentId },
+  })
+  const parentIn = (spaceId: string) => prisma.item.findUnique.mockImplementation(({ where }: any) =>
+    Promise.resolve(where.id === 'T' ? { spaceId } : mockItem({ id: 'P' })))
+
+  it('targetParentId : rattaché en tête sous le parent de l\'espace cible, frères décalés', async () => {
+    parentIn('space-2')
+    const res = await moveUnder('T')
+
+    expect(res.statusCode).toBe(200)
+    expect(prisma.item.updateMany).toHaveBeenCalledWith({
+      where: { spaceId: 'space-2', parentId: 'T', id: { notIn: ['P'] } },
+      data: { position: { increment: 1 } },
+    })
+    expect(prisma.item.update).toHaveBeenCalledWith({ where: { id: 'P' }, data: { parentId: 'T', position: 0 } })
+  })
+
+  it('targetParentId hors de l\'espace cible → 400, rien ne bouge', async () => {
+    parentIn('space-3')
+    const res = await moveUnder('T')
+    expect(res.statusCode).toBe(400)
+    expect(prisma.item.update).not.toHaveBeenCalled()
+  })
+
+  it('targetParentId dans la branche déplacée → 400', async () => {
+    const res = await moveUnder('P')
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('targetParentId avec plusieurs items → 400', async () => {
+    parentIn('space-2')
+    const res = await moveUnder('T', ['P', 'Q'])
+    expect(res.statusCode).toBe(400)
   })
 })
 

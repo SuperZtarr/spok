@@ -10,6 +10,8 @@
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
  * (sessionStorage, par onglet) pour permettre la reprise après expiration de session.
+ * UnderItemMoveModal (2026-11-15) : confirmation du dépôt MindMap sous un élément d'un autre espace quand des relations
+ * seraient coupées (actions.pendingUnderItemMove).
  * Clic sur un élément dans une vue (openItemFromView) : sa fiche, sauf un article, qui s'ouvre sur sa page de lecture
  * (décision Thomas 2026-11-06) ; le menu ⋮ reste le chemin vers sa fiche. Création et ?item= ouvrent toujours la fiche.
  * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Afficher / Ouvrir, liens partagés) — itemOpenMode.ts.
@@ -1078,6 +1080,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onMove={actions.handleMove}
               onMoveToSpace={(id) => setMoveItemId(id)}
               onMoveToSpaceDirect={actions.handleMoveItemToSpace}
+              onMoveUnderItem={actions.handleMoveUnderItem}
               onDuplicateToSpace={(id) => setDuplicateItemId(id)}
               onConvertToSpace={actions.handleConvertToSpace}
               onSelfAssign={handleSelfAssign}
@@ -1868,6 +1871,50 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 Déplacer seul
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => actions.setPendingCrossSpaceMove(null)}>
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Dépôt MindMap sous un élément d'un autre espace : confirmation seulement si des relations sont coupées */}
+      <Modal
+        isOpen={!!actions.pendingUnderItemMove}
+        onClose={() => actions.setPendingUnderItemMove(null)}
+        title="Déplacer vers un autre espace"
+        size="small"
+        devName="UnderItemMoveModal"
+      >
+        {actions.pendingUnderItemMove && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+              <FolderInput className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="font-semibold truncate">{actions.pendingUnderItemMove.itemTitle}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              L'élément et ses sous-éléments passent dans <strong>{actions.pendingUnderItemMove.targetSpaceName}</strong>,
+              sous <strong>{actions.pendingUnderItemMove.targetTitle}</strong>. Ses tags suivent.
+            </p>
+            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>{actions.pendingUnderItemMove.cutRelations}</strong> relation{actions.pendingUnderItemMove.cutRelations > 1 ? 's' : ''} avec
+                des éléments qui restent dans l'espace d'origine {actions.pendingUnderItemMove.cutRelations > 1 ? 'seront supprimées' : 'sera supprimée'}.
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const m = actions.pendingUnderItemMove!;
+                  actions.setPendingUnderItemMove(null);
+                  actions.executeMoveUnderItem(m.itemId, m.targetItemId);
+                }}
+              >
+                Déplacer et supprimer {actions.pendingUnderItemMove.cutRelations > 1 ? 'ces relations' : 'cette relation'}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => actions.setPendingUnderItemMove(null)}>
                 Annuler
               </Button>
             </div>

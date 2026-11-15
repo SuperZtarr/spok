@@ -14,6 +14,9 @@
  * handleSetTags(id, tags) (vue Tags, 2026-11-11) : enregistre la liste complète des tags (tagIds), affichage optimiste,
  * refus signalé par window.alert puis relecture. handleBulkTags(itemIds, add, removeIds) : même chose pour plusieurs
  * éléments en une requête (POST bulk-tags).
+ * handleMoveUnderItem(id, targetId) (MindMap, 2026-11-15) : dépôt sous un élément d'un autre espace = la branche part dans
+ * l'espace de la cible et s'y rattache (bulk-move + targetParentId). Direct si aucune relation n'est coupée, sinon
+ * pendingUnderItemMove ouvre la confirmation (SpacePage) ; refus de l'API signalé par window.alert.
  */
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +25,7 @@ import type { Item, ItemType, StatusConfig, Tag } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { statusChangeFields } from '../lib/statusChange';
 import { itemUrl, type ItemOpenMode } from '../lib/itemOpenMode';
+import { branchIds, countCutRelations } from '../lib/crossSpaceMove';
 
 // Types for modal states
 export interface DeletingItem {
@@ -68,6 +72,15 @@ export interface PendingCrossSpaceMove {
   updates?: { status?: string; type?: ItemType };
 }
 
+export interface PendingUnderItemMove {
+  itemId: string;
+  itemTitle: string;
+  targetItemId: string;
+  targetTitle: string;
+  targetSpaceName: string;
+  cutRelations: number;
+}
+
 interface UseSpaceActionsOptions {
   spaceId: string | undefined;
   allItems: Item[];
@@ -91,6 +104,7 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   const [deletingItem, setDeletingItem] = useState<DeletingItem | null>(null);
   const [convertingItem, setConvertingItem] = useState<ConvertingItem | null>(null);
   const [pendingCrossSpaceMove, setPendingCrossSpaceMove] = useState<PendingCrossSpaceMove | null>(null);
+  const [pendingUnderItemMove, setPendingUnderItemMove] = useState<PendingUnderItemMove | null>(null);
   const [mergingItemId, setMergingItemId] = useState<string | null>(null);
   const [pendingStatusPropagation, setPendingStatusPropagation] = useState<PendingStatusPropagation | null>(null);
 
@@ -429,6 +443,31 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     }
   }, [allItems, communitySpaces, executeCrossSpaceMove]);
 
+  const executeMoveUnderItem = useCallback(async (itemId: string, targetItemId: string) => {
+    const sourceSpaceId = resolveItemSpaceId(itemId);
+    const targetSpaceId = resolveItemSpaceId(targetItemId);
+    try {
+      await itemsApi.bulkMove(sourceSpaceId, { itemIds: [itemId], targetSpaceId, includeChildren: true, targetParentId: targetItemId });
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Déplacement impossible');
+    }
+    queryClient.invalidateQueries({ queryKey: ['items'] });
+  }, [resolveItemSpaceId, queryClient]);
+
+  const handleMoveUnderItem = useCallback((itemId: string, targetItemId: string) => {
+    const cutRelations = countCutRelations(allItems, branchIds(allItems, itemId));
+    if (cutRelations === 0) { executeMoveUnderItem(itemId, targetItemId); return; }
+    const targetSpaceId = resolveItemSpaceId(targetItemId);
+    setPendingUnderItemMove({
+      itemId,
+      itemTitle: allItems.find(i => i.id === itemId)?.title || 'cet élément',
+      targetItemId,
+      targetTitle: allItems.find(i => i.id === targetItemId)?.title || 'l\'élément cible',
+      targetSpaceName: communitySpaces?.find(s => s.id === targetSpaceId)?.name || 'l\'autre espace',
+      cutRelations,
+    });
+  }, [allItems, communitySpaces, resolveItemSpaceId, executeMoveUnderItem]);
+
   const handleCreateRelation = useCallback((fromItemId: string, toItemId: string, type: string, label?: string) => {
     const itemSpaceId = resolveItemSpaceId(fromItemId);
     createRelationMutation.mutate({ fromItemId, itemSpaceId, toItemId, type, label });
@@ -562,6 +601,11 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     executeCrossSpaceMove,
     pendingCrossSpaceMove,
     setPendingCrossSpaceMove,
+    // Dépôt sous un élément d'un autre espace (MindMap)
+    handleMoveUnderItem,
+    executeMoveUnderItem,
+    pendingUnderItemMove,
+    setPendingUnderItemMove,
     // Relations
     handleCreateRelation,
     handleDeleteRelation,

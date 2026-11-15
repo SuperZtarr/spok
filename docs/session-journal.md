@@ -14,6 +14,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-15 — MindMap : dépôt sous un élément d'un autre espace (branche déplacée puis rattachée, confirmation si
+  relations coupées). Inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-13 — Menu des vues (session menu des vues) : lots A, B, C poussés ; « Vue gardée » et « Référentiels centralisés »
   inscrits PRÊT POUR MEP, NON COMMITÉS. ViewSelectorBar (code mort) supprimé. Reste connu : bandeau global (Sunburst, Carte
   mentale, Graphe global, Liens) à renommer — à décider avec Thomas.
@@ -41,6 +44,9 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-15
+- 2 lots poussés : fichiers jusqu'à 100 Mo (multipart API suit DOCUMENT_MAX_SIZE ; envoi réel > 25 Mo et mémoire du conteneur non essayés), carte mentale dépôt sous un élément d'un autre espace. 2 annonces datées. Typecheck OK, TNR 2854/2854, en-têtes OK
 
 ### MEP — 2026-11-13 (4)
 - 4 lots poussés : vue gardée dans la communauté, référentiels centralisés (registre des modes), favoris et vues d'ouverture réglés par Thomas, ViewSelectorBar supprimé. Premier essai arrêté (modeRegistry modifié à 12:15 sans ses tests), repris après la session menu des vues. Skills spok-dev, spok-layout, spok-menu modifiées. Typecheck OK, TNR 2847/2847, en-têtes OK
