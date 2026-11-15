@@ -16,6 +16,8 @@
  * chacun relié au nœud de son parent.
  * Dépôt sous un élément d'un autre espace (2026-11-15) : onMoveUnderItem (branche déplacée dans l'espace de la cible puis
  * rattachée, confirmation si des relations sont coupées) ; onMove ne sert qu'au reparentage dans un même espace.
+ * Dépôt sur le nœud de son propre sous-espace = retour à la racine de ce sous-espace (onMove parent null).
+ * Dépôt d'un élément de sous-espace sur le nœud central = déplacement à la racine de l'espace courant (onMoveToSpaceDirect).
  * Fix réorganisation : sauvegarde aussi la position du nœud parent avant réorganisation
  * pour éviter qu'un collapse enfant ne décale le parent.
  * Toggle relations : lastRelationEdgesRef met en cache les edges de relation pour
@@ -1184,7 +1186,12 @@ function MindMapViewInner({
         if (targetSpaceId) {
           const draggedItem = items.find(i => i.id === draggedNode.id);
           const sourceSpaceId = draggedItem?.spaceId || spaceId;
-          onMoveToSpaceDirect(draggedNode.id, sourceSpaceId, targetSpaceId);
+          // Nœud de son propre espace : remonter à la racine de cet espace (bulk-move refuse le même espace)
+          if (sourceSpaceId === targetSpaceId) {
+            if (draggedItem?.parentId) onMove?.(draggedNode.id, null, 0);
+          } else {
+            onMoveToSpaceDirect(draggedNode.id, sourceSpaceId, targetSpaceId);
+          }
           dragDescendants.current = null;
           setDropTargetId(null);
           return;
@@ -1198,7 +1205,10 @@ function MindMapViewInner({
       if (target && onMove && canEdit !== false) {
         if (target.id === '__space__') {
           const draggedItem = items.find(i => i.id === draggedNode.id);
-          if (draggedItem?.parentId) {
+          // Élément d'un sous-espace : il part à la racine de l'espace courant (comme un dépôt sur un nœud de sous-espace)
+          if (draggedItem?.spaceId && spaceId && draggedItem.spaceId !== spaceId) {
+            onMoveToSpaceDirect?.(draggedNode.id, draggedItem.spaceId, spaceId);
+          } else if (draggedItem?.parentId) {
             onMove(draggedNode.id, null, 0);
           }
         } else {

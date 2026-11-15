@@ -1,5 +1,7 @@
 /**
  * ItemEditModal — Modale d'édition complète d'un item.
+ * Rafraîchissement (2026-11-15) : invalide ['items'] (toutes les listes), pas ['items', spaceId] — un élément de
+ * sous-espace est aussi affiché par la liste de l'espace parent (additionalSpaceIds, MindMap multi-espaces).
  * Affiche et permet de modifier tous les champs : titre, type, description, statut, priorité,
  * assignation, tags, dates (début/fin/échéance), contenus, relations, contributions (thread).
  * Toggle "Jours pleins / Heures" contrôle l'affichage des sélecteurs H:MM via allDay state. Type daté à l'heure près et
@@ -497,7 +499,7 @@ export function ItemEditModal({
       itemsApi.update(spaceId, itemId!, data),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['items', spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ['items'] }),
         queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] }),
       ]);
       setConflictData(null);
@@ -516,7 +518,7 @@ export function ItemEditModal({
     mutationFn: (data: { deltaDays: number; dependentIds: string[] }) =>
       itemsApi.cascadeShift(spaceId, itemId!, data),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       // Un dépendant peut être dans un autre espace (relation drives cross-space) — invalider
       // sa requête ['item', <son espace>, id] sans connaître cet espace à l'avance.
       for (const dependentId of variables.dependentIds) {
@@ -584,7 +586,7 @@ export function ItemEditModal({
       itemsApi.createRelation(spaceId, itemId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       setShowAddRelation(false);
       setNewRelationTargetId('');
       setNewRelationLabel('');
@@ -596,7 +598,7 @@ export function ItemEditModal({
       itemsApi.deleteRelation(spaceId, itemId!, relationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
     },
   });
 
@@ -605,7 +607,7 @@ export function ItemEditModal({
       itemsApi.updateRelation(spaceId, itemId!, relationId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-      queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       setEditingRelationId(null);
     },
   });
@@ -2181,7 +2183,7 @@ export function ItemEditModal({
             // Discard local changes, reload from server
             setConflictData(null);
             queryClient.invalidateQueries({ queryKey: ['item', spaceId, itemId] });
-            queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
+            queryClient.invalidateQueries({ queryKey: ['items'] });
             onClose();
           }}
         />

@@ -243,6 +243,7 @@
 - [x] Code mort ViewSelectorBar supprimé — 2026-11-13
 - [x] Contenus - fichiers jusqu'à 100 Mo, poids des images affiché — 2026-11-15
 - [x] Carte mentale - dépôt sous un élément d'un autre espace — 2026-11-15
+- [x] Carte mentale - dépôt sur le nœud de son propre sous-espace, fiche relue par l'espace parent — 2026-11-15
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

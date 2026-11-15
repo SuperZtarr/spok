@@ -45,6 +45,9 @@ _(aucun lot en attente)_
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
 
+### MEP — 2026-11-15 (2)
+- 1 lot poussé : carte mentale, dépôt sur le nœud de son propre sous-espace + fiche relue par l'espace parent. Typecheck OK, TNR 2854/2854, en-têtes OK
+
 ### MEP — 2026-11-15
 - 2 lots poussés : fichiers jusqu'à 100 Mo (multipart API suit DOCUMENT_MAX_SIZE ; envoi réel > 25 Mo et mémoire du conteneur non essayés), carte mentale dépôt sous un élément d'un autre espace. 2 annonces datées. Typecheck OK, TNR 2854/2854, en-têtes OK
 
