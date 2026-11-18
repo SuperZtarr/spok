@@ -256,9 +256,10 @@ export function ArticleBrowser({ isOpen, onClose, spaceId, articleId, presentIds
           </HelpHint>
         </div>
         <div className="flex gap-2">
-          <Button variant="bordered" onClick={onClose}>Annuler</Button>
+          {/* type="button" : rendu dans le <form> de la fiche (Modal sans portail) — sinon le clic soumet et ferme la fiche */}
+          <Button type="button" variant="bordered" onClick={onClose}>Annuler</Button>
           <HelpHint text={pageHint('article', 'browserAdd')}>
-            <Button onClick={add} disabled={count === 0}>{`Ajouter (${count})`}</Button>
+            <Button type="button" onClick={add} disabled={count === 0}>{`Ajouter (${count})`}</Button>
           </HelpHint>
         </div>
       </div>

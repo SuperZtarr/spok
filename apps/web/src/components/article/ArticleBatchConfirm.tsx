@@ -56,9 +56,10 @@ export function ArticleBatchConfirm({ isOpen, preview, isLoading, isPending, onC
           </>
         )}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="bordered" onClick={onClose}>Annuler</Button>
+          {/* type="button" : rendu dans le <form> de la fiche (Modal sans portail) — sinon le clic soumet et ferme la fiche */}
+          <Button type="button" variant="bordered" onClick={onClose}>Annuler</Button>
           <HelpHint text={pageHint('article', 'batchConfirm')}>
-            <Button onClick={onConfirm} disabled={blocked || isPending}>
+            <Button type="button" onClick={onConfirm} disabled={blocked || isPending}>
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Ajouter
             </Button>

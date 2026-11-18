@@ -1,4 +1,5 @@
-/* Modale de confirmation générique (titre, message, danger) — préférer à window.confirm. */
+/* Modale de confirmation générique (titre, message, danger) — préférer à window.confirm.
+ * Boutons type="button" : la modale (sans portail) peut être rendue dans un <form> (fiche) — un bouton par défaut le soumettrait. */
 import { AlertTriangle, LogOut } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -47,11 +48,12 @@ export function ConfirmModal({
 
         <div className="flex justify-end gap-2 pt-2">
           {/* Focus par défaut : Annuler si l'action est destructive, sinon l'action (useDialogFocus) */}
-          <Button variant="bordered" onClick={onClose} disabled={isPending}
+          <Button type="button" variant="bordered" onClick={onClose} disabled={isPending}
             data-autofocus={confirmVariant === 'destructive' ? true : undefined}>
             Annuler
           </Button>
           <Button
+            type="button"
             variant={confirmVariant}
             onClick={onConfirm}
             disabled={isPending}

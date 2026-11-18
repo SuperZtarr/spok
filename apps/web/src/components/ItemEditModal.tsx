@@ -79,7 +79,10 @@
  * Deux colonnes (2026-11-13, réorganisation, lot 3) : colonne principale commune (sélecteur de type « contenu » en fiche
  * réduite, Tags, Description, Contenus, Contributions, Historique en fiche réduite) ; fiche complète = + panneau Pilotage
  * (data-devzone item-pilotage) : Type, Statut, Priorité, Dates, Assigné, Parent, Références, Dépendances, Enfants,
- * Historique. L'identifiant n'est plus affiché : « Copier l'identifiant » dans le menu Actions.
+ * Historique.
+ * Identifiant et lien (2026-11-18, règle item-share-link) : dans le pied, à droite avant « Actions », pour un élément
+ * enregistré : identifiant sélectionnable + « Copier le lien » (itemShareUrl, lien court /items/<id> qui retrouve
+ * l'espace à l'ouverture). « Copier l'identifiant » reste aussi dans le menu Actions.
  * En-tête commun (2026-11-13, réorganisation, lot 2) : chemin + auteur·date / icône du type + titre (champ en Modifier, titre
  * en Afficher et Composer — ItemReadView hideTitle) / modes, Plus de champs (HelpHint moreFields / lessFields), un seul « ? »
  * (HelpButton compact : aide et tutoriel). Plus de « ? » de section pour les modes et Plus de champs.
@@ -131,7 +134,7 @@ import { ArticleEditor } from './article/ArticleEditor';
 import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -250,6 +253,7 @@ export function ItemEditModal({
   const [expanded, setExpanded] = useState(!collapsedByDefault);
   const [sheetCopied, setSheetCopied] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   // Dates du panneau Pilotage : résumé sur une ligne, dépliées au clic (réorganisation, lot 4) ; repliées à chaque élément
   const [datesOpen, setDatesOpen] = useState(false);
   useEffect(() => { setDatesOpen(false); }, [itemId]);
@@ -269,6 +273,9 @@ export function ItemEditModal({
   // Références externes, en ligne « Appli1 : Réf1 | appli2 : réf2 » (règle item-external-refs), découpées à l'enregistrement
   const [externalRefsText, setExternalRefsText] = useState('');
   const [type, setType] = useState<ItemType>('UNDEFINED');
+  // Élément auquel appartient la saisie `type` : en passant à un autre élément dans la même fiche (bloc d'un
+  // article…), `type` garde un rendu la valeur précédente — l'enregistrement automatique des types composés l'ignore.
+  const [typeItemId, setTypeItemId] = useState<string | null>(null);
   // Statut non permis pour le nouveau type (issue d'une question sur un autre type, ou l'inverse) : remis à « Non
   // défini » — une question enregistrée sans statut repart « Ouverte » (API, utils/question.ts)
   // Type à composants (Question…) : enregistré tout de suite, l'API fixe le statut — la relecture le reporte ici
@@ -485,6 +492,7 @@ export function ItemEditModal({
       setType(merged.type as ItemType);
       setAllDay(!getItemTypeDef(merged.type)?.timed);
     }
+    setTypeItemId(item.id);
     setDueDate(merged.dueDate);
     setStartDate(merged.startDate);
     setEndDate(merged.endDate);
@@ -952,11 +960,13 @@ export function ItemEditModal({
   // saisies restent en attente d'« Enregistrer » (fusion champ par champ à la relecture). Règle composed-type-autosave.
   useEffect(() => {
     if (!item || !canEdit || isLockedCopy || updateMutation.isPending) return;
+    // Saisie d'un autre élément (fiche qui vient de changer d'élément) : surtout ne pas lui appliquer ce type
+    if (typeItemId !== item.id) return;
     if (type === item.type || !isComposedType(type)) return;
     closeAfterSaveRef.current = false;
     updateMutation.mutate({ type, updatedAt: item.updatedAt });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, item?.type]);
+  }, [type, item?.type, typeItemId]);
 
   const confirmCascade = (includeDescendants: boolean) => {
     if (!pendingCascade) return;
@@ -1147,6 +1157,7 @@ export function ItemEditModal({
   // Retour d'une copie (fiche, vignette), affiché dans le pied : le menu s'est refermé
   const copyStatus = sheetCopied ? itemHints?.copySheetDone
     : idCopied ? itemHints?.copyIdDone
+    : linkCopied ? itemHints?.copyLinkDone
     : thumbnailState === 'copied' ? itemHints?.copyThumbnailDone
     : thumbnailState === 'downloaded' ? itemHints?.copyThumbnailDownloaded
     : thumbnailState === 'error' ? itemHints?.copyThumbnailError
@@ -1155,6 +1166,18 @@ export function ItemEditModal({
     <div className="ml-auto flex items-center gap-2">
       {copyStatus && (
         <span role="status" className={`text-xs ${thumbnailState === 'error' ? 'text-destructive' : 'text-muted-foreground'}`}>{copyStatus}</span>
+      )}
+      {/* Identifiant et lien court (règle item-share-link) : élément enregistré seulement */}
+      {itemId && (
+        <span className="inline-flex items-center gap-1" data-help-zone="item-modal:lien">
+          <span className="text-xs text-muted-foreground font-mono select-all">{itemId}</span>
+          <HelpHint text={itemHints?.copyLink}>
+            <Button type="button" variant="ghost" size="sm" aria-label="Copier le lien"
+              onClick={() => { void navigator.clipboard?.writeText(itemShareUrl(itemId)).then(() => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }).catch(() => {}); }}>
+              <Link2 className="w-4 h-4" />
+            </Button>
+          </HelpHint>
+        </span>
       )}
       <ElementHelp page="item-modal" element="actions" />
       {sheetActionGroups.length > 0 && (

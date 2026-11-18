@@ -248,6 +248,7 @@
 - [x] Fiche - identifiant et « Copier le lien » — 2026-11-18
 - [x] Recherche - voir la suite d'une catégorie, registre des catégories — 2026-11-18
 - [x] Tags - sélecteur en 3 colonnes par portée — 2026-11-18
+- [x] Fiche - élément d'article transformé en article, fiche fermée après ajout — 2026-11-18
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
