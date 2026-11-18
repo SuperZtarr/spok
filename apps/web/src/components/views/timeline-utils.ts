@@ -25,6 +25,23 @@ export function moveInitialEnd(
 }
 
 /**
+ * Dates AFFICHÉES d'une barre (TimelineView, poignées d'étirement ; signalement 2026-11-18, décision Thomas) : une
+ * poignée part de l'endroit où on la voit, et l'étirement enregistre ce qu'on voit.
+ * - début = startDate, sinon échéance, sinon aujourd'hui (barre « sans date » posée sur aujourd'hui)
+ * - fin = endDate, sinon aujourd'hui (barre ouverte dessinée jusqu'à aujourd'hui), jamais avant le début
+ * Étirer une poignée enregistre les deux dates : la date manquante prend sa valeur affichée.
+ */
+export function displayedBarDates(
+  item: { startDate?: string | Date | null; endDate?: string | Date | null; dueDate?: string | Date | null },
+  today: Date = startOfDay(new Date()),
+): { start: Date; end: Date } {
+  const startRaw = item.startDate || item.dueDate;
+  const start = startRaw ? new Date(startRaw) : today;
+  const end = item.endDate ? new Date(item.endDate) : (start > today ? start : today);
+  return { start, end };
+}
+
+/**
  * Fin qu'un item transmet à son parent sans dates, pour le calcul de la barre pointillée (TimelineView,
  * effectiveDates ; demande Thomas 2026-11-04).
  * - endDate enregistrée → elle-même

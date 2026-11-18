@@ -21,10 +21,11 @@ const elements: HelpElements = {
   barre: {
     title: 'Une barre',
     short: 'Glissez pour décaler, tirez un bord pour changer les dates.',
-    text: 'Glissez-la pour la décaler (SPOK propose de décaler aussi ce qui en dépend), tirez un bord pour changer le début ou la fin. Tirez depuis son point central vers une autre barre pour créer une dépendance. Clic droit sur la ligne : poser l\'échéance ; clic droit sur le losange : la retirer.',
+    text: 'Glissez-la pour la décaler (SPOK propose de décaler aussi ce qui en dépend), tirez un bord pour changer le début ou la fin : la barre garde ce que vous voyez, une date manquante (fin d\'une barre ouverte jusqu\'à aujourd\'hui, début d\'une barre sans date) est enregistrée à sa position affichée. Tirez depuis son point central vers une autre barre pour créer une dépendance. Clic droit sur la ligne : poser l\'échéance ; clic droit sur le losange : la retirer.',
     target: '[data-tour="timeline-bar"]',
     noZone: true,
     side: 'bottom',
+    changes: [{ id: 'gantt-stretch-missing-date', kind: 'evolution', text: 'Tirer un bord d\'une barre sans date de fin (ou sans date) enregistre maintenant les deux dates telles qu\'affichées, au lieu de rétrécir la barre ou de ne rien faire.', date: '2026-11-18' }],
   },
   today: {
     title: 'Naviguer dans le temps',

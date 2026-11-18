@@ -1,7 +1,7 @@
 /* Tests des utilitaires purs du Gantt : fin de référence d'un déplacement de barre (moveInitialEnd),
  * types de relation qui ordonnent le chemin critique (computeCriticalPath). */
 import { describe, it, expect } from 'vitest';
-import { moveInitialEnd, computeCriticalPath, rollupEnd } from './timeline-utils';
+import { moveInitialEnd, computeCriticalPath, rollupEnd, displayedBarDates } from './timeline-utils';
 import type { Item, ItemRelation } from '@spok/shared';
 
 const now = new Date(2026, 8, 28, 10, 0); // 28 sept 2026 10:00 local
@@ -25,6 +25,28 @@ describe('rollupEnd (fin transmise au parent sans dates)', () => {
   it('échéance seule : l\'échéance ; aucune date : null', () => {
     expect(rollupEnd({ dueDate: iso(5, 1) }, now)?.toISOString()).toBe(iso(5, 1));
     expect(rollupEnd({}, now)).toBeNull();
+  });
+});
+
+describe("displayedBarDates (poignées d'étirement : ce qu'on voit)", () => {
+  const today = new Date(2026, 10, 18);
+  it('dates complètes : elles-mêmes', () => {
+    const d = displayedBarDates({ startDate: '2026-11-01', endDate: '2026-11-30' }, today);
+    expect(d.start.toISOString().slice(0, 10)).toBe('2026-11-01');
+    expect(d.end.toISOString().slice(0, 10)).toBe('2026-11-30');
+  });
+  it("début sans fin : fin = aujourd'hui", () => {
+    expect(displayedBarDates({ startDate: '2026-11-01' }, today).end).toEqual(today);
+  });
+  it('début futur sans fin : fin = début, jamais avant', () => {
+    const d = displayedBarDates({ startDate: '2026-12-10' }, today);
+    expect(d.end).toEqual(d.start);
+  });
+  it('échéance seule : sert de début', () => {
+    expect(displayedBarDates({ dueDate: '2026-11-05' }, today).start.toISOString().slice(0, 10)).toBe('2026-11-05');
+  });
+  it("aucune date : barre posée sur aujourd'hui", () => {
+    expect(displayedBarDates({}, today)).toEqual({ start: today, end: today });
   });
 });
 
