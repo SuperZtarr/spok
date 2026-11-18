@@ -2,7 +2,12 @@
    « ? » (PageHelpButton), le tour et le mode Aide. `fields` : ligne d'aide sous le champ (FieldHelp, visible aussi sur téléphone,
    contrairement aux hints). Registre help/pageHelp.ts.
    Contenus multiples (lot 3a, 2026-11-08) : un élément se trouve aussi par le nom de ses fichiers et l'adresse de ses liens
-   (texte de `terme`) ; annonce search-item-contents (sans date, datée à la MEP). */
+   (texte de `terme`) ; annonce search-item-contents (sans date, datée à la MEP).
+   `suite` : bouton « Voir les … autres » et bandeau « Toutes les catégories » (zone search:suite, présente seulement quand
+   une catégorie est tronquée ou après la bascule) ; annonce search-voir-suite (sans date, datée à la MEP).
+   Les textes qui énumèrent les catégories (summary, filtres) sont générés par searchCategoriesPhrase (registre
+   SEARCH_CATEGORY_REGISTRY, @spok/shared) : ne jamais réécrire la liste à la main. */
+import { searchCategoriesPhrase } from '@spok/shared';
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -42,10 +47,17 @@ const elements: HelpElements = {
     target: '[data-tour="search-types"]',
     side: 'bottom',
   },
+  suite: {
+    title: 'Voir la suite',
+    short: 'Tous les résultats d\'une catégorie.',
+    text: 'Avec plusieurs catégories, chacune montre ses 10 premiers résultats ; son titre indique combien il y en a en tout (« 10 sur 21 »). Le bouton « Voir les … autres » sous la catégorie n\'affiche plus qu\'elle, page par page. « Toutes les catégories », en haut des résultats, ramène celles que vous aviez choisies.',
+    side: 'top',
+    changes: [{ id: 'search-voir-suite', kind: 'evolution', text: 'Les résultats au-delà des 10 premiers d\'une catégorie s\'ouvrent par un bouton bien visible, et « Toutes les catégories » ramène ensuite à la recherche complète.', date: '2026-11-18' }],
+  },
   filtres: {
     title: 'Filtres',
     short: 'Communauté, espace, type, statut, tag.',
-    text: 'Communauté, espace, type, statut, tag (les tags d\'un espace choisi). Un filtre d\'élément ne garde que les éléments et les contributions. Sur téléphone, touchez « Filtres » pour les déplier ; le chiffre indique les filtres actifs.',
+    text: `Communauté, espace, type, statut, tag (les tags d'un espace choisi). Un filtre d'élément ne garde que les ${searchCategoriesPhrase((c) => c.keptUnderItemFilter)}. Sur téléphone, touchez « Filtres » pour les déplier ; le chiffre indique les filtres actifs.`,
     target: '[data-tour="search-filters"]',
     side: 'bottom',
   },
@@ -56,7 +68,7 @@ const derived = helpFromElements(elements);
 export const help: HelpEntry = {
   title: 'Recherche',
   route: '/search',
-  summary: 'Chercher dans tout ce que vous pouvez ouvrir : communautés, espaces, éléments, utilisateurs et contributions.',
+  summary: `Chercher dans tout ce que vous pouvez ouvrir : ${searchCategoriesPhrase()}.`,
   ...derived,
   hints: {
     ...derived.hints,

@@ -10,6 +10,7 @@
  * multipart : plafond = DOCUMENT_MAX_SIZE (@spok/shared, règles d'envoi partagées web/API).
  * /spaces/:id/process-nodes : positions des items sur le canevas de la vue Process (routes/process-nodes.ts).
  * /admin/tags : tags globaux et doublons de tags (routes/admin/tags.ts).
+ * /items/:id/location : espace d'un élément pour son lien court (routes/item-location.ts, règle item-share-link).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -58,6 +59,7 @@ import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
 import { adminTagsRoutes } from './routes/admin/tags.js';
 import { contactRoutes } from './routes/contact.js';
 import { searchRoutes } from './routes/search.js';
+import { itemLocationRoutes } from './routes/item-location.js';
 import { localUploadsRoutes } from './routes/local-uploads.js';
 import { isLocalStorageMode } from './utils/r2.js';
 import { userRoutes } from './routes/user.js';
@@ -336,6 +338,8 @@ async function buildApp() {
   await app.register(publicNewsRoutes, { prefix: '/news' });
   await app.register(contactRoutes, { prefix: '/contact' });
   await app.register(searchRoutes, { prefix: '/search' });
+  // Lien court d'un élément (règle item-share-link) : espace d'un élément connu par son seul identifiant
+  await app.register(itemLocationRoutes, { prefix: '/items' });
   // Stockage local de dev (pas de R2, hors production) : sert les fichiers envoyés — absent en prod
   if (isLocalStorageMode()) await app.register(localUploadsRoutes, { prefix: '/local-uploads' });
   await app.register(userRoutes, { prefix: '/user' });

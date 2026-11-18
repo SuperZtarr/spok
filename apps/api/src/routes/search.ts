@@ -9,7 +9,9 @@
  *   not (répétable) = mot exclu ; "guillemets" = expression exacte (searchWords, @spok/shared ; searchWhere, utils) ;
  * - items et contributions triés communauté › espace › récence (regroupés à l'affichage, groupes contigus) ;
  * - filtres d'items (type, statut, priorité, tags) : appliqués aux items ET aux contributions (via leur item) ;
- *   les sections communautés, espaces et utilisateurs sont alors omises (itemFiltersActive dans la réponse) ;
+ *   seules les sections gardées sous filtre d'item sont alors cherchées (itemFiltersActive dans la réponse) ;
+ * - catégories (?types=), sections gardées sous filtre d'item et réservées aux connectés : registre
+ *   SEARCH_CATEGORY_REGISTRY (@spok/shared, searchCategoriesShown) — ne pas les réénumérer ici ;
  * - spaceId = l'espace + ses sous-espaces ; spaceId/communityId restreignent aussi la section
  *   utilisateurs aux membres (portée par défaut posée par la page Recherche) ;
  * - section utilisateurs (décision Thomas 2026-11-06, businessRules search-users-scope) : anonyme = aucun résultat ;
@@ -22,7 +24,7 @@
  * Communauté publique = visibility !== 'PRIVATE' uniquement (colonne isPublic supprimée le 2026-10-16).
  */
 import { FastifyPluginAsync } from 'fastify';
-import { resolveSearchWords } from '@spok/shared';
+import { resolveSearchWords, searchCategoriesShown, DEFAULT_SEARCH_TYPES } from '@spok/shared';
 import { allReadableSpaceIds } from './items.js';
 import { buildWordsWhere } from '../utils/searchWhere.js';
 
@@ -30,7 +32,7 @@ interface AdvancedSearchQuery {
   q?: string;
   any?: string | string[]; // répétable : mots dont au moins un doit être présent
   not?: string | string[]; // répétable : mots exclus
-  types?: string; // comma-separated: communities,spaces,items,users,contributions
+  types?: string; // ids du registre SEARCH_CATEGORY_REGISTRY séparés par des virgules (défaut : toutes)
   communityId?: string;
   spaceId?: string;
   itemType?: string;
@@ -59,10 +61,11 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Filtres d'items actifs : seules les sections items et contributions (filtrées via leur item) ont un sens
     const itemFiltersActive = !!(itemType || itemStatus || itemPriority || tagIdsParam);
-    const enabledTypes = new Set((typesParam || 'communities,spaces,items,users,contributions').split(','));
-    if (itemFiltersActive) ['communities', 'spaces', 'users'].forEach((t) => enabledTypes.delete(t));
-
     const userId = request.user?.userId;
+    // Sections cherchées : registre des catégories (ids inconnus ignorés, filtres d'items, catégories réservées aux connectés)
+    const enabledTypes = new Set<string>(searchCategoriesShown((typesParam || DEFAULT_SEARCH_TYPES).split(','), {
+      itemFiltersActive, signedIn: !!userId,
+    }));
     // Admin global : tout EN MODE ADMIN seulement (hors mode admin = utilisateur normal)
     const isAdmin = userId && request.isAdminMode
       ? (await fastify.prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } }))?.globalRole === 'ADMIN'

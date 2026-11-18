@@ -1,5 +1,7 @@
 /*
- * Recherche avancée (/search?q=...) : communautés, espaces, items, utilisateurs, contributions.
+ * Recherche avancée (/search?q=...). Catégories (boutons, titres, noms au pluriel, sections gardées sous filtre d'item,
+ * réservées aux connectés) : registre SEARCH_CATEGORY_REGISTRY (@spok/shared), icônes via constants/viewIcons — ne pas
+ * les réénumérer ici (centralisation des référentiels, 2026-11-18).
  * Catégorie Utilisateurs masquée sans connexion ; e-mail, rôle et compteurs affichés seulement si l'API les renvoie, en mode admin (règle search-users-scope).
  * Portée par défaut = espace/communauté d'où la recherche est lancée (?spaceId= / ?communityId=,
  * posés par lib/searchScope) ; l'utilisateur élargit explicitement (« Toute la communauté », « Partout »).
@@ -9,7 +11,9 @@
  * Une ligne d'aide (FieldHelp) annonce ce choix dès l'arrivée, avant les 2 mots, et l'explique sur téléphone, où l'infobulle
  * des pastilles ne s'affiche pas au survol : ne pas la remplacer par une infobulle seule.
  * Spec SPOK « Recherche [SearchPage] » : dès 1 caractère, 10 résultats par page. Pagination PAR SECTION :
- * plusieurs sections → les 10 premiers de chacune + « Voir les N résultats » (bascule sur cette section) ;
+ * plusieurs sections → les 10 premiers de chacune, titre « 10 sur N » et bouton « Voir les M autres … » (SeeAll) qui
+ * bascule sur cette section en gardant les catégories d'avant dans ?from= ; un bandeau propose alors
+ * « Toutes les catégories » (les restaure). Cocher/décocher une catégorie à la main efface ?from= ;
  * une seule section → chevrons. Filtres d'items (type, statut, tags) : l'API ne renvoie plus que Items et
  * Contributions (itemFiltersActive). Tags = ceux de l'espace choisi (les tags sont propres à un espace).
  * Items et contributions regroupés sous des en-têtes « Communauté › Espace » (groupBySpace) : l'API les trie
@@ -22,9 +26,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, Building2, FolderKanban, FileText, Users, MessageSquare, Globe, Shield, ChevronLeft, ChevronRight, ChevronDown, Tag, SlidersHorizontal } from 'lucide-react';
-import { ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES, nextSearchWordMode, resolveSearchWords } from '@spok/shared';
-import type { SearchWord, SearchWordMode } from '@spok/shared';
+import { Search, X, Building2, FolderKanban, Globe, Shield, ChevronLeft, ChevronRight, ChevronDown, Tag, SlidersHorizontal } from 'lucide-react';
+import {
+  ITEM_TYPES, DEFAULT_TYPE_LABELS, DEFAULT_STATUSES, nextSearchWordMode, resolveSearchWords,
+  SEARCH_CATEGORY_REGISTRY, DEFAULT_SEARCH_TYPES, getSearchCategory, searchCategoriesShown, searchCategoriesPhrase,
+} from '@spok/shared';
+import type { SearchWord, SearchWordMode, SearchCategory } from '@spok/shared';
+import { getViewIcon } from '../constants/viewIcons';
 import { searchApi, communitiesApi, spacesApi, tagsApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
 import { HelpHint } from '../help/HelpHint';
@@ -35,19 +43,14 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 
-const ENTITY_TYPES = [
-  { key: 'communities', label: 'Communautes', icon: Building2 },
-  { key: 'spaces', label: 'Espaces', icon: FolderKanban },
-  { key: 'items', label: 'Items', icon: FileText },
-  { key: 'users', label: 'Utilisateurs', icon: Users },
-  { key: 'contributions', label: 'Contributions', icon: MessageSquare },
-] as const;
-
-type EntityType = typeof ENTITY_TYPES[number]['key'];
+/** Catégories de recherche : registre SEARCH_CATEGORY_REGISTRY (@spok/shared) ; icône résolue par constants/viewIcons. */
+type EntityType = SearchCategory;
+const entityOf = (type: EntityType) => {
+  const category = getSearchCategory(type);
+  return { ...category, icon: getViewIcon(category.icon) };
+};
 
 const PAGE_SIZE = 10;
-/** Sections que les filtres d'items laissent affichées (les autres sont omises par l'API). */
-const ITEM_FILTER_SECTIONS = new Set<string>(['items', 'contributions']);
 
 /** Pastille d'un mot selon sa présence demandée : libellé, style, clé de l'infobulle (hints de la fiche « search »). */
 const WORD_MODES: Record<SearchWordMode, { label: string; className: string; hint: string }> = {
@@ -126,7 +129,7 @@ export function SearchPage() {
 
   // All state lives in URL params — local search input synced via debounce
   const qParam = searchParams.get('q') || '';
-  const typesParam = searchParams.get('types') || 'communities,spaces,items,users,contributions';
+  const typesParam = searchParams.get('types') || DEFAULT_SEARCH_TYPES;
   const communityIdParam = searchParams.get('communityId') || '';
   const spaceIdParam = searchParams.get('spaceId') || '';
   const itemTypeParam = searchParams.get('itemType') || '';
@@ -185,6 +188,7 @@ export function SearchPage() {
     setSearchParams(prev => {
       const params = new URLSearchParams(prev);
       params.set('types', Array.from(next).join(','));
+      params.delete('from'); // choix manuel : plus de retour « Toutes les catégories »
       params.set('page', '1');
       return params;
     }, { replace: true });
@@ -261,7 +265,7 @@ export function SearchPage() {
   const itemFiltersActive = !!(itemTypeParam || itemStatusParam || tagIdsParam);
   const activeFilterCount = [effectiveCommunityId, spaceIdParam, itemTypeParam, itemStatusParam, tagIdsParam].filter(Boolean).length;
   const shownTypes = useMemo(
-    () => [...enabledTypes].filter((t) => (!itemFiltersActive || ITEM_FILTER_SECTIONS.has(t)) && (user || t !== 'users')),
+    () => searchCategoriesShown(enabledTypes, { itemFiltersActive, signedIn: !!user }),
     [enabledTypes, itemFiltersActive, user],
   );
   // Pagination par section : une seule section → page de l'URL ; plusieurs → 10 premiers de chacune
@@ -289,16 +293,42 @@ export function SearchPage() {
 
   const totalResults = data ? Object.values(data.totals).reduce((a, b) => a + b, 0) : 0;
   const totalPages = data && singleSection
-    ? Math.max(1, Math.ceil((data.totals[shownTypes[0] as keyof typeof data.totals] ?? 0) / PAGE_SIZE))
+    ? Math.max(1, Math.ceil((data.totals[shownTypes[0]] ?? 0) / PAGE_SIZE))
     : 1;
 
-  /** Lien « Voir les N résultats » sous une section tronquée (plusieurs sections affichées). */
+  /** Section tronquée : plusieurs sections affichées et plus de résultats que la page. */
+  const isTruncated = (total: number) => !singleSection && total > PAGE_SIZE;
+
+  /** Titre de section : « Items — 10 sur 21 » si tronquée, sinon « Items (21) ». */
+  const SectionTitle = ({ type, shown, total }: { type: EntityType; shown: number; total: number }) => {
+    const { label, icon: Icon } = entityOf(type);
+    return (
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+        <Icon className="w-4 h-4" /> {label}{' '}
+        {isTruncated(total)
+          ? <span className="normal-case tracking-normal font-normal">— {shown} sur {total}</span>
+          : `(${total})`}
+      </h2>
+    );
+  };
+
+  /** Bouton sous une section tronquée : bascule sur cette seule catégorie, en gardant les catégories d'avant (?from=). */
   const SeeAll = ({ type, total }: { type: EntityType; total: number }) =>
-    !singleSection && total > PAGE_SIZE ? (
-      <button type="button" onClick={() => updateParam('types', type)} className="mt-2 text-xs text-primary hover:underline">
-        Voir les {total} résultats
+    isTruncated(total) ? (
+      <button
+        type="button"
+        data-help-zone="search:suite"
+        onClick={() => updateParams({ types: type, from: typesParam })}
+        className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        Voir les {total - PAGE_SIZE} autres {entityOf(type).noun}
+        <ChevronRight className="w-4 h-4" />
       </button>
     ) : null;
+
+  // Catégories d'avant la bascule « Voir les … autres » : bandeau de retour tant qu'une seule est affichée
+  const fromParam = searchParams.get('from') || '';
+  const showBackBanner = singleSection && !!fromParam && fromParam !== typesParam;
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full">
@@ -308,7 +338,7 @@ export function SearchPage() {
           <h1 className="text-xl sm:text-2xl font-bold">Recherche avancée</h1>
           <div className="ml-auto"><PageHelpButton pageKey="search" /></div>
         </div>
-        <p className="hidden sm:block text-sm text-muted-foreground mb-4">Recherchez dans les communautes, espaces, items, utilisateurs et contributions</p>
+        <p className="hidden sm:block text-sm text-muted-foreground mb-4">Recherchez dans les {searchCategoriesPhrase()}</p>
 
         {/* Search input — seul élément collé en mobile */}
         <div className="sticky top-0 z-10 bg-background -mx-4 px-4 py-2 mb-2 sm:static sm:z-auto sm:mx-0 sm:px-0 sm:py-0 sm:mb-4">
@@ -393,8 +423,8 @@ export function SearchPage() {
         {/* Entity type toggles */}
         {/* Mobile : une seule ligne défilante ; desktop : retour à la ligne */}
         <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 sm:mb-4 overflow-x-auto no-scrollbar sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0" data-tour="search-types" data-help-zone="search:categories">
-          {/* Catégorie Utilisateurs réservée aux connectés (règle search-users-scope) */}
-          {ENTITY_TYPES.filter(({ key }) => user || key !== 'users').map(({ key, label, icon: Icon }) => (
+          {/* Catégories réservées aux connectés masquées (signedInOnly, règle search-users-scope) */}
+          {SEARCH_CATEGORY_REGISTRY.filter((c) => user || !c.signedInOnly).map(({ id: key, label }) => { const Icon = entityOf(key).icon; return (
             <button
               key={key}
               onClick={() => toggleType(key)}
@@ -406,15 +436,15 @@ export function SearchPage() {
             >
               <Icon className="w-3.5 h-3.5" />
               {label}
-              {data && data.totals[key as keyof typeof data.totals] > 0 && (
+              {data && data.totals[key] > 0 && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                   enabledTypes.has(key) ? 'bg-primary-foreground/20' : 'bg-muted-foreground/20'
                 }`}>
-                  {data.totals[key as keyof typeof data.totals]}
+                  {data.totals[key]}
                 </span>
               )}
             </button>
-          ))}
+          ); })}
         </div>
 
         {/* Scope filters — repliés en mobile derrière « Filtres », toujours dépliés sur desktop */}
@@ -519,12 +549,25 @@ export function SearchPage() {
           {/* Total */}
           <p className="text-sm text-muted-foreground">{totalResults} resultat{totalResults > 1 ? 's' : ''}</p>
 
+          {/* Retour après « Voir les … autres » : restaure les catégories cochées avant la bascule */}
+          {showBackBanner && (
+            <div data-help-zone="search:suite" className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 text-sm">
+              <span className="text-muted-foreground">Seulement les {entityOf(shownTypes[0]).noun}</span>
+              <button
+                type="button"
+                onClick={() => updateParams({ types: fromParam, from: '' })}
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Toutes les catégories
+              </button>
+            </div>
+          )}
+
           {/* Communities */}
           {enabledTypes.has('communities') && data.communities.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Building2 className="w-4 h-4" /> Communautes ({data.totals.communities})
-              </h2>
+              <SectionTitle type="communities" shown={data.communities.length} total={data.totals.communities} />
               <div className="space-y-2">
                 {data.communities.map(c => (
                   <Link key={c.id} to={`/communities/${c.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
@@ -556,9 +599,7 @@ export function SearchPage() {
           {/* Spaces */}
           {enabledTypes.has('spaces') && data.spaces.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <FolderKanban className="w-4 h-4" /> Espaces ({data.totals.spaces})
-              </h2>
+              <SectionTitle type="spaces" shown={data.spaces.length} total={data.totals.spaces} />
               <div className="space-y-2">
                 {data.spaces.map(s => (
                   <Link key={s.id} to={`/spaces/${s.id}`} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors overflow-hidden">
@@ -581,9 +622,7 @@ export function SearchPage() {
           {/* Items */}
           {enabledTypes.has('items') && data.items.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4" /> Items ({data.totals.items})
-              </h2>
+              <SectionTitle type="items" shown={data.items.length} total={data.totals.items} />
               {groupBySpace(data.items).map(group => (
               <div key={group.spaceId} className="mb-2">
               <GroupHeader communityName={group.communityName} spaceName={group.spaceName} spaceId={group.spaceId} />
@@ -622,9 +661,7 @@ export function SearchPage() {
           {/* Users */}
           {enabledTypes.has('users') && data.users.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" /> Utilisateurs ({data.totals.users})
-              </h2>
+              <SectionTitle type="users" shown={data.users.length} total={data.totals.users} />
               <div className="space-y-2">
                 {data.users.map(u => (
                   <div key={u.id} className="flex items-center gap-3 p-3 border border-border rounded-lg overflow-hidden">
@@ -660,9 +697,7 @@ export function SearchPage() {
           {/* Contributions */}
           {enabledTypes.has('contributions') && data.contributions.length > 0 && (
             <section>
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Contributions ({data.totals.contributions})
-              </h2>
+              <SectionTitle type="contributions" shown={data.contributions.length} total={data.totals.contributions} />
               {groupBySpace(data.contributions).map(group => (
               <div key={group.spaceId} className="mb-2">
               <GroupHeader communityName={group.communityName} spaceName={group.spaceName} spaceId={group.spaceId} />

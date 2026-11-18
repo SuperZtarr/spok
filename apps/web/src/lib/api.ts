@@ -9,9 +9,12 @@
  * itemContentsApi : contenus d'un élément (images, fichiers, liens, schémas) — via hooks/useItemContents.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
  * adminApi.tags : tags globaux et doublons de tags (page /admin/tags, AdminTag).
+ * itemsApi.location : espace d'un élément par son identifiant, pour le lien court /items/:id (ItemLinkPage).
  * itemsApi.bulkTags : ajout / retrait de tags sur plusieurs éléments (vue Tags, via useSpaceActions.handleBulkTags).
+ * searchApi.advanced : totaux typés par le registre des catégories de recherche (SearchCategory, @spok/shared).
  */
 import type {
+  SearchCategory,
   ItemContent,
   AuthResponse,
   LoginInput,
@@ -1129,6 +1132,9 @@ export const itemsApi = {
   get: (spaceId: string, id: string) =>
     fetchApi<ItemWithRelations>(`/spaces/${spaceId}/items/${id}`),
 
+  /** Espace d'un élément connu par son seul identifiant (lien court /items/:id, pages/ItemLinkPage) */
+  location: (id: string) => fetchApi<{ spaceId: string }>(`/items/${id}/location`),
+
   create: (spaceId: string, data: CreateItemInput) =>
     fetchApi<Item>(`/spaces/${spaceId}/items`, {
       method: 'POST',
@@ -1399,7 +1405,8 @@ export interface AdvancedSearchResponse {
   // email, globalRole et compteurs : renvoyés en mode admin seulement (règle search-users-scope)
   users: Array<{ id: string; name: string; email?: string | null; avatarUrl: string | null; globalRole?: string; communityCount?: number; spaceCount?: number }>;
   contributions: Array<{ id: string; content: string | null; authorName: string; itemId: string; itemTitle: string; spaceId: string; spaceName: string; communityName: string | null; createdAt: string }>;
-  totals: { communities: number; spaces: number; items: number; users: number; contributions: number };
+  // Une entrée par catégorie du registre SEARCH_CATEGORY_REGISTRY (@spok/shared)
+  totals: Record<SearchCategory, number>;
   pagination: { page: number; pageSize: number };
   // Filtres d'items actifs : l'API n'a cherché que les items et les contributions
   itemFiltersActive?: boolean;

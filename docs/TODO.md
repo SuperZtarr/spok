@@ -246,6 +246,7 @@
 - [x] Carte mentale - dépôt sur le nœud de son propre sous-espace, fiche relue par l'espace parent — 2026-11-15
 - [x] Profil - onglet Communautés, Accès Claude dans Compte — 2026-11-18
 - [x] Fiche - identifiant et « Copier le lien » — 2026-11-18
+- [x] Recherche - voir la suite d'une catégorie, registre des catégories — 2026-11-18
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
