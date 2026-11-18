@@ -1,7 +1,8 @@
-/* Layout des pages /admin/* : navigation latérale admin + garde de rôle. */
+/* Layout des pages /admin/* : navigation latérale admin + garde de rôle.
+   Liens écrits à la main (copie de MENU_REGISTRY, section admin) : toute page admin ajoutée s'ajoute aussi ici. */
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye, LogOut, Shield, Search, Map as MapIcon, Activity } from 'lucide-react';
+import { Users, ArrowLeft, FolderKanban, Building2, AlertTriangle, Settings, BarChart3, History, Eye, LogOut, Shield, Search, Map as MapIcon, Activity, Database } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { GlobalSearch } from './GlobalSearch';
@@ -31,6 +32,7 @@ export function AdminLayout() {
       if (location.pathname === '/admin/views') return 'Vues';
       if (location.pathname === '/admin/stats') return 'Statistiques';
       if (location.pathname === '/admin/audit-logs') return 'Audit Logs';
+      if (location.pathname === '/admin/volumetry') return 'Volumétrie';
       return 'Administration';
     };
     document.title = import.meta.env.DEV ? `[DEV] SPOK Admin — ${getPageTitle()}` : `SPOK Admin — ${getPageTitle()}`;
@@ -127,6 +129,14 @@ export function AdminLayout() {
                 }`}
               >
                 <Activity className="w-4 h-4" /> Performances
+              </Link>
+              <Link
+                to="/admin/volumetry"
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  isActive('/admin/volumetry') ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+                }`}
+              >
+                <Database className="w-4 h-4" /> Volumétrie
               </Link>
             </div>
 

@@ -1900,6 +1900,8 @@ export const adminApi = {
       fetchApi<AdminTag>(`/admin/tags/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => fetchApi<{ success: boolean }>(`/admin/tags/${id}`, { method: 'DELETE' }),
     promote: (id: string) => fetchApi<AdminTag>(`/admin/tags/${id}/promote`, { method: 'POST' }),
+    move: (id: string, spaceId: string) =>
+      fetchApi<AdminTag>(`/admin/tags/${id}/move`, { method: 'POST', body: JSON.stringify({ spaceId }) }),
     merge: (targetId: string, sourceIds: string[]) =>
       fetchApi<{ tag: AdminTag; itemCount: number; removed: number }>('/admin/tags/merge', {
         method: 'POST', body: JSON.stringify({ targetId, sourceIds }),
@@ -2227,6 +2229,11 @@ export const adminPerfApi = {
     return fetchApi<PerfData>(`/admin/perf${qs.toString() ? '?' + qs : ''}`);
   },
   clear: () => fetchApi<{ ok: boolean }>('/admin/perf', { method: 'DELETE' }),
+};
+
+/** Volumétrie des données (2026-11-18) : taille, lignes, croissance et niveau de chaque table (lecture seule) */
+export const adminVolumetryApi = {
+  get: () => fetchApi<import('@spok/shared').VolumetryReport>('/admin/volumetry'),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {

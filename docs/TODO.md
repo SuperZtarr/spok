@@ -255,6 +255,7 @@
 - [x] Vignette - priorité affichée dans toutes les vues — 2026-11-18
 - [x] Gantt - étirement d'une barre sans date de fin — 2026-11-18
 - [x] Fiche - hauteur de la description doublée — 2026-11-18
+- [x] Admin - volumétrie des données et alerte des seuils — 2026-11-18
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

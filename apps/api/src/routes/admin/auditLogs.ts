@@ -2,7 +2,8 @@
  * Restaurer l'assigné d'un item repose la date d'assignation (assignmentStamp — accusé de lecture).
  * Copie de séance verrouillée (itemLock) : seul le rangement (parentId, position) peut être restauré.
  * Recréation d'espace/communauté : utils/audit.ts (spaceRestoreData, communityRestoreData) — l'ancien
- * isPublic des entrées d'audit antérieures est converti en visibility. */
+ * isPublic des entrées d'audit antérieures est converti en visibility.
+ * Alerte d'accumulation : plus ici (2026-11-18), voir utils/volumetryWatch.ts ; purges manuelles en fin de fichier. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
@@ -103,7 +104,7 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /admin/audit-logs/stats - Audit log statistics
-  fastify.get('/stats', async (request) => {
+  fastify.get('/stats', async () => {
     const [
       totalCount,
       entityCounts,
@@ -148,36 +149,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
     // Estimate storage size (rough: ~500 bytes per log)
     const estimatedSizeBytes = totalCount * 500;
 
-    // Alerte accumulation : si > 10 000 logs et pas de notif AUDIT_ALERT non lue pour cet admin
-    const AUDIT_ALERT_THRESHOLD = 10_000;
-    if (totalCount > AUDIT_ALERT_THRESHOLD) {
-      const existingAlert = await fastify.prisma.notification.findFirst({
-        where: {
-          userId: request.user.userId,
-          type: 'AUDIT_ALERT',
-          read: false,
-        },
-      });
-
-      if (!existingAlert) {
-        // Créer une notification pour tous les admins
-        const admins = await fastify.prisma.user.findMany({
-          where: { globalRole: 'ADMIN' },
-          select: { id: true },
-        });
-
-        await fastify.prisma.notification.createMany({
-          data: admins.map(admin => ({
-            userId: admin.id,
-            type: 'AUDIT_ALERT' as const,
-            title: 'Accumulation de logs d\'audit',
-            message: `${totalCount.toLocaleString('fr-FR')} logs enregistrés. Une purge est recommandée.`,
-            link: '/admin/audit-logs',
-          })),
-          skipDuplicates: true,
-        });
-      }
-    }
+    // L'alerte d'accumulation (AUDIT_ALERT) ne part plus d'ici depuis le 2026-11-18 : la surveillance périodique de
+    // la volumétrie (utils/volumetryWatch.ts) la déclenche, seuils du registre @spok/shared volumetry.ts.
 
     return {
       totalCount,

@@ -47,6 +47,7 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { ViewsConfigPage } from './pages/admin/ViewsConfigPage';
 import { ApiDocPage } from './pages/admin/ApiDocPage';
 import { PerfPage } from './pages/admin/PerfPage';
+import { VolumetryPage } from './pages/admin/VolumetryPage';
 import { NewsAdminPage } from './pages/admin/NewsAdminPage';
 import { ContactPage } from './pages/ContactPage';
 import { BookmarksPage } from './pages/BookmarksPage';
@@ -133,6 +134,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/admin\/audit-logs$/, 'pages/admin/AuditLogsPage.tsx'],
   [/^\/admin\/views$/, 'pages/admin/ViewsConfigPage.tsx'],
   [/^\/admin\/news$/, 'pages/admin/NewsAdminPage.tsx'],
+  [/^\/admin\/volumetry$/, 'pages/admin/VolumetryPage.tsx'],
   [/^\/$/, 'pages/HomePage.tsx \u2192 views/HomeView.tsx'],
 ];
 
@@ -246,6 +248,7 @@ export default function App() {
         <Route path="admin/api-doc" element={<AdminRoute><ApiDocPage /></AdminRoute>} />
         <Route path="admin/perf" element={<AdminRoute><PerfPage /></AdminRoute>} />
         <Route path="admin/news" element={<AdminRoute><NewsAdminPage /></AdminRoute>} />
+        <Route path="admin/volumetry" element={<AdminRoute><VolumetryPage /></AdminRoute>} />
       </Route>
     </Routes>
   </>
