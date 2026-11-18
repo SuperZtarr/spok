@@ -2,9 +2,12 @@
  * Proposés (GET /spaces/:id/tags) : tags globaux, de la communauté, de l'espace et de ses espaces parents, groupés
  * par portée avec un badge (lib/tagScope.ts ; tags d'espace rétablis le 2026-11-12, décision Thomas). Un tag créé ici
  * est un tag de L'ESPACE (proposé aussi dans ses sous-espaces) ; tags de communauté : paramètres de la communauté,
- * globaux : /admin/tags. Création refusée (nom déjà pris…) : message de l'API affiché sous le champ. */
+ * globaux : /admin/tags. Création refusée (nom déjà pris…) : message de l'API affiché sous le champ.
+ * Propositions en 3 colonnes par portée (Globaux / Communauté / Espace, toujours affichées, « Aucun tag » si vide ;
+ * empilées sur mobile), chacune défilant sur 20rem max (50vh). Colonne Espace : « Cet espace » puis une section par
+ * espace parent. ↑↓ parcourent dans l'ordre de lecture ; ←→ restent au curseur du champ (2026-11-18). */
 import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { groupTagsByScope, tagScopeBadge, tagScopeOf, TAG_SCOPE_LABELS } from '../../lib/tagScope';
+import { groupTagsByScope, TAG_SCOPE_LABELS } from '../../lib/tagScope';
 import type { TagScope } from '@spok/shared';
 
 const BADGE_CLASS: Record<TagScope, string> = {
@@ -42,7 +45,8 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
   const createTagMutation = useMutation({
     mutationFn: (name: string) => tagsApi.create(spaceId, { name }),
     onSuccess: (newTag) => {
-      queryClient.invalidateQueries({ queryKey: ['tags', spaceId] });
+      // Toutes les listes (['tags']) : le tag est aussi proposé dans les sous-espaces
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
       onChange([...value, newTag.id]);
       setInputValue('');
       setIsOpen(false);
@@ -56,17 +60,36 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
       .filter(Boolean) as Tag[];
   }, [value, spaceTags]);
 
-  // Filter suggestions: match input, exclude already selected
-  const suggestions = useMemo(() => {
+  // Propositions : filtre sur la saisie, hors tags déjà choisis, une colonne par portée (globaux, communauté, espace).
+  // Colonne Espace : sections « Cet espace » puis une par espace parent (tri nom d'espace puis nom de tag, local au
+  // sélecteur — groupTagsByScope reste inchangé). L'index clavier suit l'ordre de lecture (colonne 1, 2, 3).
+  const columns = useMemo(() => {
     const query = inputValue.toLowerCase().trim();
     const matching = spaceTags.filter(
       (t) =>
         !value.includes(t.id) &&
         (query === '' || t.name.toLowerCase().includes(query))
     );
-    // Ordre des groupes de portée (globaux, communauté, espace) : l'index clavier suit l'ordre affiché
-    return groupTagsByScope(matching).flatMap((g) => g.tags);
+    return groupTagsByScope(matching).map((g) => {
+      if (g.scope !== 'space') return { ...g, sections: [{ title: null as string | null, tags: g.tags }] };
+      const own = g.tags.filter((t) => !t.inherited);
+      const byParent = new Map<string, Tag[]>();
+      for (const t of g.tags.filter((x) => x.inherited)) {
+        const key = t.spaceName ?? 'Espace parent';
+        byParent.set(key, [...(byParent.get(key) ?? []), t]);
+      }
+      const parents = [...byParent.entries()]
+        .sort(([a], [b]) => a.localeCompare(b, 'fr'))
+        .map(([name, tags]) => ({ title: `Espace « ${name} »`, tags }));
+      const sections = [...(own.length ? [{ title: 'Cet espace', tags: own }] : []), ...parents];
+      return { ...g, sections };
+    });
   }, [spaceTags, value, inputValue]);
+
+  const suggestions = useMemo(
+    () => columns.flatMap((c) => c.sections.flatMap((s) => s.tags)),
+    [columns]
+  );
 
   // Check if input matches exactly an existing tag name
   const exactMatch = useMemo(() => {
@@ -186,43 +209,60 @@ export function TagSelector({ spaceId, value, onChange, disabled }: TagSelectorP
       {isOpen && !disabled && totalOptions > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
+          className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg"
         >
-          {suggestions.map((tag, index) => (
-            <Fragment key={tag.id}>
-            {(index === 0 || tagScopeOf(suggestions[index - 1]) !== tagScopeOf(tag)) && (
-              <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {TAG_SCOPE_LABELS[tagScopeOf(tag)]}
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
+            {columns.map((col) => (
+              <div key={col.scope} className="min-w-0 py-1 max-h-[min(20rem,50vh)] overflow-y-auto">
+                <div className={`mx-2 mb-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${BADGE_CLASS[col.scope]}`}>
+                  {TAG_SCOPE_LABELS[col.scope]}
+                </div>
+                {col.tags.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground italic">Aucun tag</div>
+                )}
+                {col.sections.map((section) => (
+                  <Fragment key={section.title ?? col.scope}>
+                    {section.title && (
+                      <div className="px-3 pt-1.5 pb-0.5 text-[10px] text-muted-foreground truncate" title={section.title}>
+                        {section.title}
+                      </div>
+                    )}
+                    {section.tags.map((tag) => {
+                      const index = suggestions.indexOf(tag);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => handleSelect(tag)}
+                          className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-left transition-colors ${
+                            index === highlightIndex ? 'bg-accent' : 'hover:bg-accent'
+                          }`}
+                        >
+                          {tag.color && (
+                            <span
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                          )}
+                          <span className="truncate" title={tag.name}>{tag.name}</span>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {(tag as Tag & { itemCount?: number }).itemCount ?? 0}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </Fragment>
+                ))}
               </div>
-            )}
-            <button
-              type="button"
-              onClick={() => handleSelect(tag)}
-              className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm text-left transition-colors ${
-                index === highlightIndex ? 'bg-accent' : 'hover:bg-accent'
-              }`}
-            >
-              {tag.color && (
-                <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: tag.color }}
-                />
-              )}
-              <span className="truncate">{tag.name}</span>
-              <span className={`text-[10px] px-1 rounded whitespace-nowrap ${BADGE_CLASS[tagScopeOf(tag)]}`}>{tagScopeBadge(tag)}</span>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {(tag as Tag & { itemCount?: number }).itemCount ?? 0}
-              </span>
-            </button>
-            </Fragment>
-          ))}
+            ))}
+          </div>
 
           {canCreate && (
             <button
               type="button"
               onClick={handleCreate}
               disabled={createTagMutation.isPending}
-              className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm text-left text-primary transition-colors ${
+              className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-primary border-t border-border transition-colors ${
                 highlightIndex === suggestions.length ? 'bg-accent' : 'hover:bg-accent'
               }`}
             >

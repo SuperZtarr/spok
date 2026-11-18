@@ -10,6 +10,7 @@
    Lot 4 (panneau compact) : texte de l'élément dates, hints.datesSummary, annonce item-panel-compact (élément dates, sans date) ; fields lus en rappel au survol des libellés.
    Lot 3 (deux colonnes) : textes champs et historique, hints.actionCopyId / copyIdDone, annonce item-two-columns (élément champs, sans date).
    hints.moreFields / lessFields + annonce item-header-common (élément titre, sans date) : en-tête commun, lot 2 de la réorganisation.
+   Élément lien + hints.copyLink / copyLinkDone : identifiant et « Copier le lien » du pied (règle item-share-link) ; annonce item-share-link sans date.
    Élément actions + hints.action* : pied commun et menu « Actions » (itemSheetActions.ts) ; annonce item-actions-menu sans date.
    Élément references + fields.externalRefs : champ Références externes (ExternalRefsField) ; annonce item-external-refs sans date.
    Élément brouillon + hints.draftExplain / draftChangedSince / draftResume / draftDiscard : bandeau ItemDraftBanner (lib/itemDraft.ts) ; annonce item-draft-local sans date.
@@ -170,10 +171,11 @@ export const elements = {
   tags: {
     title: 'Tags',
     short: 'Les étiquettes de l\'élément.',
-    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés, groupés par portée : les tags globaux (communs à tout SPOK), ceux de la communauté, et ceux de l\'espace et de ses espaces parents (badge « cet espace » ou nom de l\'espace parent). Un tag créé en tapant appartient à l\'espace de l\'élément : il est proposé dans cet espace et tous ses sous-espaces, pas ailleurs.',
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés en trois colonnes, une par portée : Globaux (communs à tout SPOK), Communauté, et Espace — d\'abord « Cet espace », puis une section par espace parent. Cliquez un tag pour l\'ajouter, ou tapez pour filtrer les trois colonnes (flèches haut et bas, puis Entrée). Une colonne vide affiche « Aucun tag ». Un tag créé en tapant appartient à l\'espace de l\'élément : il est proposé dans cet espace et tous ses sous-espaces, pas ailleurs.',
     changes: [
       { id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' },
       { id: 'item-tags-space-scope', kind: 'evolution', text: 'Tags d\'espace de retour : un tag créé depuis la fiche appartient à l\'espace et à ses sous-espaces. Le sélecteur range les tags par portée : globaux, communauté, espace.', date: '2026-11-12' },
+      { id: 'item-tags-three-columns', kind: 'evolution', text: 'Tags proposés en trois colonnes (Globaux, Communauté, Espace), plus hautes : on voit et choisit plus de tags sans défiler. Les tags d\'un espace parent sont regroupés sous son nom.', date: '2026-11-18' },
     ],
     target: '[data-tour="item-tags"]',
     noZone: true,
@@ -200,6 +202,18 @@ export const elements = {
     target: '[data-tour="item-children"]',
     noZone: true,
     side: 'top',
+  },
+  lien: {
+    title: 'Identifiant et lien',
+    short: "L'identifiant de l'élément et son lien à partager.",
+    text: "En bas de la fiche, avant « Actions » : l'identifiant de l'élément (cliquez pour le sélectionner) et le bouton « Copier le lien », qui copie une adresse courte vers cet élément. En l'ouvrant, SPOK retrouve l'espace et la communauté de l'élément, même s'il a été déplacé depuis. Le lien ne donne aucun accès : seules les personnes qui peuvent lire l'espace verront l'élément. Affiché une fois l'élément enregistré.",
+    side: 'top',
+    changes: [{
+      id: 'item-share-link',
+      kind: 'evolution',
+      text: "L'identifiant de l'élément est de nouveau affiché en bas de la fiche, avec un bouton « Copier le lien » : une adresse courte qui ouvre l'élément dans son espace, même s'il a été déplacé.",
+      date: '2026-11-18',
+    }],
   },
   actions: {
     title: 'Actions',
@@ -243,6 +257,8 @@ export const help: HelpEntry = {
     lessFields: 'Moins de champs : revient à la fiche réduite (titre, tags, description, contenus, contributions). Rien n\'est modifié.',
     actionCopyId: 'Copier l\'identifiant : met l\'identifiant technique de l\'élément dans le presse-papier (utile pour le MCP ou un signalement). Rien n\'est modifié.',
     copyIdDone: 'Identifiant copié',
+    copyLink: 'Copier le lien : met dans le presse-papier une adresse courte vers cet élément. À l\'ouverture, SPOK retrouve son espace. Le lien ne donne aucun accès : il faut pouvoir lire l\'espace. Rien n\'est modifié.',
+    copyLinkDone: 'Lien copié',
     actionExportPdf: 'Exporter en PDF : télécharge la fiche en PDF (champs, description, enfants). Rien n\'est modifié dans SPOK.',
     actionBookmark: 'Épingler : ajoute l\'élément à vos épingles (ou l\'en retire). Personnel : les autres membres ne le voient pas.',
     actionMarkUnread: 'Marquer comme non lu : l\'élément redevient « non lu » pour vous seul, et la fiche se ferme.',

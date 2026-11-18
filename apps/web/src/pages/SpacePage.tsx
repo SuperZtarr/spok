@@ -420,10 +420,11 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     queryFn: () => tagsApi.list(spaceId!),
     enabled: !!spaceId,
   });
-  // Champ « Nouveau tag » de la vue Tags : tag de l'espace (POST /spaces/:id/tags), liste relue ensuite
+  // Champ « Nouveau tag » de la vue Tags : tag de l'espace (POST /spaces/:id/tags), listes relues ensuite —
+  // toutes (['tags']) : le tag est aussi proposé dans les sous-espaces, dont le cache resterait sinon périmé
   const handleCreateTag = async (name: string) => {
     await tagsApi.create(spaceId!, { name });
-    await queryClient.invalidateQueries({ queryKey: ['tags', spaceId] });
+    await queryClient.invalidateQueries({ queryKey: ['tags'] });
   };
 
   // --- Actions hook ---

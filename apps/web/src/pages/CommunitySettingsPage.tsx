@@ -1144,6 +1144,8 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
     mutationFn: (data: { name: string; color?: string }) => communitiesApi.createTag(communityId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+      // Tags proposés dans les espaces (['tags', spaceId]) : relus partout, sinon le nouveau tag n'y paraît qu'au rechargement
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
       setNewTagName('');
     },
   });
@@ -1153,6 +1155,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
       communitiesApi.updateTag(communityId, tagId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
       setEditingId(null);
     },
   });
@@ -1161,6 +1164,7 @@ function CommunityTagsSection({ communityId }: { communityId: string }) {
     mutationFn: (tagId: string) => communitiesApi.deleteTag(communityId, tagId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-tags', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 
