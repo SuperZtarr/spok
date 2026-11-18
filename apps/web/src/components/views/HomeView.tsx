@@ -3,6 +3,7 @@
    Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
    ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden).
    Statuts : par catégorie (ouverts, « à faire », fermés — isClosedStatus / statusIdsIn), jamais de valeur en dur.
+   « TODO assignés » (2026-11-18) : filtré sur assignedToId === compte connecté (myTasks inclut aussi mes créations).
    « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications.
    FirstTimeSetup (2026-10-16) : « Créer une communauté » ouvre directement la modale (/communities?new=community) ;
    « Créer un espace personnel » le crée (POST /spaces PERSONAL) et l'ouvre — l'écran n'apparaît que sans aucun
@@ -317,9 +318,11 @@ export function HomeView() {
     [allMyTasks]
   );
 
+  // « TODO assignés » : ouverts ET assignés au compte (myTasks ramène aussi ce que j'ai seulement créé ;
+  // une assignation en saisie libre, sans compte, ne compte pas — même règle que « Assignés à moi » du tableau de bord)
   const todoTasks = useMemo(() =>
-    allMyTasks.filter(t => isStatusIn(t.status, ['open'])),
-    [allMyTasks]
+    allMyTasks.filter(t => isStatusIn(t.status, ['open']) && !!user?.id && t.assignedToId === user.id),
+    [allMyTasks, user?.id]
   );
 
   const unreadNotifs = useMemo(() =>
