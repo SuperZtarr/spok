@@ -1,10 +1,13 @@
 /*
- * Section « Accès Claude (MCP) » de la modale profil (contenu de l'onglet « Accès Claude », sans séparateur propre) : création, liste et révocation des jetons personnels
+ * Section « Accès Claude (MCP) » de la modale profil (dans l'onglet Compte depuis 2026-11-18, sans séparateur propre) : création, liste et révocation des jetons personnels
  * permettant à un Claude externe d'accéder à SPOK via le serveur MCP distant (getMcpServerUrl). Le jeton en
  * clair n'est affiché qu'une fois, juste après création, avec la commande de connexion prête à copier.
  * Accès accordé par un admin : sans accord, la section propose « Demander l'accès » (puis « demande en attente »)
  * au lieu de la création de jetons. Les jetons déjà créés restent listés (révocables) même si l'accès est retiré.
  * Aucune prop : agit sur l'utilisateur connecté. Ne jamais stocker le jeton en clair (ni store, ni localStorage).
+ * Aide : textes dans la fiche « profile » (components/help/profile.help.ts) — usage et options en ligne (FieldHelp
+ * claudeIntro / claudeSteps / tokenOptions), rappels des actions (pageHint tokenRequest / tokenCreate / tokenCopy /
+ * tokenRevoke). Ne pas écrire ces textes ici.
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +16,9 @@ import { personalTokensApi, getMcpServerUrl, type PersonalToken } from '../lib/a
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { HelpHint } from '../help/HelpHint';
+import { FieldHelp } from '../help/FieldHelp';
+import { pageHint } from '../help/pageHint';
 
 type Expiry = '30' | '90' | '365' | 'never';
 
@@ -84,18 +90,19 @@ export function PersonalTokensSection() {
         <KeyRound className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium">Accès Claude (MCP)</span>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Un jeton permet à votre Claude de lire et d'écrire dans SPOK avec vos droits. Ne le partagez pas.
-      </p>
+      <FieldHelp page="profile" field="claudeIntro" className="text-xs text-muted-foreground" />
+      <FieldHelp page="profile" field="claudeSteps" className="text-xs text-muted-foreground" />
 
       {created && (
         <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
           <p className="text-xs font-medium">Copiez cette commande maintenant : le jeton ne sera plus affiché.</p>
           <code className="block text-xs break-all">{command}</code>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={copy}>
-              {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}Copier
-            </Button>
+            <HelpHint text={pageHint('profile', 'tokenCopy')} className="inline-flex">
+              <Button size="sm" variant="outline" onClick={copy}>
+                {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}Copier
+              </Button>
+            </HelpHint>
             <Button size="sm" variant="ghost" onClick={() => setCreated(null)}>J'ai copié</Button>
           </div>
         </div>
@@ -110,15 +117,18 @@ export function PersonalTokensSection() {
         ) : (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">L'accès Claude doit être accordé par l'administrateur.</p>
-            <Button size="sm" variant="outline" disabled={requestMut.isPending} onClick={() => requestMut.mutate()}>
-              Demander l'accès
-            </Button>
+            <HelpHint text={pageHint('profile', 'tokenRequest')} className="inline-flex">
+              <Button size="sm" variant="outline" disabled={requestMut.isPending} onClick={() => requestMut.mutate()}>
+                Demander l'accès
+              </Button>
+            </HelpHint>
             {requestMut.isError && <p className="text-xs text-destructive">{(requestMut.error as Error).message}</p>}
           </div>
         )
       )}
 
       {access?.granted && (
+      <div>
       <div className="flex flex-wrap gap-2 items-center">
         <Input
           value={name}
@@ -129,9 +139,13 @@ export function PersonalTokensSection() {
         />
         <Select className="w-auto" options={SCOPE_OPTIONS} value={scope} onChange={(e) => setScope(e.target.value as 'read' | 'write')} />
         <Select className="w-auto" options={EXPIRY_OPTIONS} value={expires} onChange={(e) => setExpires(e.target.value as Expiry)} />
-        <Button size="sm" disabled={!name.trim() || createMut.isPending} onClick={() => createMut.mutate()}>
-          Créer un jeton
-        </Button>
+        <HelpHint text={pageHint('profile', 'tokenCreate')} className="inline-flex">
+          <Button size="sm" disabled={!name.trim() || createMut.isPending} onClick={() => createMut.mutate()}>
+            Créer un jeton
+          </Button>
+        </HelpHint>
+      </div>
+      <FieldHelp page="profile" field="tokenOptions" />
       </div>
       )}
       {createMut.isError && <p className="text-xs text-destructive">{(createMut.error as Error).message}</p>}
@@ -149,9 +163,11 @@ export function PersonalTokensSection() {
                   {t.tokenPrefix}… · utilisé le {formatDate(t.lastUsedAt)} · expire {t.expiresAt ? `le ${formatDate(t.expiresAt)}` : 'jamais'}
                 </div>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => revokeMut.mutate(t.id)} aria-label={`Révoquer ${t.name}`} title="Révoquer">
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <HelpHint text={pageHint('profile', 'tokenRevoke')} className="inline-flex">
+                <Button size="icon" variant="ghost" onClick={() => revokeMut.mutate(t.id)} aria-label={`Révoquer ${t.name}`}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </HelpHint>
             </li>
           ))}
         </ul>

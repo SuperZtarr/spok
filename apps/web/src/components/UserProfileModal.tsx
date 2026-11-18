@@ -1,8 +1,10 @@
 /* Modale profil utilisateur : infos, avatar, préférence de thème, changement de mot de passe, jetons d'accès Claude (PersonalTokensSection, profil propre uniquement).
-   Profil propre (2026-11-11) : modale `large` à hauteur fixe ; en-tête (avatar, nom, rôle, Déconnexion) toujours visible,
-   puis onglets Compte / Préférences / Notifications / Accès Claude / Administration (admin seulement). Chaque ouverture
-   repart sur Compte. Le tour d'aide vise les boutons d'onglet (data-tour profile-tab-<id>) : ne pas viser un contenu
-   d'onglet non affiché.
+   Profil propre (2026-11-11, réorganisé 2026-11-18) : modale `large` à hauteur fixe ; en-tête (avatar, nom, rôle,
+   Déconnexion) toujours visible, puis onglets Compte (identité + Accès Claude) / Communautés / Préférences /
+   Notifications / Administration (admin seulement). Chaque ouverture repart sur Compte.
+   Aide : fiche components/help/profile.help.ts — une zone data-help-zone="profile:<clé>" par fonction, rappels des
+   actions à effet par pageHint('profile', …), textes à lire avant d'agir par FieldHelp. Le tour vise les fonctions de
+   Compte et, pour les autres onglets, leurs boutons (data-tour profile-tab-<id>) : ne pas viser un contenu caché.
    Mode admin (AdminUserProfileModal, ouvert depuis la liste des utilisateurs) : accès aux communautés et espaces par
    UserAccessManager — colonnes Sans accès → Membre → Propriétaire (2026-10-29), partagé avec UserDetailModal. */
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -22,6 +24,9 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { PersonalTokensSection } from './PersonalTokensSection';
 import { PageHelpButton } from '../help/PageHelpButton';
+import { HelpHint } from '../help/HelpHint';
+import { FieldHelp } from '../help/FieldHelp';
+import { pageHint } from '../help/pageHint';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -183,15 +188,16 @@ function AdminUserProfileModal({ isOpen, onClose, userId }: { isOpen: boolean; o
 // Mode self — profil de l'utilisateur courant
 // =============================================================================
 
-type ProfileTabId = 'account' | 'preferences' | 'notifications' | 'claude' | 'admin';
+type ProfileTabId = 'account' | 'communities' | 'preferences' | 'notifications' | 'admin';
 
 /** Onglets du profil, dans l'ordre d'affichage. `adminOnly` : visible seulement pour un administrateur
-    (les bascules admin/dev ne rendent rien pour les autres). Les ids servent au tour d'aide (data-tour profile-tab-<id>). */
+    (les bascules admin/dev ne rendent rien pour les autres). Les ids servent au tour d'aide (data-tour profile-tab-<id>).
+    L'Accès Claude n'a plus d'onglet : il est dans Compte (2026-11-18). */
 const PROFILE_TABS: { id: ProfileTabId; label: string; adminOnly?: boolean }[] = [
   { id: 'account', label: 'Compte' },
+  { id: 'communities', label: 'Communautés' },
   { id: 'preferences', label: 'Préférences' },
   { id: 'notifications', label: 'Notifications' },
-  { id: 'claude', label: 'Accès Claude' },
   { id: 'admin', label: 'Administration', adminOnly: true },
 ];
 
@@ -349,7 +355,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
       <div className="flex flex-col flex-1 min-h-0 gap-4">
         <div className="flex justify-end -mt-2"><PageHelpButton pageKey="profile" /></div>
         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg flex-shrink-0">
-          <div className="relative group">
+          <div className="relative group" data-help-zone="profile:avatar">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
               {avatarSrc ? (
                 <img src={avatarSrc} alt={user.name} className="w-full h-full object-cover" />
@@ -362,18 +368,20 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
                 </div>
               )}
             </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors shadow-sm"
-              title="Changer l'avatar"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
+            <HelpHint text={pageHint('profile', 'avatarChange')} className="absolute -bottom-1 -right-1">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors shadow-sm"
+                aria-label="Changer l'avatar"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+            </HelpHint>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleUpload} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" data-help-zone="profile:nom">
               <input
                 type="text"
                 value={nameValue}
@@ -390,14 +398,18 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             </div>
             <p className="text-sm text-muted-foreground">{ROLE_LABELS[user.globalRole] || user.globalRole}</p>
             {user.avatarUrl && (
-              <button onClick={handleDelete} disabled={uploading} className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1">
-                <Trash2 className="w-3 h-3" />Supprimer l'avatar
-              </button>
+              <HelpHint text={pageHint('profile', 'avatarDelete')} className="inline-flex mt-1">
+                <button onClick={handleDelete} disabled={uploading} className="text-xs text-destructive hover:underline flex items-center gap-1">
+                  <Trash2 className="w-3 h-3" />Supprimer l'avatar
+                </button>
+              </HelpHint>
             )}
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors flex-shrink-0">
-            <LogOut className="w-4 h-4" />Déconnexion
-          </button>
+          <HelpHint text={pageHint('profile', 'logout')} className="flex-shrink-0">
+            <button onClick={handleLogout} data-help-zone="profile:deconnexion" className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">
+              <LogOut className="w-4 h-4" />Déconnexion
+            </button>
+          </HelpHint>
         </div>
 
         {error && <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md flex-shrink-0">{error}</div>}
@@ -423,7 +435,8 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pr-1" role="tabpanel">
         {activeTab === 'account' && (<>
-        <div className="space-y-3" data-tour="profile-identity" data-help-zone="profile:identite">
+        <div className="space-y-3">
+          <div data-help-zone="profile:email">
           <div className="flex items-center gap-3 text-sm">
             <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -447,8 +460,10 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
               )}
             </div>
           </div>
+          <FieldHelp page="profile" field="email" className="text-xs text-muted-foreground mt-1 ml-7" />
+          </div>
 
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-3 text-sm" data-help-zone="profile:motdepasse">
             <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             {editingPassword ? (
               <div className="flex-1 space-y-2">
@@ -466,9 +481,11 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
                   className="w-full px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <div className="flex items-center gap-2">
-                  <button onClick={handleChangePassword} disabled={savingPassword || !currentPassword || newPassword.length < 8} className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1">
-                    {savingPassword ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}Valider
-                  </button>
+                  <HelpHint text={pageHint('profile', 'passwordSave')} className="inline-flex">
+                    <button onClick={handleChangePassword} disabled={savingPassword || !currentPassword || newPassword.length < 8} className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1">
+                      {savingPassword ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}Valider
+                    </button>
+                  </HelpHint>
                   <button onClick={() => { setEditingPassword(false); setCurrentPassword(''); setNewPassword(''); }} disabled={savingPassword} className="px-3 py-1 text-xs text-muted-foreground hover:bg-accent rounded-md">Annuler</button>
                   {passwordSuccess && <span className="text-xs text-green-600">Mot de passe modifié</span>}
                 </div>
@@ -478,6 +495,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             )}
           </div>
 
+          <div className="space-y-3" data-help-zone="profile:role">
           <div className="flex items-center gap-3 text-sm">
             <Shield className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Rôle :</span>
@@ -489,13 +507,19 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             <span className="text-muted-foreground">ID :</span>
             <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{user.id}</span>
           </div>
+          </div>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-3">
+        <div className="pt-4 border-t border-border" data-help-zone="profile:claude"><PersonalTokensSection /></div>
+        </>)}
+
+        {activeTab === 'communities' && (
+        <div data-help-zone="profile:communautes">
+          <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium">Communautés</span>
           </div>
+          <FieldHelp page="profile" field="communities" className="text-xs text-muted-foreground mt-1 mb-3" />
           {communities && communities.length > 0 ? (
             <div className="space-y-2">
               {communities.map((community) => (
@@ -509,10 +533,10 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             <p className="text-sm text-muted-foreground">Aucune communauté</p>
           )}
         </div>
-        </>)}
+        )}
 
         {activeTab === 'preferences' && (<>
-        <div>
+        <div data-help-zone="profile:theme">
           <span className="text-sm font-medium" data-tour="profile-theme">Thème</span>
           <div className="flex gap-2 mt-2">
             {themeOptions.map(({ value, label, icon: Icon }) => (
@@ -523,12 +547,13 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
           </div>
         </div>
 
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border" data-help-zone="profile:tutoriels">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium">Tutoriels</span>
             </div>
+            <HelpHint text={pageHint('profile', 'tutorialsReset')} className="inline-flex">
             <button
               data-tour="profile-tutorials"
               onClick={() => {
@@ -542,6 +567,7 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
             >
               Réinitialiser tous les tutoriels
             </button>
+            </HelpHint>
           </div>
         </div>
         </>)}
@@ -550,12 +576,8 @@ function SelfUserProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onCl
           <div data-help-zone="profile:notifications"><NotificationPreferencesSection /></div>
         )}
 
-        {activeTab === 'claude' && (
-          <div data-help-zone="profile:claude"><PersonalTokensSection /></div>
-        )}
-
         {activeTab === 'admin' && isAdmin && (
-          <div className="space-y-2">
+          <div className="space-y-2" data-help-zone="profile:administration">
             <AdminModeToggle />
             <DevModeToggle />
             <DevDbStatus />
