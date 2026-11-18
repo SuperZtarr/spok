@@ -181,7 +181,7 @@ export const TYPE_FILTER_OPTIONS: { id: ItemType; label: string; color: string }
 export function getStatusHex(statusId: string | null | undefined, statuses: StatusConfig[] = DEFAULT_STATUSES): string {
   const id = !statusId || statusId === 'none' ? 'undefined' : statusId;
   const color = (statuses.find((s) => s.id === id) ?? DEFAULT_STATUSES.find((s) => s.id === id))?.color ?? '';
-  const hue = /bg-([a-z]+)-\d+/.exec(color)?.[1] as TypeHue | undefined;
+  const hue = /\bbg-([a-z]+)-\d+/.exec(color)?.[1] as TypeHue | undefined;
   return (hue && TYPE_HUE_PALETTE[hue]?.hex) || TYPE_HUE_PALETTE.gray.hex;
 }
 
