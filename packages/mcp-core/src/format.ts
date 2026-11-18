@@ -1,7 +1,15 @@
 /*
  * Mise en forme texte des réponses d'outils MCP (lignes d'items, extraction de texte depuis HTML ou
  * Tiptap JSON). Purement présentationnel — aucune règle métier ici.
+ * Tags (2026-11-18) : formatTags donne « nom [id], … » — affiché par get_item et dans chaque ligne d'item, car
+ * update_item REMPLACE la liste des tags et le modèle doit voir ceux à reprendre.
  */
+/** Tags d'un item (objets { id, name } renvoyés par l'API) en « nom [id], … » ; '' s'il n'en a pas. */
+export function formatTags(tags: any[] | undefined): string {
+  return (tags ?? []).map((t) => `${t.name} [${t.id}]`).join(', ')
+}
+
+
 export function extractText(description: any): string {
   if (!description) return ''
   if (typeof description === 'string') {
@@ -40,6 +48,8 @@ export function formatItemLine(item: any, opts: { excerpt?: number; withSpace?: 
   if (item.endDate) parts.push(`fin: ${item.endDate.slice(0, 10)}`)
   if (item.dueDate) parts.push(`échéance: ${item.dueDate.slice(0, 10)}`)
   if (item.contents?.length) parts.push(`contenus: ${item.contents.length}`)
+  const tags = formatTags(item.tags)
+  if (tags) parts.push(`tags: ${tags}`)
   if (opts.withParent && item.parentId) parts.push(`parent: ${item.parentId}`)
   const max = opts.excerpt ?? 120
   const text = extractText(item.content ?? item.description)

@@ -46,4 +46,5 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 7. Si un outil renvoie une erreur de convention, corrige la valeur avec la liste fournie et réessaie.
 8. Ne supprime rien sans confirmation explicite de l'utilisateur.
 9. Tags : utilise uniquement les tags existants de l'espace (get_space_conventions ou list_tags) ; n'en invente pas.
-   Dans update_item, tags remplace la liste complète : reprends les tags existants de l'item à conserver.`
+   Dans update_item, tags remplace la liste complète : reprends les tags existants de l'item à conserver
+   (get_item les affiche sur sa ligne « Tags »).`

@@ -3,6 +3,7 @@
  * conventions avant écriture (statut, type, dates, parent), conversion Markdown, erreurs renvoyées
  * en isError au lieu de faire planter le serveur. Contenus (lot 5) : add/update/delete_item_content.
  * Références externes (2026-11-13) : externalRefs de create_item / update_item, ligne de get_item.
+ * Tags lus et relations (2026-11-18) : ligne « Tags » de get_item, tags des lignes d'items, list_relations via le détail.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -165,6 +166,51 @@ describe('références externes (item-external-refs)', () => {
     expect(text(r1)).toContain('Références externes : Jira : PROJ-12 | Sf : 0000575747')
     const r0 = await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'r0' } })
     expect(text(r0)).not.toContain('Références externes')
+  })
+})
+
+describe('tags lus et relations (2026-11-18)', () => {
+  function clientWith(routes: Record<string, any>) {
+    const client = fakeClient()
+    const baseGet = client.get.getMockImplementation()!
+    client.get.mockImplementation(async (path: string) => (path in routes ? routes[path] : baseGet(path)))
+    return client
+  }
+
+  it('get_item : ligne « Tags » avec nom et id, « aucun » sinon', async () => {
+    const client = clientWith({
+      '/spaces/s1/items/g1': { id: 'g1', type: 'TASK', title: 'G', tags: [{ id: 't1', name: 'Urgent' }, { id: 't2', name: 'UX' }] },
+      '/spaces/s1/items/g0': { id: 'g0', type: 'TASK', title: 'G0', tags: [] },
+    })
+    const { mcp } = await connect('public-read', client)
+    expect(text(await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'g1' } }))).toContain('Tags : Urgent [t1], UX [t2]')
+    expect(text(await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'g0' } }))).toContain('Tags : aucun')
+  })
+
+  it('list_items : tags sur la ligne de l\'item', async () => {
+    const client = clientWith({
+      '/spaces/s1/items?pageSize=100&page=1': { data: [{ id: 'a', type: 'TASK', title: 'A', tags: [{ id: 't1', name: 'Urgent' }] }, { id: 'b', type: 'TASK', title: 'B', tags: [] }] },
+    })
+    const { mcp } = await connect('public-read', client)
+    const out = text(await mcp.callTool({ name: 'list_items', arguments: { spaceId: 's1' } }))
+    expect(out).toContain('[a] [TASK] A | tags: Urgent [t1]')
+    expect(out).not.toMatch(/\[b\].*tags:/)
+  })
+
+  it('list_relations : lit le détail de l\'item, relations sortantes et entrantes avec leur id', async () => {
+    const client = clientWith({
+      '/spaces/s1/items/x': {
+        id: 'x', type: 'TASK', title: 'X',
+        relationsFrom: [{ id: 'r1', type: 'blocks', label: 'motif', toItemId: 'y', toItem: { id: 'y', title: 'Y' } }],
+        relationsTo: [{ id: 'r2', type: 'relates', label: null, fromItemId: 'z', fromItem: { id: 'z', title: 'Z' } }],
+      },
+      '/spaces/s1/items/seul': { id: 'seul', type: 'TASK', title: 'S', relationsFrom: [], relationsTo: [] },
+    })
+    const { mcp } = await connect('public-read', client)
+    const out = text(await mcp.callTool({ name: 'list_relations', arguments: { spaceId: 's1', itemId: 'x' } }))
+    expect(out).toBe('[r1] blocks (motif) → [y] Y\n[r2] relates ← [z] Z')
+    expect(client.get).not.toHaveBeenCalledWith('/spaces/s1/items/x/relations')
+    expect(text(await mcp.callTool({ name: 'list_relations', arguments: { spaceId: 's1', itemId: 'seul' } }))).toBe('Aucune relation.')
   })
 })
 

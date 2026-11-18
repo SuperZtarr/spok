@@ -15,6 +15,11 @@
  * Références externes (règle item-external-refs, 2026-11-13) : externalRefs de create_item / update_item = liste de
  * chaînes « Outil : référence » transmise telle quelle à l'API (qui normalise, dédoublonne et plafonne : 400 → isError) ;
  * elle REMPLACE toute la liste ([] = aucune). get_item affiche la ligne « Références externes : … | … ».
+ * Tags lus (2026-11-18) : get_item affiche toujours « Tags : nom [id], … » (ou « aucun »), et les lignes d'items
+ * (list_items, get_space, search_items) portent « tags: … » — sans cela update_item (qui remplace la liste) écrasait
+ * des tags invisibles.
+ * Relations (2026-11-18) : il n'existe pas de GET …/items/:id/relations (404) ; list_relations lit relationsFrom /
+ * relationsTo de GET …/items/:id, dans les deux sens, avec l'id de chaque relation (update_relation / delete_relation).
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z, type ZodRawShape } from 'zod'
@@ -23,7 +28,7 @@ import { ConventionError, SpokApiError } from './errors.js'
 import { fetchConventions, resolveStatus, resolveTags, assertTypeAllowed, assertDateOrder, type SpaceConventions } from './conventions.js'
 import { normalizeDate } from './dates.js'
 import { markdownToHtml } from './markdown.js'
-import { extractText, formatContents, formatItemLine } from './format.js'
+import { extractText, formatContents, formatItemLine, formatTags } from './format.js'
 
 export type ToolProfile = 'admin' | 'public' | 'public-read'
 type Level = 'read' | 'write' | 'admin'
@@ -230,6 +235,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
         item.dueDate ? `Échéance : ${item.dueDate.slice(0, 10)}` : null,
         item.parentId ? `Parent : ${item.parentId}` : null,
         item.spaceId ? `Espace : ${item.spaceId}` : null,
+        `Tags : ${formatTags(item.tags) || 'aucun'}`,
         item.externalRefs?.length ? `Références externes : ${item.externalRefs.join(' | ')}` : null,
       ].filter(Boolean)
       const text = extractText(item.content ?? item.description)
@@ -265,12 +271,17 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       return ok(lines.join('\n'))
     })
 
-  define('read', 'list_relations', 'Liste les relations d\'un item.',
+  define('read', 'list_relations', 'Liste les relations d\'un item, sortantes (→ cible) et entrantes (← source), avec l\'id de chaque relation.',
     { spaceId: zId(), itemId: zId() },
     async ({ spaceId, itemId }) => {
-      const relations = asList(await client.get(`/spaces/${spaceId}/items/${itemId}/relations`), 'data')
-      const lines = relations.map((r: any) =>
-        `[${r.id}] ${r.type}${r.label ? ` (${r.label})` : ''} → [${r.toItemId ?? r.toItem?.id}] ${r.toItem?.title ?? ''}`)
+      // Pas de route GET …/relations : les relations viennent du détail de l'item (relationsFrom / relationsTo).
+      const item = await client.get(`/spaces/${spaceId}/items/${itemId}`)
+      const line = (r: any, arrow: string, other: any, otherId: string) =>
+        `[${r.id}] ${r.type}${r.label ? ` (${r.label})` : ''} ${arrow} [${other?.id ?? otherId}] ${other?.title ?? ''}`.trimEnd()
+      const lines = [
+        ...asList(item.relationsFrom).map((r: any) => line(r, '→', r.toItem, r.toItemId)),
+        ...asList(item.relationsTo).map((r: any) => line(r, '←', r.fromItem, r.fromItemId)),
+      ]
       return ok(lines.length > 0 ? lines.join('\n') : 'Aucune relation.')
     })
 

@@ -14,12 +14,28 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-18 — Profil : onglet Communautés, Accès Claude dans Compte, aide par fonction ; inscrit PRÊT POUR MEP,
+  NON COMMITÉ. Lot à part possible : 4 listes locales du profil (rôles, rôles de communauté, types et canaux de
+  notification) à brancher sur des registres shared.
+- 2026-11-18 — Recherche : « voir la suite » d'une catégorie (bouton, 10 sur N, retour aux catégories) inscrit PRÊT
+  POUR MEP, NON COMMITÉ. Lot à part proposé : registre shared des catégories de recherche (3 copies : SearchPage,
+  routes/search.ts, ITEM_FILTER_SECTIONS).
+
+- 2026-11-18 — Fiche : correctif « élément d'article transformé en article » inscrit PRÊT POUR MEP, NON COMMITÉ.
+- 2026-11-18 — Article : mise en page des éléments illustrés (galerie, image à côté) inscrite PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-18 — Tags : sélecteur de la fiche en 3 colonnes par portée (sections par espace parent), aide + spec à jour.
+  Inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-18 — MCP : lot « tags lus et list_relations » inscrit PRÊT POUR MEP, NON COMMITÉ. Hors lot : GET item
+  renvoie les relations vers des espaces illisibles (titres), contrairement à /links — à traiter si Thomas le veut.
+
 - 2026-11-15 — MindMap : dépôt sous un élément d'un autre espace (branche déplacée puis rattachée, confirmation si
   relations coupées). Inscrit PRÊT POUR MEP, NON COMMITÉ.
 
-- 2026-11-13 — Menu des vues (session menu des vues) : lots A, B, C poussés ; « Vue gardée » et « Référentiels centralisés »
-  inscrits PRÊT POUR MEP, NON COMMITÉS. ViewSelectorBar (code mort) supprimé. Reste connu : bandeau global (Sunburst, Carte
-  mentale, Graphe global, Liens) à renommer — à décider avec Thomas.
+- 2026-11-13 — Menu des vues (session menu des vues) : tous les lots poussés (A, B, C, vue gardée, référentiels centralisés,
+  favoris réglés par Thomas, ViewSelectorBar supprimé). Reste ouvert : bandeau global (Sunburst, Carte mentale, Graphe global,
+  Liens) à renommer — à décider avec Thomas ; specs SPOK en to_validate à valider par Thomas.
 
 - 2026-11-13 — Fiche élément : réorganisation en 4 lots (spec `cmwec7lnh00038jdrd6tjgug8`). Les 4 lots (pied, en-tête, deux colonnes, panneau compact) inscrits PRÊT POUR MEP, NON COMMITÉS.
 
@@ -44,6 +60,9 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-18
+- 9 lots en 8 commits (« Recherche - voir la suite » avec le registre des catégories, fichiers communs). 5 annonces datées. Typecheck OK, TNR 2901/2901, en-têtes OK
 
 ### MEP — 2026-11-15 (2)
 - 1 lot poussé : carte mentale, dépôt sur le nœud de son propre sous-espace + fiche relue par l'espace parent. Typecheck OK, TNR 2854/2854, en-têtes OK
