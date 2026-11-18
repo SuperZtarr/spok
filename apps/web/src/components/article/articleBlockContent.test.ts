@@ -1,7 +1,7 @@
 /* Tests de la ligne d'infos, de l'icône du site et de la disposition selon les contenus des blocs d'article (articleBlockContent.ts). */
 import { describe, it, expect } from 'vitest';
 import type { ArticleBlockView } from '@spok/shared';
-import { blockContents, blockLayout, blockMetaLine, siteIconUrl } from './articleBlockContent';
+import { blockContents, blockLayout, blockMetaLine, imageArrangement, isShortCaption, siteIconUrl } from './articleBlockContent';
 import { formatDate, formatDateTime } from '../../lib/utils';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
@@ -75,5 +75,35 @@ describe('blockLayout (contenus multiples, lot 3a)', () => {
     expect(blockLayout(item({ contents: [] }))).toBe('section');
     expect(blockLayout(item({ contents: [c('DIAGRAM', null), c('LINK', 'javascript:x')] }))).toBe('section');
     expect(blockContents(item({ contents: [c('DIAGRAM', null), c('FILE')] }))).toHaveLength(1);
+  });
+  it('images avec un vrai texte → section (le texte garde sa mise en page) ; légende courte → figure', () => {
+    const imgs = [c('IMAGE'), c('IMAGE', 'https://r2/y')];
+    expect(blockLayout(item({ contents: imgs, description: '<p>Amulette de lune</p>' }))).toBe('figure');
+    expect(blockLayout(item({ contents: imgs, description: '<p>Un</p><p>Deux</p>' }))).toBe('section');
+    expect(blockLayout(item({ contents: imgs, description: `<p>${'x'.repeat(201)}</p>` }))).toBe('section');
+  });
+});
+
+describe('isShortCaption', () => {
+  it('vide ou un paragraphe court', () => {
+    expect(isShortCaption(null)).toBe(true);
+    expect(isShortCaption('<p></p>')).toBe(true);
+    expect(isShortCaption('<p>Une <strong>légende</strong></p>')).toBe(true);
+  });
+  it('plusieurs paragraphes, liste, saut de ligne ou texte long → non', () => {
+    expect(isShortCaption('<p>a</p><p>b</p>')).toBe(false);
+    expect(isShortCaption('<ul><li>a</li></ul>')).toBe(false);
+    expect(isShortCaption('<p>a<br>b</p>')).toBe(false);
+    expect(isShortCaption('x'.repeat(201))).toBe(false);
+  });
+});
+
+describe('imageArrangement', () => {
+  it('selon le nombre d\'images et la présence d\'un texte', () => {
+    expect(imageArrangement(0, true)).toBe('none');
+    expect(imageArrangement(1, true)).toBe('beside');
+    expect(imageArrangement(1, false)).toBe('single');
+    expect(imageArrangement(2, true)).toBe('gallery');
+    expect(imageArrangement(5, false)).toBe('gallery');
   });
 });

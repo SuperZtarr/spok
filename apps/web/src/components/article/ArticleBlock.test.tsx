@@ -1,6 +1,6 @@
 /* TNR du rendu des blocs d'article selon les contenus de l'élément (ArticleBlock, lot 3a 2026-11-08) : intertitre,
  * figure + légende, ligne d'infos, cartes de liens et icône du site, fichiers joints, contenus mêlés dans l'ordre fixe,
- * bloc indisponible. */
+ * bloc indisponible ; images selon leur nombre (à côté du texte, galerie, agrandissement — 2026-11-18). */
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -52,7 +52,7 @@ describe('ArticleBlock', () => {
     expect(screen.getByRole('heading', { name: 'Plan' })).toBeTruthy();
   });
 
-  it('contenus mêlés : intertitre, texte, puis Images, Fichiers, Liens', () => {
+  it('contenus mêlés : intertitre, image seule à côté du texte (posée avant lui), puis Fichiers, Liens', () => {
     const { container } = show(block(item({ type: 'TASK', title: 'Chantier', description: '<p>Le texte</p>', contents: [
       content('IMAGE', 'https://r2/photo.webp'),
       content('FILE', 'https://r2/docs/1729000000000-devis.pdf'),
@@ -60,10 +60,25 @@ describe('ArticleBlock', () => {
     ] })));
     expect(screen.getByRole('heading', { name: 'Chantier' })).toBeTruthy();
     const html = container.innerHTML;
-    expect(html.indexOf('Le texte')).toBeLessThan(html.indexOf('photo.webp'));
-    expect(html.indexOf('photo.webp')).toBeLessThan(html.indexOf('devis.pdf'));
+    expect(html.indexOf('photo.webp')).toBeLessThan(html.indexOf('Le texte'));
+    expect(container.querySelector('img[src="https://r2/photo.webp"]')!.closest('.sm\\:float-right')).toBeTruthy();
+    expect(html.indexOf('Le texte')).toBeLessThan(html.indexOf('devis.pdf'));
     expect(html.indexOf('devis.pdf')).toBeLessThan(html.indexOf('Fournisseur'));
     expect(container.querySelector('figure')).toBeNull();
+  });
+
+  it('images avec un vrai texte : section, texte mis en page, galerie dessous ; clic = image en grand', () => {
+    const { container } = show(block(item({ title: 'Sort', description: '<p>Premier</p><p>Second</p>', contents: [
+      content('IMAGE', 'https://r2/a.webp'), content('IMAGE', 'https://r2/b.webp'),
+    ] })));
+    expect(container.querySelector('figure')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sort' })).toBeTruthy();
+    expect(container.querySelectorAll('p')).toHaveLength(2);
+    const html = container.innerHTML;
+    expect(html.indexOf('Second')).toBeLessThan(html.indexOf('a.webp'));
+    expect(container.querySelector('.grid')!.querySelectorAll('img')).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: /Agrandir/ })[0]);
+    expect(container.querySelectorAll('img[src="https://r2/a.webp"]')).toHaveLength(2);
   });
 
   it('tâche : ligne d’infos', () => {

@@ -62,8 +62,8 @@ export function groupContents(contents: ItemContent[] | undefined): Array<[ItemC
 
 const displayName = (c: ItemContent) => c.name?.trim() || (c.kind === 'LINK' ? c.url : null) || KIND_LABELS[c.kind];
 
-/** Image en plein écran (clic pour fermer) */
-function Lightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
+/** Image en plein écran (clic pour fermer) — aussi utilisée par les blocs d'article (ArticleBlock) */
+export function Lightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 cursor-pointer" onClick={onClose}>
       <img src={url} alt={alt} className="max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl" />

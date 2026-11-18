@@ -9,9 +9,13 @@
  *   passer par /url-meta ; l'image peut ne pas exister : ArticleBlock affiche alors l'icône de repli.
  * - blockContents(item) : contenus affichables de l'élément (adresse sûre ; schéma sans aperçu écarté), dans l'ordre
  *   reçu de l'API (Images, Fichiers, Liens, Schémas). Contenus multiples, lot 3a (2026-11-08).
- * - blockLayout(item) : 'figure' si l'élément ne porte que des images / schémas (image + légende, peut flotter),
- *   'links' s'il ne porte que des liens (cartes, texte dessous), sinon 'section' (intertitre, infos, texte, contenus).
+ * - blockLayout(item) : 'figure' si l'élément ne porte que des images / schémas ET que son texte tient en légende
+ *   (isShortCaption : vide, ou un seul paragraphe court) — images + légende, peut flotter ; 'links' s'il ne porte que
+ *   des liens (cartes, texte dessous), sinon 'section' (intertitre, infos, texte mis en page, contenus). Un élément
+ *   d'images avec un vrai texte est donc une section : son texte n'est jamais écrasé en légende (2026-11-18).
  *   Le rendu suit les contenus, plus le type (règle article-block-display-by-contents).
+ * - imageArrangement(count, besideText) : disposition des images d'un bloc selon leur nombre (2026-11-18) — 'none',
+ *   'single' (une image seule, hauteur limitée), 'beside' (une image à côté du texte), 'gallery' (2 et plus, en grille).
  * Utilisé par ArticleBlock (lecture, Composer, impression) et ArticleEditor (habillage proposé si 'figure').
  */
 import type { ArticleBlockContent, ArticleBlockView } from '@spok/shared';
@@ -75,12 +79,36 @@ export function blockContents(item: Pick<BlockItem, 'contents'>): ArticleBlockCo
 
 export type BlockLayout = 'figure' | 'links' | 'section';
 
-export function blockLayout(item: Pick<BlockItem, 'contents'>): BlockLayout {
+/** Longueur maximale (texte visible) d'une légende */
+export const CAPTION_MAX = 200;
+
+/** Texte qui tient en légende : vide, ou un seul paragraphe (pas de liste, titre, tableau ni saut de ligne) court. */
+export function isShortCaption(description: string | null | undefined): boolean {
+  if (!description) return true;
+  const text = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;|&#\d+;/gi, 'x').trim();
+  if (text === '') return true;
+  if (text.length > CAPTION_MAX) return false;
+  if (/<(ul|ol|li|h[1-6]|table|blockquote|pre|br)\b/i.test(description)) return false;
+  return (description.match(/<p\b/gi) ?? []).length <= 1;
+}
+
+export const isPicture = (c: Pick<ArticleBlockContent, 'kind'>) => c.kind === 'IMAGE' || c.kind === 'DIAGRAM';
+
+export function blockLayout(item: Pick<BlockItem, 'contents' | 'description'>): BlockLayout {
   const shown = blockContents(item);
   if (shown.length === 0) return 'section';
-  if (shown.every((c) => c.kind === 'IMAGE' || c.kind === 'DIAGRAM')) return 'figure';
+  if (shown.every(isPicture)) return isShortCaption(item.description) ? 'figure' : 'section';
   if (shown.every((c) => c.kind === 'LINK')) return 'links';
   return 'section';
+}
+
+export type ImageArrangement = 'none' | 'single' | 'beside' | 'gallery';
+
+/** Disposition des images d'un bloc : besideText = un texte les accompagne et la place permet de le mettre à côté. */
+export function imageArrangement(count: number, besideText: boolean): ImageArrangement {
+  if (count <= 0) return 'none';
+  if (count >= 2) return 'gallery';
+  return besideText ? 'beside' : 'single';
 }
 
 export function siteIconUrl(url: string | null): string | null {

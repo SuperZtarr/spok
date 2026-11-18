@@ -1,7 +1,7 @@
 /*
  * Mise en page « flux de blocs » d'un article (spec Article 2026-10-23) — fonctions pures, testées.
  * blockClasses : largeur full (100 %) / wide (85 %) / medium (60 %), centrée ; align left/right seulement pour
- * un bloc « figure » (élément qui ne porte que des images / schémas, blockLayout — lot 3a 2026-11-08) : flottant (45 % max) que le texte suivant habille. Sous 640 px (sm) : toujours pleine largeur,
+ * un bloc « figure » (élément qui ne porte que des images / schémas avec un texte court, blockLayout — lot 3a 2026-11-08) : flottant (45 % max) que le texte suivant habille. Sous 640 px (sm) : toujours pleine largeur,
  * sans flottant (lecture mobile). Le conteneur de l'article doit fermer les flottants (classe flow-root).
  * moveBlock : nouvel ordre des blocs après glisser-déposer (mode Composer).
  * groupRows : colonnes — blocs « à côté du précédent » regroupés en rangées de 3 au plus (empilées sous 640 px).

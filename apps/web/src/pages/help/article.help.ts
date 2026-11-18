@@ -3,7 +3,8 @@
    pageHint) détaillent les actions du mode Composer ; écrits d'après apps/api/src/routes/item-article.ts : à revoir si la route change.
    La clé `compose` de l'élément est lue par pageHint : ne pas la renommer. Registre help/pageHelp.ts.
    Contenus multiples (lot 3a, 2026-11-08) : un bloc se rend selon les contenus de l'élément (texte de `bloc`, rappel
-   `align`) ; annonce article-block-contents (sans date, datée à la MEP). */
+   `align`) ; annonce article-block-contents. Images selon leur nombre (2026-11-18) : annonce article-block-images
+   (sans date, datée à la MEP). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -18,10 +19,13 @@ const elements: HelpElements = {
   bloc: {
     title: 'Un bloc',
     short: 'Un élément existant affiché dans l\'article.',
-    text: 'Un élément existant affiché dans l\'article : le corriger le corrige partout où il apparaît. Le texte d\'une note se modifie directement ici ; les autres blocs s\'ouvrent dans leur fiche. Chaque bloc montre ce que porte l\'élément : son titre et son texte, puis ses contenus dans l\'ordre images, fichiers, liens, schémas ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Un élément qui ne porte que des images s\'affiche en grand avec sa légende ; un élément qui ne porte que des liens, en cartes avec l\'icône du site. Tags, assignation et contributions n\'y figurent pas. Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
+    text: 'Un élément existant affiché dans l\'article : le corriger le corrige partout où il apparaît. Le texte d\'une note se modifie directement ici ; les autres blocs s\'ouvrent dans leur fiche. Chaque bloc montre ce que porte l\'élément : son titre et son texte, puis ses contenus dans l\'ordre images, fichiers, liens, schémas ; la date d\'une réunion ; statut, échéance et priorité d\'une tâche ; les dates d\'un projet. Le texte garde toujours sa mise en page. Une image seule se place à côté du texte (au-dessus sur mobile), plusieurs images forment une galerie sous le texte ; un clic agrandit une image. Un élément qui ne porte que des images avec un texte court s\'affiche comme une illustration légendée ; un élément qui ne porte que des liens, en cartes avec l\'icône du site. Tags, assignation et contributions n\'y figurent pas. Les lecteurs voient le contenu des blocs, sans accès aux éléments d\'origine. S\'il est barré « contenu indisponible », la personne qui l\'a ajouté n\'y a plus accès.',
     target: '[data-tour="article-block"]',
     side: 'top',
-    changes: [{ id: 'article-block-contents', kind: 'evolution', text: 'Un bloc d\'article montre tous les contenus de l\'élément (images, fichiers, liens, schémas), quel que soit son type.', date: '2026-11-11' }],
+    changes: [
+      { id: 'article-block-contents', kind: 'evolution', text: 'Un bloc d\'article montre tous les contenus de l\'élément (images, fichiers, liens, schémas), quel que soit son type.', date: '2026-11-11' },
+      { id: 'article-block-images', kind: 'evolution', text: 'Dans un article, le texte d\'un élément illustré garde sa mise en page : une image se place à côté, plusieurs forment une galerie, et un clic agrandit l\'image.', date: '2026-11-18' },
+    ],
   },
   compose: {
     title: 'Composer',
@@ -50,7 +54,7 @@ export const help: HelpEntry = {
     remove: 'Retire ce bloc de l\'article. L\'élément d\'origine n\'est pas supprimé.',
     beside: 'À côté : place ce bloc à droite du bloc précédent. Des blocs « à côté » qui se suivent forment une rangée de colonnes de même largeur (3 au plus) ; sur mobile, ils s\'empilent. Le glisser-déposer change qui est à côté de qui.',
     width: 'Largeur du bloc : pleine, large ou moyenne (sur mobile, tout est en pleine largeur).',
-    align: 'Position du bloc d\'images (élément qui ne porte que des images ou des schémas) : centrée, ou à gauche / à droite avec le texte suivant autour.',
+    align: 'Position du bloc d\'images (élément qui ne porte que des images ou des schémas, avec un texte court) : centrée, ou à gauche / à droite avec le texte suivant autour.',
     lessVisible: 'Cet élément est moins visible que l\'article (espace privé ou autre communauté) : tous les lecteurs de l\'article verront son contenu. Ils n\'auront pas accès à l\'élément lui-même.',
     duplicate: 'Cet élément figure déjà dans l\'article.',
     pickerEmpty: 'Aucun élément trouvé. Seuls les éléments que vous pouvez lire sont proposés, hors articles.',

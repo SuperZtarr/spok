@@ -430,7 +430,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'article-block-display-by-contents',
     page: 'Article',
     trigger: 'Affichage d\'un bloc (lecture, Composer, impression)',
-    effect: "Rendu selon les contenus de l'élément, plus selon son type (contenus multiples, lot 3a, 2026-11-08). Contenu d'abord, champs vides omis, jamais de bloc vide (au moins le titre). Élément qui ne porte que des images ou des schémas avec aperçu : images + légende titre et description (seul cas où la position gauche / droite s'applique) ; que des liens : une carte par lien, icône du site (repli générique) + titre + adresse, description dessous ; sinon intertitre + ligne d'infos du type (Réunion : date et heures ; Tâche / Bug : statut · échéance · priorité ; Projet : dates · statut ; Période : dates) + texte, puis les contenus regroupés dans l'ordre Images, Fichiers (📎 nom), Liens (cartes), Schémas (aperçu). Schéma sans aperçu et adresse non sûre omis. Jamais tags, assigné, contributions, relations ni enfants. Libellé de statut résolu par l'API dans les référentiels de l'espace d'origine",
+    effect: "Rendu selon les contenus de l'élément, plus selon son type (contenus multiples, lot 3a, 2026-11-08). Contenu d'abord, champs vides omis, jamais de bloc vide (au moins le titre). Élément qui ne porte que des images ou des schémas avec aperçu ET un texte court (vide, ou un seul paragraphe de 200 caractères au plus) : images + légende titre et texte mis en forme (seul cas où la position gauche / droite s'applique) ; que des liens : une carte par lien, icône du site (repli générique) + titre + adresse, description dessous ; sinon (dont images avec un vrai texte) intertitre + ligne d'infos du type (Réunion : date et heures ; Tâche / Bug : statut · échéance · priorité ; Projet : dates · statut ; Période : dates) + texte toujours mis en page, puis Fichiers (📎 nom), Liens (cartes). Images (2026-11-18) : une seule à côté du texte (40 %, à droite ; au-dessus sur mobile ou dans une colonne), deux et plus en galerie sous le texte (2 ou 3 par rangée), hauteur toujours limitée sans être coupées, clic = image en grand. Schéma sans aperçu et adresse non sûre omis. Jamais tags, assigné, contributions, relations ni enfants. Libellé de statut résolu par l'API dans les référentiels de l'espace d'origine",
     location: 'apps/web/src/components/article/ArticleBlock.tsx, articleBlockContent.ts, apps/api/src/routes/item-article.ts (resolveBlocks)',
   },
   {
@@ -655,7 +655,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     page: 'Recherche, section Utilisateurs',
     trigger: 'Recherche avec la catégorie Utilisateurs (GET /search/advanced)',
     effect: "Visiteur non connecté : aucun utilisateur, catégorie masquée. Connecté, admin hors mode admin compris : recherche sur le nom seul, comptes actifs, membres de la portée s'il peut la lire, sinon lui-même et les personnes avec qui il partage un espace ou une communauté ; réponse limitée à l'identifiant, au nom et à l'avatar. Admin en mode admin : tous les comptes, recherche sur le nom et l'e-mail, réponse complète (décision Thomas 2026-11-06)",
-    location: 'apps/api/src/routes/search.ts (section Users), apps/web/src/pages/SearchPage.tsx',
+    location: 'packages/shared/src/constants/searchCategories.ts (signedInOnly), apps/api/src/routes/search.ts (section Users), apps/web/src/pages/SearchPage.tsx',
   },
   {
     id: 'members-email-scope',
@@ -677,6 +677,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "Déplier « Historique » en bas de la fiche",
     effect: "Toute personne connectée qui peut lire l'élément (propriétaire, membre, lecteur ; pas le visiteur anonyme) voit ses changements, du plus récent au plus ancien, 30 à la fois : création, titre, type, statut, priorité, dates (début, fin, échéance), parent, assigné, tags ajoutés ou retirés, description modifiée (sans le texte), contenus ajoutés, renommés, retirés ou réordonnés, relations ajoutées ou retirées, déplacement d'espace ; auteur, date, mention « via MCP ». Lecture seule. Le titre d'un élément lié ou le nom d'un espace n'apparaît que si le lecteur peut le lire. Tags, assigné et contenus ne sont tracés que depuis le 2026-11-12. L'historique de l'espace et la restauration restent à l'admin (space-history-admin-only) (décision Thomas 2026-11-12)",
     location: 'apps/api/src/routes/item-history.ts, apps/api/src/utils/itemHistory.ts, apps/api/src/routes/items.ts (audit PATCH : tags, assigné), apps/api/src/routes/item-contents.ts (contentChange), apps/web/src/components/ItemHistorySection.tsx',
+  },
+  {
+    id: 'item-share-link',
+    page: "Fiche d'un élément (ItemEditModal), pied ; lien /items/:itemId",
+    trigger: "« Copier le lien » dans le pied de la fiche, puis ouverture du lien copié",
+    effect: "Le lien copié est court et ne contient que l'élément (https://…/items/<id>). À l'ouverture, l'API donne l'espace de l'élément (GET /items/:id/location) et la page redirige vers l'élément dans son espace ; la communauté se retrouve depuis l'espace. Le lien reste valable si l'élément change d'espace. Il ne donne aucun accès : la lecture suit les droits sur l'espace (anonyme compris pour un espace public, mode admin) ; élément absent ou illisible → même 404, sans rien dévoiler. Ouvert dans le mode par défaut selon les droits (item-open-mode-default). L'identifiant est affiché à côté, pour un élément enregistré (décision Thomas 2026-11-18)",
+    location: 'apps/api/src/routes/item-location.ts, apps/web/src/pages/ItemLinkPage.tsx, apps/web/src/lib/itemOpenMode.ts (itemShareUrl), apps/web/src/components/ItemEditModal.tsx (pied)',
   },
   {
     id: 'item-draft-local',

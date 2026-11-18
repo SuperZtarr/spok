@@ -2,10 +2,13 @@
  * Rendu d'un bloc d'article (ArticleBlockView) en lecture, selon les CONTENUS de l'élément référencé (contenus
  * multiples, lot 3a, décision Thomas 2026-11-08, règle article-block-display-by-contents ; remplace le rendu par type
  * du 2026-10-24) — contenu d'abord, jamais de champ vide ni de bloc vide. Disposition (blockLayout) :
- * - 'figure' (que des images / schémas avec aperçu) → images pleine largeur + légende (titre en gras + description) ;
+ * - 'figure' (que des images / schémas, texte court) → images + légende (titre en gras, texte dessous avec sa mise en forme) ;
  * - 'links' (que des liens) → une carte par lien (icône du site + titre + adresse), description dessous ;
- * - 'section' (le reste) → intertitre + ligne d'infos selon le type (blockMetaLine : Réunion, Tâche, Projet, Période)
- *   + texte, puis les contenus regroupés dans l'ordre Images, Fichiers (« 📎 nom »), Liens (cartes), Schémas (aperçu).
+ * - 'section' (le reste, dont un élément d'images avec un vrai texte) → intertitre + ligne d'infos selon le type
+ *   (blockMetaLine : Réunion, Tâche, Projet, Période) + texte mis en page, puis Fichiers (« 📎 nom »), Liens (cartes).
+ * Images (BlockImages, imageArrangement — 2026-11-18) : hauteur toujours limitée, jamais coupées (object-contain) ;
+ * une image à côté du texte (40 %, à droite ; au-dessus sous 640 px ou dans une colonne), deux et plus en galerie
+ * (2 ou 3 par rangée). Clic → image en grand (Lightbox de ItemContentsSection).
  * Jamais : tags, assigné, contributions, relations, enfants.
  * Bloc indisponible → encart « contenu indisponible ».
  * Hiérarchie (block.depth, 0-3, décision Thomas 2026-10-30) : sous-niveau = décalage vers la droite avec filet à gauche
@@ -23,8 +26,9 @@ import type { ArticleBlockContent, ArticleBlockView } from '@spok/shared';
 import { sanitizeHtml, safeHref } from '../../lib/sanitizeHtml';
 import { fileNameFromUrl } from '../../lib/itemClipboard';
 import { pageHint } from '../../help/pageHint';
+import { Lightbox } from '../contents/ItemContentsSection';
 import { blockClasses, depthIndentClasses, depthTitleClasses } from './articleLayout';
-import { blockContents, blockLayout, blockMetaLine, siteIconUrl } from './articleBlockContent';
+import { blockContents, blockLayout, blockMetaLine, imageArrangement, isPicture, siteIconUrl } from './articleBlockContent';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
 
@@ -53,7 +57,7 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
   }
   return (
     <div className={inRow ? 'min-w-0' : `${blockClasses(block, blockLayout(item) === 'figure')} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block" data-help-zone="article:bloc">
-      {renderBody(item, block.depth, children)}
+      {renderBody(item, block.depth, children, inRow)}
     </div>
   );
 }
@@ -73,15 +77,41 @@ function LinkCard({ url, label }: { url: string; label: string }) {
 
 const contentName = (c: ArticleBlockContent) => c.name?.trim() || fileNameFromUrl(c.url!);
 
-/** Contenus d'un bloc « section », déjà dans l'ordre Images, Fichiers, Liens, Schémas (API) */
+/** Images d'un bloc : une seule (hauteur limitée), à côté du texte (flottant à droite, 40 %), ou en galerie. */
+function BlockImages({ images, title, beside }: { images: ArticleBlockContent[]; title: string; beside: boolean }) {
+  const [open, setOpen] = useState<ArticleBlockContent | null>(null);
+  const arrangement = imageArrangement(images.length, beside);
+  if (arrangement === 'none') return null;
+  const picture = (c: ArticleBlockContent, cls: string) => (
+    <button key={c.id} type="button" onClick={() => setOpen(c)} aria-label={`Agrandir ${c.name || title}`}
+      className="block w-full rounded-md border border-border bg-muted/30 overflow-hidden cursor-zoom-in">
+      <img src={safeHref(c.url)} alt={c.name || title} className={`mx-auto object-contain ${cls}`} />
+    </button>
+  );
+  return (
+    <>
+      {arrangement === 'gallery' && (
+        <div className={`grid gap-2 ${images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          {images.map((c) => picture(c, 'h-40 sm:h-52 w-full'))}
+        </div>
+      )}
+      {arrangement === 'single' && picture(images[0], 'max-h-[28rem] w-auto max-w-full')}
+      {arrangement === 'beside' && (
+        <div className="mb-3 sm:float-right sm:w-2/5 sm:ml-5">
+          {picture(images[0], 'max-h-[24rem] w-auto max-w-full')}
+        </div>
+      )}
+      {open && safeHref(open.url) && <Lightbox url={safeHref(open.url)!} alt={open.name || title} onClose={() => setOpen(null)} />}
+    </>
+  );
+}
+
+/** Contenus non-images d'un bloc « section », déjà dans l'ordre Fichiers, Liens (API) */
 function ContentList({ contents, title }: { contents: ArticleBlockContent[]; title: string }) {
   if (contents.length === 0) return null;
   return (
     <div className="mt-2 space-y-2">
       {contents.map((c) => {
-        if (c.kind === 'IMAGE' || c.kind === 'DIAGRAM') {
-          return <img key={c.id} src={safeHref(c.url)} alt={c.name || title} className="w-full h-auto rounded-md border border-border" />;
-        }
         if (c.kind === 'LINK') return <LinkCard key={c.id} url={c.url!} label={c.name?.trim() || title} />;
         return (
           <p key={c.id} className="text-sm">
@@ -93,24 +123,21 @@ function ContentList({ contents, title }: { contents: ArticleBlockContent[]; tit
   );
 }
 
-function renderBody(item: BlockItem, depth: number, children?: ReactNode): ReactNode {
+function renderBody(item: BlockItem, depth: number, children: ReactNode | undefined, inRow: boolean): ReactNode {
   const fiche = item.canOpen && item.spaceId ? `/spaces/${item.spaceId}?item=${item.id}` : null;
   const title = fiche ? <Link to={fiche} className="hover:underline">{item.title}</Link> : item.title;
   const text = children ?? (hasContent(item.description) ? <div className={PROSE} dangerouslySetInnerHTML={html(item.description)} /> : null);
   const contents = blockContents(item);
+  const images = contents.filter(isPicture);
   const layout = blockLayout(item);
 
   if (layout === 'figure') {
     return (
       <figure>
-        <div className="space-y-2">
-          {contents.map((c) => (
-            <img key={c.id} src={safeHref(c.url)} alt={c.name || item.title} className="w-full h-auto rounded-md border border-border" />
-          ))}
-        </div>
-        <figcaption className="mt-1 text-xs text-muted-foreground text-center">
+        <BlockImages images={images} title={item.title} beside={false} />
+        <figcaption className="mt-1 text-sm text-muted-foreground text-center">
           <strong className="font-semibold">{title}</strong>
-          {hasContent(item.description) && <>{' '}<span className="[&_p]:inline" dangerouslySetInnerHTML={html(item.description)} /></>}
+          {hasContent(item.description) && <div className="[&_p]:my-0" dangerouslySetInnerHTML={html(item.description)} />}
         </figcaption>
       </figure>
     );
@@ -130,12 +157,16 @@ function renderBody(item: BlockItem, depth: number, children?: ReactNode): React
   }
 
   const meta = blockMetaLine(item);
+  // Une image + un texte : à côté du texte (flottant, posé avant lui) ; sinon images sous le texte (galerie ou seule)
+  const beside = !!text && !inRow && imageArrangement(images.length, true) === 'beside';
   return (
-    <section>
+    <section className="flow-root">
       <h3 className={`font-semibold mb-1 ${depthTitleClasses(depth)}`}>{title}</h3>
       {meta && <p className="text-xs text-muted-foreground mb-2">{meta}</p>}
+      {beside && <BlockImages images={images} title={item.title} beside />}
       {text}
-      <ContentList contents={contents} title={item.title} />
+      {!beside && images.length > 0 && <div className={text ? 'mt-3' : ''}><BlockImages images={images} title={item.title} beside={false} /></div>}
+      <ContentList contents={contents.filter((c) => !isPicture(c))} title={item.title} />
     </section>
   );
 }
