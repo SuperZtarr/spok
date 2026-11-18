@@ -252,6 +252,7 @@
 - [x] Article - mise en page des éléments illustrés — 2026-11-18
 - [x] MCP - tags lus et list_relations — 2026-11-18
 - [x] Admin tags - déplacer un tag vers un espace — 2026-11-18
+- [x] Vignette - priorité affichée dans toutes les vues — 2026-11-18
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

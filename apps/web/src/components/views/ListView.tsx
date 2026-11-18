@@ -276,6 +276,7 @@ export function ListView({ items, currentSpaceId, portalGroups, onEdit, onDelete
                       iconClass={getTypeTextColor(item.type, referentiels?.typeLabels)}
                       face={itemFace(item, 'ligne', { type: typeLabel, status: statusLabel })}
                       showMeta={false}
+                      showPriority={false}
                     />
                     <AssigneeBadge item={item} />
                     <button

@@ -14,6 +14,8 @@
  * type). Toute adresse passe par safeHref (dangereuse = ignorée).
  * Params : FaceSource (item normalisé), format, libellés du type et du statut dans l'espace.
  * Infos selon le type : profil `display` du registre des types (@spok/shared), jamais de test de type en dur.
+ * Priorité (signalement 2026-11-18) : renvoyée à part (face.priority, tirée de PRIORITIES) pour tout élément qui en a
+ * une, dans les trois formats, quel que soit son type ; jamais dans meta (pas de doublon).
  */
 import type { ItemContentKind } from '@spok/shared';
 import { ITEM_CONTENT_KINDS, getItemTypeDef } from '@spok/shared';
@@ -72,6 +74,8 @@ export interface ItemFace {
   address?: string;
   /** Bouton « Ouvrir » du contenu principal (premier fichier, sinon premier lien), grande seulement */
   openHref?: string;
+  /** Priorité de l'élément (tout type, tout format) : entrée de PRIORITIES, absente si non renseignée */
+  priority?: NonNullable<ReturnType<typeof getPriorityConfig>>;
 }
 
 const DAY_MS = 86_400_000;
@@ -168,7 +172,7 @@ function mainInfo(main: ReturnType<typeof mainContent>): string | null {
 
 /**
  * | Type               | ligne               | carte                 | grande : ajoute                     |
- * | Tâche, Anomalie    | statut              | statut, échéance      | priorité, assigné                   |
+ * | Tâche, Anomalie    | statut              | statut, échéance      | assigné                             |
  * | Projet             | statut              | statut, dates         | enfants, assigné                    |
  * | Réunion            | date                | date                  | assigné                             |
  * | Période            | dates               | dates                 | durée                               |
@@ -176,6 +180,7 @@ function mainInfo(main: ReturnType<typeof mainContent>): string | null {
  * | Élément (contenus) | extension ou site   | extension ou site     | adresse d'un lien, bouton Ouvrir    |
  * | Autres             | statut              | type, statut          | —                                   |
  * Texte : aucun en ligne, extrait 2 lignes en carte, description 4 lignes en grande.
+ * Priorité : pastille à part (face.priority), tous types et tous formats.
  */
 export function itemFace(item: FaceSource, format: VignetteFormat, labels: { type: string; status: string | null }): ItemFace {
   const contents = contentsOf(item);
@@ -189,7 +194,7 @@ export function itemFace(item: FaceSource, format: VignetteFormat, labels: { typ
   // Profil d'affichage du type : registre des types (display), jamais de test de type ici
   switch (getItemTypeDef(item.type)?.display) {
     case 'task':
-      meta = format === 'ligne' ? [labels.status] : [labels.status, dueOf(item), big && getPriorityConfig(item.priority)?.label, assignee];
+      meta = format === 'ligne' ? [labels.status] : [labels.status, dueOf(item), assignee];
       break;
     case 'project':
       meta = format === 'ligne' ? [labels.status] : [labels.status, datesOf(item), big && childrenOf(item.childCount), assignee];
@@ -208,6 +213,8 @@ export function itemFace(item: FaceSource, format: VignetteFormat, labels: { typ
   }
 
   const face: ItemFace = { cover, badges, meta: meta.filter(isDefined) };
+  const priority = getPriorityConfig(item.priority);
+  if (priority) face.priority = priority;
   // Sans description, le début du premier fichier dit ce que l'élément contient (aperçu des fichiers)
   const max = big ? BLOCK_MAX : CARD_TEXT_MAX;
   const text = format === 'ligne' ? undefined : excerpt(item.description, max) ?? excerpt(fileExcerptOf(item), max);

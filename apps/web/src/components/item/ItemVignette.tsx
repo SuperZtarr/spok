@@ -9,6 +9,8 @@
  *   openHint : infobulle du bouton Ouvrir (grande) ; titleClassName : retouche du titre propre à une vue (couleur…)
  *   showMeta=false : la vue montre déjà ces infos dans ses propres colonnes (Planning, badge de statut de la Liste) —
  *   seul écart permis au visage commun, pour ne pas les répéter
+ *   showPriority=false : la vue a déjà une colonne priorité (Liste à plat) ; sinon la pastille de priorité
+ *   (face.priority, couleurs de PRIORITIES) s'affiche dans tous les formats, même avec showMeta=false
  * Règles : la vignette remplit son conteneur (h-full en carte/grande) et se tronque si le cadre est fixe (Loupe) ;
  * le bouton Ouvrir et le menu arrêtent les événements (pas de clic sur la vignette). Image illisible = icône.
  * Miniature « document » (1re page d'un fichier, 2026-11-11) : cadrée sur le haut, extension en pastille (carte, grande).
@@ -37,6 +39,7 @@ interface ItemVignetteProps {
   openHint?: string;
   titleClassName?: string;
   showMeta?: boolean;
+  showPriority?: boolean;
 }
 
 const stop = (event: SyntheticEvent) => event.stopPropagation();
@@ -49,6 +52,15 @@ function SpacePill({ name }: { name: string }) {
   );
 }
 
+/** Pastille de priorité : P1…P4 en ligne, libellé complet (« Urgente »…) en carte et grande */
+function PriorityPill({ priority, short }: { priority: NonNullable<ItemFace['priority']>; short?: boolean }) {
+  return (
+    <span className={`flex-shrink-0 rounded px-1 text-xs font-medium ${priority.bgColor} ${priority.textColor} dark:bg-transparent`} title={`Priorité : ${priority.label}`}>
+      {short ? priority.shortLabel : priority.label}
+    </span>
+  );
+}
+
 function Menu({ children }: { children: ReactNode }) {
   return (
     <div className="ml-auto flex-shrink-0 self-start" onClick={stop} onDoubleClick={stop} onPointerDown={stop}>
@@ -57,7 +69,7 @@ function Menu({ children }: { children: ReactNode }) {
   );
 }
 
-export function ItemVignette({ format, face, title, Icon, iconClass = '', color, spaceName, tags, leading, menu, openHint, titleClassName = '', showMeta: metaWanted = true }: ItemVignetteProps) {
+export function ItemVignette({ format, face, title, Icon, iconClass = '', color, spaceName, tags, leading, menu, openHint, titleClassName = '', showMeta: metaWanted = true, showPriority = true }: ItemVignetteProps) {
   const [imageFailed, setImageFailed] = useState(false);
   // Adresses déjà filtrées par itemFace ; refiltrées ici pour qu'aucun appelant ne puisse faire passer javascript:
   const image = imageFailed ? undefined : safeHref(face.cover.url);
@@ -70,6 +82,7 @@ export function ItemVignette({ format, face, title, Icon, iconClass = '', color,
   const openHref = safeHref(face.openHref);
   const markFailed = () => setImageFailed(true);
   const iconStyle = color ? { color } : undefined;
+  const priority = showPriority ? face.priority : undefined;
   const typeIcon = (size: string) => <Icon className={`flex-shrink-0 ${size} ${iconClass}`} style={iconStyle} />;
 
   if (format === 'ligne') {
@@ -82,6 +95,7 @@ export function ItemVignette({ format, face, title, Icon, iconClass = '', color,
         <span className={`min-w-[3rem] flex-1 truncate text-sm ${titleClassName}`} style={iconStyle} title={title}>{title || '—'}</span>
         {spaceName && <SpacePill name={spaceName} />}
         {metaWanted && face.meta[0] && <span className="max-w-[40%] flex-shrink truncate text-xs text-muted-foreground" style={iconStyle}>{face.meta[0]}</span>}
+        {priority && <PriorityPill priority={priority} short />}
         <ContentBadges badges={face.badges} compact color={color} />
         {menu && <Menu>{menu}</Menu>}
       </div>
@@ -90,7 +104,7 @@ export function ItemVignette({ format, face, title, Icon, iconClass = '', color,
 
   const big = format === 'grande';
   const meta = metaWanted ? face.meta : [];
-  const showMeta = !!spaceName || meta.length > 0;
+  const showMeta = !!spaceName || meta.length > 0 || !!priority;
   return (
     <div className="flex h-full min-w-0 flex-col" data-vignette={format}>
       {image && !big && (
@@ -111,6 +125,7 @@ export function ItemVignette({ format, face, title, Icon, iconClass = '', color,
       {showMeta && (
         <div className="mt-0.5 flex min-w-0 flex-shrink-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
           {spaceName && <SpacePill name={spaceName} />}
+          {priority && <PriorityPill priority={priority} />}
           {meta.map((part) => <span key={part} className="truncate">{part}</span>)}
         </div>
       )}

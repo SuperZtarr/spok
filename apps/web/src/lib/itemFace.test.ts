@@ -60,7 +60,7 @@ describe('miniature et pastilles', () => {
 });
 
 describe('contenu progressif selon le format', () => {
-  it('tâche : statut en ligne ; statut et échéance en carte ; priorité et assigné en grande', () => {
+  it('tâche : statut en ligne ; statut et échéance en carte ; assigné en grande', () => {
     const item = { type: 'TASK', dueDate: '2026-03-02T12:00:00Z', priority: 4, assigneeName: 'Camille', description };
     expect(face(item, 'ligne').meta).toEqual(['En cours']);
     const carte = face(item, 'carte');
@@ -69,8 +69,19 @@ describe('contenu progressif selon le format', () => {
     expect(carte).toMatchObject({ text: 'Premier Second', textLines: 2 });
     const grande = face(item, 'grande');
     expect(grande.meta).toContain('Camille');
-    expect(grande.meta).toHaveLength(4);
+    expect(grande.meta).toHaveLength(3);
     expect(grande).toMatchObject({ text: 'Premier Second', textLines: 4 });
+  });
+
+  it('priorité à part, dans les trois formats et pour tout type, jamais dans meta', () => {
+    for (const format of ['ligne', 'carte', 'grande'] as const) {
+      for (const type of ['TASK', 'PROJECT', 'UNDEFINED', 'MEETING']) {
+        const f = face({ type, priority: 4 }, format);
+        expect(f.priority?.label).toBe('Urgente');
+        expect(f.meta).not.toContain('Urgente');
+      }
+    }
+    expect(face({ type: 'TASK' }, 'carte').priority).toBeUndefined();
   });
 
   it('la ligne n\'a jamais de texte', () => {
