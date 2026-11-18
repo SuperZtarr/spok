@@ -5,7 +5,8 @@
  * Mêmes conditions d'affichage qu'avant : partage pour tous, épingle si connecté, réorganisation seulement si canEdit,
  * Absorber / Éclater / Fusionner / Convertir seulement si la vue fournit l'action et qu'elle a un sens (enfants, titres),
  * Supprimer seulement si canEdit et onDelete, seule dans son groupe, en rouge.
- * Copier l'identifiant (2026-11-13, lot 3) : l'identifiant technique n'est plus affiché dans la fiche.
+ * Copier l'identifiant (2026-11-13, lot 3) : gardé ici ; depuis le 2026-11-18 l'identifiant est aussi affiché dans le pied,
+ * avec « Copier le lien » (ItemEditModal, règle item-share-link).
  * Fonction pure : l'appelant fournit les droits, les gestionnaires et les textes ; un gestionnaire absent retire l'entrée.
  */
 import {
@@ -19,7 +20,7 @@ export interface SheetActionHandlers {
   exportPdf: () => void;
   copySheet: () => void;
   copyThumbnail: () => void;
-  /** Copier l'identifiant technique (plus affiché dans la fiche depuis le lot 3 de la réorganisation) */
+  /** Copier l'identifiant technique (aussi affiché dans le pied de la fiche, à côté de « Copier le lien ») */
   copyId?: () => void;
   toggleBookmark?: () => void;
   markUnread?: () => void;

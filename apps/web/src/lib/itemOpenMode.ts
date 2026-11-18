@@ -7,6 +7,8 @@
  *   'read' sinon (visiteur anonyme ou membre en lecture seule) — règle businessRules « item-open-mode-default ».
  * articlePageUrl : adresse de la page de lecture d'un article ; on y va avec { state: { from } } pour que son
  * « Retour à l'espace » ramène à la vue d'origine (articleReturnState).
+ * itemShareUrl : lien court et complet d'un élément (https://…/items/<id>, « Copier le lien » de la fiche) ; la page
+ * /items/:itemId (ItemLinkPage) retrouve l'espace puis redirige vers itemUrl — règle item-share-link.
  * Ne pas lire `mode` ailleurs qu'ici : parseItemMode / itemUrl sont la seule source du format d'URL. */
 
 export type ItemOpenMode = 'read' | 'edit' | 'compose';
@@ -29,6 +31,11 @@ export function itemUrl(spaceId: string, itemId: string, mode?: ItemOpenMode): s
   if (mode === 'read') return `${base}&${ITEM_MODE_PARAM}=${READ_VALUE}`;
   if (mode === 'compose') return `${base}&${ITEM_MODE_PARAM}=${COMPOSE_VALUE}`;
   return base;
+}
+
+/** Lien court et complet d'un élément, à partager : l'espace est retrouvé à l'ouverture (ItemLinkPage). */
+export function itemShareUrl(itemId: string, origin: string = window.location.origin): string {
+  return `${origin}/items/${itemId}`;
 }
 
 /** Mode effectif à l'ouverture : celui demandé, sinon lecture pour qui ne peut pas modifier l'espace. */

@@ -1,12 +1,17 @@
-/* TNR de itemOpenMode — format d'URL du mode Afficher et mode par défaut (lecture pour qui ne peut pas modifier). */
+/* TNR de itemOpenMode — format d'URL du mode Afficher, lien court à partager (item-share-link) et mode par défaut
+ * (lecture pour qui ne peut pas modifier). */
 import { describe, it, expect } from 'vitest';
-import { itemUrl, parseItemMode, resolveItemMode } from './itemOpenMode';
+import { itemShareUrl, itemUrl, parseItemMode, resolveItemMode } from './itemOpenMode';
 
 describe('itemOpenMode', () => {
   it('URL : mode lecture porté par &mode=lecture, rien sinon', () => {
     expect(itemUrl('s1', 'i1', 'read')).toBe('/spaces/s1/content?item=i1&mode=lecture');
     expect(itemUrl('s1', 'i1', 'edit')).toBe('/spaces/s1/content?item=i1');
     expect(itemUrl('s1', 'i1')).toBe('/spaces/s1/content?item=i1');
+  });
+
+  it('lien court à partager : origine + /items/<id>, sans espace ni mode', () => {
+    expect(itemShareUrl('i1', 'https://spok.space')).toBe('https://spok.space/items/i1');
   });
 
   it('lecture du paramètre', () => {

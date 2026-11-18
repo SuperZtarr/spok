@@ -5,6 +5,7 @@
  * pour déclencher le bouton "Retourner à" dans GlobalNavBar après reconnexion.
  * LiveSessionHost (utilisateur connecté) : fenêtre de la séance live active, visible sur toutes les pages.
  * /admin/tags : TagsPage (tags globaux et doublons de tags, 2026-11-11).
+ * /items/:itemId : ItemLinkPage, lien court d'un élément (« Copier le lien » de la fiche, règle item-share-link).
  */
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -23,6 +24,7 @@ import { useParams } from 'react-router-dom';
 import { SpaceSettingsPage } from './pages/SpaceSettingsPage';
 import { SpaceHistoryPage } from './pages/SpaceHistoryPage';
 import { ArticlePage } from './pages/ArticlePage';
+import { ItemLinkPage } from './pages/ItemLinkPage';
 import { CommunitySettingsPage } from './pages/CommunitySettingsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { GlobalTasksPage } from './pages/GlobalTasksPage';
@@ -115,6 +117,7 @@ const PAGE_NAMES: [RegExp, string][] = [
   [/^\/spaces\/[^/]+\/settings$/, 'pages/SpaceSettingsPage.tsx'],
   [/^\/spaces\/[^/]+\/history$/, 'pages/SpaceHistoryPage.tsx'],
   [/^\/spaces\/[^/]+\/articles\/[^/]+$/, 'pages/ArticlePage.tsx'],
+  [/^\/items\/[^/]+$/, 'pages/ItemLinkPage.tsx'],
   [/^\/spaces\/[^/]+$/, 'pages/SpacePage.tsx'],
   [/^\/communities\/[^/]+\/settings$/, 'pages/CommunitySettingsPage.tsx'],
   [/^\/communities\/[^/]+$/, 'pages/CommunityPage.tsx'],
@@ -223,6 +226,7 @@ export default function App() {
         <Route path="spaces/:spaceId/settings" element={<SpaceSettingsPage />} />
         <Route path="spaces/:spaceId/history" element={<AdminRoute><SpaceHistoryPage /></AdminRoute>} />
         <Route path="spaces/:spaceId/articles/:itemId" element={<ArticlePage />} />
+        <Route path="items/:itemId" element={<ItemLinkPage />} />
         <Route path="communities/:communityId" element={<CommunityPage />} />
         <Route path="communities/:communityId/settings" element={<CommunitySettingsPage />} />
         <Route path="admin" element={<AdminRoute><Navigate to="/admin/users" replace /></AdminRoute>} />
