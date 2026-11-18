@@ -1,8 +1,13 @@
-/* Préférences par espace et par utilisateur (état MindMap : repliés, épinglés, portails). */
+/* Préférences par espace et par utilisateur (état MindMap : repliés, épinglés, portails ; champs d'export choisis,
+   `export.fields`, ids du registre shared EXPORT_FIELD_REGISTRY dans l'ordre des colonnes — 2026-11-18). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { EXPORT_FIELD_IDS } from '@spok/shared';
 
 const preferencesSchema = z.object({
+  export: z.object({
+    fields: z.array(z.enum(EXPORT_FIELD_IDS)).min(1).max(EXPORT_FIELD_IDS.length),
+  }).optional(),
   mindmap: z.object({
     collapsedIds: z.array(z.string()).optional(),
     pinnedIds: z.array(z.string()).optional(),

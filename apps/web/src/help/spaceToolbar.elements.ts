@@ -99,7 +99,7 @@ export const SPACE_TOOLBAR_ELEMENTS = {
   exporter: {
     title: 'Exporter',
     short: 'Exporter : télécharger le contenu de la vue (formats selon la vue : CSV, Excel, PDF, image…).',
-    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…).',
+    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…). Pour CSV, Excel et PDF données, vous choisissez d\'abord les champs exportés et l\'ordre des colonnes ; le choix est gardé pour vous dans cet espace.',
     target: '[data-tour="view-export"]',
     side: 'bottom',
   },

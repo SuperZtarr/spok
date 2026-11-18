@@ -1,7 +1,8 @@
 /* Constantes partagées : types d'espaces, types de relations, alias.
    Types d'élément : ITEM_TYPES et tout le reste viennent du registre typeRegistry.ts (source unique, 2026-11-08).
    Statuts : référentiels (defaultReferentiels.ts) ; leur sens par catégorie (statusCategory.ts) — plus de liste de statuts ici.
-   Catégories de la recherche avancée : searchCategories.ts (registre, 2026-11-18). */
+   Catégories de la recherche avancée : searchCategories.ts (registre, 2026-11-18).
+   Champs exportables (CSV, Excel, PDF données) : exportFields.ts (registre, 2026-11-18). */
 export { ITEM_TYPES } from './typeRegistry.js';
 
 export const SPACE_TYPES = ['PERSONAL', 'GROUP'] as const;
@@ -32,6 +33,8 @@ export * from './viewRegistry.js';
 export * from './modeRegistry.js';
 export * from './externalRefs.js';
 export * from './searchCategories.js';
+export * from './exportFields.js';
+export * from './volumetry.js';
 export {
   ITEM_TYPE_REGISTRY, DEFAULT_ITEM_TYPE, getItemTypeDef, isItemType, itemTypesWhere, isComposedType,
 } from './typeRegistry.js';

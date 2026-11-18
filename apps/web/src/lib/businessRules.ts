@@ -3,7 +3,8 @@
    Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents.
    Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune.
    Modes d'interface (2026-11-13) : listes de modes, favoris, vues d'ouverture et catégories générées par lib/modeTexts
-   depuis MODE_REGISTRY — jamais recopiées en clair dans une règle. */
+   depuis MODE_REGISTRY — jamais recopiées en clair dans une règle.
+   Export (2026-11-18) : export-fields-choice (choix des champs, registre EXPORT_FIELD_REGISTRY). */
 import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, statusIdsIn } from '@spok/shared';
 import { collapsedModesLabel, contextModeSentence, favoritesByModeSentence, modesList, openingViewsSentence, viewCategoriesList } from './modeTexts';
 
@@ -171,6 +172,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'apps/api/src/routes/admin/tags.ts (POST /merge, POST /:id/promote), apps/web/src/pages/admin/TagsPage.tsx (canBeMergeTarget)',
   },
   {
+    id: 'tag-move-to-space',
+    category: 'type',
+    appliesToValues: [],
+    trigger: 'Administration → Tags : « Déplacer vers un espace » sur un tag',
+    effect: "Le tag (global, de communauté ou d'un autre espace) devient le tag de l'espace choisi : proposé dans cet espace et ses sous-espaces, plus ailleurs ; il garde son nom, sa couleur et ses éléments. Refusé si des éléments qui le portent sont hors de l'espace et de ses sous-espaces (nombre et espaces indiqués), si un autre tag du même nom est déjà proposé dans l'espace (fusionner plutôt), ou s'il y est déjà. Journalisé (entité Tag, UPDATE) (demande Thomas 2026-11-18)",
+    location: 'apps/api/src/routes/admin/tags.ts (POST /:id/move), apps/web/src/pages/admin/MoveTagModal.tsx',
+  },
+  {
     id: 'type-shows-hours-mode',
     category: 'type',
     appliesToValues: ['MEETING'],
@@ -237,6 +246,13 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
 ];
 
 export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
+  {
+    id: 'export-fields-choice',
+    page: 'Menu Exporter des vues d’espace',
+    trigger: 'Export CSV, Excel ou PDF données',
+    effect: "La fenêtre « Champs à exporter » s'ouvre d'abord : champs cochés et ordre des colonnes, pré-remplis avec le dernier choix de l'utilisateur dans cet espace (un seul choix pour les trois formats). Le choix est enregistré au moment de l'export, par utilisateur et par espace (préférences d'adhésion) ; un non-membre repart du défaut, tous les champs dans l'ordre du registre. Au moins un champ. Le PDF raccourcit une description longue ; CSV et Excel la gardent entière. JSON, PNG, SVG et PDF visuels restent complets et directs (élément SPOK cmwlt95x0000hgxbeapfmpoxq, 2026-11-18)",
+    location: 'packages/shared/src/constants/exportFields.ts (EXPORT_FIELD_REGISTRY), apps/web/src/lib/exportUtils.ts, components/ExportFieldsModal.tsx, hooks/useExportFields.ts, apps/api/src/routes/space-preferences.ts',
+  },
   {
     id: 'item-contents-views',
     page: 'Vues Images, Documents et Liens',
@@ -535,7 +551,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'item-vignette-format',
     page: 'Loupe, Kanban, Liste (arbre et à plat), Gantt / PERT (colonne des titres), Planning, MindMap, Activité, Favoris, « Copier la vignette »',
     trigger: "Affichage d'un élément dans une vue",
-    effect: "Un élément a le même visage partout à format égal (décision Thomas 2026-11-08) ; la vue ne garde que son cadre (glisser, menu ⋮, couleurs et poignées de la MindMap, colonnes du Planning et de la Liste à plat). Miniature : première image, sinon aperçu du premier schéma, sinon icône du type (image illisible = icône). Pastilles : nombre d'images, fichiers, liens et schémas, dans cet ordre, la miniature non comptée. Ligne (Liste, arbre, Planning, MindMap, Favoris, Loupe minimale) : miniature 24 px, titre sur une ligne, info la plus utile (statut d'une Tâche, d'un Projet ; date d'une Réunion ; dates d'une Période ; extension du fichier ou site du lien d'un Élément), pastilles. Carte (Kanban, Activité, Loupe intermédiaire) : image en bandeau, titre sur deux lignes, infos du type (Tâche : statut, échéance ; Projet : statut, dates ; autres : type, statut), extrait de deux lignes, tags, pastilles. Grande (Loupe zoomée, copie de vignette) : grande image, toutes les infos (priorité, assigné, enfants, durée), description sur quatre lignes, adresse d'un lien, bouton Ouvrir du premier fichier sinon du premier lien (nouvel onglet ; ne fige pas le zoom de la Loupe). Sans contenus renvoyés, l'icône du type (plus de repli sur l'ancien champ url depuis le lot 4). Une adresse dangereuse n'est ni affichée ni ouverte. Les galeries Images / Documents / Liens (une entrée par contenu) et les blocs d'Article n'utilisent pas cette vignette",
+    effect: "Un élément a le même visage partout à format égal (décision Thomas 2026-11-08) ; la vue ne garde que son cadre (glisser, menu ⋮, couleurs et poignées de la MindMap, colonnes du Planning et de la Liste à plat). Miniature : première image, sinon aperçu du premier schéma, sinon icône du type (image illisible = icône). Pastilles : nombre d'images, fichiers, liens et schémas, dans cet ordre, la miniature non comptée. Priorité (2026-11-18) : pastille colorée pour tout élément qui en a une, quel que soit son type, dans les trois formats (P1…P4 en ligne, libellé en carte et grande), même quand la vue montre ses infos en colonnes (Planning) ; seule la Liste à plat, qui a sa colonne Priorité, ne la répète pas. Ligne (Liste, arbre, Planning, MindMap, Favoris, Loupe minimale) : miniature 24 px, titre sur une ligne, info la plus utile (statut d'une Tâche, d'un Projet ; date d'une Réunion ; dates d'une Période ; extension du fichier ou site du lien d'un Élément), pastilles. Carte (Kanban, Activité, Loupe intermédiaire) : image en bandeau, titre sur deux lignes, infos du type (Tâche : statut, échéance ; Projet : statut, dates ; autres : type, statut), extrait de deux lignes, tags, pastilles. Grande (Loupe zoomée, copie de vignette) : grande image, toutes les infos (assigné, enfants, durée), description sur quatre lignes, adresse d'un lien, bouton Ouvrir du premier fichier sinon du premier lien (nouvel onglet ; ne fige pas le zoom de la Loupe). Sans contenus renvoyés, l'icône du type (plus de repli sur l'ancien champ url depuis le lot 4). Une adresse dangereuse n'est ni affichée ni ouverte. Les galeries Images / Documents / Liens (une entrée par contenu) et les blocs d'Article n'utilisent pas cette vignette",
     location: 'apps/web/src/lib/itemFace.ts, apps/web/src/components/item/ItemVignette.tsx, apps/web/src/components/item/ContentBadges.tsx',
   },
   {
@@ -565,6 +581,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "Glisser le corps de barre d'un item avec début mais sans date de fin",
     effect: "La barre (dessinée jusqu'à aujourd'hui) se déplace telle qu'affichée : début et fin décalés du même delta, une date de fin est enregistrée",
     location: 'apps/web/src/components/views/timeline-utils.ts (moveInitialEnd), TimelineView.tsx (handleBodyMouseDown)',
+  },
+  {
+    id: 'gantt-stretch-missing-date',
+    page: 'Vue Gantt (TimelineView)',
+    trigger: "Tirer une poignée (bord gauche ou droit) d'une barre à qui il manque une date (fin, ou début et fin)",
+    effect: "La poignée part de sa position affichée et l'étirement enregistre ce qu'on voit : début ET fin, la date manquante prenant sa valeur affichée (fin d'une barre ouverte = aujourd'hui, jamais avant le début ; début d'une barre sans date = échéance, sinon aujourd'hui). Début toujours ≤ fin (décision Thomas 2026-11-18)",
+    location: 'apps/web/src/components/views/timeline-utils.ts (displayedBarDates), TimelineView.tsx (poignées, handleDragMove)',
   },
   {
     id: 'gantt-move-dateless-parent',

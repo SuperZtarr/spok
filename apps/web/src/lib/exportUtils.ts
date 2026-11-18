@@ -1,13 +1,16 @@
 /*
  * Fonctions d'export centralisées des vues : CSV, Excel, PDF (données et visuel), PNG, SVG
  * (PERT via canvas + inlining des styles). Utilisées par ExportDropdownButton dans chaque vue.
+ * Champs exportés (CSV, Excel, PDF données) : choisis par l'utilisateur (ExportFieldsModal, mémorisés par espace via
+ * useExportFields), colonnes dans l'ordre reçu ; liste des champs = registre shared EXPORT_FIELD_REGISTRY, valeurs =
+ * EXPORT_FIELD_VALUES ci-dessous. Sans `fields`, tout le registre dans son ordre. Le JSON reste complet (export technique).
  */
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toPng } from 'html-to-image';
-import type { Item, ItemRelation } from '@spok/shared';
-import { VIEW_REGISTRY } from '@spok/shared';
+import type { Item, ItemRelation, ExportFieldId } from '@spok/shared';
+import { VIEW_REGISTRY, EXPORT_FIELD_IDS, getExportFieldLabel } from '@spok/shared';
 import type { ViewMode } from '../stores/viewMode';
 
 export function sanitizeFilename(name: string): string {
@@ -45,23 +48,32 @@ function downloadFile(content: string | ArrayBuffer, filename: string, type: str
   URL.revokeObjectURL(url);
 }
 
-export function buildItemRows(items: Item[]) {
+/** Valeur exportée de chaque champ du registre EXPORT_FIELD_REGISTRY (Record strict : un champ ajouté au registre sans
+ *  valeur ici casse la compilation). `titles` = titre de chaque item de l'export, pour la colonne Parent. */
+export const EXPORT_FIELD_VALUES: Record<ExportFieldId, (item: Item, titles: Map<string, string>) => string | number> = {
+  title: item => item.title,
+  type: item => item.type,
+  status: item => item.status || '',
+  priority: item => item.priority ?? '',
+  parent: (item, titles) => item.parentId ? (titles.get(item.parentId) || item.parentId) : '',
+  assignee: item => (item as any).assignedTo?.name || item.assignedToName || '',
+  tags: item => item.tags?.map(t => t.name).join(', ') || '',
+  dueDate: item => formatDate(item.dueDate),
+  startDate: item => formatDate(item.startDate),
+  endDate: item => formatDate(item.endDate),
+  createdAt: item => formatDate(item.createdAt),
+  updatedAt: item => formatDate(item.updatedAt),
+  description: item => stripHtmlSafe(item.description || ''),
+};
+
+/** Lignes de l'export : une par item, colonnes = `fields` dans l'ordre donné (défaut : tout le registre), clés = libellés. */
+export function buildItemRows(items: Item[], fields: readonly ExportFieldId[] = EXPORT_FIELD_IDS): Record<string, string | number>[] {
   const titleMap = new Map(items.map(i => [i.id, i.title]));
-  return items.map(item => ({
-    'Titre': item.title,
-    'Type': item.type,
-    'Statut': item.status || '',
-    'Priorité': item.priority ?? '',
-    'Parent': item.parentId ? (titleMap.get(item.parentId) || item.parentId) : '',
-    'Assigné à': (item as any).assignedTo?.name || item.assignedToName || '',
-    'Tags': item.tags?.map(t => t.name).join(', ') || '',
-    'Date échéance': formatDate(item.dueDate),
-    'Date début': formatDate(item.startDate),
-    'Date fin': formatDate(item.endDate),
-    'Créé le': formatDate(item.createdAt),
-    'Modifié le': formatDate(item.updatedAt),
-    'Description': stripHtmlSafe(item.description || ''),
-  }));
+  return items.map(item => {
+    const row: Record<string, string | number> = {};
+    for (const id of fields) row[getExportFieldLabel(id)] = EXPORT_FIELD_VALUES[id](item, titleMap);
+    return row;
+  });
 }
 
 export function buildRelationRows(items: Item[]) {
@@ -80,11 +92,11 @@ export function buildRelationRows(items: Item[]) {
   return relations;
 }
 
-export function exportCSV(items: Item[], filename: string) {
-  const rows = buildItemRows(items);
+export function exportCSV(items: Item[], filename: string, fields: readonly ExportFieldId[] = EXPORT_FIELD_IDS) {
+  const rows = buildItemRows(items, fields);
   if (rows.length === 0) return;
-  const headers = Object.keys(rows[0]);
-  const csv = [headers.join(';'), ...rows.map(row => headers.map(h => `"${String((row as any)[h]).replace(/"/g, '""')}"`).join(';'))].join('\n');
+  const headers = fields.map(getExportFieldLabel);
+  const csv = [headers.join(';'), ...rows.map(row => headers.map(h => `"${String(row[h]).replace(/"/g, '""')}"`).join(';'))].join('\n');
   downloadFile('﻿' + csv, `${filename}.csv`, 'text/csv;charset=utf-8');
 }
 
@@ -107,9 +119,9 @@ export function exportJSON(items: Item[], filename: string, spaceName: string) {
   downloadFile(JSON.stringify(data, null, 2), `${filename}.json`, 'application/json');
 }
 
-export function exportExcel(items: Item[], filename: string) {
+export function exportExcel(items: Item[], filename: string, fields: readonly ExportFieldId[] = EXPORT_FIELD_IDS) {
   const wb = XLSX.utils.book_new();
-  const wsItems = XLSX.utils.json_to_sheet(buildItemRows(items));
+  const wsItems = XLSX.utils.json_to_sheet(buildItemRows(items, fields), { header: fields.map(getExportFieldLabel) });
   XLSX.utils.book_append_sheet(wb, wsItems, 'Items');
   const relationRows = buildRelationRows(items);
   if (relationRows.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(relationRows), 'Relations');
@@ -117,7 +129,10 @@ export function exportExcel(items: Item[], filename: string) {
   downloadFile(buf, `${filename}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
-export function exportDataPDF(items: Item[], filename: string, spaceName: string) {
+/** Longueur maximale d'une cellule Description dans le PDF données (tableau lisible ; CSV et Excel la gardent entière). */
+const PDF_DESCRIPTION_MAX = 200;
+
+export function exportDataPDF(items: Item[], filename: string, spaceName: string, fields: readonly ExportFieldId[] = EXPORT_FIELD_IDS) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   doc.setFontSize(16);
   doc.text(spaceName, 14, 15);
@@ -125,16 +140,23 @@ export function exportDataPDF(items: Item[], filename: string, spaceName: string
   doc.setTextColor(120);
   doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} — ${items.length} élément${items.length > 1 ? 's' : ''}`, 14, 21);
   doc.setTextColor(0);
-  const rows = buildItemRows(items);
-  const columns = ['Titre', 'Type', 'Statut', 'Priorité', 'Assigné à', 'Tags', 'Date échéance', 'Date début', 'Date fin'];
+  const rows = buildItemRows(items, fields);
+  const columns = fields.map(getExportFieldLabel);
+  const titleCol = fields.indexOf('title');
+  const descCol = fields.indexOf('description');
+  const clip = (text: string, max: number) => text.length > max ? text.slice(0, max - 3) + '...' : text;
   autoTable(doc, {
     startY: 26, head: [columns],
-    body: rows.map(row => columns.map(col => (row as any)[col] || '')),
+    body: rows.map(row => columns.map(col => String(row[col] ?? ''))),
     styles: { fontSize: 7, cellPadding: 1.5 },
     headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [245, 247, 250] },
-    columnStyles: { 0: { cellWidth: 60 } },
-    didParseCell: (data) => { if (data.column.index === 0 && data.cell.text.join('').length > 80) data.cell.text = [data.cell.text.join('').slice(0, 77) + '...']; },
+    columnStyles: titleCol >= 0 ? { [titleCol]: { cellWidth: 60 } } : {},
+    didParseCell: (data) => {
+      if (data.section !== 'body') return;
+      if (data.column.index === titleCol) data.cell.text = [clip(data.cell.text.join(''), 80)];
+      if (data.column.index === descCol) data.cell.text = [clip(data.cell.text.join(' '), PDF_DESCRIPTION_MAX)];
+    },
   });
   const relationRows = buildRelationRows(items);
   if (relationRows.length > 0) {

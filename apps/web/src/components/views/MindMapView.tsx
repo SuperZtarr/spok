@@ -1568,9 +1568,9 @@ function MindMapViewInner({
           disabled={exporting}
           groups={[
             { options: [
-              { label: 'CSV (.csv)', onClick: () => exportCSV(items, buildExportFilename(spaceName, 'mindmap')) },
-              { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'mindmap')) },
-              { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'mindmap'), spaceName) },
+              { label: 'CSV (.csv)', fieldsExport: { format: 'CSV', run: f => exportCSV(items, buildExportFilename(spaceName, 'mindmap'), f) } },
+              { label: 'Excel (.xlsx)', fieldsExport: { format: 'Excel', run: f => exportExcel(items, buildExportFilename(spaceName, 'mindmap'), f) } },
+              { label: 'PDF — données (.pdf)', fieldsExport: { format: 'PDF', run: f => exportDataPDF(items, buildExportFilename(spaceName, 'mindmap'), spaceName ?? '', f) } },
             ]},
             { options: [
               { label: 'PNG — schéma complet (.png)', onClick: exportPNG },

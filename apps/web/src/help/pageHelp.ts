@@ -29,6 +29,7 @@ import { help as liveSessionHelp } from '../components/help/live-session.help';
 import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
+import { help as exportFieldsHelp } from '../components/help/export-fields.help';
 import { help as articleHelp } from '../pages/help/article.help';
 import { help as sitemapHelp } from '../pages/help/sitemap.help';
 import { help as globalGraphHelp } from '../pages/help/global-graph.help';
@@ -49,6 +50,7 @@ import { help as adminApiDocHelp } from '../pages/help/admin-api-doc.help';
 import { help as adminPerfHelp } from '../pages/help/admin-perf.help';
 import { help as adminViewsHelp } from '../pages/help/admin-views.help';
 import { help as adminNewsHelp } from '../pages/help/admin-news.help';
+import { help as adminVolumetryHelp } from '../pages/help/admin-volumetry.help';
 
 export const PAGE_HELP = {
   dashboard,
@@ -73,6 +75,7 @@ export const PAGE_HELP = {
   'item-contents': itemContentsHelp,
   'live-session': liveSessionHelp,
   'merge-item': mergeItemHelp,
+  'export-fields': exportFieldsHelp,
   'move-to-space': moveToSpaceHelp,
   'duplicate-to-space': duplicateToSpaceHelp,
   article: articleHelp,
@@ -95,6 +98,7 @@ export const PAGE_HELP = {
   'admin-perf': adminPerfHelp,
   'admin-views': adminViewsHelp,
   'admin-news': adminNewsHelp,
+  'admin-volumetry': adminVolumetryHelp,
 } satisfies Record<string, HelpEntry>;
 
 export type PageHelpKey = keyof typeof PAGE_HELP;

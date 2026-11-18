@@ -206,7 +206,7 @@ export function PertToolbar({
       <ViewHelpButton viewMode="pert" onStartTour={onStartTour} pulse={pulseHelp} />
       <ExportDropdownButton
         groups={[
-          { options: [{ label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, filename, spaceName) }] },
+          { options: [{ label: 'PDF — données (.pdf)', fieldsExport: { format: 'PDF', run: f => exportDataPDF(items, filename, spaceName, f) } }] },
           { options: [
             { label: 'PNG — vue (.png)', onClick: () => svgRef.current ? exportSvgAsPng(svgRef.current, filename) : Promise.resolve() },
             { label: 'PDF — vue (.pdf)', onClick: () => svgRef.current ? exportSvgAsPdf(svgRef.current, filename) : Promise.resolve() },

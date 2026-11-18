@@ -55,6 +55,8 @@ import { publicMenuRoutes, adminMenuRoutes } from './routes/admin/menu.js';
 import { publicNewsRoutes, adminNewsRoutes } from './routes/admin/news.js';
 import { adminBackupRoutes } from './routes/admin/backup.js';
 import { adminPerfRoutes } from './routes/admin/perf.js';
+import { adminVolumetryRoutes } from './routes/admin/volumetry.js';
+import { startVolumetryWatch } from './utils/volumetryWatch.js';
 import { adminDuplicatesRoutes } from './routes/admin/duplicates.js';
 import { adminTagsRoutes } from './routes/admin/tags.js';
 import { contactRoutes } from './routes/contact.js';
@@ -331,6 +333,7 @@ async function buildApp() {
   await app.register(adminMenuRoutes, { prefix: '/admin/menu' });
   await app.register(adminBackupRoutes, { prefix: '/admin/backup-log' });
   await app.register(adminPerfRoutes, { prefix: '/admin/perf' });
+  await app.register(adminVolumetryRoutes, { prefix: '/admin/volumetry' });
   await app.register(adminDuplicatesRoutes, { prefix: '/admin/duplicates' });
   await app.register(adminTagsRoutes, { prefix: '/admin/tags' });
   await app.register(publicMenuRoutes, { prefix: '/menu' });
@@ -405,6 +408,8 @@ async function start() {
   try {
     await app.listen({ port, host });
     console.log(`Server running at http://${host}:${port}`);
+    // Surveillance de la volumétrie (2026-11-18) : alerte les admins au-delà des seuils, jamais de purge automatique
+    startVolumetryWatch(app.prisma, app.log);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

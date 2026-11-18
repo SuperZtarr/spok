@@ -13,6 +13,8 @@
  * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
  * Sa fin : la plus tardive des enfants ; un enfant commencé sans fin compte jusqu'à aujourd'hui (rollupEnd).
  * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
+ * Poignées d'étirement : partent de la position affichée et enregistrent ce qu'on voit — la date manquante (fin
+ * d'une barre ouverte, début d'une barre sans date) prend sa valeur affichée (displayedBarDates, 2026-11-18).
  * Déplacement de barre au jour près dans tous les zooms ; seul le resize (poignées) s'aimante au calendrier.
  * Props clés : items, relations, onUpdateDates, onUpdateDueDate, onCascadeShift, onCreateRelation, onDeleteRelation, spaceId.
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
@@ -50,7 +52,7 @@ import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER } from './timeline-constants';
 import { RELATION_TYPE_LIST, getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
-import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd, rollupEnd } from './timeline-utils';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd, rollupEnd, displayedBarDates } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
@@ -776,29 +778,27 @@ treeSort: treeSortProp,
     const item = items.find(i => i.id === dragging.itemId);
     if (!item) return;
 
-    const hasExistingDates = !!(item.startDate || item.endDate);
-    const today = startOfDay(new Date());
-    const currentStart = (dragPreview?.itemId === item.id && dragPreview.startDate)
-      ? new Date(dragPreview.startDate)
-      : item.startDate ? new Date(item.startDate) : today;
-    const currentEnd = (dragPreview?.itemId === item.id && dragPreview.endDate)
-      ? new Date(dragPreview.endDate)
-      : item.endDate ? new Date(item.endDate) : currentStart;
+    // Étirement = ce qu'on voit (signalement 2026-11-18) : la date manquante prend sa valeur affichée
+    // (displayedBarDates), donc on enregistre toujours début ET fin, début ≤ fin.
+    const shown = displayedBarDates(item);
+    const ownPreview = dragPreview?.itemId === item.id ? dragPreview : null;
+    const currentStart = ownPreview?.startDate ? new Date(ownPreview.startDate) : shown.start;
+    const currentEnd = ownPreview?.endDate ? new Date(ownPreview.endDate) : shown.end;
 
     if (dragging.type === 'start') {
-      if (!hasExistingDates || newDate <= currentEnd) {
+      if (newDate <= currentEnd) {
         setDragPreview({
           itemId: dragging.itemId,
           startDate: newDate.toISOString(),
-          endDate: dragPreview?.endDate ?? item.endDate ?? (hasExistingDates ? null : newDate.toISOString()),
+          endDate: currentEnd.toISOString(),
         });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
       }
     } else if (dragging.type === 'end') {
-      if (!hasExistingDates || newDate >= currentStart) {
+      if (newDate >= currentStart) {
         setDragPreview({
           itemId: dragging.itemId,
-          startDate: dragPreview?.startDate ?? item.startDate ?? (hasExistingDates ? null : newDate.toISOString()),
+          startDate: currentStart.toISOString(),
           endDate: newDate.toISOString(),
         });
         setDragging(prev => prev ? { ...prev, lastDeltaDays: deltaDays } : null);
@@ -1212,11 +1212,11 @@ treeSort: treeSortProp,
         <ExportDropdownButton
           groups={[
             { options: [
-              { label: 'CSV (.csv)',    onClick: () => exportCSV(items, buildExportFilename(spaceName, 'timeline')) },
-              { label: 'Excel (.xlsx)', onClick: () => exportExcel(items, buildExportFilename(spaceName, 'timeline')) },
+              { label: 'CSV (.csv)',    fieldsExport: { format: 'CSV', run: f => exportCSV(items, buildExportFilename(spaceName, 'timeline'), f) } },
+              { label: 'Excel (.xlsx)', fieldsExport: { format: 'Excel', run: f => exportExcel(items, buildExportFilename(spaceName, 'timeline'), f) } },
             ]},
             { options: [
-              { label: 'PDF — données (.pdf)', onClick: () => exportDataPDF(items, buildExportFilename(spaceName, 'timeline'), spaceName) },
+              { label: 'PDF — données (.pdf)', fieldsExport: { format: 'PDF', run: f => exportDataPDF(items, buildExportFilename(spaceName, 'timeline'), spaceName, f) } },
             ]},
             { options: [
               { label: 'PNG — vue (.png)', onClick: () => viewContainerRef.current ? exportContainerPNG(viewContainerRef.current, buildExportFilename(spaceName, 'timeline')) : Promise.resolve() },
@@ -1505,7 +1505,7 @@ treeSort: treeSortProp,
                               e,
                               item.id,
                               'start',
-                              item.startDate ? new Date(item.startDate) : new Date()
+                              displayedBarDates(item).start
                             )}
                             title="Ajuster la date de début"
                           >
@@ -1541,7 +1541,7 @@ treeSort: treeSortProp,
                               e,
                               item.id,
                               'end',
-                              item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : new Date())
+                              displayedBarDates(item).end
                             )}
                             title="Ajuster la date de fin"
                           >

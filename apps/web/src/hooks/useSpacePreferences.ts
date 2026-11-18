@@ -1,5 +1,5 @@
 /*
- * Hook : préférences par espace et par utilisateur (MindMap : nœuds repliés/épinglés/portails...),
+ * Hook : préférences par espace et par utilisateur (MindMap : nœuds repliés/épinglés/portails..., champs d'export),
  * persistées côté API (space-preferences). Debounce les écritures.
  */
 import { useCallback, useRef } from 'react';
@@ -13,6 +13,8 @@ export interface MindMapPreferences {
 
 export interface SpacePreferences {
   mindmap?: MindMapPreferences;
+  /** Champs d'export choisis, dans l'ordre des colonnes (ids du registre EXPORT_FIELD_REGISTRY) — useExportFields */
+  export?: { fields?: string[] };
 }
 
 const API_URL = import.meta.env.VITE_API_URL || '';
