@@ -260,6 +260,7 @@
 - [x] Accueil - « TODO assignés » limité aux tâches assignées — 2026-11-18
 - [x] Export - choix et ordre des champs exportés — 2026-11-18
 - [x] Bandeau - section Tout SPOK, pages globales renommées — 2026-11-18
+- [x] Vues - VIEW_CATEGORIES supprimé — 2026-11-18
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

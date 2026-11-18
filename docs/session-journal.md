@@ -14,6 +14,13 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-18 — Revue des specs avec Thomas, toutes passées en done après correction : sélecteur de vues, mode d'interface, registre des vues, comportement général de SpacePage, skill spok-dev. Reste en to_validate : spec du bandeau (renommage du jour).
+- 2026-11-18 — Bandeau : section « Tout SPOK », 4 pages globales renommées (libellés via menuLabel), store dashboardTab supprimé ; spec bandeau en to_validate ; inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-18 — Export : choix et ordre des champs (CSV/Excel/PDF données, mémorisé par espace) inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-18 — Tableau de bord : couleurs « Par statut » inscrites PRÊT POUR MEP, NON COMMITÉ. « TODO assignés » de l'accueil (confirmé par Thomas) inscrit aussi.
+
 - 2026-11-18 — Profil : onglet Communautés, Accès Claude dans Compte, aide par fonction ; inscrit PRÊT POUR MEP,
   NON COMMITÉ. Lot à part possible : 4 listes locales du profil (rôles, rôles de communauté, types et canaux de
   notification) à brancher sur des registres shared.
@@ -61,8 +68,11 @@ _(aucun lot en attente)_
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
 
+### MEP — 2026-11-18 (2)
+- 10 lots poussés, un commit chacun (fichiers communs entiers avec le dernier lot qui les touche). 9 annonces datées. Typecheck OK, TNR 2953/2953, en-têtes OK. Volumétrie : notification réelle non vérifiée
+
 ### MEP — 2026-11-18
-- 9 lots en 8 commits (« Recherche - voir la suite » avec le registre des catégories, fichiers communs). 5 annonces datées. Typecheck OK, TNR 2901/2901, en-têtes OK
+- 8 lots en 7 commits (« Recherche - voir la suite » avec le registre des catégories, fichiers communs). 5 annonces datées. Typecheck OK, TNR 2901/2901, en-têtes OK
 
 ### MEP — 2026-11-15 (2)
 - 1 lot poussé : carte mentale, dépôt sur le nœud de son propre sous-espace + fiche relue par l'espace parent. Typecheck OK, TNR 2854/2854, en-têtes OK

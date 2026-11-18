@@ -1,6 +1,7 @@
-/* TNR du store viewMode : constantes VIEW_MODES, mode par défaut, persistance. */
+/* TNR du store viewMode : constantes VIEW_MODES (catégories = SPACE_VIEW_SECTIONS), mode par défaut, persistance. */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useViewModeStore, VIEW_MODES, VIEW_CATEGORIES, type ViewMode } from './viewMode'
+import { SPACE_VIEW_SECTION_IDS } from '@spok/shared'
+import { useViewModeStore, VIEW_MODES, type ViewMode } from './viewMode'
 
 describe('VIEW_MODES constants', () => {
   it('should have 34 view modes', () => {
@@ -12,27 +13,10 @@ describe('VIEW_MODES constants', () => {
     expect(new Set(values).size).toBe(values.length)
   })
 
-  it('should all have a category', () => {
-    const categoryValues = VIEW_CATEGORIES.map(c => c.value)
+  it('should all have a category of SPACE_VIEW_SECTIONS', () => {
     for (const mode of VIEW_MODES) {
-      expect(categoryValues).toContain(mode.category)
+      expect(SPACE_VIEW_SECTION_IDS.has(mode.category)).toBe(true)
     }
-  })
-})
-
-describe('VIEW_CATEGORIES constants', () => {
-  it('should have 6 categories (dashboard + 5 catégories de vues)', () => {
-    expect(VIEW_CATEGORIES).toHaveLength(6)
-  })
-
-  it('should include dashboard and the 5 view categories', () => {
-    const values = VIEW_CATEGORIES.map(c => c.value)
-    expect(values).toContain('dashboard')
-    expect(values).toContain('content')
-    expect(values).toContain('organize')
-    expect(values).toContain('tracking')
-    expect(values).toContain('planning')
-    expect(values).toContain('exploration')
   })
 })
 

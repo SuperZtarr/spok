@@ -6,23 +6,17 @@
  * l'accès à une vue se règle dans /admin/views (useMenuItems).
  * ViewMode : alias de ViewId, dérivé de VIEW_REGISTRY (@spok/shared, centralisation des référentiels 2026-11-13) —
  * plus d'union écrite à la main : ajouter une vue = une entrée du registre.
- * Catégories : dérivées de SPACE_VIEW_SECTIONS (@spok/shared, 5 catégories depuis 2026-11-13), plus « dashboard ».
+ * Catégories : celles du registre (ViewCategoryId) ; libellés dans SPACE_VIEW_SECTIONS (@spok/shared). VIEW_CATEGORIES
+ * (copie locale avec une fausse catégorie « dashboard », lue par son seul test) supprimée le 2026-11-18.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { VIEW_REGISTRY, SPACE_VIEW_SECTIONS, type ViewCategoryId, type ViewId } from '@spok/shared';
+import { VIEW_REGISTRY, type ViewCategoryId, type ViewId } from '@spok/shared';
 
 export type ViewMode = ViewId;
 
-export type ViewCategory = 'dashboard' | ViewCategoryId;
-
-export const VIEW_CATEGORIES: { value: ViewCategory; label: string }[] = [
-  { value: 'dashboard', label: 'Tableau de bord' },
-  ...SPACE_VIEW_SECTIONS.map((s) => ({ value: s.id as ViewCategory, label: s.label })),
-];
-
-export const VIEW_MODES: { value: ViewMode; label: string; icon: string; category: ViewCategory }[] =
-  VIEW_REGISTRY.map(v => ({ value: v.id as ViewMode, label: v.label, icon: v.icon, category: v.category as ViewCategory }));
+export const VIEW_MODES: { value: ViewMode; label: string; icon: string; category: ViewCategoryId }[] =
+  VIEW_REGISTRY.map(v => ({ value: v.id as ViewMode, label: v.label, icon: v.icon, category: v.category }));
 
 interface ViewModeState {
   mode: ViewMode;
