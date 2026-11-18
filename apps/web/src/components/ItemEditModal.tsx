@@ -1493,7 +1493,8 @@ export function ItemEditModal({
               {/* Tags, dans les deux fiches, avant la Description */}
               {tagsSection}
 
-              {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) */}
+              {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) ;
+                  hauteur doublée (480 px mini, 80vh maxi en fiche simple) — demande 2026-11-18 */}
               <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
                 <label className="text-sm font-medium flex items-center gap-1.5">Description <ElementHelp page="item-modal" element="description" /></label>
                 <RichTextEditor
@@ -1502,8 +1503,8 @@ export function ItemEditModal({
                   onChange={setDescription}
                   editable={canEdit}
                   spaceId={spaceId}
-                  minHeight={240}
-                  defaultMaxHeight={!showAll ? '40vh' : undefined}
+                  minHeight={480}
+                  defaultMaxHeight={!showAll ? '80vh' : undefined}
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
