@@ -2,7 +2,8 @@
    (help/elements.ts) : un texte par fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide.
    Rappels fonctionnels (hints, via pageHint) décrivant l'effet réel côté API (apps/api/src/routes/admin/tags.ts) :
    à revérifier à chaque évolution de ces routes. duplicatesIntro : phrase visible sous l'onglet Doublons (bloc de
-   décision). Registre help/pageHelp.ts. Annonce `admin-tags-grouped` (liste rangée par portée, 2026-11-13) sans date,
+   décision). Registre help/pageHelp.ts. Annonce `admin-tags-grouped` (liste rangée par portée, 2026-11-13) datée ;
+   `admin-tags-move` (« Déplacer vers un espace », 2026-11-18, hints move / moveIntro lus par MoveTagModal) sans date,
    datée par la session MEP. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
@@ -25,11 +26,12 @@ const elements: HelpElements = {
   },
   liste: {
     title: 'Tags',
-    short: 'Renommer, recolorer, rendre global, supprimer.',
-    text: 'Les tags sont rangés par portée : Globaux, Communautés (un intertitre par communauté), Espaces (un intertitre par espace), avec leur nombre. Filtrez par portée ou par nom. Pour chaque tag : nombre d\'éléments qui le portent, renommer ou changer la couleur, « Rendre global » (un tag de communauté ou d\'espace devient proposé partout), supprimer. Un tag « Espace » est créé depuis la fiche d\'un élément : il est proposé dans son espace et tous ses sous-espaces.',
+    short: 'Renommer, recolorer, rendre global, déplacer vers un espace, supprimer.',
+    text: 'Les tags sont rangés par portée : Globaux, Communautés (un intertitre par communauté), Espaces (un intertitre par espace), avec leur nombre. Filtrez par portée ou par nom. Pour chaque tag : nombre d\'éléments qui le portent, renommer ou changer la couleur, « Rendre global » (un tag de communauté ou d\'espace devient proposé partout), « Déplacer vers un espace » (le tag devient celui de l\'espace choisi et de ses sous-espaces), supprimer. Un tag « Espace » est créé depuis la fiche d\'un élément : il est proposé dans son espace et tous ses sous-espaces.',
     changes: [
       { id: 'admin-tags-space-scope', kind: 'evolution', text: 'Les tags d\'espace sont de retour : la liste les montre avec leur espace, et le filtre Portée propose « Espaces ».', date: '2026-11-12' },
       { id: 'admin-tags-grouped', kind: 'evolution', text: 'La liste des tags est rangée par portée : Globaux, puis une rubrique par communauté et par espace, avec leur nombre.', date: '2026-11-13' },
+      { id: 'admin-tags-move', kind: 'new', text: 'Nouveau : « Déplacer vers un espace » rattache un tag à l\'espace de votre choix, qu\'il soit global, de communauté ou d\'un autre espace.', date: '2026-11-18' },
     ],
     target: '[data-tour="admin-tags-list"]',
     side: 'top',
@@ -66,6 +68,8 @@ export const help: HelpEntry = {
     merge: 'Fusionner : les éléments des autres tags du groupe reçoivent le tag choisi (sans double), puis ces tags sont supprimés. Irréversible ; journalisé dans l\'audit (action Fusion).',
     duplicatesIntro: 'Tags de même nom (majuscules comprises) dans plusieurs communautés ou en global. Choisissez le tag à garder, puis fusionnez : il remplace les autres sur tous leurs éléments. Un tag grisé ne peut pas être gardé, car certains éléments sont hors de sa communauté.',
     noTarget: 'Aucun tag de ce groupe ne peut être gardé : rendez-en un global (onglet « Tous les tags »), puis fusionnez.',
+    move: 'Déplacer vers un espace : le tag devient celui de l\'espace choisi, proposé dans cet espace et ses sous-espaces seulement ; il garde son nom, sa couleur et ses éléments. Refusé si des éléments qui le portent sont ailleurs, ou si un tag du même nom y est déjà proposé. Journalisé dans l\'audit.',
+    moveIntro: 'Choisissez l\'espace qui portera ce tag : il y sera proposé, ainsi que dans ses sous-espaces, et plus ailleurs. Tous les éléments qui le portent doivent déjà se trouver dans cet espace ou ses sous-espaces ; sinon le déplacement est refusé et les espaces concernés sont indiqués.',
   },
   tour: [
     {

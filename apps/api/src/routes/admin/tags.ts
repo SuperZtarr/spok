@@ -10,6 +10,8 @@
  * - PATCH /:id       : renomme / recolore (nom unique dans la portée du tag : communauté + globaux, ou globaux).
  * - DELETE /:id      : supprime le tag (retiré de tous ses éléments ; irréversible, journalisé).
  * - POST /:id/promote: rend le tag global (refus 409 si un tag global du même nom existe : fusionner plutôt).
+ * - POST /:id/move   : { spaceId } — le tag devient un tag de cet espace (2026-11-18) ; refus 400 si des éléments qui
+ *                      le portent sont hors de l'espace et de ses sous-espaces, 409 si un tag de même nom y est déjà visible.
  * - POST /merge      : { targetId, sourceIds } — les éléments des sources reçoivent la cible (sans double), puis les
  *                      sources sont supprimées, en transaction. Refus 400 si la cible n'est pas visible depuis tous
  *                      les éléments concernés (cible de communauté C et élément hors de C ; cible d'espace E et élément
@@ -19,12 +21,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../../utils/audit.js';
-import { communityScope, findTagByName, GLOBAL_TAG_WHERE, isGlobalTag, spaceTagScope, spaceWithDescendantIds } from '../../utils/tagScope.js';
+import { communityScope, findTagByName, GLOBAL_TAG_WHERE, isGlobalTag, spaceTagScope, spaceWithDescendantIds, tagsVisibleWhere } from '../../utils/tagScope.js';
 
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const createSchema = z.object({ name: z.string().trim().min(1), color: colorSchema.optional() });
 const updateSchema = z.object({ name: z.string().trim().min(1).optional(), color: colorSchema.nullable().optional() });
 const mergeSchema = z.object({ targetId: z.string().min(1), sourceIds: z.array(z.string().min(1)).min(1) });
+const moveSchema = z.object({ spaceId: z.string().min(1) });
 
 export type AdminTagScope = 'global' | 'community' | 'space';
 
@@ -160,6 +163,48 @@ export const adminTagsRoutes: FastifyPluginAsync = async (fastify) => {
     });
     await createAuditLog(fastify.prisma, {
       action: 'UPDATE', entity: 'Tag', entityId: tag.id, userId: request.user.userId, spaceId: null,
+      changes: { before: toAdminTag(tag), after: toAdminTag(updated) },
+    });
+    return toAdminTag(updated);
+  });
+
+  // Déplacer un tag vers un espace (demande Thomas 2026-11-18) : le tag, quelle que soit sa portée, devient un tag de
+  // l'espace cible (visible dans l'espace et ses sous-espaces). Refus 400 si des éléments qui le portent sont hors de
+  // cette portée (nombre et espaces renvoyés) ; refus 409 si un autre tag de même nom est déjà visible depuis la cible
+  // (global, communauté, espace parent) — fusionner plutôt. Le tag garde son id, son nom, sa couleur et ses éléments.
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof moveSchema> }>('/:id/move', async (request, reply) => {
+    const { spaceId } = moveSchema.parse(request.body);
+    const tag = await fastify.prisma.tag.findUnique({ where: { id: request.params.id }, include: TAG_INCLUDE });
+    if (!tag) return reply.notFound('Tag not found');
+    const space = await fastify.prisma.space.findUnique({ where: { id: spaceId }, select: { id: true, name: true } });
+    if (!space) return reply.notFound('Espace introuvable');
+    if (tag.spaceId === spaceId) return reply.badRequest('Ce tag appartient déjà à cet espace');
+
+    const inScope = await spaceWithDescendantIds(fastify.prisma, spaceId);
+    const outside = await fastify.prisma.itemTag.findMany({
+      where: { tagId: tag.id, item: { spaceId: { notIn: inScope } } },
+      select: { item: { select: { space: { select: { name: true } } } } },
+    });
+    if (outside.length > 0) {
+      const spaces = [...new Set(outside.map((l) => l.item.space?.name ?? '?'))];
+      return reply.badRequest(
+        `${outside.length} élément(s) portant ce tag sont hors de « ${space.name} » et de ses sous-espaces (${spaces.join(', ')}) : déplacez-les ou retirez-leur le tag d'abord`,
+      );
+    }
+
+    const sameName = await fastify.prisma.tag.findFirst({
+      where: { ...tagsVisibleWhere(await spaceTagScope(fastify.prisma, spaceId)), id: { not: tag.id }, name: { equals: tag.name.trim(), mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (sameName) return reply.conflict(`Un tag « ${tag.name} » est déjà proposé dans « ${space.name} » : fusionnez les deux tags plutôt`);
+
+    const updated = await fastify.prisma.tag.update({
+      where: { id: tag.id },
+      data: { spaceId, communityId: null },
+      include: TAG_INCLUDE,
+    });
+    await createAuditLog(fastify.prisma, {
+      action: 'UPDATE', entity: 'Tag', entityId: tag.id, userId: request.user.userId, spaceId,
       changes: { before: toAdminTag(tag), after: toAdminTag(updated) },
     });
     return toAdminTag(updated);
