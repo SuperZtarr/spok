@@ -2,7 +2,8 @@
  * Plan du site (/sitemap), accessible sans connexion. Deux blocs :
  * - Contenu public : communautés non privées et leurs espaces publics, chargés de l'API (GET /communities puis
  *   GET /spaces?communityId=), filtrés par lib/publicSiteTree.ts — même contenu pour tous, jamais d'espace privé ;
- * - Pages et vues : SITE_PAGES, écrit à la main ici — toute nouvelle route d'App.tsx s'y ajoute.
+ * - Pages et vues : SITE_PAGES, écrit à la main ici — toute nouvelle route d'App.tsx s'y ajoute. Une page présente
+ *   dans le bandeau prend son libellé par menuLabel(clé) (MENU_REGISTRY), jamais recopié (pages « Tout SPOK », 2026-11-18).
  *   Les vues d'espace ne s'écrivent pas ici : elles viennent de useMenuItems (VIEW_REGISTRY, droits et réglages de
  *   /admin/views compris) et de l'accroche de leur fiche d'aide (VIEW_HELP.short).
  * En mode développement (isDev), chaque ligne affiche aussi son composant, son chemin et son niveau d'accès.
@@ -11,7 +12,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { Globe, User, Shield, ChevronRight } from 'lucide-react';
-import type { MenuSection } from '@spok/shared';
+import { menuLabel, type MenuSection } from '@spok/shared';
 import { useAuthStore } from '../stores/auth';
 import { useMenuItems } from '../hooks/useMenuItems';
 import { communitiesApi, spacesApi } from '../lib/api';
@@ -88,13 +89,13 @@ function buildSitePages(viewNodes: SiteNode[], viewCount: number): SiteNode[] {
           description: 'L\'historique de ce qui a changé dans SPOK, pour retrouver une annonce déjà ignorée ou lue' },
         { label: 'Espaces', path: '/spaces', component: 'SpacesListPage', auth: 'authenticated', note: 'Redirige vers /communities si aucune communauté n\'est sélectionnée',
           description: 'Espaces groupés par communauté, création depuis un modèle, hiérarchie par glisser-déposer' },
-        { label: 'Graphe global', path: '/graph', component: 'GraphPage', auth: 'authenticated',
+        { label: menuLabel('global-graph'), path: '/graph', component: 'GraphPage', auth: 'authenticated',
           description: 'Graphe interactif des relations entre tous les éléments' },
-        { label: 'Sunburst global', path: '/sunburst', component: 'SunburstPage', auth: 'authenticated',
+        { label: menuLabel('global-sunburst'), path: '/sunburst', component: 'SunburstPage', auth: 'authenticated',
           description: 'Hiérarchie communautés, espaces et éléments en diagramme circulaire' },
-        { label: 'Carte mentale globale', path: '/mindmap', component: 'MindMapPage', auth: 'authenticated',
-          description: 'Arbre interactif de toute l\'organisation' },
-        { label: 'Liens', path: '/links', component: 'GlobalLinksPage', auth: 'authenticated',
+        { label: menuLabel('global-mindmap'), path: '/mindmap', component: 'MindMapPage', auth: 'authenticated',
+          description: 'Carte des communautés et de leurs espaces, pour ranger l\'arborescence' },
+        { label: menuLabel('global-links'), path: '/links', component: 'GlobalLinksPage', auth: 'authenticated',
           description: 'Tous les éléments de type lien auxquels vous avez accès' },
       ],
     },
@@ -157,6 +158,8 @@ function buildSitePages(viewNodes: SiteNode[], viewCount: number): SiteNode[] {
           description: 'Requêtes récentes de l\'API : temps de réponse, taille, points d\'accès les plus lents' },
         { label: 'Nouveautés', path: '/admin/news', component: 'NewsAdminPage', auth: 'admin',
           description: 'Publication des nouveautés : masquer une annonce, corriger sa date ou la programmer' },
+        { label: 'Volumétrie', path: '/admin/volumetry', component: 'VolumetryPage', auth: 'admin',
+          description: 'Taille et croissance de chaque table, seuils d\'alerte, lien vers la purge manuelle' },
       ],
     },
     {

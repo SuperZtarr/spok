@@ -1,4 +1,5 @@
-/* Graphe global (/graph) : GraphView en mode global (communautés accessibles, filtre par communauté).
+/* Page « Réseau des éléments » (/graph, clé global-graph — libellé dans MENU_REGISTRY) : GraphView en mode global
+   (communautés accessibles, filtre par communauté). Ex-« Graphe global », renommée le 2026-11-18.
    Le « ? » est en haut à GAUCHE : le panneau de contrôle de GraphView occupe le coin haut droit. */
 import { useNavigate } from 'react-router-dom';
 import { GraphView } from '../components/views/GraphView';

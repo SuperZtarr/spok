@@ -1,4 +1,4 @@
-/* Accueil connecté (/) : rend HomeView (onglets communautés/espaces/visualisations selon dashboardTab). */
+/* Accueil connecté (/) : rend HomeView ; visiteur anonyme : LandingPage. (L'ancien store dashboardTab est supprimé, 2026-11-18.) */
 import { HomeView } from '../components/views/HomeView';
 import { LandingPage } from './LandingPage';
 import { useAuthStore } from '../stores/auth';

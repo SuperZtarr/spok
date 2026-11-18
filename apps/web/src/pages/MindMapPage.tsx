@@ -1,5 +1,6 @@
 /*
- * Carte mentale globale (/mindmap) : DashboardMindMapView — navigation (clic) et rangement des espaces (glisser-déposer).
+ * Page « Carte des espaces » (/mindmap, clé global-mindmap — libellé dans MENU_REGISTRY ; ex-« Carte mentale », renommée
+ * le 2026-11-18) : DashboardMindMapView — navigation (clic) et rangement des espaces (glisser-déposer).
  * handleMoveSpace attend la réponse du PATCH, recharge espaces/communautés (la carte se redessine d'après la base)
  * et affiche l'échec dans un bandeau (pas de système de toast dans l'appli) ; la vue remet alors le nœud en place.
  */

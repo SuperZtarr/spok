@@ -1,5 +1,5 @@
 /*
- * Carte mentale globale (/mindmap) : tous les espaces accessibles, regroupés par communauté — distincte de MindMapView.
+ * Carte des espaces (page /mindmap, ex-« Carte mentale globale ») : tous les espaces accessibles, regroupés par communauté — distincte de MindMapView.
  * Clic : espace → sa page, communauté → sa page. Glisser un espace sur un autre espace / une communauté / le groupe
  * des indépendants = le déplacer (règles : dashboard-mindmap-drop.ts). Pendant le survol : nœud glissé translucide,
  * cible qui pulse en vert (ou rouge si refusé) et étiquette près du curseur disant ce que fera le dépôt.

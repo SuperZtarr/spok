@@ -68,7 +68,6 @@ apps/web/src/
   stores/
     auth.test.ts
     community.test.ts
-    dashboardTab.test.ts
     selection.test.ts
     space.test.ts
     theme.test.ts

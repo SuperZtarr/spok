@@ -391,7 +391,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   // Types présents : le filtre Statuts n'offre les issues d'une question que si l'espace en contient (SpaceToolbar)
   const presentTypes = useMemo(() => [...new Set(allItems.map((i: Item) => i.type))], [allItems]);
 
-  // --- Deferred items (statut planifié + startDate > 30j) ---
   // --- Search ---
   // Recherche texte ET tags cochés (filtre Tags, 2026-11-11) — les types et statuts passent par l'API ou highlightType/Status
   const activeTagFilter = tagFilter.length > 0 ? tagFilter : undefined;

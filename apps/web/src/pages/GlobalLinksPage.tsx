@@ -1,5 +1,6 @@
 /*
- * Liens globaux (/links) : UN LIEN PAR CONTENU Lien des éléments des espaces lisibles, quel que soit leur type (lot 4
+ * Page « Tous les liens » (/links, clé global-links ; titre = menuLabel, libellé dans MENU_REGISTRY, ex-« Liens »
+ * renommée le 2026-11-18) : UN LIEN PAR CONTENU Lien des éléments des espaces lisibles, quel que soit leur type (lot 4
  * contenus multiples : plus de type Lien ; API ?contentKind=LINK), groupés Communauté › Espace › sous-espace.
  * Titre d'un lien : nom du contenu, sinon titre de l'élément, sinon titre de la page.
  * Périmètre : sélecteur Communauté / Espace (un espace inclut ses sous-espaces), filtré côté API (GET /user/tasks,
@@ -11,7 +12,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { ExternalLink, Search, FolderOpen, Building2, ChevronRight } from 'lucide-react';
-import type { SpaceWithRole } from '@spok/shared';
+import { menuLabel, type SpaceWithRole } from '@spok/shared';
 import { userTasksApi, spacesApi } from '../lib/api';
 import { PageHelpButton } from '../help/PageHelpButton';
 import { safeHref } from '../lib/sanitizeHtml';
@@ -247,7 +248,7 @@ export function GlobalLinksPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <ExternalLink className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold">Liens</h1>
+            <h1 className="text-2xl font-bold">{menuLabel('global-links')}</h1>
             <span className="text-sm text-muted-foreground">({countLabel})</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">

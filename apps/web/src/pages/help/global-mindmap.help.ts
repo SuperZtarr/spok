@@ -1,7 +1,11 @@
-/* Aide utilisateur de la page « Carte mentale globale » (/mindmap), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par
-   le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts. */
+/* Aide utilisateur de la page « Carte des espaces » (/mindmap, clé global-mindmap), écrite en éléments d'aide (help/elements.ts) : un texte par
+   fonction, repris par le « ? » (PageHelpButton), le tour et le mode Aide — registre help/pageHelp.ts.
+   Titre lu dans MENU_REGISTRY (menuLabel), jamais recopié : renommée « Carte des espaces » le 2026-11-18 (ex-« Carte mentale », confondue avec la vue). */
+import { menuLabel } from '@spok/shared';
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const TITLE = menuLabel('global-mindmap');
 
 const elements: HelpElements = {
   communaute: {
@@ -10,6 +14,7 @@ const elements: HelpElements = {
     text: 'Le nœud d\'une communauté regroupe ses espaces. Cliquez pour ouvrir sa page ; déposez-y un espace pour l\'y rattacher à la racine.',
     target: '[data-tour="global-mindmap-community"]',
     side: 'right',
+    changes: [{ id: 'global-mindmap-renamed', kind: 'evolution', text: `Cette page s'appelle désormais « ${TITLE} » et se trouve dans la section « Tout SPOK » du bandeau, pour ne plus la confondre avec la vue Carte mentale d'un espace.`, date: '2026-11-18' }],
   },
   espace: {
     title: 'Un espace',
@@ -29,14 +34,14 @@ const elements: HelpElements = {
 };
 
 export const help: HelpEntry = {
-  title: 'Carte mentale globale',
-  summary: 'Toutes vos communautés et leurs espaces en carte, pour voir et réorganiser l\'arborescence.',
+  title: TITLE,
+  summary: 'Toutes vos communautés et leurs espaces en carte (sans les éléments), pour voir et réorganiser l\'arborescence.',
   ...helpFromElements(elements),
   tour: [
     {
       popover: {
-        title: 'Carte mentale globale',
-        description: 'La structure de vos communautés et de leurs espaces.',
+        title: TITLE,
+        description: 'La structure de vos communautés et de leurs espaces. Pour les éléments d\'un espace, utilisez sa vue Carte mentale.',
       },
     },
     ...elementTourSteps('global-mindmap', elements),

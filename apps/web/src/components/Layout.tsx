@@ -20,6 +20,7 @@
  * dérivés de MODE_REGISTRY (@spok/shared), infobulles générées (lib/modeTexts).
  * Titre de l'onglet (2026-11-04) : élément ouvert (useOpenItemStore, jamais l'adresse : ?item= n'y reste pas) = icône de
  * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
+ * Accueil (2026-11-18) : titre « SPOK — » + menuLabel('home') ; l'ancien store dashboardTab (liste recopiée, code mort) est supprimé.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -65,9 +66,8 @@ import { useViewModeStore, VIEW_MODES } from '../stores/viewMode';
 import { useOpenItemStore } from '../stores/openItem';
 import { getViewIcon, getNavIcon } from '../constants/viewIcons';
 import { useMenuItems } from '../hooks/useMenuItems';
-import { useDashboardTabStore, DASHBOARD_TABS } from '../stores/dashboardTab';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, INTERFACE_MODE_LABELS, modeForContext, type InterfaceMode } from '../stores/interfaceMode';
-import { SPACE_VIEW_SECTION_IDS, MODE_REGISTRY, type SpaceWithRole } from '@spok/shared';
+import { SPACE_VIEW_SECTION_IDS, MODE_REGISTRY, menuLabel, type SpaceWithRole } from '@spok/shared';
 import { modeHint } from '../lib/modeTexts';
 
 /** Boutons d'option du mode d'interface (header) : dérivés du registre des modes (MODE_REGISTRY, @spok/shared,
@@ -805,7 +805,6 @@ export function Layout() {
 
   // Current view/function name helpers
   const { mode } = useViewModeStore();
-  const { tab } = useDashboardTabStore();
 
   const getCurrentFunctionLabel = () => {
     const path = location.pathname;
@@ -815,10 +814,7 @@ export function Layout() {
       const viewItem = spaceViews.find(v => v.viewMode === mode);
       return viewItem?.label || '';
     }
-    if (path === '/') {
-      const dashTab = DASHBOARD_TABS.find(t => t.value === tab);
-      return dashTab?.label || '';
-    }
+    if (path === '/') return menuLabel('home');
     if (path === '/tasks') return 'Mes tâches';
     return '';
   };
@@ -864,7 +860,7 @@ export function Layout() {
     }
 
     document.title = `${icon}${import.meta.env.DEV ? '[DEV] ' : ''}${title}`;
-  }, [currentSpace, openItemRef, openItem, location.pathname, mode, tab]);
+  }, [currentSpace, openItemRef, openItem, location.pathname, mode]);
 
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   const handleToggleFavorite = useCallback(async (spaceId: string) => {

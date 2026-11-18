@@ -1,7 +1,11 @@
-/* Aide utilisateur de la page « Sunburst global » (/sunburst), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le
-   « ? » (PageHelpButton) et le tour. Elle affiche SunburstView : le mode Aide y lit les zones sunburst:*. Registre help/pageHelp.ts. */
+/* Aide utilisateur de la page « Panorama » (/sunburst, clé global-sunburst), écrite en éléments d'aide (help/elements.ts) : un texte par fonction,
+   repris par le « ? » (PageHelpButton) et le tour. Elle affiche SunburstView : le mode Aide y lit les zones sunburst:*. Registre help/pageHelp.ts.
+   Titre lu dans MENU_REGISTRY (menuLabel), jamais recopié : renommée « Panorama » le 2026-11-18 (ex-« Sunburst », confondue avec la vue). */
+import { menuLabel } from '@spok/shared';
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
+
+const TITLE = menuLabel('global-sunburst');
 
 const elements: HelpElements = {
   segment: {
@@ -11,6 +15,7 @@ const elements: HelpElements = {
     target: '[data-tour="sunburst-segment"]',
     noZone: true,
     side: 'right',
+    changes: [{ id: 'global-sunburst-renamed', kind: 'evolution', text: `Cette page s'appelle désormais « ${TITLE} » et se trouve dans la section « Tout SPOK » du bandeau, pour ne plus la confondre avec la vue Sunburst d'un espace.`, date: '2026-11-18' }],
   },
   communautes: {
     title: 'Communautés',
@@ -23,13 +28,13 @@ const elements: HelpElements = {
 };
 
 export const help: HelpEntry = {
-  title: 'Sunburst global',
-  summary: 'Toute votre arborescence en anneaux : communautés, puis espaces, puis éléments.',
+  title: TITLE,
+  summary: 'Toute votre arborescence en anneaux, toutes communautés confondues : communautés, puis espaces, puis éléments.',
   ...helpFromElements(elements),
   tour: [
     {
       popover: {
-        title: 'Sunburst global',
+        title: TITLE,
         description: 'Du centre vers l\'extérieur : vos communautés, leurs espaces, leurs éléments.',
       },
     },

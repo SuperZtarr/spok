@@ -1,4 +1,5 @@
-/* Sunburst global (/sunburst) : SunburstView en mode global (hiérarchie communautés > espaces > items). */
+/* Page « Panorama » (/sunburst, clé global-sunburst — libellé dans MENU_REGISTRY) : SunburstView en mode global
+   (hiérarchie communautés > espaces > items). Ex-« Sunburst global », renommée le 2026-11-18. */
 import { SunburstView } from '../components/views/SunburstView';
 import { PageHelpButton } from '../help/PageHelpButton';
 

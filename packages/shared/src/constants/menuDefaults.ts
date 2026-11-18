@@ -1,10 +1,13 @@
 /* MENU_REGISTRY : items de menu par défaut (globaux, vues, admin) — overrides via AppConfig menu_overrides.
-   Une icône nouvelle doit être ajoutée aux deux NAV_ICONS (GlobalNavBar.tsx et Layout.tsx), sinon le bouton s'affiche sans icône.
+   Une icône nouvelle doit être déclarée dans apps/web/src/constants/viewIcons.ts (test viewIcons.test.ts).
+   Libellés : ici seulement — aide, plan du site et titres de page les lisent par menuLabel(key), jamais recopiés.
+   Section « Tout SPOK » (overview, 2026-11-18) : pages qui couvrent tout SPOK, nommées d'après ce qu'elles montrent,
+   jamais du nom d'une vue d'espace (test apps/web/src/lib/menuRegistry.test.ts) — Thomas confondait « Carte mentale » globale et vue.
    news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site.
    admin-tags (2026-11-11) : tags globaux et doublons de tags (/admin/tags, icône Tag).
    admin-news (2026-11-12) : publication des nouveautés (/admin/news, icône Sparkles déjà déclarée pour news).
    Vues d'espace en 5 catégories (2026-11-13) : SPACE_VIEW_SECTIONS ci-dessous, seule liste des catégories.
-   Carte mentale globale en icône Share2, comme la vue d'espace (2026-11-13). */
+   Carte des espaces (global-mindmap) en icône Share2, comme la vue d'espace (2026-11-13). */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY, type ViewCategoryId } from './viewRegistry.js';
 
@@ -46,10 +49,11 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'home',          label: 'Accueil',         icon: 'Home',          section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/',                    viewMode: null, order: 0, visible: true, access: 'public' },
   { id: '', key: 'communities',   label: 'Communautés',     icon: 'Users',         section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/communities',         viewMode: null, order: 1, visible: true, access: 'public' },
   { id: '', key: 'spaces',        label: 'Espaces',         icon: 'FolderKanban',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/spaces',              viewMode: null, order: 2, visible: true, access: 'public' },
-  { id: '', key: 'global-sunburst',label: 'Sunburst',       icon: 'CircleDot',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/sunburst',            viewMode: null, order: 3, visible: true, access: 'public' },
-  { id: '', key: 'global-mindmap', label: 'Carte mentale',  icon: 'Share2',     section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/mindmap',             viewMode: null, order: 4, visible: true, access: 'user'   },
-  { id: '', key: 'global-graph',   label: 'Graphe global',  icon: 'Network',       section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/graph',               viewMode: null, order: 5, visible: true, access: 'user'   },
-  { id: '', key: 'global-links',   label: 'Liens',          icon: 'ExternalLink',  section: 'global',    sectionLabel: 'Global',        sectionOrder: 0, route: '/links',               viewMode: null, order: 6, visible: true, access: 'user'   },
+  // ── Tout SPOK : vues d'ensemble de toutes les communautés (sectionOrder 0.5 : entre « global » et « personal ») ──
+  { id: '', key: 'global-mindmap', label: 'Carte des espaces',   icon: 'Share2',       section: 'overview', sectionLabel: 'Tout SPOK', sectionOrder: 0.5, route: '/mindmap',  viewMode: null, order: 0, visible: true, access: 'user'   },
+  { id: '', key: 'global-sunburst',label: 'Panorama',            icon: 'CircleDot',    section: 'overview', sectionLabel: 'Tout SPOK', sectionOrder: 0.5, route: '/sunburst', viewMode: null, order: 1, visible: true, access: 'public' },
+  { id: '', key: 'global-graph',   label: 'Réseau des éléments', icon: 'Network',      section: 'overview', sectionLabel: 'Tout SPOK', sectionOrder: 0.5, route: '/graph',    viewMode: null, order: 2, visible: true, access: 'user'   },
+  { id: '', key: 'global-links',   label: 'Tous les liens',      icon: 'ExternalLink', section: 'overview', sectionLabel: 'Tout SPOK', sectionOrder: 0.5, route: '/links',    viewMode: null, order: 3, visible: true, access: 'user'   },
 
   // ── personal ──
   { id: '', key: 'today',     label: 'Ma journée',      icon: 'Sun',             section: 'personal', sectionLabel: 'Personnel', sectionOrder: 1, route: '/today',     viewMode: null, order: 0, visible: true, access: 'user' },
@@ -76,6 +80,8 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'admin-perf',        label: 'Performances',    icon: 'Activity',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/perf',         viewMode: null, order: 11, visible: true, access: 'admin' },
   // Publication des nouveautés (2026-11-12) : masquer, dater ou programmer une annonce (NewsAdminPage)
   { id: '', key: 'admin-news',        label: 'Nouveautés',      icon: 'Sparkles',     section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/news',         viewMode: null, order: 12, visible: true, access: 'admin' },
+  // Volumétrie (2026-11-18) : taille et croissance des tables, seuils du registre volumetry.ts (icône BarChart3 déjà déclarée)
+  { id: '', key: 'admin-volumetry',   label: 'Volumétrie',      icon: 'BarChart3',    section: 'admin', sectionLabel: 'Administration', sectionOrder: 8, route: '/admin/volumetry',    viewMode: null, order: 13, visible: true, access: 'admin' },
 
   // ── misc ──
   { id: '', key: 'search',  label: 'Recherche',    icon: 'Search',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/search',  viewMode: null, order: 0, visible: true, access: 'user'   },
@@ -84,3 +90,12 @@ export const MENU_REGISTRY: MenuItemConfig[] = [
   { id: '', key: 'news',    label: 'Nouveautés',   icon: 'Sparkles',    section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: '/news',    viewMode: null, order: 3, visible: true, access: 'public' },
   { id: '', key: 'logout',  label: 'Déconnexion',  icon: 'LogOut',      section: 'misc', sectionLabel: 'Divers', sectionOrder: 7, route: null,       viewMode: null, order: 4, visible: true, access: 'user'   },
 ];
+
+/** Libellé d'une entrée du menu (MENU_REGISTRY) : titres d'aide, plan du site et titres de page le lisent ici au lieu
+ *  de le recopier. Les surcharges admin ne touchent que visible/access, donc ce libellé est bien celui affiché.
+ *  Clé inconnue → erreur (un renommage de clé doit casser le build/les tests, pas afficher un titre vide). */
+export function menuLabel(key: string): string {
+  const entry = MENU_REGISTRY.find((m) => m.key === key);
+  if (!entry) throw new Error(`menuLabel : clé de menu inconnue « ${key} »`);
+  return entry.label;
+}
