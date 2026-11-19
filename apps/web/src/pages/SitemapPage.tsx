@@ -6,6 +6,8 @@
  *   dans le bandeau prend son libellé par menuLabel(clé) (MENU_REGISTRY), jamais recopié (pages « Tout SPOK », 2026-11-18).
  *   Les vues d'espace ne s'écrivent pas ici : elles viennent de useMenuItems (VIEW_REGISTRY, droits et réglages de
  *   /admin/views compris) et de l'accroche de leur fiche d'aide (VIEW_HELP.short).
+ * Mise en page (2026-11-19) : deux colonnes à partir de lg — 1) Pages et vues, 2) Communautés et espaces publics ;
+ * empilées en dessous.
  * En mode développement (isDev), chaque ligne affiche aussi son composant, son chemin et son niveau d'accès.
  */
 import { useMemo } from 'react';
@@ -317,7 +319,7 @@ export function SitemapPage() {
 
   return (
     <div className="flex-1 overflow-auto bg-background text-foreground">
-      <div className="mx-auto max-w-4xl px-4">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="pb-4 pt-6 flex items-center gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -338,8 +340,17 @@ export function SitemapPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 space-y-8">
-        <section data-tour="sitemap-public" data-help-zone="sitemap:public">
+      <div className="mx-auto max-w-6xl px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <section data-tour="sitemap-pages" data-help-zone="sitemap:pages" className="min-w-0">
+          <h2 className="text-sm font-semibold mb-2">Pages et vues</h2>
+          <div className="border border-border rounded-xl overflow-hidden py-2">
+            {visibleTree.map((node, i) => (
+              <TreeNode key={node.path || `${node.label}-${i}`} node={node} level={0} isAuthenticated={isAuthenticated} isAdmin={isAdmin} isDev={isDev} />
+            ))}
+          </div>
+        </section>
+
+        <section data-tour="sitemap-public" data-help-zone="sitemap:public" className="min-w-0">
           <h2 className="text-sm font-semibold mb-2">Communautés et espaces publics</h2>
           <div className="border border-border rounded-xl overflow-hidden py-2">
             {isLoading && <p className="px-4 py-2 text-sm text-muted-foreground">Chargement…</p>}
@@ -349,15 +360,6 @@ export function SitemapPage() {
             )}
             {publicNodes.map((node) => (
               <TreeNode key={node.path} node={node} level={0} isAuthenticated={isAuthenticated} isAdmin={isAdmin} isDev={isDev} />
-            ))}
-          </div>
-        </section>
-
-        <section data-tour="sitemap-pages" data-help-zone="sitemap:pages">
-          <h2 className="text-sm font-semibold mb-2">Pages et vues</h2>
-          <div className="border border-border rounded-xl overflow-hidden py-2">
-            {visibleTree.map((node, i) => (
-              <TreeNode key={node.path || `${node.label}-${i}`} node={node} level={0} isAuthenticated={isAuthenticated} isAdmin={isAdmin} isDev={isDev} />
             ))}
           </div>
         </section>

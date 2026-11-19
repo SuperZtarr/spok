@@ -14,12 +14,17 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-19 — Fiche élément (signalements du 19/11) : réorganisation couverte par les autres signalements (Thomas),
+  priorité déjà résolue ; 3 changements livrés, inscrits PRÊT POUR MEP, NON COMMITÉS.
+- 2026-11-19 — Header admin responsive, ligne Administration, plan du site 2 colonnes : 3 lots inscrits PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-18 — Revue des specs avec Thomas, toutes passées en done après correction : sélecteur de vues, mode d'interface, registre des vues, comportement général de SpacePage, skill spok-dev. Reste en to_validate : spec du bandeau (renommage du jour).
 - 2026-11-18 — Bandeau : section « Tout SPOK », 4 pages globales renommées (libellés via menuLabel), store dashboardTab supprimé ; spec bandeau en to_validate ; inscrit PRÊT POUR MEP, NON COMMITÉ.
 
 - 2026-11-18 — Export : choix et ordre des champs (CSV/Excel/PDF données, mémorisé par espace) inscrit PRÊT POUR MEP, NON COMMITÉ.
 
 - 2026-11-18 — Tableau de bord : couleurs « Par statut » inscrites PRÊT POUR MEP, NON COMMITÉ. « TODO assignés » de l'accueil (confirmé par Thomas) inscrit aussi.
+- 2026-11-19 — Accueil : « TODO assignés » vide après MEP 043cbe89 + critères des aperçus (plan validé par Thomas) : un lot, inscrit PRÊT POUR MEP, NON COMMITÉ.
 
 - 2026-11-18 — Profil : onglet Communautés, Accès Claude dans Compte, aide par fonction ; inscrit PRÊT POUR MEP,
   NON COMMITÉ. Lot à part possible : 4 listes locales du profil (rôles, rôles de communauté, types et canaux de
@@ -67,6 +72,9 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-19
+- 5 lots en 4 commits (« bouton Mode admin en responsive » avec la ligne Administration : Layout.tsx commun). 2 annonces datées. Typecheck OK, TNR 2955/2955, en-têtes OK
 
 ### MEP — 2026-11-18 (2)
 - 10 lots poussés, un commit chacun (fichiers communs entiers avec le dernier lot qui les touche). 9 annonces datées. Typecheck OK, TNR 2953/2953, en-têtes OK. Volumétrie : notification réelle non vérifiée
