@@ -3,7 +3,8 @@
    Responsive (2026-10-10) : aperçus 1 par ligne sur mobile, en-têtes de carte tronqués pour
    ne jamais pousser « Voir tout » / badge hors de la carte (overflow-hidden).
    Statuts : par catégorie (ouverts, « à faire », fermés — isClosedStatus / statusIdsIn), jamais de valeur en dur.
-   « TODO assignés » (2026-11-18) : filtré sur assignedToId === compte connecté (myTasks inclut aussi mes créations).
+   Aperçus d'éléments (2026-11-19) : TASK_PREVIEWS, une définition par carte (requête filtrée par le serveur + texte
+   des critères affiché sous le titre). Avant : filtre côté navigateur d'une liste tronquée à 200 → cartes incomplètes.
    « Voir tout » des Non lus ouvre la cloche (useNotificationPanelStore) : il n'existe pas de page /notifications.
    FirstTimeSetup (2026-10-16) : « Créer une communauté » ouvre directement la modale (/communities?new=community) ;
    « Créer un espace personnel » le crée (POST /spaces PERSONAL) et l'ouvre — l'écran n'apparaît que sans aucun
@@ -15,9 +16,9 @@ import logoUrl from '../../assets/logo.png';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, FolderKanban, Rocket, LogIn, Plus, ArrowRight, LayoutDashboard, Search, Mail, Star, Clock, Activity, AlertTriangle, CalendarDays, Bell } from 'lucide-react';
 import { communitiesApi, spacesApi, activityApi, userTasksApi, notificationsApi } from '../../lib/api';
-import type { GlobalTask } from '../../lib/api';
+import type { GlobalTask, GlobalTaskFilters } from '../../lib/api';
 import type { Notification } from '@spok/shared';
-import { OPEN_CATEGORIES, isClosedStatus, isStatusIn, statusIdsIn } from '@spok/shared';
+import { OPEN_CATEGORIES, isClosedStatus, statusIdsIn } from '@spok/shared';
 import { TYPE_LABELS } from '../../constants/ui';
 import { TYPE_ICONS } from '../../constants/ui';
 import { useAuthStore } from '../../stores/auth';
@@ -167,6 +168,7 @@ function DashboardPreviewCard({
   to,
   onSeeAll,
   variant = 'default',
+  criteria,
   renderItem,
 }: {
   title: string;
@@ -177,6 +179,8 @@ function DashboardPreviewCard({
   to?: string;
   onSeeAll?: () => void;
   variant?: 'default' | 'danger';
+  /** Ce que la carte montre et pourquoi, affiché sous le titre (tiré de la définition de la carte) */
+  criteria?: string;
   renderItem: (item: any) => React.ReactNode;
 }) {
   return (
@@ -201,11 +205,79 @@ function DashboardPreviewCard({
           </button>
         )}
       </div>
+      {criteria && <p className="px-3 pt-1.5 text-[10px] leading-snug text-muted-foreground">{criteria}</p>}
       {count === 0
         ? <p className="text-[11px] text-muted-foreground text-center py-4">—</p>
         : <div className="divide-y divide-border">{items.slice(0, 5).map(item => renderItem(item))}</div>
       }
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Aperçus d'éléments : UNE définition par carte — la requête (filtrée par le serveur, sans troncature) et le
+// texte des critères affiché sous le titre en dérivent ; changer un critère = changer les deux ici.
+// ---------------------------------------------------------------------------
+
+type TaskPreviewDef = {
+  key: string;
+  title: string;
+  icon: React.ReactNode;
+  variant?: 'default' | 'danger';
+  criteria: string;
+  params: (today: Date) => GlobalTaskFilters;
+};
+
+const OPEN_STATUS_PARAM = () => statusIdsIn(OPEN_CATEGORIES).join(',');
+const PREVIEW_SORT = { sortBy: 'dueDate', sortDir: 'asc', pageSize: 5 } as const;
+
+const TASK_PREVIEWS: TaskPreviewDef[] = [
+  {
+    key: 'upcoming',
+    title: 'Échéances proches',
+    icon: <CalendarDays className="w-3.5 h-3.5 text-orange-500" />,
+    criteria: 'Non terminés, échéance dans les 7 jours, créés par vous ou assignés à vous.',
+    params: (today) => {
+      const end = new Date(today); end.setDate(end.getDate() + 8); end.setMilliseconds(-1);
+      return { status: OPEN_STATUS_PARAM(), myTasks: true, dueDateFrom: today.toISOString(), dueDateTo: end.toISOString(), ...PREVIEW_SORT };
+    },
+  },
+  {
+    key: 'overdue',
+    title: 'En retard',
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-500" />,
+    variant: 'danger',
+    criteria: 'Non terminés, échéance passée, créés par vous ou assignés à vous.',
+    params: (today) => ({ status: OPEN_STATUS_PARAM(), myTasks: true, dueDateTo: new Date(today.getTime() - 1).toISOString(), ...PREVIEW_SORT }),
+  },
+  {
+    // Assignation en saisie libre (nom sans compte) exclue : rien ne la relie au compte — même règle que « Assignés à moi »
+    key: 'assigned-todo',
+    title: 'TODO assignés',
+    icon: <Clock className="w-3.5 h-3.5 text-blue-500" />,
+    criteria: 'À faire (statuts « à faire »), assignés à votre compte, par échéance.',
+    params: () => ({ status: statusIdsIn(['open']).join(','), assignedToMe: true, ...PREVIEW_SORT }),
+  },
+];
+
+function TaskPreviewCard({ def }: { def: TaskPreviewDef }) {
+  const today = startOfDay(new Date());
+  const { data } = useQuery({
+    queryKey: ['home-preview', def.key, today.toISOString()],
+    queryFn: () => userTasksApi.list(def.params(today)),
+    staleTime: 60_000,
+  });
+  return (
+    <DashboardPreviewCard
+      title={def.title}
+      icon={def.icon}
+      variant={def.variant}
+      criteria={def.criteria}
+      count={data?.total ?? 0}
+      items={data?.data ?? []}
+      to="/dashboard"
+      renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
+    />
   );
 }
 
@@ -271,13 +343,6 @@ export function HomeView() {
     staleTime: 30_000,
   });
 
-  const { data: myTasksData } = useQuery({
-    queryKey: ['home-my-tasks'],
-    queryFn: () => userTasksApi.list({ status: statusIdsIn(OPEN_CATEGORIES).join(','), myTasks: true, pageSize: 200 }),
-    enabled: !!user,
-    staleTime: 60_000,
-  });
-
   const { data: notifData } = useQuery({
     queryKey: ['home-notifications'],
     queryFn: () => notificationsApi.list(20, 0),
@@ -301,29 +366,6 @@ export function HomeView() {
   const favoriteSpaces = (favoriteIds || [])
     .map(id => (allSpaces || []).find(s => s.id === id))
     .filter((s): s is NonNullable<typeof s> => !!s);
-
-  const allMyTasks = myTasksData?.data || [];
-  const today = startOfDay(new Date());
-  const in7Days = new Date(today); in7Days.setDate(in7Days.getDate() + 7);
-
-  const upcomingTasks = useMemo(() =>
-    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) >= today && new Date(t.dueDate) <= in7Days)
-      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
-    [allMyTasks]
-  );
-
-  const overdueTasks = useMemo(() =>
-    allMyTasks.filter(t => t.dueDate && new Date(t.dueDate) < today && !isClosedStatus(t.status))
-      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
-    [allMyTasks]
-  );
-
-  // « TODO assignés » : ouverts ET assignés au compte (myTasks ramène aussi ce que j'ai seulement créé ;
-  // une assignation en saisie libre, sans compte, ne compte pas — même règle que « Assignés à moi » du tableau de bord)
-  const todoTasks = useMemo(() =>
-    allMyTasks.filter(t => isStatusIn(t.status, ['open']) && !!user?.id && t.assignedToId === user.id),
-    [allMyTasks, user?.id]
-  );
 
   const unreadNotifs = useMemo(() =>
     (notifData || []).filter(n => !n.read),
@@ -419,33 +461,10 @@ export function HomeView() {
         {/* Dashboard preview sections */}
         {!!user && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8" data-tour="home-previews" data-help-zone="home:apercus">
-            <DashboardPreviewCard
-              title="Échéances proches"
-              icon={<CalendarDays className="w-3.5 h-3.5 text-orange-500" />}
-              count={upcomingTasks.length}
-              items={upcomingTasks}
-              to="/dashboard"
-              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
-            />
-            <DashboardPreviewCard
-              title="En retard"
-              icon={<AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
-              count={overdueTasks.length}
-              items={overdueTasks}
-              to="/dashboard"
-              variant="danger"
-              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
-            />
-            <DashboardPreviewCard
-              title="TODO assignés"
-              icon={<Clock className="w-3.5 h-3.5 text-blue-500" />}
-              count={todoTasks.length}
-              items={todoTasks}
-              to="/dashboard"
-              renderItem={(task: GlobalTask) => <TaskPreviewRow key={task.id} task={task} />}
-            />
+            {TASK_PREVIEWS.map((def) => <TaskPreviewCard key={def.key} def={def} />)}
             <DashboardPreviewCard
               title="Non lus"
+              criteria="Vos notifications non lues, parmi les 20 dernières."
               icon={<Bell className="w-3.5 h-3.5 text-violet-500" />}
               count={unreadNotifs.length}
               items={unreadNotifs}

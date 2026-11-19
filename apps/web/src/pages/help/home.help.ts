@@ -28,9 +28,10 @@ const elements: HelpElements = {
   apercus: {
     title: 'Aperçus',
     short: 'Échéances, retards, tâches et non-lus.',
-    text: 'Échéances proches, retards, tâches qui vous sont assignées, notifications non lues. « Voir tout » ouvre la page complète (pour les non lus : la cloche des notifications).',
+    text: 'Échéances proches, retards, tâches qui vous sont assignées, notifications non lues. Sous chaque titre, une ligne dit ce que la carte retient ; le nombre compte tous les éléments concernés, la carte en montre les premiers par échéance. « Voir tout » ouvre la page complète (pour les non lus : la cloche des notifications).',
     target: '[data-tour="home-previews"]',
     side: 'bottom',
+    changes: [{ id: 'home-preview-criteria', kind: 'evolution', text: 'Les aperçus de l\'accueil disent sous leur titre ce qu\'ils retiennent, et comptent désormais tous vos éléments concernés (avant, les plus anciens pouvaient manquer ; « TODO assignés » ne garde que les tâches assignées à votre compte).', date: '2026-11-19' }],
   },
   activite: {
     title: 'Activité récente',
