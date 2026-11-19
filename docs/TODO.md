@@ -266,6 +266,7 @@
 - [x] Header - ligne Administration sous le bandeau, mode admin visible en responsive — 2026-11-19
 - [x] Plan du site sur deux colonnes — 2026-11-19
 - [x] Tableau de bord - zone Échéances vide — 2026-11-19
+- [x] Statuts propres aux réunions et aux articles, Kanban une famille de statuts à la fois — 2026-11-19
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

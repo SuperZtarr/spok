@@ -105,8 +105,9 @@
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
  * Type QUESTION (2026-11-08) : bloc QuestionPanel (réponses, votes, issue) au-dessus de la zone Contenus et en mode Afficher ;
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
- * Statuts proposés aux autres types : statusesForType (sans les issues réservées) ; un statut devenu non permis par un
- * changement de type est remis à « Non défini ».
+ * Statuts proposés aux autres types : statusesForType (Réunion et Article : leurs statuts réservés, 2026-11-19) ; au
+ * changement de type, statusForType (@spok/shared) remplace un statut non permis par celui de même catégorie, sinon
+ * par le premier du type (réunion « À organiser ») ou le retire.
  * Types à composants (groupe « Compositions » : Article, Question — isComposedType, 2026-11-11) : choisir un de ces types
  * enregistre aussitôt le type seul, fiche ouverte, pour afficher ses composants (règle composed-type-autosave).
  */
@@ -123,7 +124,7 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusAllowedForType, statusesForType, getInterfaceMode } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusForType, statusesForType, getInterfaceMode } from '@spok/shared';
 import { statusChangeFields } from '../lib/statusChange';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -289,11 +290,13 @@ export function ItemEditModal({
   // Élément auquel appartient la saisie `type` : en passant à un autre élément dans la même fiche (bloc d'un
   // article…), `type` garde un rendu la valeur précédente — l'enregistrement automatique des types composés l'ignore.
   const [typeItemId, setTypeItemId] = useState<string | null>(null);
-  // Statut non permis pour le nouveau type (issue d'une question sur un autre type, ou l'inverse) : remis à « Non
-  // défini » — une question enregistrée sans statut repart « Ouverte » (API, utils/question.ts)
-  // Type à composants (Question…) : enregistré tout de suite, l'API fixe le statut — la relecture le reporte ici
+  // Statut normalisé pour le nouveau type (statusForType, @spok/shared — 2026-11-19) : une réunion part « À organiser »,
+  // un statut d'un autre type est remplacé par celui de même catégorie, sinon retiré.
+  // Type à composants (Question, Article) : enregistré tout de suite, l'API fixe le statut — la relecture le reporte ici
   useEffect(() => {
-    if (!statusAllowedForType(status, type) && !isComposedType(type)) setStatus('');
+    if (isComposedType(type)) return;
+    const next = statusForType(type, status, referentiels?.statuses || DEFAULT_REFERENTIELS.statuses);
+    if ((next ?? '') !== (status ?? '')) setStatus(next ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
   const [dueDate, setDueDate] = useState('');

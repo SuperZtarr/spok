@@ -1,12 +1,21 @@
 /* Aide utilisateur de la vue « Kanban » (kanban), écrite en éléments d'aide (2026-11-07).
    Chaque fonction est écrite une fois dans `elements` ; conseils, zones du mode Aide, infobulles et étapes du tour en
    sont dérivés (help/elements.ts). Lue par le « ? » (ViewHelpButton → HelpButton), le tour (useViewOnboarding), le mode
-   Aide (helpZones), l'infobulle de colonne (KanbanView) et les nouveautés (help/announcements.ts). */
+   Aide (helpZones), l'infobulle de colonne (KanbanView) et les nouveautés (help/announcements.ts).
+   famille (2026-11-19) : sélecteur « Éléments | Questions » (familles de statuts) ; hints.familyGeneral = libellé du
+   bouton des statuts ordinaires (les autres boutons prennent le libellé du type). */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { ITEM_MENU_STEP, SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
 
 const elements: HelpElements = {
+  famille: {
+    title: 'Famille de statuts',
+    short: 'Choisit les éléments affichés : ceux aux statuts ordinaires, ou les réunions, articles ou questions avec leurs propres statuts.',
+    text: 'Réunions, articles et questions ont leurs propres statuts (une réunion va de « À organiser » à « CR envoyé », une question d\'« Ouverte » à « Tranchée »…). Quand l\'espace en contient, le Kanban montre une famille à la fois : « Éléments » (tâches, projets… et leurs statuts ordinaires), « Réunions », « Articles » ou « Questions », chacune avec ses colonnes. Le choix est retenu pour cet espace dans ce navigateur. Les éléments des autres familles ne sont ni masqués ailleurs ni modifiés. Une colonne « Autre statut » regroupe, s\'il y en a, les cartes dont le statut n\'est pas l\'une des colonnes (statut d\'avant le changement, statut masqué) : ouvrez la carte pour lui en donner un.',
+    side: 'bottom',
+    changes: [{ id: 'kanban-status-family', kind: 'evolution', text: 'Kanban : un sélecteur « Éléments | Réunions | Articles | Questions » sépare chaque famille de statuts, au lieu de tout mélanger dans les mêmes colonnes.', date: '2026-11-19' }],
+  },
   colonne: {
     title: 'Colonne de statut',
     short: 'Un statut de l\'espace : déposez-y une carte pour le lui donner.',
@@ -23,12 +32,19 @@ const elements: HelpElements = {
   },
 };
 
+const derived = helpFromElements(elements);
+
 export const help: HelpEntry = {
   title: 'Kanban',
   summary: 'Les éléments en colonnes par statut, pour suivre l\'avancement du travail.',
   short: 'Colonnes par statut',
   empty: 'Aucun élément à classer par statut. Créez-en un avec « Nouveau » : il se range dans la colonne de son statut.',
-  ...helpFromElements(elements),
+  ...derived,
+  hints: {
+    ...derived.hints,
+    familyGeneral: 'Éléments',
+    otherColumn: 'Autre statut',
+  },
   tour: [
     {
       popover: {

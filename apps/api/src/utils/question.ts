@@ -1,9 +1,9 @@
 /*
  * Question (type QUESTION, 2026-11-08) — règles serveur, source unique pour les routes items, item-question,
  * item-bulk et la copie de séance.
- * - statusForType(type, status) : statut normalisé pour un type. Un statut réservé à un autre type devient null ;
- *   une question sans statut (ou avec un statut non permis) démarre « Ouverte ». La réservation fait foi depuis
- *   DEFAULT_STATUSES (withDefaultStatuses la rétablit dans tout référentiel personnalisé).
+ * - statusForType(type, status) : réexport de @spok/shared (source unique depuis 2026-11-19, tous les types à statuts
+ *   réservés) — une question sans statut (ou avec un statut non permis) démarre « Ouverte », sans correspondance
+ *   par catégorie. La réservation fait foi depuis DEFAULT_STATUSES (withDefaultStatuses la rétablit partout).
  * - syncQuestionAfterStatus : après un changement de statut d'une question (fiche, menu, Kanban, MCP), garde la
  *   table questions cohérente — retour à « Ouverte » efface l'issue ; une issue autre que « Tranchée » efface
  *   l'option retenue / la réponse écrite ; toute issue note qui et quand.
@@ -16,20 +16,13 @@
  *   clients relisent la question) — décompte en direct.
  * Les votes ne tranchent jamais : aucune fonction ici ne change le statut à partir des votes.
  */
-import { DEFAULT_STATUSES, QUESTION_STATUS, statusAllowedForType, type QuestionView } from '@spok/shared';
+import { QUESTION_STATUS, type QuestionView } from '@spok/shared';
 import { liveHub } from './liveHub.js';
 
 export const QUESTION_OUTCOME_IDS: string[] = Object.values(QUESTION_STATUS);
 
-/** Statut normalisé pour un type (création, changement de type ou de statut). */
-export function statusForType(type: string, status: string | null | undefined): string | null | undefined {
-  if (type === 'QUESTION') {
-    if (!status || status === 'undefined' || !statusAllowedForType(status, type, DEFAULT_STATUSES)) return QUESTION_STATUS.OPEN;
-    return status;
-  }
-  if (status && !statusAllowedForType(status, type, DEFAULT_STATUSES)) return null;
-  return status;
-}
+/** Statut normalisé pour un type : règle générale de @spok/shared (2026-11-19, Réunion et Article compris), réexportée */
+export { statusForType } from '@spok/shared';
 
 export const isQuestionOpen = (status: string | null | undefined) => !status || status === 'undefined' || status === QUESTION_STATUS.OPEN;
 

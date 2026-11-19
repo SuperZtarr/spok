@@ -4,8 +4,13 @@
  * que le cadre : poignées, clignotement (urgent, non vu), menu ⋮ au survol. Ne pas y remettre de rendu par type.
  * Aide : repère unique data-help-zone sur la colonne et la carte, partagé par le mode Aide, le tutoriel et les
  * nouveautés (pilote « élément d'aide », kanban.help.ts). Infobulle du nom de colonne : `hints` de la fiche.
- * Statuts réservés (2026-11-08) : les colonnes des issues d'une question n'apparaissent que si une question est
- * affichée ; déposer une carte dans la colonne d'un statut non permis pour son type est ignoré.
+ * Statuts réservés (2026-11-08) : déposer une carte dans la colonne d'un statut non permis pour son type est ignoré.
+ * Kanban par famille de statuts (2026-11-19, décision Thomas) : une seule famille à la fois (statuts ordinaires, ou
+ * issues des questions) — cartes et colonnes de cette famille seulement ; sélecteur dans la barre de la vue s'il y en a
+ * plusieurs (repère kanban:famille), choix retenu par espace en localStorage. Familles : statusFamilies (@spok/shared),
+ * ne pas recalculer ici. Les éléments d'une autre famille restent dans l'espace (ni filtrés ailleurs ni exportés ici).
+ * Familles : Éléments, Réunions, Articles, Questions (statuts réservés, 2026-11-19). Colonne « Autre statut »
+ * (OTHER_COLUMN) : cartes dont le statut n'est pas une colonne de la famille, seulement si besoin, sans dépôt possible.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -28,7 +33,9 @@ import { buildItemMenuGroups, hasChildItems } from '../../lib/itemMenuGroups';
 import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
-import { DEFAULT_REFERENTIELS, statusAllowedForType, statusesForItems } from '@spok/shared';
+import {
+  DEFAULT_REFERENTIELS, GENERAL_STATUS_FAMILY, statusAllowedForType, statusFamilies, statusesForFamily, typeInStatusFamily,
+} from '@spok/shared';
 import { getTypeIcon, getTypeTextColor } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
 import { itemFace } from '../../lib/itemFace';
@@ -334,7 +341,11 @@ function ResizeHandle({ onResize }: { onResize: (deltaY: number) => void }) {
   );
 }
 
-export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
+const OTHER_COLUMN = '__other';
+const familyStorageKey =(spaceId?: string) => `spok:kanban-family:${spaceId ?? 'default'}`;
+const readFamily = (spaceId?: string) => { try { return localStorage.getItem(familyStorageKey(spaceId)); } catch { return null; } };
+
+export function KanbanView({ items: allItems, currentSpaceId, portalGroups, onEdit, onDelete, onUpdateStatus, onAddChild, onMoveToSpace, onDuplicateToSpace, onConvertToSpace, onSelfAssign, onMerge, onAbsorbChildren, onSplitDescription, onOpen,
             onOpenInNewTab, onMoveItemToSpace, referentiels, canEdit = true, canEditItem,
             spaceName, viewContainerRef, onStartTour, pulseHelp }: KanbanViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -348,12 +359,27 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     })
   );
 
-  // Use referentiels or defaults — colonnes des statuts réservés (issues d'une question) seulement si un élément
-  // de ce type est affiché (statusesForItems)
-  const statuses = useMemo(() => {
-    const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
-    return statusesForItems(statusList, items).filter((s) => s.visible).sort((a, b) => a.order - b.order);
-  }, [referentiels, items]);
+  // Famille de statuts affichée (2026-11-19) : une seule à la fois — statuts ordinaires, ou issues des questions —,
+  // choisie par le sélecteur s'il y en a plusieurs, retenue par espace dans ce navigateur. Source : @spok/shared.
+  const statusList = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+  const families = useMemo(() => statusFamilies(statusList, allItems), [statusList, allItems]);
+  const [familyPick, setFamilyPick] = useState<string | null>(() => readFamily(currentSpaceId));
+  const family = families.find((f) => f.key === familyPick) ?? families[0];
+  const pickFamily = (key: string) => {
+    setFamilyPick(key);
+    try { localStorage.setItem(familyStorageKey(currentSpaceId), key); } catch { /* préférence locale facultative */ }
+  };
+  const items = useMemo(
+    () => (family ? allItems.filter((i) => typeInStatusFamily(statusList, family, i.type)) : allItems),
+    [allItems, family, statusList],
+  );
+  const statuses = useMemo(
+    () => (family ? statusesForFamily(statusList, family) : statusList).filter((s) => s.visible).sort((a, b) => a.order - b.order),
+    [statusList, family],
+  );
+  const familyLabel = (key: string) => (key === GENERAL_STATUS_FAMILY
+    ? kanbanHelp.hints?.familyGeneral ?? key
+    : (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[key as ItemType]?.label ?? key);
 
 
   // Build space sections: main space + portal spaces
@@ -383,12 +409,23 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     }));
   }, []);
 
+  // Colonne « Autre statut » (2026-11-19) : cartes dont le statut n'est pas une colonne de la famille (statut d'avant
+  // une réservation, statut masqué…) — affichée seulement si besoin, on ne peut rien y déposer
+  const isOrphan = useCallback((item: Item) => (item.status
+    ? !statuses.some((s) => s.id === item.status)
+    : !statuses.some((s) => s.id === 'undefined')), [statuses]);
+  const columns = useMemo((): StatusConfig[] => (items.some(isOrphan)
+    ? [...statuses, { id: OTHER_COLUMN, label: kanbanHelp.hints?.otherColumn ?? OTHER_COLUMN, color: 'bg-gray-100 text-gray-600', borderColor: 'border-gray-300 bg-gray-50', order: 999, visible: true }]
+    : statuses), [items, isOrphan, statuses]);
+
   // Group items by status per space
   const groupedBySpace = useMemo(() => {
     const result: Record<string, Record<string, Item[]>> = {};
     for (const section of spaceSections) {
-      result[section.spaceId] = statuses.reduce((acc, status) => {
-        if (status.id === 'undefined') {
+      result[section.spaceId] = columns.reduce((acc, status) => {
+        if (status.id === OTHER_COLUMN) {
+          acc[status.id] = section.items.filter(isOrphan);
+        } else if (status.id === 'undefined') {
           acc[status.id] = section.items.filter((item) => !item.status);
         } else {
           acc[status.id] = section.items.filter((item) => item.status === status.id);
@@ -397,7 +434,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
       }, {} as Record<string, Item[]>);
     }
     return result;
-  }, [spaceSections, statuses]);
+  }, [spaceSections, columns, isOrphan]);
 
   const activeItem = activeId ? items.find((item) => item.id === activeId) : null;
 
@@ -427,6 +464,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     const targetSpaceId = separatorIdx >= 0 ? droppableId.slice(0, separatorIdx) : currentSpaceId;
     const targetStatusId = separatorIdx >= 0 ? droppableId.slice(separatorIdx + 2) : droppableId;
 
+    if (targetStatusId === OTHER_COLUMN) return; // « Autre statut » : on ne s'y range pas
     const newStatus = targetStatusId === 'undefined' ? '' : targetStatusId;
     const currentStatus = item.status || '';
     // Colonne d'un statut non permis pour ce type (issue d'une question pour une tâche, ou l'inverse) : ignoré
@@ -453,6 +491,16 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+        {families.length > 1 && (
+          <div data-help-zone="kanban:famille" role="group" className="inline-flex rounded-md border border-border p-0.5 text-xs">
+            {families.map((f) => (
+              <button key={f.key} type="button" aria-pressed={f.key === family?.key} onClick={() => pickFamily(f.key)}
+                className={`rounded px-2 py-0.5 ${f.key === family?.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
+                {familyLabel(f.key)}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="kanban" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (
@@ -500,7 +548,7 @@ export function KanbanView({ items, currentSpaceId, portalGroups, onEdit, onDele
                 style={{ height: spaceSections.length > 1 ? getHeight(section.spaceId) : undefined }}
               >
                 <div className="flex gap-3 h-full min-h-0">
-                  {statuses.map((status) => {
+                  {columns.map((status) => {
                     const droppableId = `${section.spaceId}::${status.id}`;
                     return (
                       <KanbanColumn

@@ -4,7 +4,7 @@
  * utilisées par create_item/update_item (statut, type, tags, dates) : chaque refus lève ConventionError
  * avec les valeurs acceptées.
  * Statuts réservés (2026-11-08) : un statut porteur de `types` n'est permis que pour ces types, et un type qui a des
- * statuts réservés (QUESTION) n'utilise qu'eux — même règle que statusesForType (@spok/shared), recopiée ici
+ * statuts réservés (QUESTION, MEETING, ARTICLE — 2026-11-19) n'utilise qu'eux — même règle que statusesForType (@spok/shared), recopiée ici
  * (mcp-core ne dépend pas de @spok/shared). Sans type connu (update_item sans type), l'API normalise.
  */
 import type { SpokClient } from './client.js'

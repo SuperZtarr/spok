@@ -53,10 +53,12 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   {
     id: 'status-reserved-for-type',
     category: 'status',
-    appliesToValues: ['question_open', 'question_decided', 'question_postponed', 'question_no_conclusion'],
+    appliesToValues: ['question_open', 'question_decided', 'question_postponed', 'question_no_conclusion',
+      'meeting_to_organize', 'meeting_planned', 'meeting_agenda_sent', 'meeting_held', 'meeting_minutes_sent', 'meeting_postponed', 'meeting_cancelled',
+      'article_draft', 'article_to_validate', 'article_published', 'article_cancelled'],
     trigger: 'Choix ou changement du statut, ou du type, d’un élément',
-    effect: "Les issues d'une question (Ouverte, Tranchée, Reportée, Sans conclusion) sont réservées au type Question, qui n'utilise qu'elles. Elles ne sont proposées que pour une question ; les colonnes du Kanban et le filtre Statuts ne les montrent que si l'espace contient une question. Un statut non permis après un changement de type est retiré (une question repart « Ouverte »). Elles ne se suppriment pas des référentiels (décision Thomas 2026-11-08)",
-    location: 'packages/shared/src/constants/defaultReferentiels.ts (statusesForType, statusAllowedForType, withDefaultStatuses), apps/api/src/utils/question.ts (statusForType), apps/api/src/routes/items.ts',
+    effect: "Question (Ouverte, Tranchée, Reportée, Sans conclusion — 2026-11-08), Réunion (À organiser, Planifiée, ODJ envoyé, Réalisée en cours, CR envoyé = terminée, Reportée, Annulée) et Article (Brouillon, À valider, Publié, Annulé — 2026-11-19) ont leurs statuts réservés : ce type n'utilise qu'eux, les autres types jamais. Ils sont livrés partout (ajoutés aux référentiels personnalisés), renommables et recolorables, catégorie fixe, non supprimables. Création : une réunion part « À organiser », un article « Brouillon », une question « Ouverte ». Changement de type : statut de même catégorie parmi ceux du nouveau type, sinon le premier (type à statuts réservés) ou aucun (type ordinaire) ; une question repart toujours « Ouverte ». Éléments d'avant la règle : scripts/migrate-type-statuses.ts (décisions Thomas 2026-11-08 et 2026-11-19)",
+    location: 'packages/shared/src/constants/defaultReferentiels.ts (DEFAULT_STATUSES, statusForType, statusesForType, statusAllowedForType, withDefaultStatuses), apps/api/src/routes/items.ts, apps/web/src/components/ItemEditModal.tsx, apps/api/scripts/migrate-type-statuses.ts',
   },
   {
     id: 'question-votes-never-decide',
@@ -105,6 +107,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     trigger: 'Modèle de réponse choisi sur une question',
     effect: "Les modèles (Oui / Non / NSP, échelle d'accord en 4 niveaux + Ne sait pas, Go / No-go) sont proposés tant que la question est Ouverte et que personne n'a voté. Un modèle remplace toutes les réponses possibles (changer de modèle, corriger un mauvais clic), en choix unique, et les enregistre aussitôt ; elles se modifient ensuite comme les autres. Dès qu'un vote existe, plus de modèle : aucun vote n'est jamais perdu par un modèle (décision Thomas 2026-11-12)",
     location: 'apps/web/src/components/question/questionTemplates.ts, apps/web/src/components/question/QuestionPanel.tsx (OptionsEditor)',
+  },
+  {
+    id: 'kanban-status-family',
+    category: 'type',
+    appliesToValues: ['QUESTION'],
+    trigger: 'Vue Kanban d\'un espace qui contient des questions',
+    effect: "Le Kanban montre une seule famille de statuts à la fois : « Éléments » (types aux statuts ordinaires) ou une famille par type à statuts réservés présent (Réunions, Articles, Questions) — cartes et colonnes de cette famille seulement ; colonne « Autre statut » (sans dépôt) pour les cartes dont le statut n'est pas une colonne de la famille. Sélecteur seulement s'il y a plusieurs familles ; « Éléments » par défaut ; choix retenu par espace dans le navigateur. Familles dérivées des réservations de statut (StatusConfig.types) : un type qui recevra ses propres statuts deviendra une famille sans autre code (décision Thomas 2026-11-19)",
+    location: 'packages/shared/src/constants/defaultReferentiels.ts (statusFamilies, typeInStatusFamily, statusesForFamily), apps/web/src/components/views/KanbanView.tsx',
   },
   {
     id: 'default-type-undefined',

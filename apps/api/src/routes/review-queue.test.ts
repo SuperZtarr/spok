@@ -117,8 +117,12 @@ describe('GET /user/review-queue', () => {
     })
 
     const where = prisma.item.findMany.mock.calls[0][0].where
-    // Fermés = catégories terminé / annulé (statuts par défaut ici : questions tranchées et sans conclusion comprises)
-    expect([...where.status.notIn].sort()).toEqual(['cancelled', 'done', 'question_decided', 'question_no_conclusion'])
+    // Fermés = catégories terminé / annulé (statuts par défaut ici : questions tranchées et sans conclusion, réunions
+    // au CR envoyé ou annulées, articles publiés ou annulés compris)
+    expect([...where.status.notIn].sort()).toEqual([
+      'article_cancelled', 'article_published', 'cancelled', 'done',
+      'meeting_cancelled', 'meeting_minutes_sent', 'question_decided', 'question_no_conclusion',
+    ])
   })
 
   it('retourne vide si aucun espace accessible', async () => {

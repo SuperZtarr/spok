@@ -1,5 +1,6 @@
 /*
- * TNR du type Question (2026-11-08) : statuts réservés (statusForType, statusesForType, withDefaultStatuses),
+ * TNR du type Question (2026-11-08) : statuts réservés (statusForType — Réunion et Article compris depuis 2026-11-19,
+ * correspondance par catégorie —, statusesForType, withDefaultStatuses),
  * routes …/question (lecture sans vote pour un lecteur, options à identifiant stable, issue, vote figé après décision,
  * issue d'une copie de séance réservée à l'animateur et reportée sur la question d'origine, réponse liée à un élément :
  * accès vérifié à l'enregistrement, élément montré seulement au lecteur qui peut le lire).
@@ -32,8 +33,18 @@ describe('Statuts réservés', () => {
     expect(statusForType('QUESTION', null)).toBe(QUESTION_STATUS.OPEN)
     expect(statusForType('QUESTION', 'done')).toBe(QUESTION_STATUS.OPEN)
     expect(statusForType('QUESTION', QUESTION_STATUS.DECIDED)).toBe(QUESTION_STATUS.DECIDED)
-    expect(statusForType('TASK', QUESTION_STATUS.DECIDED)).toBeNull()
+    // Statut d'un autre type : même catégorie parmi les statuts ordinaires (Tranchée = terminé → Terminé, 2026-11-19)
+    expect(statusForType('TASK', QUESTION_STATUS.DECIDED)).toBe('done')
     expect(statusForType('TASK', 'todo')).toBe('todo')
+    // Réunion et article (2026-11-19) : premier statut à la création, correspondance par catégorie au changement de type
+    expect(statusForType('MEETING', null)).toBe('meeting_to_organize')
+    expect(statusForType('MEETING', 'done')).toBe('meeting_minutes_sent')
+    expect(statusForType('MEETING', 'cancelled')).toBe('meeting_cancelled')
+    expect(statusForType('ARTICLE', 'to_validate')).toBe('article_to_validate')
+    expect(statusForType('ARTICLE', 'late')).toBe('article_draft')
+    expect(statusForType('TASK', 'meeting_minutes_sent')).toBe('done')
+    expect(statusForType('MEETING', 'meeting_held')).toBe('meeting_held')
+    expect(statusForType('QUESTION', 'meeting_minutes_sent')).toBe(QUESTION_STATUS.OPEN)
     // Statut propre à une communauté (inconnu des défauts) : conservé
     expect(statusForType('TASK', 'review')).toBe('review')
     expect(statusAllowedForType('review', 'QUESTION')).toBe(false)

@@ -15,6 +15,8 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
   déposé seul), ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
   QUESTION (titre = la question ; issue notée par ses statuts réservés question_open / question_decided /
   question_postponed / question_no_conclusion, qu'elle seule utilise ; options et votes ne se gèrent pas par MCP).
+  MEETING et ARTICLE ont aussi leurs statuts réservés (meeting_* : à organiser → CR envoyé ; article_* : brouillon →
+  publié) : get_space_conventions indique pour chaque statut réservé le type qui l'utilise.
   Les types réellement utilisés et leurs libellés dépendent de la communauté : voir get_space_conventions.
 - Contenus : un item de n'importe quel type porte des images, fichiers, liens et schémas (plusieurs de chaque).
   get_item les liste avec leur id. Par MCP : add_item_content ajoute un lien ou un schéma draw.io (xml) — le

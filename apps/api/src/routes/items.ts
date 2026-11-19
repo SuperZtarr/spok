@@ -516,7 +516,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       if (tagIds?.length && (await invisibleTagIds(fastify.prisma, request.params.spaceId, tagIds)).length > 0) {
         return reply.badRequest('Tag non disponible dans cet espace');
       }
-      // Statut réservé à un autre type → retiré ; une question démarre « Ouverte » (utils/question.ts)
+      // Statut normalisé pour le type (statusForType, @spok/shared) : une réunion démarre « À organiser », un article
+      // « Brouillon », une question « Ouverte » ; un statut réservé à un autre type est remplacé (même catégorie) ou retiré
       itemData.status = statusForType(itemData.type, itemData.status);
 
       if (itemData.parentId) {
@@ -739,8 +740,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       if (tagIds?.length && (await invisibleTagIds(fastify.prisma, existingItem.spaceId, tagIds)).length > 0) {
         return reply.badRequest('Tag non disponible dans cet espace');
       }
-      // Statut cohérent avec le type (changement de type ou de statut) : statut réservé à un autre type retiré,
-      // question remise à « Ouverte » si son statut n'est pas une issue (utils/question.ts)
+      // Statut cohérent avec le type (changement de type ou de statut, statusForType de @spok/shared) : statut de
+      // même catégorie parmi ceux du type (Réunion, Article…), sinon le premier ; question remise à « Ouverte »
       const finalType = updateData.type ?? existingItem.type;
       if (updateData.type !== undefined || updateData.status !== undefined) {
         const current = updateData.status !== undefined ? updateData.status : existingItem.status;

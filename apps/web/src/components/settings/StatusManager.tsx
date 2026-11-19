@@ -2,8 +2,9 @@
    Catégorie (2026-11-08, constants/statusCategory.ts) : sens du statut dans toutes les vues (Terminé / Annulé ferment
    l'élément…) ; un nouveau statut part en « À faire » ; « Non défini » et les statuts réservés gardent la leur.
    Aide en ligne : FieldHelp community-settings.statusCategory sous le titre (texte à lire avant de choisir).
-   Statuts réservés à un type (status.types, ex. issues d'une question — RESERVED_STATUS_IDS) : badge « Réservé aux
-   questions » (aide sous FieldHelp community-settings.reservedStatus), suppression impossible (l'API les rétablit). */
+   Statuts réservés à un type (status.types — issues d'une question, statuts d'une réunion ou d'un article depuis
+   2026-11-19 — RESERVED_STATUS_IDS) : badge « Réservé aux <type> » (hint reservedBadge, aide sous FieldHelp
+   community-settings.reservedStatus), catégorie figée, suppression impossible (l'API les rétablit). */
 import { useState, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { Plus, Trash2, GripVertical, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -12,8 +13,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { BadgeColorPicker } from './ColorPicker';
-import { BADGE_COLOR_OPTIONS, RESERVED_STATUS_IDS, STATUS_CATEGORY_OPTIONS, statusCategory } from '@spok/shared';
+import { BADGE_COLOR_OPTIONS, DEFAULT_TYPE_LABELS, RESERVED_STATUS_IDS, STATUS_CATEGORY_OPTIONS, statusCategory } from '@spok/shared';
 import { FieldHelp } from '../../help/FieldHelp';
+import { pageHint } from '../../help/pageHint';
 
 interface StatusManagerProps {
   statuses: StatusConfig[];
@@ -213,9 +215,12 @@ export function StatusManager({ statuses, onChange, onCheckUsage }: StatusManage
                 </span>
               )}
 
-              {status.types?.includes('QUESTION') && (
-                <span className="px-2 py-1 rounded text-xs border border-sky-300 text-sky-700">Réservé aux questions</span>
-              )}
+              {status.types?.length ? (
+                <span className="px-2 py-1 rounded text-xs border border-sky-300 text-sky-700">
+                  {pageHint('community-settings', 'reservedBadge')?.replace('{type}',
+                    status.types.map((t) => (DEFAULT_TYPE_LABELS[t]?.label ?? t).toLowerCase()).join(', '))}
+                </span>
+              ) : null}
               <span className={`px-2 py-1 rounded text-xs ${status.color}`}>
                 Aperçu
               </span>

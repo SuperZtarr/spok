@@ -6,7 +6,10 @@
    Bugs le 2026-11-11.)
    Statuts réservés à un type (StatusConfig.types) : les 4 issues d'une question (QUESTION_STATUS) ne sont proposées
    que pour une Question, qui n'utilise qu'elles — statusesForType / statusAllowedForType sont la source unique de ce tri (API, MCP, web) ;
-   withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation. */
+   statusFamilies / typeInStatusFamily / statusesForFamily en dérivent les familles de statuts (Kanban par famille, 2026-11-19) ;
+   withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation.
+   Réunion (7 statuts, terminée = CR envoyé) et Article (4 statuts) ont aussi leurs statuts réservés (2026-11-19) ;
+   statusForType normalise le statut d'un élément selon son type (correspondance par catégorie au changement de type). */
 import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
 import { ITEM_TYPE_REGISTRY } from './typeRegistry.js';
 
@@ -129,7 +132,53 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     category: 'cancelled',
     types: ['QUESTION'],
   },
+  // Statuts d'une réunion (type MEETING, décision Thomas 2026-11-19) — réservés à ce type ; terminée = CR envoyé
+  // Classes Tailwind écrites en toutes lettres et déjà présentes dans apps/web/src (le contenu scanné par Tailwind
+  // n'inclut pas ce paquet : une classe absente du web ne serait pas générée)
+  { id: 'meeting_to_organize', label: 'À organiser', color: 'bg-yellow-100 text-yellow-800', borderColor: 'border-yellow-300 bg-yellow-50', order: 12, visible: true, category: 'open', types: ['MEETING'] },
+  { id: 'meeting_planned', label: 'Planifiée', color: 'bg-blue-100 text-blue-800', borderColor: 'border-blue-300 bg-blue-50', order: 13, visible: true, category: 'open', types: ['MEETING'] },
+  { id: 'meeting_agenda_sent', label: 'ODJ envoyé', color: 'bg-cyan-100 text-cyan-800', borderColor: 'border-cyan-300 bg-cyan-50', order: 14, visible: true, category: 'open', types: ['MEETING'] },
+  { id: 'meeting_held', label: 'Réalisée', color: 'bg-orange-100 text-orange-800', borderColor: 'border-orange-300 bg-orange-50', order: 15, visible: true, category: 'active', types: ['MEETING'] },
+  { id: 'meeting_minutes_sent', label: 'CR envoyé', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 16, visible: true, category: 'done', types: ['MEETING'] },
+  { id: 'meeting_postponed', label: 'Reportée', color: 'bg-amber-100 text-amber-800', borderColor: 'border-amber-300 bg-amber-50', order: 17, visible: true, category: 'open', types: ['MEETING'] },
+  { id: 'meeting_cancelled', label: 'Annulée', color: 'bg-pink-100 text-pink-800', borderColor: 'border-pink-300 bg-pink-50', order: 18, visible: true, category: 'cancelled', types: ['MEETING'] },
+  // Statuts d'un article (type ARTICLE, décision Thomas 2026-11-19) — réservés à ce type
+  { id: 'article_draft', label: 'Brouillon', color: 'bg-gray-100 text-gray-600', borderColor: 'border-gray-300 bg-gray-50', order: 19, visible: true, category: 'open', types: ['ARTICLE'] },
+  { id: 'article_to_validate', label: 'À valider', color: 'bg-purple-100 text-purple-800', borderColor: 'border-purple-300 bg-purple-50', order: 20, visible: true, category: 'review', types: ['ARTICLE'] },
+  { id: 'article_published', label: 'Publié', color: 'bg-green-100 text-green-800', borderColor: 'border-green-300 bg-green-50', order: 21, visible: true, category: 'done', types: ['ARTICLE'] },
+  { id: 'article_cancelled', label: 'Annulé', color: 'bg-pink-100 text-pink-800', borderColor: 'border-pink-300 bg-pink-50', order: 22, visible: true, category: 'cancelled', types: ['ARTICLE'] },
 ];
+
+/**
+ * Types dont le statut ne se déduit jamais de la catégorie au changement de type : une question repart toujours
+ * « Ouverte » (son issue se note, elle ne s'hérite pas).
+ */
+const NO_CATEGORY_MAPPING_TYPES = ['QUESTION'];
+
+/**
+ * Statut normalisé pour un type (création, changement de type, MCP, API — source unique, 2026-11-19) :
+ * - statut permis pour ce type : gardé (vide gardé pour un type aux statuts ordinaires) ;
+ * - type à statuts réservés (Question, Réunion, Article) : statut de même catégorie parmi les siens (sauf Question),
+ *   sinon le premier (À organiser, Brouillon, Ouverte) ;
+ * - type ordinaire avec un statut réservé à un autre type : statut ordinaire de même catégorie, sinon null.
+ * La catégorie d'un statut inconnu de `statuses` (statut propre à une communauté) n'est pas connue : pas de correspondance.
+ */
+export function statusForType(
+  type: string,
+  status: string | null | undefined,
+  statuses: StatusConfig[] = DEFAULT_STATUSES,
+): string | null | undefined {
+  const all = withDefaultStatuses(statuses);
+  const own = statusesForType(all, type).filter((s) => s.id !== 'undefined').sort((a, b) => a.order - b.order);
+  const reserved = all.some((s) => s.types?.includes(type));
+  const empty = !status || status === 'undefined' || status === 'none';
+  if (empty) return reserved ? own[0]?.id ?? status : status;
+  if (statusAllowedForType(status, type, all)) return status;
+  const category = all.find((s) => s.id === status)?.category;
+  const match = category && !NO_CATEGORY_MAPPING_TYPES.includes(type) ? own.find((s) => s.category === category) : undefined;
+  if (match) return match.id;
+  return reserved ? own[0]?.id ?? null : null;
+}
 
 /** Identifiants des issues d'une question (statuts réservés au type QUESTION). */
 export const QUESTION_STATUS = {
@@ -181,6 +230,43 @@ export function statusesForItems<T extends StatusConfig>(statuses: T[], items: I
   const present = new Set<string>();
   for (const it of items) if (it.type) present.add(it.type);
   return statuses.filter((s) => !s.types?.length || s.types.some((t) => present.has(t)));
+}
+
+/** Famille de statuts : types qui partagent les mêmes statuts (types null = tous les types sans statut réservé) */
+export interface StatusFamily {
+  key: string;
+  types: string[] | null;
+}
+export const GENERAL_STATUS_FAMILY = 'general';
+
+/**
+ * Familles de statuts présentes parmi ces éléments (Kanban par famille, décision Thomas 2026-11-19) : « general »
+ * si un élément utilise les statuts ordinaires, puis une famille par type à statuts réservés présent (Question…).
+ * Dérivé des réservations (StatusConfig.types) : un type qui recevra ses propres statuts deviendra une famille de plus.
+ */
+export function statusFamilies(statuses: StatusConfig[], items: Iterable<{ type?: string | null }>): StatusFamily[] {
+  const reservedTypes = [...new Set(statuses.flatMap((s) => s.types ?? []))];
+  const present = new Set<string>();
+  let general = false;
+  for (const it of items) {
+    if (it.type && reservedTypes.includes(it.type)) present.add(it.type);
+    else general = true;
+  }
+  return [
+    ...(general ? [{ key: GENERAL_STATUS_FAMILY, types: null }] : []),
+    ...reservedTypes.filter((t) => present.has(t)).map((t) => ({ key: t, types: [t] })),
+  ];
+}
+
+/** Un élément de ce type appartient-il à cette famille ? */
+export function typeInStatusFamily(statuses: StatusConfig[], family: StatusFamily, type: string | null | undefined): boolean {
+  if (family.types) return !!type && family.types.includes(type);
+  return !type || !statuses.some((s) => s.types?.includes(type));
+}
+
+/** Statuts (colonnes) d'une famille */
+export function statusesForFamily<T extends StatusConfig>(statuses: T[], family: StatusFamily): T[] {
+  return statusesForType(statuses, family.types?.[0] ?? null);
 }
 
 /**
