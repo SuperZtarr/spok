@@ -34,6 +34,7 @@ const ZONE_COLORS: Record<string, string> = {
   sidebar: '#2563eb',
   header: '#7c3aed',
   bandeau: '#db2777',
+  'bandeau-admin': '#dc2626', // ligne Administration du header (mode admin, 2026-11-19)
   toolbar: '#ea580c',
   contenu: '#059669',
   // sous-zones de la barre d'espace

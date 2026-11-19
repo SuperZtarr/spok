@@ -263,6 +263,7 @@
 - [x] Vues - VIEW_CATEGORIES supprimé — 2026-11-18
 - [x] Accueil - aperçus filtrés par le serveur, critères affichés — 2026-11-19
 - [x] Fiche élément - contenus au-dessus, zones renseignées colorées, espace cliquable — 2026-11-19
+- [x] Header - ligne Administration sous le bandeau, mode admin visible en responsive — 2026-11-19
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

@@ -20,6 +20,8 @@
  * dérivés de MODE_REGISTRY (@spok/shared), infobulles générées (lib/modeTexts).
  * Titre de l'onglet (2026-11-04) : élément ouvert (useOpenItemStore, jamais l'adresse : ?item= n'y reste pas) = icône de
  * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
+ * Administration (2026-11-19) : bouton Mode admin/dev visible aussi en responsive ; le menu Administration n'est plus
+ * dans le pied de sidebar mais dans la ligne admin du header (GlobalNavBar) — sur mobile, grille de navigation.
  * Accueil (2026-11-18) : titre « SPOK — » + menuLabel('home') ; l'ancien store dashboardTab (liste recopiée, code mort) est supprimé.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
@@ -417,11 +419,10 @@ export function Layout() {
   const { user, updateUser, logout, refreshToken } = useAuthStore();
   const communityContexts = useCommunityContexts();
   const { initTheme } = useThemeStore();
-  const { spaceViews, sections: menuSections, visibleItems } = useMenuItems();
+  const { spaceViews, sections: menuSections } = useMenuItems();
   const interfaceMode = useInterfaceModeStore(s => s.mode);
   const contextInterfaceMode = useInterfaceModeStore(s => s.contextMode);
   const chooseInterfaceMode = useInterfaceModeStore(s => s.chooseMode);
-  const adminMenuItems = visibleItems.filter(item => item.section === 'admin');
   const adminMode = useAdminMode();
   const { clearIncludeChildren } = useSpaceStore();
   const { startTour, showWelcome, closeWelcome } = useOnboarding();
@@ -1268,35 +1269,7 @@ export function Layout() {
 
       {/* Footer sidebar */}
       <div data-devzone="sidebar-footer" className="border-t border-border flex-shrink-0">
-        {adminMode && adminMenuItems.length > 0 && (
-          <div className="px-2 py-2 border-b border-border/50">
-            <div className="flex items-center px-1 mb-1">
-              <Settings className="w-3 h-3 text-red-500 mr-1.5 flex-shrink-0" />
-              <span className="text-[10px] font-semibold text-red-600 uppercase tracking-wider">Administration</span>
-            </div>
-            <div className="space-y-0.5">
-              {adminMenuItems.map(item => {
-                if (!item.route) return null;
-                const Icon = getNavIcon(item.icon);
-                const isActive = location.pathname === item.route || location.pathname.startsWith(item.route + '/');
-                return (
-                  <Link
-                    key={item.key}
-                    to={item.route}
-                    className={`flex items-center gap-2 px-2 py-1 rounded-md text-xs transition-colors ${
-                      isActive
-                        ? 'bg-red-50 text-red-700 font-medium'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                    }`}
-                  >
-                    {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Menu Administration déplacé dans le header (ligne admin de GlobalNavBar, 2026-11-19) */}
         <div className="px-4 py-2">
           <span className="text-[10px] text-muted-foreground/50">
             MEP {new Date(__BUILD_DATE__).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -1521,10 +1494,13 @@ export function Layout() {
                 <NotificationBell />
                 {/* Raccourcis déplacés depuis le bandeau (GlobalNavBar) le 2026-08-31 :
                     Mode admin / Mode dev (compact, gatés admin), Déconnexion, puis "Retourner à"
-                    éventuel — desktop uniquement, mobile inchangé (grille sidebar + modale profil). */}
-                <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
+                    éventuel. Mode admin / Mode dev visibles aussi en responsive (bug 2026-11-19) ;
+                    Déconnexion et "Retourner à" desktop uniquement (mobile : grille sidebar + modale profil). */}
+                <div className="flex items-center gap-0.5 flex-shrink-0">
                   <AdminModeToggle variant="compact" />
                   <DevModeToggle variant="compact" />
+                </div>
+                <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
                   <button
                     onClick={handleLogout}
                     title="Déconnexion"
