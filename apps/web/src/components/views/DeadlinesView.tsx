@@ -2,7 +2,9 @@
  * Badges de priorité : toujours via PRIORITIES (constants/ui), jamais de table locale.
  * Types suivis par défaut : tous ceux du registre (ITEM_TYPES) ; seuls les éléments datés y apparaissent.
  * Éléments fermés (isClosedStatus, statuts par défaut : page transverse à plusieurs communautés) : jamais en retard,
- * masqués sauf « Afficher terminés ». */
+ * masqués sauf « Afficher terminés ».
+ * Intégrée (embedded, 2026-11-19) : requête forcée sur mes éléments, non terminés, triée par échéance — les filtres
+ * du tableau de bord (tri priorité, pas de myTasks) ramenaient 2000 éléments sans échéance → zone vide. */
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +18,7 @@ import { userTasksApi, itemsApi } from '../../lib/api';
 import type { GlobalTask } from '../../lib/api';
 import type { Item } from '@spok/shared';
 import { ItemEditModal } from '../ItemEditModal';
-import { buildStatusColorMap, buildStatusLabelMap, isClosedStatus, ITEM_TYPES } from '@spok/shared';
+import { buildStatusColorMap, buildStatusLabelMap, isClosedStatus, ITEM_TYPES, OPEN_CATEGORIES, statusIdsIn } from '@spok/shared';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import type { GlobalTaskFilterState } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
@@ -119,9 +121,16 @@ export function DeadlinesView({ embedded, filters: externalFilters }: { embedded
 
   const filters = externalFilters ?? internalFilters;
 
+  // Intégré au tableau de bord : mes éléments (créés ou assignés), non terminés sauf « terminés » cochés, tri par
+  // échéance (sans échéance en fin) — sinon la liste, tronquée et triée par priorité, ne contenait aucune échéance
+  const params = embedded
+    ? { ...filters.queryParams, myTasks: true, sortBy: 'dueDate' as const, sortDir: 'asc' as const,
+        status: filters.queryParams.status || (showDone ? undefined : statusIdsIn(OPEN_CATEGORIES).join(',')) }
+    : filters.queryParams;
+
   const { data: tasksData, isLoading } = useQuery({
-    queryKey: ['deadlines-view', filters.queryParams],
-    queryFn: () => userTasksApi.list(filters.queryParams),
+    queryKey: ['deadlines-view', params],
+    queryFn: () => userTasksApi.list(params),
   });
 
   const { data: spaceItemsData } = useQuery({
