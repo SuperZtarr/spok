@@ -27,7 +27,8 @@ export const elements = {
   chemin: {
     title: 'Fil d\'Ariane',
     short: 'Communauté, espace et parents de l\'élément.',
-    text: 'Communauté → Espace → Parents. Cliquez sur l\'espace pour y retourner, ou sur un parent pour naviguer dans la hiérarchie.',
+    text: 'Communauté → Espace → Parents. Le nom de l\'espace ferme la fiche et ouvre l\'espace de l\'élément, utile quand vous l\'avez trouvé par une recherche ou depuis une page globale (Aujourd\'hui, Mes tâches…). Un parent ouvre la fiche de ce parent.',
+    changes: [{ id: 'item-open-space', kind: 'new', text: 'La fiche affiche l\'espace de l\'élément en haut : cliquez dessus pour ouvrir cet espace, même si vous avez trouvé l\'élément par une recherche.', date: '2026-11-19' }],
     target: '[data-tour="item-breadcrumb"]',
     noZone: true,
     side: 'bottom',
@@ -62,7 +63,7 @@ export const elements = {
   champs: {
     title: 'Plus de champs',
     short: 'Déplie ou replie la fiche.',
-    text: 'Dépliez la fiche (« Plus de champs ») pour ouvrir à droite le panneau Pilotage : type, statut, priorité, dates, assignation, parent, références externes, dépendances, enfants et historique. « Moins de champs » le referme. La colonne de gauche ne change pas : tags, description, contenus et contributions restent au même endroit. La fiche s\'ouvre réduite en mode ' + collapsedModesLabel() + ', complète dans les autres modes.',
+    text: 'Dépliez la fiche (« Plus de champs ») pour ouvrir à droite le panneau Pilotage : type, statut, priorité, dates, assignation, parent, références externes, dépendances, enfants et historique. « Moins de champs » le referme. La colonne de gauche ne change pas : tags, contenus, description et contributions restent au même endroit. Les zones qui contiennent une information sont colorées, les zones vides restent neutres. La fiche s\'ouvre réduite en mode ' + collapsedModesLabel() + ', complète dans les autres modes.',
     target: '[data-tour="item-more-fields"]',
     noZone: true,
     side: 'bottom',
@@ -249,12 +250,13 @@ export const help: HelpEntry = {
   ...derived,
   hints: {
     ...derived.hints,
+    openSpace: 'Ouvrir l\'espace de cet élément : ferme la fiche et affiche l\'espace où il est rangé.',
     sectionHelp: 'Chaque section de la fiche a son petit « ? » : cliquez-le pour savoir à quoi elle sert et comment s\'en servir.',
     saveAndClose: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche (touche Entrée dans un champ : même effet).',
     save: 'Enregistrer : enregistre les modifications et garde la fiche ouverte pour continuer (raccourci Ctrl+S).',
     datesSummary: 'Cliquez pour déplier les dates et les modifier. Rien n\'est modifié tant que vous n\'enregistrez pas.',
     moreFields: 'Plus de champs : affiche aussi le type, le statut, la priorité, les dates, l\'assignation, les relations et l\'historique. Rien n\'est modifié.',
-    lessFields: 'Moins de champs : revient à la fiche réduite (titre, tags, description, contenus, contributions). Rien n\'est modifié.',
+    lessFields: 'Moins de champs : revient à la fiche réduite (titre, tags, contenus, description, contributions). Rien n\'est modifié.',
     actionCopyId: 'Copier l\'identifiant : met l\'identifiant technique de l\'élément dans le presse-papier (utile pour le MCP ou un signalement). Rien n\'est modifié.',
     copyIdDone: 'Identifiant copié',
     copyLink: 'Copier le lien : met dans le presse-papier une adresse courte vers cet élément. À l\'ouverture, SPOK retrouve son espace. Le lien ne donne aucun accès : il faut pouvoir lire l\'espace. Rien n\'est modifié.',

@@ -77,9 +77,13 @@
  * chaque élément) ; aides des champs du panneau en rappel au survol du libellé (itemFields) au lieu de texte sous le champ ;
  * fiche complète sur grand écran : colonne principale et panneau défilent séparément.
  * Deux colonnes (2026-11-13, réorganisation, lot 3) : colonne principale commune (sélecteur de type « contenu » en fiche
- * réduite, Tags, Description, Contenus, Contributions, Historique en fiche réduite) ; fiche complète = + panneau Pilotage
+ * réduite, Tags, Contenus, Description, Contributions, Historique en fiche réduite — Contenus au-dessus de la Description
+ * depuis 2026-11-19) ; fiche complète = + panneau Pilotage
  * (data-devzone item-pilotage) : Type, Statut, Priorité, Dates, Assigné, Parent, Références, Dépendances, Enfants,
  * Historique.
+ * Zones renseignées (2026-11-19) : chaque zone qui contient une valeur est teintée (filledZone, seule source du style),
+ * une zone vide reste neutre. Chemin : l'espace est lu ici (useSpace, aucune page ne passe spaceName) et son nom est un
+ * lien « ouvrir l'espace » (hints.openSpace) qui ferme la fiche — utile après une recherche ou une page globale.
  * Identifiant et lien (2026-11-18, règle item-share-link) : dans le pied, à droite avant « Actions », pour un élément
  * enregistré : identifiant sélectionnable + « Copier le lien » (itemShareUrl, lien court /items/<id> qui retrouve
  * l'espace à l'ouverture). « Copier l'identifiant » reste aussi dans le menu Actions.
@@ -133,6 +137,7 @@ import { QuestionStatusField } from './question/QuestionStatusField';
 import { ArticleEditor } from './article/ArticleEditor';
 import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
+import { useSpace } from '../hooks/useSpaces';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 import { itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
@@ -182,6 +187,14 @@ import { useInterfaceModeStore } from '../stores/interfaceMode';
 import { isFreshDraft, isItemEmpty } from '../lib/emptyNewItem';
 
 type ParentSortMode = 'tree' | 'alpha';
+
+/** Zone renseignée (demande Thomas 2026-11-19) : fond teinté + trait coloré à gauche ; zone vide neutre, mêmes marges
+ *  pour que tout reste aligné. Seule source de ce style dans la fiche (mode Modifier). */
+const filledZone = (filled: boolean) =>
+  `rounded-md border-l-2 px-3 py-2 transition-colors ${filled ? 'bg-primary/5 border-primary/40' : 'border-transparent'}`;
+
+/** Texte réellement saisi dans une description HTML (balises retirées). */
+const hasText = (html: string | null | undefined) => !!html && html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length > 0;
 
 interface ItemEditModalProps {
   isOpen: boolean;
@@ -1044,6 +1057,11 @@ export function ItemEditModal({
     }
   }, [allItems, itemId, parentSortMode]);
 
+  // Espace de l'élément (lien « ouvrir l'espace » du chemin) : lu ici, aucune page ne passe spaceName (2026-11-19)
+  const itemSpaceId = item?.spaceId ?? spaceId;
+  const { data: itemSpace } = useSpace(itemSpaceId);
+  const shownSpaceName = spaceName ?? itemSpace?.name;
+
   // Build breadcrumb path by walking up parentId chain
   const breadcrumb = useMemo(() => {
     if (!item || !allItems.length) return [];
@@ -1203,8 +1221,10 @@ export function ItemEditModal({
         : <FieldHelp page="question" field="unsaved" />)}
       {/* Contenus : images, fichiers, liens, schémas, quel que soit le type — masqués sur un Article (ses blocs) */}
       {type !== 'ARTICLE' && (
-        <ItemContentsSection spaceId={item?.spaceId ?? spaceId} itemId={itemId ?? undefined} contents={item?.contents}
-          canEdit={canEdit} onTitleHint={autoFillTitle} />
+        <div className={filledZone((item?.contents?.length ?? 0) > 0)}>
+          <ItemContentsSection spaceId={item?.spaceId ?? spaceId} itemId={itemId ?? undefined} contents={item?.contents}
+            canEdit={canEdit} onTitleHint={autoFillTitle} />
+        </div>
       )}
     </>
   );
@@ -1212,7 +1232,7 @@ export function ItemEditModal({
   // Tags — toujours visibles (décision Thomas 2026-11-11 : une anomalie est une Tâche taguée « bug », une
   // configuration une Note taguée « config ») : fiche réduite sous la ligne de type, fiche complète en colonne droite.
   const tagsSection = (
-    <div className="space-y-3" data-tour="item-tags" data-devzone="item-tags">
+    <div className={`space-y-3 ${filledZone(selectedTagIds.length > 0)}`} data-tour="item-tags" data-devzone="item-tags">
       <h2 className="text-sm font-semibold flex items-center gap-2">
         <TagIcon className="w-4 h-4" />
         Tags
@@ -1252,7 +1272,7 @@ export function ItemEditModal({
           {/* En-tête commun (réorganisation, lot 2, 2026-11-13) — même structure dans Modifier, Afficher et Composer :
               1. chemin + auteur · date ; 2. icône du type + titre pleine largeur ; 3. modes, Plus de champs, un seul « ? » */}
           <div className="flex items-start gap-3 mb-2 px-1">
-            {(communityName || spaceName || breadcrumb.length > 0) ? (
+            {(communityName || shownSpaceName || breadcrumb.length > 0) ? (
               <nav className="flex flex-1 min-w-0 items-center gap-1.5 text-sm text-muted-foreground flex-wrap" data-tour="item-breadcrumb" data-devzone="item-chemin">
               {communityName && (
                 <>
@@ -1261,11 +1281,14 @@ export function ItemEditModal({
                   <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground/50" />
                 </>
               )}
-              {spaceName && (
-                <Link to={`/spaces/${spaceId}`} onClick={onClose} className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <Home className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="font-medium">{spaceName}</span>
-                </Link>
+              {shownSpaceName && (
+                <HelpHint text={itemHints?.openSpace}>
+                  <Link to={`/spaces/${itemSpaceId}`} onClick={onClose}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-border text-foreground hover:border-primary hover:text-primary transition-colors">
+                    <Home className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="font-medium">{shownSpaceName}</span>
+                  </Link>
+                </HelpHint>
               )}
               {breadcrumb.map((crumb) => (
                 <span key={crumb.id} className="flex items-center gap-1.5">
@@ -1490,12 +1513,16 @@ export function ItemEditModal({
                 );
               })()}
 
-              {/* Tags, dans les deux fiches, avant la Description */}
+              {/* Tags, dans les deux fiches, avant les Contenus */}
               {tagsSection}
+
+              {/* Contenus (et bloc Question / phrase Article) au-dessus de la Description, dans les deux fiches
+                  (demande Thomas 2026-11-19) */}
+              {mediaSection}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) ;
                   hauteur doublée (480 px mini, 80vh maxi en fiche simple) — demande 2026-11-18 */}
-              <div className="space-y-2" data-tour="item-description" data-devzone="item-description">
+              <div className={`space-y-2 ${filledZone(hasText(description))}`} data-tour="item-description" data-devzone="item-description">
                 <label className="text-sm font-medium flex items-center gap-1.5">Description <ElementHelp page="item-modal" element="description" /></label>
                 <RichTextEditor
                   key={itemId}
@@ -1509,11 +1536,8 @@ export function ItemEditModal({
                 />
               </div>
 
-              {/* Contenus (et bloc Question / phrase Article) sous la Description, dans les deux fiches */}
-              {mediaSection}
-
               {/* Reactions + Contributions */}
-              <div className="space-y-3" data-tour="item-reactions" data-devzone="item-contributions">
+              <div className={`space-y-3 ${filledZone(contributionCount > 0)}`} data-tour="item-reactions" data-devzone="item-contributions">
                 {/* Reaction bar on item */}
                 {item && (
                   <div className="flex items-start gap-1.5">
@@ -1667,7 +1691,7 @@ export function ItemEditModal({
           {showAll && <div className="space-y-6 min-w-0 lg:border-l lg:border-border lg:pl-6 lg:pr-2 lg:overflow-y-auto" data-tour="item-details" data-devzone="item-pilotage">
 
               {/* Type */}
-              {showAll && <div className="space-y-2" data-tour="item-type-selector" data-devzone="item-type">
+              {showAll && <div className={`space-y-2 ${filledZone(!!type)}`} data-tour="item-type-selector" data-devzone="item-type">
                 <label className="text-sm font-medium flex items-center gap-1.5">Type <ElementHelp page="item-modal" element="type" /></label>
                 {canEdit ? (
                   <>
@@ -1736,7 +1760,7 @@ export function ItemEditModal({
               {showAll && type === 'QUESTION' && itemId && item?.type === 'QUESTION' && (
                 <QuestionStatusField spaceId={item.spaceId ?? spaceId} itemId={itemId} statuses={referentiels?.statuses} />
               )}
-              {showAll && type !== 'QUESTION' &&<div className="space-y-2" data-tour="item-status" data-devzone="item-statut">
+              {showAll && type !== 'QUESTION' &&<div className={`space-y-2 ${filledZone(!!status)}`} data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium flex items-center gap-1.5">Statut <ElementHelp page="item-modal" element="statut" /></label>
                 {canEdit ? (
                   <>
@@ -1775,7 +1799,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Priorité */}
-              {showAll && <div className="space-y-2">
+              {showAll && <div className={`space-y-2 ${filledZone(priority !== null)}`}>
                 <HelpHint text={itemFields?.priority}><label className="text-sm font-medium">Priorité</label></HelpHint>
                 {canEdit ? (
                   <>
@@ -1815,7 +1839,7 @@ export function ItemEditModal({
               </div>}
 
               {/* Dates */}
-              {showAll && <div data-tour="item-dates" data-devzone="item-dates" className="space-y-3">
+              {showAll && <div data-tour="item-dates" data-devzone="item-dates" className={`space-y-3 ${filledZone(!!(startDate || endDate || dueDate))}`}>
                 {/* Toggle Jours pleins / Heures (dates dépliées seulement) ; le « ? » des dates reste visible sans droit d'édition */}
                 {canEdit && datesOpen ? (
                   <div className="flex items-center gap-3">
@@ -1934,7 +1958,7 @@ export function ItemEditModal({
 
               {/* Assigné à */}
               {showAll && spaceMembers && spaceMembers.length > 0 && (
-                <div className="space-y-2">
+                <div className={`space-y-2 ${filledZone(!!(assignedToId || assignedToName?.trim()))}`}>
                   <HelpHint text={itemFields?.assignee}><label className="text-sm font-medium">Assigné à</label></HelpHint>
                   {canEdit ? (
                     <div className="flex items-center gap-2">
@@ -1984,7 +2008,7 @@ export function ItemEditModal({
 
               {/* Parent (masqué sans droit d'édition) */}
               {showAll && canEdit && (
-              <div className="space-y-2">
+              <div className={`space-y-2 ${filledZone(!!parentId)}`}>
                 <div className="flex items-center justify-between">
                   <HelpHint text={itemFields?.parent}><label className="text-sm font-medium">Parent</label></HelpHint>
                     <button type="button" onClick={toggleParentSortMode}
@@ -1999,7 +2023,7 @@ export function ItemEditModal({
 
               {/* Références externes (règle item-external-refs) : fiche complète, saisie sur une ligne */}
               {showAll && (canEdit || (item?.externalRefs?.length ?? 0) > 0) && (
-                <div className="space-y-2" data-tour="item-external-refs" data-devzone="item-references">
+                <div className={`space-y-2 ${filledZone(canEdit ? externalRefsText.trim() !== '' : (item?.externalRefs?.length ?? 0) > 0)}`} data-tour="item-external-refs" data-devzone="item-references">
                   <label className="text-sm font-medium flex items-center gap-1.5"><HelpHint text={itemFields?.externalRefs}><span>Références externes</span></HelpHint> <ElementHelp page="item-modal" element="references" /></label>
                   {canEdit
                     ? <ExternalRefsInput value={externalRefsText} onChange={setExternalRefsText} placeholder="Appli1 : Réf1 | appli2 : réf2" />
@@ -2008,7 +2032,7 @@ export function ItemEditModal({
               )}
 
               {/* Dépendances */}
-              {showAll && <div className="space-y-3" data-tour="item-relations" data-devzone="item-relations">
+              {showAll && <div className={`space-y-3 ${filledZone((item?.relationsFrom?.length ?? 0) + (item?.relationsTo?.length ?? 0) > 0)}`} data-tour="item-relations" data-devzone="item-relations">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold flex items-center gap-2">
                     <Link2 className="w-4 h-4" />
@@ -2109,7 +2133,7 @@ export function ItemEditModal({
                 const children = allItems.filter(i => i.parentId === item.id);
                 if (children.length === 0) return null;
                 return (
-                  <div className="space-y-2" data-tour="item-children" data-devzone="item-enfants">
+                  <div className={`space-y-2 ${filledZone(true)}`} data-tour="item-children" data-devzone="item-enfants">
                     <h2 className="text-sm font-semibold flex items-center gap-2">
                       <GitBranch className="w-4 h-4" />
                       Éléments enfants ({children.length})
