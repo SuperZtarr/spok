@@ -12,6 +12,8 @@
  *   rendus en grand APRÈS la description et articleContent (ItemContentsRead), regroupés Images, Fichiers, Liens,
  *   Schémas ; le média unique de la fiche (sheet.media) n'est alors plus affiché. Absent (undefined) : ancien média
  *   unique en tête. La copie (« Copier la fiche », sheet) garde le média unique jusqu'au lot 3.
+ * - secrets : section « Données sécurisées » en lecture (2026-11-20), sous les contenus ; absente de sheet, donc
+ *   jamais copiée ni imprimée par « Copier la fiche ».
  * - hideTitle : titre non répété — la fiche l'affiche déjà dans son en-tête commun (réorganisation, lot 2, 2026-11-13)
  * - tags : tags de l'élément, affichés en couleur (TagBadge, comme dans les vues — 2026-11-11) ; absent : noms en gris.
  * Règles : aucun champ modifiable ici — l'édition reste dans la fiche (ItemEditModal, sélecteur Afficher / Modifier).
@@ -34,6 +36,8 @@ interface ItemReadViewProps {
   articleContent?: ReactNode;
   /** Contenus de l'élément (undefined = ancien média unique de la fiche) */
   contents?: ItemContent[];
+  /** Données sécurisées (ItemSecretsSection en lecture, fournie par la modale) — jamais dans sheet ni la copie */
+  secrets?: ReactNode;
   /** Tags de l'élément avec leur couleur (TagBadge) ; absent : noms seuls de la fiche (sheet.tags) */
   tags?: Tag[];
   /** Titre déjà affiché par l'en-tête de la fiche */
@@ -46,7 +50,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border pb-1 mb-3">{children}</h2>;
 }
 
-export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent, contents, tags, hideTitle = false }: ItemReadViewProps) {
+export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleContent, contents, secrets, tags, hideTitle = false }: ItemReadViewProps) {
   const [zoomed, setZoomed] = useState(false);
   // item.url n'est pas filtré par l'API : un schéma hors liste blanche (javascript:…) n'est ni affiché ni cliquable
   const media = contents === undefined && sheet.media && isSafeUrl(sheet.media.url) ? sheet.media : null;
@@ -121,6 +125,8 @@ export function ItemReadView({ sheet, toolbar, reactions, onOpenChild, articleCo
         {articleContent}
 
         {contents && <ItemContentsRead contents={contents} />}
+
+        {secrets}
 
         {sheet.children.length > 0 && (
           <section>

@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
   remove: vi.fn(),
   reorder: vi.fn(),
 }))
-vi.mock('../../lib/api', () => ({ itemContentsApi: api }))
+vi.mock('../../lib/api', () => ({ itemContentsApi: api, itemSecretsApi: { list: vi.fn().mockResolvedValue([]) } }))
 
 import { ItemContentsSection, ItemContentsRead, groupContents, formatSize } from './ItemContentsSection'
 
@@ -56,7 +56,7 @@ describe('ItemContentsSection', () => {
     const onTitleHint = vi.fn()
     renderZone({ onTitleHint })
     fireEvent.click(screen.getByRole('button', { name: /Ajouter/ }))
-    expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Fichier', 'Image', 'Lien', 'Schéma'])
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Fichier', 'Image', 'Lien', 'Schéma', 'Donnée sécurisée'])
     fireEvent.click(screen.getByRole('menuitem', { name: /Lien/ }))
     fireEvent.change(screen.getByLabelText('Adresse du lien'), { target: { value: 'https://exemple.fr/page' } })
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter le lien' }))

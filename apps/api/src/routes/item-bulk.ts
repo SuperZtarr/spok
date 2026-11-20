@@ -3,10 +3,12 @@
    Tags des copies : tagMapping (utils/tagScope.ts) — un tag encore visible dans l'espace d'arrivée est gardé, sinon
    repris par nom, sinon recréé en tag de l'espace d'arrivée.
    Références externes (item-external-refs, 2026-11-13) : chaque copie reprend celles de l'original, dans leur ordre.
+   Données sécurisées (2026-11-20) : recopiées et re-chiffrées, auteur gardé, « moi seul » si l'espace change.
    POST /bulk-tags (2026-11-11) : ajout / retrait de tags sur plusieurs éléments en une transaction (vue Tags). */
 import { QUESTION_STATUS } from '@spok/shared';
 import { copyQuestionData } from '../utils/question.js';
 import { copyItemContents } from '../utils/itemContentCopy.js';
+import { copyItemSecrets } from '../utils/itemSecrets.js';
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog, createAuditLogs, serializeItemForAudit } from '../utils/audit.js';
@@ -222,6 +224,8 @@ export const itemBulkRoutes: FastifyPluginAsync = async (fastify) => {
         createdItems.push({ oldItem: item, newItem });
         // Contenus (lot 4 : remplacent l'ancien champ url) ; fichiers partagés avec l'original, comme avant
         await copyItemContents(fastify.prisma, item.id, newItem.id, { userId: request.user.userId, copyFiles: false });
+        // Données sécurisées : suivent la copie, auteur gardé ; « moi seul » si l'espace change (utils/itemSecrets.ts)
+        await copyItemSecrets(fastify.prisma, item.id, newItem.id, { sameSpace: item.spaceId === targetSpaceId });
         if (item.type === 'QUESTION') {
           await copyQuestionData(fastify.prisma, item.id, newItem.id, { withVotes: false, keepOutcome: false });
         }

@@ -17,3 +17,4 @@ export * from './itemTemplate.js';
 export * from './liveSession.js';
 export * from './question.js';
 export * from './itemContent.js';
+export * from './itemSecret.js';

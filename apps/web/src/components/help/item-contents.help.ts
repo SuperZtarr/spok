@@ -7,8 +7,12 @@
    hints : rappels fonctionnels de chaque action à effet (ajouter chaque sorte, renommer, réordonner, retirer), vérifiés
    dans apps/api/src/routes/item-contents.ts ; fields : phrases visibles (élément non enregistré, zone vide, lien).
    Plafond d'un fichier : DOCUMENT_MAX_MB (jamais écrit en dur) ; annonce file-size-100 (2026-11-15, poids affiché).
+   Données sécurisées (2026-11-20) : élément secrets (zone item-contents:secrets, présente seulement si l'élément en
+   porte — étape sautée sinon), rappels secret* vérifiés dans apps/api/src/routes/item-secrets.ts, champs secretValue /
+   secretVisibility, annonce item-secrets (sans date).
    L'annonce `item-contents` est sans date : la session MEP la date au déploiement (règles : skill spok-doc). */
 import type { HelpEntry } from '../../help/types';
+import { ITEM_SECRETS_MAX } from '@spok/shared';
 import { DOCUMENT_MAX_MB } from '../../lib/uploadRules';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -28,6 +32,13 @@ const elements: HelpElements = {
       { id: 'item-contents', kind: 'evolution', text: 'Un élément porte maintenant plusieurs contenus (images, fichiers, liens, schémas), quel que soit son type : « + Ajouter » sous la description.', date: '2026-11-11' },
       { id: 'file-size-100', kind: 'evolution', text: `Les fichiers joints peuvent maintenant peser jusqu'à ${DOCUMENT_MAX_MB} Mo, et le poids de chaque fichier ou image s'affiche sous son nom.`, date: '2026-11-15' },
     ],
+  },
+  secrets: {
+    title: 'Données sécurisées',
+    short: 'Mots de passe et codes rangés sur l\'élément, masqués.',
+    text: '« + Ajouter » › « Donnée sécurisée » range sur l\'élément un mot de passe, un code ou une clé, avec un libellé et un identifiant facultatif. La valeur est chiffrée et toujours masquée : l\'œil l\'affiche 30 secondes, le bouton Copier la place dans le presse-papiers, vidé au bout de 30 secondes. « Moi seul » (par défaut) : vous seul la voyez. « Membres de l\'espace » : les membres de l\'espace peuvent aussi l\'afficher. Chaque consultation est enregistrée ; l\'auteur voit combien de fois sa donnée a été consultée. Les données sécurisées n\'apparaissent jamais dans l\'export, la copie de la fiche, la recherche, les vignettes ni pour Claude (MCP), qui n\'en voit que le libellé.',
+    side: 'top',
+    changes: [{ id: 'item-secrets', kind: 'new', text: 'Un élément peut porter des données sécurisées (mot de passe, code) : masquées, chiffrées, visibles par vous seul ou par les membres de l\'espace. « + Ajouter » › « Donnée sécurisée ».' }],
   },
   apercu: {
     title: 'Aperçu d\'un fichier',
@@ -51,6 +62,14 @@ export const help: HelpEntry = {
     addIMAGE: 'Joint une image (déposée, choisie ou collée avec Ctrl+V), réduite si besoin. Elle est enregistrée dès l\'envoi.',
     addLINK: 'Joint une adresse web, avec un nom facultatif.',
     addDIAGRAM: 'Crée un schéma vide, enregistré tout de suite : cliquez « Modifier » pour le dessiner dans draw.io.',
+    addSECRET: `Range un mot de passe ou un code sur l'élément, chiffré et masqué (${ITEM_SECRETS_MAX} au plus). Vous choisissez qui peut l'afficher.`,
+    secretReveal: 'Affiche la valeur 30 secondes, puis la masque. La consultation est enregistrée.',
+    secretCopy: 'Copie la valeur dans le presse-papiers ; il est vidé au bout de 30 secondes. La consultation est enregistrée.',
+    secretEdit: 'Modifier le libellé, l\'identifiant, la valeur ou la visibilité (seul l\'auteur le peut).',
+    secretRemoveHint: 'Retirer cette donnée sécurisée (une confirmation est demandée).',
+    secretRemove: 'La donnée est effacée définitivement, pour tous ceux qui pouvaient la voir. Elle ne peut pas être restaurée. L\'élément et ses autres contenus restent.',
+    secretVisibility: 'Qui peut afficher la valeur : « Moi seul » ou « Membres de l\'espace ». Si l\'élément part dans un autre espace, elle repasse « Moi seul ».',
+    secretSave: 'Enregistre tout de suite la donnée, chiffrée. Le libellé reste lisible ; la valeur et l\'identifiant ne le sont qu\'avec l\'œil ou Copier.',
     addLinkConfirm: 'Enregistre le lien tout de suite sur l\'élément.',
     rename: 'Renommer ce contenu (le fichier lui-même n\'est pas modifié).',
     moveUp: 'Place ce contenu un cran avant, parmi ceux de sa sorte. L\'ordre est enregistré tout de suite.',
@@ -63,6 +82,8 @@ export const help: HelpEntry = {
     unsaved: 'Enregistrez d\'abord l\'élément pour lui ajouter des contenus.',
     empty: 'Aucun contenu. « + Ajouter » joint un fichier, une image, un lien ou un schéma.',
     link: 'L\'adresse doit commencer par http:// ou https://.',
+    secretValue: 'La valeur et l\'identifiant sont chiffrés et ne s\'affichent qu\'à la demande. Le libellé, lui, reste lisible : n\'y mettez rien de secret.',
+    secretVisibility: '« Moi seul » : vous seul pourrez l\'afficher. « Membres de l\'espace » : chaque membre pourra l\'afficher et la copier. L\'administrateur ne peut pas lire la valeur.',
   },
   tour: [
     {

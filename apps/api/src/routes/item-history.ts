@@ -37,7 +37,9 @@ export const itemHistoryRoutes: FastifyPluginAsync = async (fastify) => {
 
       const relationOf = (side: 'before' | 'after', key: 'fromItemId' | 'toItemId') =>
         ({ changes: { path: [side, key], equals: id } });
+      // Consultations de données sécurisées (READ) exclues : jamais montrées, elles ne doivent pas remplir les paquets
       const baseWhere = {
+        action: { not: 'READ' },
         OR: [
           { entity: 'Item', entityId: id },
           { entity: 'ItemRelation', OR: [relationOf('after', 'fromItemId'), relationOf('after', 'toItemId'), relationOf('before', 'fromItemId'), relationOf('before', 'toItemId')] },

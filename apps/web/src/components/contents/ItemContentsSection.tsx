@@ -20,12 +20,16 @@
  * Règles : zone masquée sur un Article (décidé par l'appelant) ; adresses toujours passées par safeHref / isSafeUrl
  * (règle user-html-sanitized) ; écritures via hooks/useItemContents seulement. Aide : components/help/item-contents.help.ts
  * (zones data-help-zone item-contents:*, rappels pageHint('item-contents', …)). Règle de gestion : item-contents-zone.
+ * Données sécurisées (2026-11-20) : dernière section (ITEM_CONTENT_SECTIONS), entrée « Donnée sécurisée » du menu
+ * « + Ajouter » ; rendues par ItemSecretsSection (table et routes à part, jamais dans item.contents).
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Trash2, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Lock, Trash2, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
 import { fileExtension, hostOf } from '../../lib/itemFace';
-import { ITEM_CONTENT_KINDS, sortItemContents, type ItemContent, type ItemContentKind } from '@spok/shared';
+import { ITEM_CONTENT_KINDS, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection } from '@spok/shared';
 import { useItemContents } from '../../hooks/useItemContents';
+import { useItemSecretList } from '../../hooks/useItemSecrets';
+import { ItemSecretsSection } from './ItemSecretsSection';
 import { isSafeUrl, safeHref } from '../../lib/sanitizeHtml';
 import { HelpHint } from '../../help/HelpHint';
 import { FieldHelp } from '../../help/FieldHelp';
@@ -39,11 +43,11 @@ import { ConfirmModal } from '../ConfirmModal';
 import { fileNameToTitle, urlToTitle } from '../item-edit-helpers';
 import { FilePreviewThumb, hasFilePreview } from './FilePreviewThumb';
 
-export const KIND_LABELS: Record<ItemContentKind, string> = { IMAGE: 'Images', FILE: 'Fichiers', LINK: 'Liens', DIAGRAM: 'Schémas' };
-const ADD_LABELS: Record<ItemContentKind, string> = { FILE: 'Fichier', IMAGE: 'Image', LINK: 'Lien', DIAGRAM: 'Schéma' };
-/** Ordre du menu « + Ajouter » (décision Thomas) — l'affichage, lui, suit ITEM_CONTENT_KINDS */
-const ADD_ORDER: ItemContentKind[] = ['FILE', 'IMAGE', 'LINK', 'DIAGRAM'];
-const KIND_ICONS = { IMAGE: ImageIcon, FILE: FileText, LINK: Link2, DIAGRAM: Workflow } as const;
+export const KIND_LABELS: Record<ItemContentSection, string> = { IMAGE: 'Images', FILE: 'Fichiers', LINK: 'Liens', DIAGRAM: 'Schémas', SECRET: 'Données sécurisées' };
+const ADD_LABELS: Record<ItemContentSection, string> = { FILE: 'Fichier', IMAGE: 'Image', LINK: 'Lien', DIAGRAM: 'Schéma', SECRET: 'Donnée sécurisée' };
+/** Ordre du menu « + Ajouter » (décision Thomas) — l'affichage, lui, suit ITEM_CONTENT_SECTIONS */
+const ADD_ORDER: ItemContentSection[] = ['FILE', 'IMAGE', 'LINK', 'DIAGRAM', 'SECRET'];
+const KIND_ICONS = { IMAGE: ImageIcon, FILE: FileText, LINK: Link2, DIAGRAM: Workflow, SECRET: Lock } as const;
 
 /** Taille lisible (Ko / Mo) */
 export function formatSize(size: number | null | undefined): string | null {
@@ -81,8 +85,9 @@ interface SectionProps {
 
 export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitleHint }: SectionProps) {
   const api = useItemContents(spaceId, itemId);
+  const { data: secrets = [] } = useItemSecretList(spaceId, itemId);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [adding, setAdding] = useState<ItemContentKind | null>(null);
+  const [adding, setAdding] = useState<ItemContentSection | null>(null);
   const [toRemove, setToRemove] = useState<ItemContent | null>(null);
   const [lightbox, setLightbox] = useState<ItemContent | null>(null);
   const groups = groupContents(contents);
@@ -92,7 +97,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
   // Changement d'élément dans la même fiche : formulaires d'ajout refermés
   useEffect(() => { setAdding(null); setMenuOpen(false); setToRemove(null); }, [itemId]);
 
-  const choose = (kind: ItemContentKind) => {
+  const choose = (kind: ItemContentSection) => {
     setMenuOpen(false);
     if (kind === 'DIAGRAM') { api.add.mutate({ kind: 'DIAGRAM', xml: '' }); return; }
     setAdding(kind);
@@ -110,7 +115,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
     api.reorder.mutate(ids);
   };
 
-  if (!canEdit && groups.length === 0) return null;
+  if (!canEdit && groups.length === 0 && secrets.length === 0) return null;
 
   return (
     <div className="space-y-3" data-devzone="item-medias">
@@ -143,7 +148,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
       </div>
 
       {canEdit && !itemId && <FieldHelp page="item-contents" field="unsaved" />}
-      {writable && groups.length === 0 && !adding && <FieldHelp page="item-contents" field="empty" />}
+      {writable && groups.length === 0 && secrets.length === 0 && !adding && <FieldHelp page="item-contents" field="empty" />}
 
       {adding === 'IMAGE' && (
         <AddSlot onCancel={() => setAdding(null)}>
@@ -185,6 +190,9 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
             </div>
           </section>
         ))}
+        {/* Dernière section (ITEM_CONTENT_SECTIONS) : données sécurisées, table et routes à part */}
+        <ItemSecretsSection spaceId={spaceId} itemId={itemId} canAdd={writable} title={KIND_LABELS.SECRET}
+          adding={adding === 'SECRET'} onAddingDone={() => setAdding(null)} />
       </div>
 
       {lightbox?.url && isSafeUrl(lightbox.url) && <Lightbox url={lightbox.url} alt={displayName(lightbox) ?? ''} onClose={() => setLightbox(null)} />}

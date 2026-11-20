@@ -20,6 +20,8 @@
  * Fiche réduite (2026-10-29) : rangée des types « avec contenu » (CONTENT_TYPES : Non défini, Note, Lien, Document, Image,
  * Schéma, Article) au-dessus de la Description. Les types de pilotage, dates, priorité et statut restent dans la fiche
  * complète ; un élément d'un tel type voit son type, non modifiable ici.
+ * Données sécurisées (2026-11-20) : dans la zone Contenus en mode Modifier, et ItemSecretsSection en lecture passée à
+ * ItemReadView (prop secrets) en mode Afficher — hors Article.
  * Zone « Contenus » (contenus multiples, lot 2, 2026-11-08) : ItemContentsSection sous la Description (mediaSection),
  * quel que soit le type, masquée sur un Article — images, fichiers, liens, schémas, plusieurs par sorte, écrits tout
  * de suite (hooks/useItemContents), hors « Enregistrer ». Le formulaire n'envoie ni url ni content.xml (plus de champ
@@ -165,7 +167,8 @@ import { useAuthStore } from '../stores/auth';
 import { useUnsavedGuard, UnsavedChangesGuard } from './ui/UnsavedChangesGuard';
 import { useCtrlS } from '../hooks/useCtrlS';
 import { RichTextEditor } from './ui/RichTextEditor';
-import { ItemContentsSection } from './contents/ItemContentsSection';
+import { ItemContentsSection, KIND_LABELS } from './contents/ItemContentsSection';
+import { ItemSecretsSection } from './contents/ItemSecretsSection';
 import { DateTimeField } from './ui/DateTimeField';
 import { TimeRangePicker } from './ui/TimeRangePicker';
 import { diffMs, addHours, addDays, addMonths, toDatetimeLocal, fromDatetimeLocal } from '../lib/dateUtils';
@@ -1416,6 +1419,9 @@ export function ItemEditModal({
                     <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
                   ) : undefined}
                   contents={item?.type === 'ARTICLE' ? [] : (item?.contents ?? [])}
+                  secrets={item?.type !== 'ARTICLE' && itemId ? (
+                    <ItemSecretsSection spaceId={item?.spaceId ?? spaceId} itemId={itemId} canAdd={false} readOnly title={KIND_LABELS.SECRET} />
+                  ) : undefined}
                   reactions={(
                     <ReactionBar spaceId={spaceId} itemId={item.id} summary={(item as any).reactionSummary || []} readOnly={!user} />
                   )}

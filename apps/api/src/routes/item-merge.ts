@@ -12,6 +12,8 @@
  * (utils/contentMerge.ts). GET /:id/merge-preview?targetItemId= renvoie le même calcul pour la modale.
  * Références externes (règle item-external-refs, 2026-11-13) : cumulées de la même façon sur l'élément gardé (fusion et
  * absorption), doublons sans casse retirés, refus 400 au-delà de 20 AVANT toute écriture (utils/externalRefsMerge.ts).
+ * Données sécurisées (2026-11-20) : rattachées à l'élément gardé avant la suppression des éléments réunis, auteur et
+ * visibilité inchangés (même espace) — utils/itemSecrets.ts. Pas de plafond appliqué à la fusion.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -21,6 +23,7 @@ import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { loadContentMergePlan, applyContentMergePlan, ContentMergeError } from '../utils/contentMerge.js';
 import { loadExternalRefsMerge, applyExternalRefsMerge } from '../utils/externalRefsMerge.js';
+import { moveItemSecrets } from '../utils/itemSecrets.js';
 
 const mergeItemSchema = z.object({
   targetItemId: z.string(),
@@ -140,6 +143,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Contenus de la source ajoutés à la cible, après les siens dans chaque sorte, doublons retirés
     await applyContentMergePlan(fastify.prisma, targetItemId, contentPlan);
+    await moveItemSecrets(fastify.prisma, [sourceId], targetItemId);
     await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
     // Move contributions from source to target
@@ -279,6 +283,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     const refsPlan = await loadExternalRefsMerge(fastify.prisma, parentId, children.map(c => c.id));
     if (refsPlan.error) return reply.badRequest(refsPlan.error);
     await applyContentMergePlan(fastify.prisma, parentId, contentPlan);
+    await moveItemSecrets(fastify.prisma, children.map((c) => c.id), parentId);
     await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
     const beforeParent = serializeItemForAudit(parent);

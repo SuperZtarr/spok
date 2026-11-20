@@ -16,6 +16,9 @@
 import type {
   SearchCategory,
   ItemContent,
+  ItemSecretSummary,
+  ItemSecretRevealed,
+  ItemSecretVisibility,
   AuthResponse,
   LoginInput,
   RegisterInput,
@@ -997,6 +1000,22 @@ export const itemContentsApi = {
   /** Ordre complet des contenus d'UNE sorte */
   reorder: (spaceId: string, itemId: string, ids: string[]) =>
     fetchApi<ItemContent[]>(`/spaces/${spaceId}/items/${itemId}/contents/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+};
+
+/** Données sécurisées d'un élément (2026-11-20, routes/item-secrets.ts) : la liste ne porte jamais de valeur ;
+ *  reveal est la seule réponse qui en porte une — ne jamais la mettre en cache (useMutation, état local du composant). */
+export interface ItemSecretInput { label: string; login?: string | null; value: string; visibility?: ItemSecretVisibility }
+export const itemSecretsApi = {
+  list: (spaceId: string, itemId: string) =>
+    fetchApi<ItemSecretSummary[]>(`/spaces/${spaceId}/items/${itemId}/secrets`),
+  add: (spaceId: string, itemId: string, body: ItemSecretInput) =>
+    fetchApi<ItemSecretSummary>(`/spaces/${spaceId}/items/${itemId}/secrets`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (spaceId: string, itemId: string, secretId: string, body: Partial<ItemSecretInput>) =>
+    fetchApi<ItemSecretSummary>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  remove: (spaceId: string, itemId: string, secretId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}`, { method: 'DELETE' }),
+  reveal: (spaceId: string, itemId: string, secretId: string) =>
+    fetchApi<ItemSecretRevealed>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}/reveal`, { method: 'POST' }),
 };
 
 export const articlesApi = {

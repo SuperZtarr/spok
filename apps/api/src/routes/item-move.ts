@@ -12,6 +12,8 @@
  * en position 0 sous ce parent, qui doit être dans l'espace cible et hors de la branche déplacée ; frères décalés.
  * Tags au bulk-move : tagMapping (utils/tagScope.ts, 2026-11-11) — tags de communauté et globaux suivent (avant :
  * seuls les tags d'espace étaient repris, les autres étaient perdus).
+ * Données sécurisées (2026-11-20) : vers un autre espace, celles « membres de l'espace » passent « moi seul »
+ * (utils/itemSecrets.ts) — les membres de l'espace d'arrivée ne les lisent pas.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -20,6 +22,7 @@ import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { moveProcessPlacement } from '../utils/processPlacement.js';
+import { privatizeItemSecrets } from '../utils/itemSecrets.js';
 import { parentViolation } from '../utils/itemParent.js';
 import { tagMapping } from '../utils/tagScope.js';
 
@@ -369,6 +372,9 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Place dans la vue Process (positions, couloirs) : suit les éléments dans l'espace d'arrivée
       await moveProcessPlacement(tx, allItemIds, request.params.spaceId, targetSpaceId);
+
+      // Données sécurisées : les membres de l'espace d'arrivée ne les reçoivent pas (« moi seul », utils/itemSecrets.ts)
+      if (targetSpaceId !== request.params.spaceId) await privatizeItemSecrets(tx, allItemIds);
     });
 
     // Audit log for BULK_MOVE - one log entry per item

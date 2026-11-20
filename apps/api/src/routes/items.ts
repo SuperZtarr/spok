@@ -52,6 +52,7 @@ import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
 import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
 import { itemContentRoutes } from './item-contents.js';
+import { itemSecretRoutes } from './item-secrets.js';
 import { itemHistoryRoutes } from './item-history.js';
 
 // Contenus renvoyés avec l'élément : ordre d'affichage (enum Prisma déclaré IMAGE, FILE, LINK, DIAGRAM)
@@ -365,6 +366,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemArticleWriteRoutes);
     await authInstance.register(itemQuestionWriteRoutes);
     await authInstance.register(itemContentRoutes);
+    await authInstance.register(itemSecretRoutes);
     await authInstance.register(itemHistoryRoutes);
   });
 

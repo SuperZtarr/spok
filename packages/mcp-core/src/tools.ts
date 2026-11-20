@@ -10,6 +10,8 @@
  * Contenus (lot 4 contenus multiples) : plus de champ url ; le paramètre url de create_item / update_item AJOUTE un
  * contenu Lien (POST …/contents) ; get_item liste les contenus avec leur id. Lot 5 : add_item_content (lien, schéma),
  * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
+ * Données sécurisées (2026-11-20) : get_item liste leurs libellés (GET …/secrets) ; aucun outil ne les révèle ni ne
+ * les écrit, et l'API refuse la révélation à un jeton MCP (garde secrets-leak.test.ts).
  * Tags (2026-11-12) : portée global, communauté ou espace (tag d'espace proposé aussi dans ses sous-espaces) ;
  * list_tags affiche la portée (et l'espace d'un tag hérité) ; create_tag crée un tag de l'espace.
  * Références externes (règle item-external-refs, 2026-11-13) : externalRefs de create_item / update_item = liste de
@@ -242,6 +244,11 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       if (text) lines.push(`\nContenu :\n${text}`)
       const contents = formatContents(item.contents)
       if (contents) lines.push(`\nContenus (images, fichiers, liens, schémas) :\n${contents}`)
+      // Données sécurisées (2026-11-20) : libellés seulement — aucune valeur n'est lisible par MCP. Échec = section omise.
+      const secrets: any[] = await client.get(`/spaces/${spaceId}/items/${itemId}/secrets`).catch(() => [])
+      if (Array.isArray(secrets) && secrets.length) {
+        lines.push(`\nDonnées sécurisées (valeurs non lisibles par MCP) :\n${secrets.map((s) => `- ${s.label}`).join('\n')}`)
+      }
       return ok(lines.join('\n'))
     })
 

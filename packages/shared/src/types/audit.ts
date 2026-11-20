@@ -1,6 +1,8 @@
 /* Types AuditLog : actions, entités, aperçu de suppression (delete preview).
  * Entité 'Tag' et action 'MERGE' (2026-11-11) : gestion des tags dans /admin/tags (routes/admin/tags.ts).
- * ItemHistory* (2026-11-12) : historique d'un élément lu par ses membres dans la fiche (règle item-history-members). */
+ * ItemHistory* (2026-11-12) : historique d'un élément lu par ses membres dans la fiche (règle item-history-members).
+ * Action 'READ' (2026-11-20) : consultation d'une donnée sécurisée (routes/item-secrets.ts) — trace seule, jamais
+ * restaurable ni affichée dans l'historique de la fiche. */
 export type AuditAction =
   | 'CREATE'
   | 'UPDATE'
@@ -11,7 +13,8 @@ export type AuditAction =
   | 'UPDATE_RELATION'
   | 'DELETE_RELATION'
   | 'MERGE'
-  | 'BACKUP';
+  | 'BACKUP'
+  | 'READ';
 
 export type AuditEntity = 'Item' | 'ItemRelation' | 'Contribution' | 'Space' | 'Community' | 'Tag' | 'System';
 

@@ -8,6 +8,8 @@
  * Les libellés viennent de `ctx` (statuts du référentiel, noms, titres) : l'appelant (routes/item-history.ts) ne
  * fournit le titre d'un élément ou le nom d'un espace que si le lecteur peut le lire — sinon un libellé neutre.
  * Entrées anciennes : tags et assigné n'y figurent pas (tracés depuis le 2026-11-12), rien n'est inventé.
+ * Données sécurisées (2026-11-20, routes/item-secrets.ts) : « Donnée sécurisée ajoutée / modifiée / retirée » sans
+ * libellé ; consultations (action READ) jamais montrées.
  */
 import { getItemTypeDef } from '@spok/shared';
 import type { ItemHistoryLine } from '@spok/shared';
@@ -97,7 +99,17 @@ export function describeHistoryLog(log: HistoryLog, ctx: HistoryContext): ItemHi
     return [{ label: 'Déplacé vers un autre espace', after: name ?? null }];
   }
 
+  // Consultation d'une donnée sécurisée : trace d'audit seulement, jamais dans l'historique de la fiche
+  if (log.action === 'READ') return [];
+
   const content = after.contentChange as { op?: string; kind?: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean } | undefined;
+  // Donnée sécurisée : sans son libellé (celui d'une donnée « moi seul » ne regarde que son auteur)
+  if (content?.kind === 'SECRET') {
+    if (content.op === 'add') return [{ label: 'Donnée sécurisée ajoutée' }];
+    if (content.op === 'remove') return [{ label: 'Donnée sécurisée retirée' }];
+    if (content.op === 'update') return [{ label: 'Donnée sécurisée modifiée' }];
+    return [];
+  }
   if (content) {
     const kind = CONTENT_KIND_LABELS[content.kind ?? ''] ?? 'Contenu';
     const what = content.name ? `${kind} « ${content.name} »` : kind;

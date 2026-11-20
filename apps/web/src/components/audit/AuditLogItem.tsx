@@ -1,4 +1,5 @@
-/* Ligne d'audit : action, entité, auteur, date — ouvre le détail. MERGE (2026-11-11) : fusion de tags (/admin/tags). */
+/* Ligne d'audit : action, entité, auteur, date — ouvre le détail. MERGE (2026-11-11) : fusion de tags (/admin/tags).
+   READ (2026-11-20) : consultation d'une donnée sécurisée (libellé et id, jamais la valeur). */
 import type { AuditLog, AuditAction } from '@spok/shared';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -37,6 +38,7 @@ const ACTION_CONFIG: Record<
   DELETE_RELATION: { label: 'Suppression relation', icon: Unlink, color: 'bg-orange-100 text-orange-800' },
   MERGE: { label: 'Fusion', icon: Merge, color: 'bg-indigo-100 text-indigo-800' },
   BACKUP: { label: 'Sauvegarde', icon: DatabaseBackup, color: 'bg-gray-100 text-gray-800' },
+  READ: { label: 'Consultation', icon: Eye, color: 'bg-gray-100 text-gray-800' },
 };
 
 function formatDate(dateString: string): string {

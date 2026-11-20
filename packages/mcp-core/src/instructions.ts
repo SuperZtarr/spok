@@ -23,6 +23,8 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
   paramètre url de create_item / update_item ajoute aussi un lien ; update_item_content renomme, change l'adresse
   d'un lien ou le xml d'un schéma, ou déplace un contenu dans sa sorte ; delete_item_content le retire (après
   confirmation de l'utilisateur). Images et fichiers ne s'envoient pas par MCP. Au plus 30 contenus par item.
+  Données sécurisées (mots de passe, codes) : get_item n'en montre que les libellés ; leurs valeurs ne sont jamais
+  lisibles ni modifiables par MCP — l'utilisateur les consulte dans SPOK.
   Il n'y a plus de type Note, Lien, Image, Document, Diagramme, Configuration ni Anomalie.
 - Tags = classement libre : globaux (proposés partout), de la communauté, ou d'un espace (proposés dans cet espace et
   ses sous-espaces) ; list_tags donne ceux d'un espace. Une anomalie est une

@@ -77,6 +77,7 @@ export function createMockPrisma() {
     questionOption: mockModel(),
     questionVote: mockModel(),
     itemContent: mockModel(),
+    itemSecret: mockModel(),
     liveSession: mockModel(),
     liveSessionRole: mockModel(),
     liveSessionEntry: mockModel(),

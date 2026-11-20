@@ -72,6 +72,7 @@ model User {
   questionsDecided            Question[]         @relation("QuestionDecidedBy")
   questionVotes               QuestionVote[]
   itemContentsAdded           ItemContent[]      @relation("ItemContentCreatedBy")
+  itemSecrets                 ItemSecret[]       @relation("ItemSecretCreatedBy")
 
   @@map("users")
 }
@@ -383,6 +384,7 @@ model Item {
   // Réponses possibles d'autres questions qui renvoient à cet élément (2026-11-12)
   questionOptionRefs QuestionOption[] @relation("QuestionOptionRef")
   contents        ItemContent[]
+  secrets         ItemSecret[]
 
   @@index([spaceId])
   @@index([createdById])
@@ -557,6 +559,36 @@ model ItemExternalRef {
 
   @@index([itemId, position])
   @@map("item_external_refs")
+}
+
+// Données sécurisées d'un élément (2026-11-20) : mots de passe, codes, clés. Table à part, lue seulement par
+// routes/item-secrets.ts et utils/itemSecrets.ts (API). label en clair ; loginEnc / valueEnc chiffrés AES-256-GCM
+// (utils/secretCrypto.ts, clé SECRETS_ENCRYPTION_KEY, AAD = id). id sans défaut : fourni par l'API avant chiffrement.
+// Auteur supprimé → ses données le sont aussi (elles n'ont de sens que pour lui ou par son partage).
+model ItemSecret {
+  id             String               @id
+  itemId         String
+  item           Item                 @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  label          String
+  loginEnc       String?              @db.Text
+  valueEnc       String               @db.Text
+  keyVersion     Int                  @default(1)
+  visibility     ItemSecretVisibility @default(PRIVATE)
+  position       Int                  @default(0)
+  createdById    String
+  createdBy      User                 @relation("ItemSecretCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  revealCount    Int                  @default(0)
+  lastRevealedAt DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([itemId, position])
+  @@map("item_secrets")
+}
+
+enum ItemSecretVisibility {
+  PRIVATE
+  SPACE
 }
 
 enum ItemContentKind {

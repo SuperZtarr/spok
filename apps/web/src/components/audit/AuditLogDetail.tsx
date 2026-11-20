@@ -1,5 +1,5 @@
 /* Détail d'une entrée d'audit : diff before/after + bouton restaurer. Libellé de chaque action (MERGE : fusion de
-   tags, /admin/tags, 2026-11-11). */
+   tags, /admin/tags, 2026-11-11 ; READ : consultation d'une donnée sécurisée, 2026-11-20). */
 import { useState, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import type { AuditLog, AuditAction } from '@spok/shared';
@@ -27,6 +27,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   DELETE_RELATION: 'Suppression relation',
   MERGE: 'Fusion',
   BACKUP: 'Sauvegarde',
+  READ: 'Consultation',
 };
 
 function formatDate(dateString: string): string {

@@ -10,6 +10,12 @@ export type ItemContentKind = 'IMAGE' | 'FILE' | 'LINK' | 'DIAGRAM';
 /** Ordre fixe d'affichage des sortes : Images, Fichiers, Liens, Schémas */
 export const ITEM_CONTENT_KINDS: readonly ItemContentKind[] = ['IMAGE', 'FILE', 'LINK', 'DIAGRAM'];
 
+/** Sections de la zone Contenus, dans l'ordre d'affichage : les sortes de item_contents puis les données sécurisées
+ *  (table à part item_secrets, types/itemSecret.ts — 2026-11-20). ITEM_CONTENT_KINDS reste la liste des sortes
+ *  stockées dans item_contents (export, vignettes, presse-papiers) : un secret n'y figure donc jamais. */
+export type ItemContentSection = ItemContentKind | 'SECRET';
+export const ITEM_CONTENT_SECTIONS: readonly ItemContentSection[] = [...ITEM_CONTENT_KINDS, 'SECRET'];
+
 /** Nombre maximal de contenus par élément (toutes sortes confondues) */
 export const ITEM_CONTENTS_MAX = 30;
 

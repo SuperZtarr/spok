@@ -169,6 +169,27 @@ describe('références externes (item-external-refs)', () => {
   })
 })
 
+describe('données sécurisées (2026-11-20)', () => {
+  it('get_item : libellés seulement, jamais de révélation ; liste en échec = section omise', async () => {
+    const client = fakeClient()
+    const baseGet = client.get.getMockImplementation()!
+    client.get.mockImplementation(async (path: string) => {
+      if (path === '/spaces/s1/items/k1') return { id: 'k1', type: 'UNDEFINED', title: 'K' }
+      if (path === '/spaces/s1/items/k1/secrets') return [{ id: 's1', label: 'Accès test' }]
+      if (path === '/spaces/s1/items/k0') return { id: 'k0', type: 'UNDEFINED', title: 'K0' }
+      if (path === '/spaces/s1/items/k0/secrets') throw new Error('boom')
+      return baseGet(path)
+    })
+    const { mcp } = await connect('public-read', client)
+    const r1 = text(await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'k1' } }))
+    expect(r1).toContain('Données sécurisées (valeurs non lisibles par MCP) :\n- Accès test')
+    const r0 = text(await mcp.callTool({ name: 'get_item', arguments: { spaceId: 's1', itemId: 'k0' } }))
+    expect(r0).toContain('[k0]')
+    expect(r0).not.toContain('Données sécurisées')
+    expect(client.post.mock.calls.some((c: any[]) => String(c[0]).includes('/reveal'))).toBe(false)
+  })
+})
+
 describe('tags lus et relations (2026-11-18)', () => {
   function clientWith(routes: Record<string, any>) {
     const client = fakeClient()
