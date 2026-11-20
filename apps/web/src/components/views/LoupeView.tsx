@@ -10,8 +10,9 @@
  * dans un nouvel onglet, pour garder le chemin : les actions de SpacePage sont liées à l'espace courant.
  * Props : items = TOUS les items de l'espace (la vue estompe sans masquer) ; callbacks du menu comme les autres vues.
  * Vignettes : vignette d'élément commune (components/item/ItemVignette, règle lib/itemFace.ts) — minimale = format ligne,
- * intermédiaire = carte, zoomée = grande ; cadre de taille fixe (loupe-scene.ts), le contenu s'y tronque. Élément à
- * miniature (image ou schéma) : vignette agrandie plus haute (tallIds).
+ * intermédiaire = carte, zoomée = grande ; cadre fixe, sauf la vignette au repos, agrandie selon la richesse de l'élément
+ * (scales, vignetteScale de loupe-scene.ts : contenus + enfants + relations, jusqu'à ×3) ; le contenu s'y tronque. Élément à
+ * miniature (image ou schéma) : vignette agrandie plus haute (tallIds). Item d'un autre espace : seuls ses contenus comptent.
  * Calculs (positions, liens, chemin) : loupe-scene.ts. Textes : help/loupe.help.ts. Zones fragiles : aucune modification
  * de la carte mentale ici, radialLayout est seulement importé.
  * Couleur de bord d'une vignette : getTypeHex (registre des types), jamais de table locale.
@@ -33,8 +34,8 @@ import { help } from './help/loupe.help';
 import { ItemVignette } from '../item/ItemVignette';
 import { coverOf, itemFace, type FaceSource, type VignetteFormat } from '../../lib/itemFace';
 import {
-  VIGNETTE_SIZES, advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene, edgesFromLinks,
-  externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, settlePositions, worldPositions,
+  advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene, dims, edgesFromLinks,
+  externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, settlePositions, vignetteScale, worldPositions,
   type LoupeEdge, type LoupeSourceItem, type MapView, type Point, type SceneNode, type TrailEntry,
 } from './loupe-scene';
 
@@ -87,6 +88,13 @@ export function LoupeView(props: LoupeViewProps) {
 
   const index = useMemo(() => buildIndex(items), [items]);
   const world = useMemo(() => worldPositions(index), [index]);
+  // Agrandissement de chaque vignette selon sa richesse (vignetteScale) : enfants connus pour l'espace courant seulement
+  const scales = useMemo(() => {
+    const map = new Map<string, number>();
+    items.forEach((item) => map.set(item.id, vignetteScale(item, index.children.get(item.id)?.length ?? 0)));
+    externals.forEach(({ item }) => map.set(item.id, vignetteScale(item)));
+    return map;
+  }, [items, index, externals]);
   const localEdges = useMemo(() => buildLocalEdges(index), [index]);
 
   const focusId = pinnedId ?? hoverId;
@@ -117,8 +125,8 @@ export function LoupeView(props: LoupeViewProps) {
   useEffect(() => {
     if (fitted || size.width === 0 || world.size === 0) return;
     setFitted(true);
-    setView(fitMap(world, size.width, size.height));
-  }, [fitted, size, world]);
+    setView(fitMap(world, size.width, size.height, scales));
+  }, [fitted, size, world, scales]);
 
   // Les liens reçus font apparaître les items des autres espaces ; ils restent sur la carte une fois le zoom figé
   useEffect(() => {
@@ -175,7 +183,7 @@ export function LoupeView(props: LoupeViewProps) {
 
   // L'écartement ne porte que sur l'espace courant et ne dépend que de l'échelle : ni le survol ni le déplacement de la
   // carte ne le relancent (calcul coûteux, il saturait l'interface sur un grand espace). Les autres espaces s'y ajoutent.
-  const settledWorld = useMemo(() => settlePositions(world, view.k), [world, view.k]);
+  const settledWorld = useMemo(() => settlePositions(world, view.k, scales), [world, view.k, scales]);
   const settled = useMemo(() => {
     if (visibleExternals.size === 0) return settledWorld;
     const all = new Map(settledWorld);
@@ -187,8 +195,8 @@ export function LoupeView(props: LoupeViewProps) {
   }, [settledWorld, visibleExternals, externals, view.k]);
 
   const scene = useMemo(
-    () => computeScene({ positions: settled, offset: { x: view.x, y: view.y }, width: size.width, height: size.height, focusId, linkedIds, previewId, tallIds }),
-    [settled, view.x, view.y, size, focusId, linkedIds, previewId, tallIds],
+    () => computeScene({ positions: settled, offset: { x: view.x, y: view.y }, width: size.width, height: size.height, focusId, linkedIds, previewId, tallIds, scales }),
+    [settled, view.x, view.y, size, focusId, linkedIds, previewId, tallIds, scales],
   );
 
   const edges = useMemo(() => {
@@ -416,7 +424,7 @@ export function LoupeView(props: LoupeViewProps) {
     const data = local ?? external;
     if (!node || !data) return null;
 
-    const { w, h } = VIGNETTE_SIZES[node.size];
+    const { w, h } = dims(node.size, node.scale);
     const level = levelOf(node.size);
     const typeLabel = referentiels?.typeLabels?.[data.type]?.label ?? data.type;
     const statusLabel = data.status && data.status !== 'undefined' ? statuses.find((s) => s.id === data.status)?.label ?? data.status : null;
@@ -546,7 +554,7 @@ export function LoupeView(props: LoupeViewProps) {
           <button
             type="button"
             data-tour="loupe-fit"
-            onClick={() => setView(fitMap(positions, size.width, size.height))}
+            onClick={() => setView(fitMap(positions, size.width, size.height, scales))}
             className="inline-flex h-7 items-center gap-1 rounded px-2 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Maximize2 className="h-3.5 w-3.5" />

@@ -1,6 +1,9 @@
 /*
  * Calculs de la vue Loupe, sans React : liens d'un item, disposition de la carte, tailles et positions à l'écran, chemin.
  * Trois tailles de vignette : l'item zoomé (big), ses liés (mid), les autres (small, la vignette minimale, jamais moins).
+ * Chaque vignette au repos (petite taille seulement) est agrandie selon la richesse de l'item (vignetteScale : contenus + enfants + relations, à égalité,
+ * jusqu'à ×SCALE_MAX au score SCALE_CAP — décision Thomas 2026-11-20) ; scales (id → facteur) est passé à settlePositions
+ * et computeScene, et toute dimension passe par dims() : ne jamais relire VIGNETTE_SIZES sans le facteur.
  * Au repos, settlePositions écarte les vignettes minimales qui se recouvrent : la carte reste lisible une fois cadrée.
  * L'item zoomé ne bouge jamais à cause d'un voisin ; ses liés s'écartent pour ne pas se recouvrir et restent dans le cadre.
  * Règle : aucune lecture du DOM ni appel réseau ici — tout passe par des paramètres, pour rester testable (loupe-scene.test.ts).
@@ -21,6 +24,24 @@ export const VIGNETTE_SIZES: Record<VignetteSize, { w: number; h: number }> = {
   big: { w: 310, h: 190 },
   bigTall: { w: 340, h: 270 },
 };
+
+/** Score à partir duquel la vignette atteint sa taille maximale, et cet agrandissement maximal. */
+export const SCALE_CAP = 5;
+export const SCALE_MAX = 3;
+
+/**
+ * Facteur d'agrandissement d'une vignette : score = contenus + enfants + relations (dans les deux sens), chacun compte 1.
+ * Score 0 → 1 (taille de base, jamais moins) ; linéaire jusqu'à SCALE_CAP → SCALE_MAX, plafonné au-delà.
+ * childCount est fourni par l'appelant (index.children) ; un item d'un autre espace n'a que ses contenus de connus.
+ */
+export function vignetteScale(item: Pick<LoupeSourceItem, 'contents' | 'relationsFrom' | 'relationsTo'>, childCount = 0): number {
+  const score = (item.contents?.length ?? 0) + childCount + (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0);
+  return 1 + (SCALE_MAX - 1) * Math.min(score, SCALE_CAP) / SCALE_CAP;
+}
+
+/** Dimensions d'une vignette, facteur d'agrandissement compris. */
+export const dims = (size: VignetteSize, scale = 1): { w: number; h: number } =>
+  ({ w: VIGNETTE_SIZES[size].w * scale, h: VIGNETTE_SIZES[size].h * scale });
 
 /** Niveau de détail du contenu d'une vignette (grille : loupe-vignette.ts) ; les tailles *Tall sont celles des images. */
 export const levelOf = (size: VignetteSize): 'small' | 'mid' | 'big' =>
@@ -76,7 +97,8 @@ export interface LoupeEdge {
 
 export interface Point { x: number; y: number }
 export interface MapView { x: number; y: number; k: number }
-export interface SceneNode { cx: number; cy: number; size: VignetteSize; state: VignetteState }
+/** scale : facteur d'agrandissement de l'item (vignetteScale), à appliquer aux dimensions de size (dims). */
+export interface SceneNode { cx: number; cy: number; size: VignetteSize; state: VignetteState; scale: number }
 export interface TrailEntry { id: string; title: string; spaceName?: string }
 
 export function buildIndex<T extends LoupeSourceItem>(items: T[]): LoupeIndex<T> {
@@ -178,10 +200,10 @@ export function fitView(points: Iterable<Point>, width: number, height: number, 
   return { x: width / 2 - k * (minX + maxX) / 2, y: height / 2 - k * (minY + maxY) / 2, k };
 }
 
-interface Placed { id: string; cx: number; cy: number; size: VignetteSize; fixed: boolean }
+interface Placed { id: string; cx: number; cy: number; size: VignetteSize; scale: number; fixed: boolean }
 
 function keepInFrame(p: Placed, width: number, height: number) {
-  const { w, h } = VIGNETTE_SIZES[p.size];
+  const { w, h } = dims(p.size, p.scale);
   p.cx = Math.max(w / 2 + FRAME_MARGIN, Math.min(Math.max(w / 2 + FRAME_MARGIN, width - w / 2 - FRAME_MARGIN), p.cx));
   p.cy = Math.max(h / 2 + FRAME_MARGIN, Math.min(Math.max(h / 2 + FRAME_MARGIN, height - h / 2 - FRAME_MARGIN), p.cy));
 }
@@ -191,11 +213,12 @@ function keepInFrame(p: Placed, width: number, height: number) {
  * rapport, des vignettes plus larges que hautes s'empileraient toujours en colonne. moveQ : part du déplacement portée par q.
  */
 function separate(p: Placed, q: Placed, moveQ: number): boolean {
-  const overlapX = (VIGNETTE_SIZES[p.size].w + VIGNETTE_SIZES[q.size].w) / 2 + GAP - Math.abs(p.cx - q.cx);
-  const overlapY = (VIGNETTE_SIZES[p.size].h + VIGNETTE_SIZES[q.size].h) / 2 + GAP - Math.abs(p.cy - q.cy);
+  const [dp, dq] = [dims(p.size, p.scale), dims(q.size, q.scale)];
+  const overlapX = (dp.w + dq.w) / 2 + GAP - Math.abs(p.cx - q.cx);
+  const overlapY = (dp.h + dq.h) / 2 + GAP - Math.abs(p.cy - q.cy);
   if (overlapX <= 0 || overlapY <= 0) return false;
-  const widthRef = VIGNETTE_SIZES[p.size].w + VIGNETTE_SIZES[q.size].w;
-  const heightRef = VIGNETTE_SIZES[p.size].h + VIGNETTE_SIZES[q.size].h;
+  const widthRef = dp.w + dq.w;
+  const heightRef = dp.h + dq.h;
   if (overlapX / widthRef < overlapY / heightRef) {
     const sign = p.cx <= q.cx ? 1 : -1;
     p.cx -= sign * overlapX * (1 - moveQ);
@@ -213,9 +236,10 @@ function separate(p: Placed, q: Placed, moveQ: number): boolean {
  * pas se recouvrir. Balayage trié par abscisse : seules les voisines sont comparées, un grand espace reste rapide.
  * Passes bornées par SETTLE_ROUNDS et SETTLE_BUDGET : sur un très grand espace, des recouvrements peuvent subsister.
  */
-export function settlePositions(positions: Map<string, Point>, k: number): Map<string, Point> {
-  const placed: Placed[] = [...positions].map(([id, p]) => ({ id, cx: p.x * k, cy: p.y * k, size: 'small', fixed: false }));
-  const reach = VIGNETTE_SIZES.small.w + GAP;
+export function settlePositions(positions: Map<string, Point>, k: number, scales?: Map<string, number>): Map<string, Point> {
+  const placed: Placed[] = [...positions].map(([id, p]) => ({ id, cx: p.x * k, cy: p.y * k, size: 'small', scale: scales?.get(id) ?? 1, fixed: false }));
+  // Portée du balayage : la plus large vignette possible, pour ne manquer aucun recouvrement
+  const reach = VIGNETTE_SIZES.small.w * SCALE_MAX + GAP;
   const rounds = Math.min(SETTLE_ROUNDS, Math.ceil(SETTLE_BUDGET / Math.max(placed.length, 1)));
   for (let round = 0; round < rounds; round++) {
     let moved = false;
@@ -231,9 +255,9 @@ export function settlePositions(positions: Map<string, Point>, k: number): Map<s
 }
 
 /** Cadrage de la carte : l'échelle vient de la disposition, le centrage tient compte de l'écartement des vignettes. */
-export function fitMap(positions: Map<string, Point>, width: number, height: number): MapView {
+export function fitMap(positions: Map<string, Point>, width: number, height: number, scales?: Map<string, number>): MapView {
   const { k } = fitView(positions.values(), width, height);
-  const settled = [...settlePositions(positions, k).values()];
+  const settled = [...settlePositions(positions, k, scales).values()];
   if (settled.length === 0) return { x: width / 2, y: height / 2, k };
   const xs = settled.map((p) => p.x);
   const ys = settled.map((p) => p.y);
@@ -247,6 +271,8 @@ export function fitMap(positions: Map<string, Point>, width: number, height: num
  * restent visibles dans le cadre, les autres s'estompent sur place.
  * previewId (zoom figé) : cet item passe en taille intermédiaire par-dessus la carte, sans déplacer aucune autre vignette.
  * tallIds : items à miniature (Image, Diagramme), dont la vignette agrandie est plus haute.
+ * scales : facteur d'agrandissement de chaque item (vignetteScale), 1 par défaut ; il ne vaut qu'en petite taille
+ * (repos, estompé, lié au-delà du plafond) : zoomé, lié à mi-taille et aperçu gardent leur taille fixe (Thomas 2026-11-20).
  */
 export function computeScene(params: {
   positions: Map<string, Point>;
@@ -257,9 +283,11 @@ export function computeScene(params: {
   linkedIds: string[];
   previewId?: string | null;
   tallIds?: Set<string>;
+  scales?: Map<string, number>;
 }): Map<string, SceneNode> {
-  const { positions, offset, width, height, focusId, linkedIds, previewId, tallIds } = params;
+  const { positions, offset, width, height, focusId, linkedIds, previewId, tallIds, scales } = params;
   const midSize = (id: string): VignetteSize => (tallIds?.has(id) ? 'midTall' : 'mid');
+  const scaleOf = (id: string) => scales?.get(id) ?? 1;
   const rest: VignetteSize = 'small';
   const toScreen = (p: Point): Point => ({ x: p.x + offset.x, y: p.y + offset.y });
   const scene = new Map<string, SceneNode>();
@@ -268,13 +296,13 @@ export function computeScene(params: {
   if (!focusId || !focusPoint) {
     for (const [id, p] of positions) {
       const s = toScreen(p);
-      scene.set(id, { cx: s.x, cy: s.y, size: rest, state: 'rest' });
+      scene.set(id, { cx: s.x, cy: s.y, size: rest, state: 'rest', scale: scaleOf(id) });
     }
     return scene;
   }
 
   const focusScreen = toScreen(focusPoint);
-  const focus: Placed = { id: focusId, cx: focusScreen.x, cy: focusScreen.y, size: tallIds?.has(focusId) ? 'bigTall' : 'big', fixed: true };
+  const focus: Placed = { id: focusId, cx: focusScreen.x, cy: focusScreen.y, size: tallIds?.has(focusId) ? 'bigTall' : 'big', scale: 1, fixed: true };
   keepInFrame(focus, width, height);
 
   const pushed = (p: Point): Point => {
@@ -291,7 +319,7 @@ export function computeScene(params: {
   const allLinks = new Set(shownLinks);
   const zoomed: Placed[] = [...zoomedIds].map((id) => {
     const s = pushed(positions.get(id)!);
-    return { id, cx: s.x, cy: s.y, size: midSize(id), fixed: false };
+    return { id, cx: s.x, cy: s.y, size: midSize(id), scale: 1, fixed: false };
   });
 
   for (let round = 0; round < 24; round++) {
@@ -304,21 +332,21 @@ export function computeScene(params: {
   // Le cadre a pu ramener un lié sous l'item zoomé : dernier écart, qui prime sur le cadre
   zoomed.forEach((p) => separate(focus, p, 1));
 
-  scene.set(focusId, { cx: focus.cx, cy: focus.cy, size: focus.size, state: 'focus' });
-  zoomed.forEach((p) => scene.set(p.id, { cx: p.cx, cy: p.cy, size: p.size, state: 'linked' }));
+  scene.set(focusId, { cx: focus.cx, cy: focus.cy, size: focus.size, state: 'focus', scale: focus.scale });
+  zoomed.forEach((p) => scene.set(p.id, { cx: p.cx, cy: p.cy, size: p.size, state: 'linked', scale: p.scale }));
 
   // Les autres ne bougent jamais (décision Thomas 2026-11-07) : déplacer toute la carte à chaque survol la rendait illisible
   for (const [id, p] of positions) {
     if (scene.has(id)) continue;
     const s = toScreen(p);
-    scene.set(id, { cx: s.x, cy: s.y, size: rest, state: allLinks.has(id) ? 'linked' : 'dim' });
+    scene.set(id, { cx: s.x, cy: s.y, size: rest, state: allLinks.has(id) ? 'linked' : 'dim', scale: scaleOf(id) });
   }
 
   const preview = previewId ? scene.get(previewId) : undefined;
   if (previewId && preview?.size === 'small') {
-    const placed: Placed = { id: previewId, cx: preview.cx, cy: preview.cy, size: midSize(previewId), fixed: false };
+    const placed: Placed = { id: previewId, cx: preview.cx, cy: preview.cy, size: midSize(previewId), scale: 1, fixed: false };
     keepInFrame(placed, width, height);
-    scene.set(previewId, { cx: placed.cx, cy: placed.cy, size: placed.size, state: 'preview' });
+    scene.set(previewId, { cx: placed.cx, cy: placed.cy, size: placed.size, state: 'preview', scale: placed.scale });
   }
   return scene;
 }

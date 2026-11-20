@@ -3,10 +3,11 @@
 import { describe, it, expect } from 'vitest';
 import type { ItemLink } from '../../lib/api';
 import {
-  MAX_ZOOMED_LINKS, VIGNETTE_SIZES, advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene,
-  edgesFromLinks, externalPosition, fitView, levelOf, mergeLinks, orderedLinkedIds, settlePositions, worldPositions,
-  type LoupeSourceItem, type Point, type SceneNode,
+  MAX_ZOOMED_LINKS, SCALE_CAP, SCALE_MAX, advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene,
+  dims, edgesFromLinks, externalPosition, fitView, levelOf, mergeLinks, orderedLinkedIds, settlePositions, vignetteScale,
+  worldPositions, type LoupeSourceItem, type Point, type SceneNode,
 } from './loupe-scene';
+import type { FaceContent } from '../../lib/itemFace';
 
 const item = (id: string, extra: Partial<LoupeSourceItem> = {}): LoupeSourceItem => ({ id, title: id, type: 'TASK', ...extra });
 const items = [
@@ -19,7 +20,7 @@ const index = buildIndex(items);
 const linked = (id: string) => ({ id, title: id, type: 'TASK', status: null, spaceId: 's2', spaceName: 'Autre' });
 
 function overlap(a: SceneNode, b: SceneNode) {
-  const [sa, sb] = [VIGNETTE_SIZES[a.size], VIGNETTE_SIZES[b.size]];
+  const [sa, sb] = [dims(a.size, a.scale), dims(b.size, b.scale)];
   return Math.abs(a.cx - b.cx) < (sa.w + sb.w) / 2 && Math.abs(a.cy - b.cy) < (sa.h + sb.h) / 2;
 }
 
@@ -92,8 +93,15 @@ describe('disposition', () => {
 
   it('carte très réduite : les vignettes minimales s\'écartent au lieu de se recouvrir', () => {
     const positions = new Map<string, Point>(Array.from({ length: 40 }, (_, i) => [`n${i}`, { x: 100 * Math.cos(i), y: 100 * Math.sin(i) }]));
-    const settled = [...settlePositions(positions, 0.2).values()].map((p): SceneNode => ({ cx: p.x, cy: p.y, size: 'small', state: 'rest' }));
+    const settled = [...settlePositions(positions, 0.2).values()].map((p): SceneNode => ({ cx: p.x, cy: p.y, size: 'small', state: 'rest', scale: 1 }));
     expect(settled).toHaveLength(40);
+    settled.forEach((a, i) => settled.slice(i + 1).forEach((b) => expect(overlap(a, b)).toBe(false)));
+  });
+
+  it('vignettes agrandies : l\'écartement tient compte de leur taille réelle', () => {
+    const positions = new Map<string, Point>(Array.from({ length: 40 }, (_, i) => [`n${i}`, { x: 100 * Math.cos(i), y: 100 * Math.sin(i) }]));
+    const scales = new Map([...positions.keys()].map((id, i) => [id, i % 2 ? SCALE_MAX : 1]));
+    const settled = [...settlePositions(positions, 0.2, scales)].map(([id, p]): SceneNode => ({ cx: p.x, cy: p.y, size: 'small', state: 'rest', scale: scales.get(id)! }));
     settled.forEach((a, i) => settled.slice(i + 1).forEach((b) => expect(overlap(a, b)).toBe(false)));
   });
 
@@ -186,6 +194,43 @@ describe('scène', () => {
     const scene = computeScene({ ...base, positions, focusId: 'f', linkedIds: ids });
     expect(ids.filter((id) => scene.get(id)!.size === 'mid')).toHaveLength(MAX_ZOOMED_LINKS);
     expect(ids.every((id) => scene.get(id)!.state === 'linked')).toBe(true);
+  });
+});
+
+describe('agrandissement selon la richesse (vignetteScale)', () => {
+  const contents = (n: number) => Array.from({ length: n }, () => ({}) as FaceContent);
+  const relFrom = (n: number) => Array.from({ length: n }, (_, i) => ({ type: 'relates', toItemId: `t${i}` }));
+  const relTo = (n: number) => Array.from({ length: n }, (_, i) => ({ type: 'relates', fromItemId: `f${i}` }));
+
+  it('sans contenu, enfant ni relation : taille de base', () => {
+    expect(vignetteScale(item('x'))).toBe(1);
+  });
+
+  it('linéaire jusqu\'au plafond, puis plafonné', () => {
+    expect(SCALE_CAP).toBe(5);
+    expect(SCALE_MAX).toBe(3);
+    expect(vignetteScale(item('x'), 1)).toBeCloseTo(1.4);
+    expect(vignetteScale(item('x'), 5)).toBeCloseTo(3);
+    expect(vignetteScale(item('x'), 25)).toBeCloseTo(3);
+  });
+
+  it('contenus, enfants et relations dans les deux sens comptent à égalité', () => {
+    const expected = vignetteScale(item('x'), 4);
+    expect(vignetteScale(item('x', { contents: contents(4) }))).toBeCloseTo(expected);
+    expect(vignetteScale(item('x', { relationsFrom: relFrom(2), relationsTo: relTo(2) }))).toBeCloseTo(expected);
+    expect(vignetteScale(item('x', { contents: contents(1), relationsTo: relTo(1) }), 2)).toBeCloseTo(expected);
+  });
+
+  it('seule la petite taille est agrandie : zoomé, lié à mi-taille et aperçu gardent leur taille fixe', () => {
+    const positions = new Map<string, Point>([['f', { x: 0, y: 0 }], ['l', { x: 200, y: 0 }], ['o', { x: -300, y: 200 }], ['p', { x: 300, y: 300 }]]);
+    const scales = new Map([['f', 2], ['l', 1.6], ['o', 1.4], ['p', 1.8]]);
+    const base = { offset: { x: 500, y: 400 }, width: 1000, height: 800, positions, scales };
+    expect(computeScene({ ...base, focusId: null, linkedIds: [] }).get('f')!.scale).toBe(2);
+    const scene = computeScene({ ...base, focusId: 'f', linkedIds: ['l'], previewId: 'p' });
+    expect(scene.get('f')!.scale).toBe(1);
+    expect(scene.get('l')!.scale).toBe(1);
+    expect(scene.get('p')!.scale).toBe(1);
+    expect(scene.get('o')!).toMatchObject({ size: 'small', state: 'dim', scale: 1.4 });
   });
 });
 
