@@ -7,9 +7,11 @@
  * Statuts réservés (2026-11-08) : déposer une carte dans la colonne d'un statut non permis pour son type est ignoré.
  * Kanban par famille de statuts (2026-11-19, décision Thomas) : une seule famille à la fois (statuts ordinaires, ou
  * issues des questions) — cartes et colonnes de cette famille seulement ; sélecteur dans la barre de la vue s'il y en a
- * plusieurs (repère kanban:famille), choix retenu par espace en localStorage. Familles : statusFamilies (@spok/shared),
+ * plusieurs (repère kanban:famille) — depuis le 2026-11-20, barre d'onglets pleine largeur sous la barre de la vue,
+ * avec le nombre d'éléments de chaque famille (bug « cela dissimule les autres éléments ») —, choix retenu par espace en localStorage. Familles : statusFamilies (@spok/shared),
  * ne pas recalculer ici. Les éléments d'une autre famille restent dans l'espace (ni filtrés ailleurs ni exportés ici).
- * Familles : Éléments, Réunions, Articles, Questions (statuts réservés, 2026-11-19). Colonne « Autre statut »
+ * Familles : Éléments, Réunions, Articles, Questions (statuts réservés, 2026-11-19). Périodes : sans statut, absentes
+ * du Kanban (typeHasStatus, 2026-11-20). Colonne « Autre statut »
  * (OTHER_COLUMN) : cartes dont le statut n'est pas une colonne de la famille, seulement si besoin, sans dépôt possible.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';
@@ -34,7 +36,7 @@ import { SpaceExportButton } from '../SpaceExportButton';
 import { ViewHelpButton } from '../ViewHelpButton';
 import type { Item, ItemType, SpaceReferentiels, StatusConfig } from '@spok/shared';
 import {
-  DEFAULT_REFERENTIELS, GENERAL_STATUS_FAMILY, statusAllowedForType, statusFamilies, statusesForFamily, typeInStatusFamily,
+  DEFAULT_REFERENTIELS, GENERAL_STATUS_FAMILY, statusAllowedForType, statusFamilies, statusesForFamily, typeHasStatus, typeInStatusFamily,
 } from '@spok/shared';
 import { getTypeIcon, getTypeTextColor } from '../../constants/ui';
 import { printItem, exportItemPDF } from '../../lib/itemExport';
@@ -370,13 +372,17 @@ export function KanbanView({ items: allItems, currentSpaceId, portalGroups, onEd
     try { localStorage.setItem(familyStorageKey(currentSpaceId), key); } catch { /* préférence locale facultative */ }
   };
   const items = useMemo(
-    () => (family ? allItems.filter((i) => typeInStatusFamily(statusList, family, i.type)) : allItems),
+    // Sans famille (seulement des périodes) : rien — une période n'a pas de statut, donc pas de colonne
+    () => (family ? allItems.filter((i) => typeInStatusFamily(statusList, family, i.type)) : allItems.filter((i) => typeHasStatus(i.type))),
     [allItems, family, statusList],
   );
   const statuses = useMemo(
     () => (family ? statusesForFamily(statusList, family) : statusList).filter((s) => s.visible).sort((a, b) => a.order - b.order),
     [statusList, family],
   );
+  // Nombre d'éléments de chaque famille, affiché sur son onglet (rien ne doit sembler disparu)
+  const familyCounts = useMemo(() => Object.fromEntries(families.map((f) =>
+    [f.key, allItems.filter((i) => typeInStatusFamily(statusList, f, i.type)).length])), [families, allItems, statusList]);
   const familyLabel = (key: string) => (key === GENERAL_STATUS_FAMILY
     ? kanbanHelp.hints?.familyGeneral ?? key
     : (referentiels?.typeLabels || DEFAULT_REFERENTIELS.typeLabels)[key as ItemType]?.label ?? key);
@@ -491,22 +497,32 @@ export function KanbanView({ items: allItems, currentSpaceId, portalGroups, onEd
     <div className="flex flex-col h-full overflow-hidden">
       {/* ViewHeader */}
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
-        {families.length > 1 && (
-          <div data-help-zone="kanban:famille" role="group" className="inline-flex rounded-md border border-border p-0.5 text-xs">
-            {families.map((f) => (
-              <button key={f.key} type="button" aria-pressed={f.key === family?.key} onClick={() => pickFamily(f.key)}
-                className={`rounded px-2 py-0.5 ${f.key === family?.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
-                {familyLabel(f.key)}
-              </button>
-            ))}
-          </div>
-        )}
         <div className="flex-1" />
         <ViewHelpButton viewMode="kanban" onStartTour={onStartTour} pulse={pulseHelp} />
         {spaceName && viewContainerRef && (
           <SpaceExportButton items={items} spaceName={spaceName} viewMode="kanban" viewContainerRef={viewContainerRef} />
         )}
       </div>
+      {/* Onglets de famille (bug cmwoqkv07, 2026-11-20 : les autres familles passaient inaperçues) : barre pleine
+          largeur, gros onglets, nombre d'éléments de chaque famille toujours affiché */}
+      {families.length > 1 && (
+        <div data-help-zone="kanban:famille" role="tablist" className="flex flex-wrap items-end gap-1 border-b-2 border-primary/30 bg-muted/40 px-2 pt-2 flex-shrink-0">
+          {families.map((f) => {
+            const active = f.key === family?.key;
+            return (
+              <button key={f.key} type="button" role="tab" aria-selected={active} onClick={() => pickFamily(f.key)}
+                className={`-mb-0.5 inline-flex items-center gap-2 rounded-t-md border-2 px-4 py-2 text-sm font-semibold ${active
+                  ? 'border-primary/30 border-b-background bg-background text-primary'
+                  : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground'}`}>
+                {familyLabel(f.key)}
+                <span className={`min-w-[1.5rem] rounded-full px-2 py-0.5 text-xs font-bold ${active ? 'bg-primary text-primary-foreground' : 'bg-amber-100 text-amber-800'}`}>
+                  {familyCounts[f.key] ?? 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {items.length === 0 && <EmptyHelp mode="kanban" title="Aucun élément" banner />}
     <DndContext
       sensors={sensors}
