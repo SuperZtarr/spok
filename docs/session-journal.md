@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-20 — MEP : annonce item-secrets datée (clé SECRETS_ENCRYPTION_KEY posée en prod par Thomas). Typecheck OK, TNR 3051/3051.
+
+- 2026-11-20 — MEP : Gantt « Tout le projet », données sécurisées (table item_secrets), vignettes carte et grande (jusqu'à 08f490f) ; poussé d'abord sans la clé. Point mineur : longueur du tag GCM non imposée au déchiffrement. TNR 3051/3051.
+
+- 2026-11-20 — Données sécurisées : clé posée en prod (SUCCESS) et en local, annonce datée ; inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-20 — Vignettes carte/grande : toutes les infos renseignées, tout type ; inscrit PRÊT POUR MEP, NON COMMITÉ.
 
 - 2026-11-20 — Données sécurisées : lot complet (API, MCP, fiche, aide, spec), revue sécu + 2 corrections ; inscrit PRÊT POUR MEP, NON COMMITÉ. Clé Railway à poser par Thomas.
@@ -86,6 +92,3 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
-
-### MEP — 2026-11-20 (3)
-- 3 lots poussés : Gantt « Tout le projet », données sécurisées (table item_secrets additive, db push), vignettes carte et grande. 

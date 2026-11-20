@@ -38,7 +38,7 @@ const elements: HelpElements = {
     short: 'Mots de passe et codes rangés sur l\'élément, masqués.',
     text: '« + Ajouter » › « Donnée sécurisée » range sur l\'élément un mot de passe, un code ou une clé, avec un libellé et un identifiant facultatif. La valeur est chiffrée et toujours masquée : l\'œil l\'affiche 30 secondes, le bouton Copier la place dans le presse-papiers, vidé au bout de 30 secondes. « Moi seul » (par défaut) : vous seul la voyez. « Membres de l\'espace » : les membres de l\'espace peuvent aussi l\'afficher. Chaque consultation est enregistrée ; l\'auteur voit combien de fois sa donnée a été consultée. Les données sécurisées n\'apparaissent jamais dans l\'export, la copie de la fiche, la recherche, les vignettes ni pour Claude (MCP), qui n\'en voit que le libellé.',
     side: 'top',
-    changes: [{ id: 'item-secrets', kind: 'new', text: 'Un élément peut porter des données sécurisées (mot de passe, code) : masquées, chiffrées, visibles par vous seul ou par les membres de l\'espace. « + Ajouter » › « Donnée sécurisée ».' }],
+    changes: [{ id: 'item-secrets', kind: 'new', text: 'Un élément peut porter des données sécurisées (mot de passe, code) : masquées, chiffrées, visibles par vous seul ou par les membres de l\'espace. « + Ajouter » › « Donnée sécurisée ».', date: '2026-11-20' }],
   },
   apercu: {
     title: 'Aperçu d\'un fichier',
