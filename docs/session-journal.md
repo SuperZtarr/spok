@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-20 — MEP : Loupe, taille selon l'importance dans l'espace, ajustée à l'écran. 2 annonces datées. Typecheck OK, TNR 3073/3073.
+
+- 2026-11-20 — Loupe : facteur d'écran unique + poids relatif à l'espace ; doc, aide, spec à jour ; inscrit PRÊT POUR MEP sur demande de Thomas, NON COMMITÉ.
+
+- 2026-11-20 — Migration prod des périodes (accord de Thomas) : sauvegarde backups/manual-prod-period-statuses-2026-11-20T12-29-03-337Z.json (39), 37 statuts vidés, bilan final sans conversion. Tunnel fermé.
+
 - 2026-11-20 — MEP : 5 lots (Gantt échelle en boutons, période sans statut, onglets du Kanban, menu ⋮ statut suivant, poids des vignettes de la Loupe). 4 annonces datées. Typecheck OK, TNR 3063/3063. APRÈS : migrate-type-statuses --prod pour les périodes, sur accord de Thomas.
 
 - 2026-11-20 — Loupe : priorité et éléments d'un article ajoutés au poids des vignettes ; inscrit PRÊT POUR MEP, NON COMMITÉ.

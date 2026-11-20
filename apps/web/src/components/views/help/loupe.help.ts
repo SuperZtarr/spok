@@ -9,14 +9,18 @@ const elements: HelpElements = {
   carte: {
     title: 'La carte',
     short: 'Les éléments de l\'espace, selon leur hiérarchie.',
-    text: 'Les éléments de l\'espace, disposés selon leur hiérarchie : les traits pleins relient parents et enfants, les pointillés sont les relations. La molette zoome, le glisser déplace ; un clic sur le fond ou sur Départ revient au départ et efface le chemin. Les éléments d\'autres espaces n\'apparaissent qu\'en suivant un lien, si vous avez le droit de les lire : ils portent le nom de leur espace, leur menu se limite à l\'ouverture et leur fiche s\'ouvre dans un nouvel onglet.',
+    text: 'Les éléments de l\'espace, disposés selon leur hiérarchie : les traits pleins relient parents et enfants, les pointillés sont les relations ; un trait est plus épais et plus foncé quand il touche un élément très relié. À l\'ouverture, toute la carte tient à l\'écran, et elle se recadre si la fenêtre change de taille, tant que vous ne l\'avez ni déplacée ni zoomée. Toutes les vignettes s\'ajustent ensemble à la taille de la fenêtre, en gardant leurs écarts de taille ; un élément qui deviendrait trop petit pour être lu devient une pastille qui ne montre que l\'icône de son type (son titre s\'affiche au survol) — toujours les moins importants de l\'espace d\'abord. La molette zoome, le glisser déplace ; un clic sur le fond ou sur Départ revient au départ et efface le chemin. Les éléments d\'autres espaces n\'apparaissent qu\'en suivant un lien, si vous avez le droit de les lire : ils portent le nom de leur espace, leur menu se limite à l\'ouverture et leur fiche s\'ouvre dans un nouvel onglet.',
     target: '[data-tour="loupe-map"]',
     side: 'top',
+    changes: [
+      { id: 'loupe-weight-visible', kind: 'evolution', text: 'Les éléments importants se repèrent d\'un coup d\'œil : la taille des vignettes suit l\'importance de chaque élément dans son espace et s\'ajuste à votre écran ; les moins importants deviennent des pastilles quand la place manque ; les traits sont plus épais autour des éléments les plus reliés.', date: '2026-11-20' },
+      { id: 'loupe-fit-whole-map', kind: 'evolution', text: 'La carte tient maintenant entière à l\'écran, centrée, et se recadre quand la fenêtre change de taille ; les titres des grandes vignettes passent à la ligne.', date: '2026-11-20' },
+    ],
   },
   vignette: {
     title: 'Un élément',
     short: 'Survolez pour l\'agrandir, cliquez pour figer, recliquez pour ouvrir la fiche.',
-    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un nouveau clic sur l\'élément figé ouvre sa fiche ; un clic sur un élément lié avance d\'un pas. « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un clic sur le fond revient au départ. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, comme dans les autres vues : au repos, une ligne (miniature, titre, l\'essentiel, pastilles des contenus) ; à mi-taille, une carte (tout ce qui est renseigné : statut, dates, échéance, assigné ; début de la description, tags) ; agrandie, en plus le type, la durée, le nombre d\'enfants et de relations, avec un bouton « Ouvrir » pour le premier fichier ou lien et le menu ⋮. Au repos, un élément riche (contenus, enfants, relations, priorité élevée, éléments assemblés pour un article) a une vignette plus grande, jusqu\'à trois fois la taille de base à partir de cinq ; agrandi, il reprend la taille commune.',
+    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un nouveau clic sur l\'élément figé ouvre sa fiche ; un clic sur un élément lié avance d\'un pas. « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un clic sur le fond revient au départ. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, comme dans les autres vues : au repos, une ligne (miniature, titre, l\'essentiel, pastilles des contenus) ; à mi-taille, une carte (tout ce qui est renseigné : statut, dates, échéance, assigné ; début de la description, tags) ; agrandie, en plus le type, la durée, le nombre d\'enfants et de relations, avec un bouton « Ouvrir » pour le premier fichier ou lien et le menu ⋮. Au repos, la taille d\'une vignette dit l\'importance de l\'élément dans son espace (contenus, enfants, relations, priorité, éléments assemblés pour un article) : le plus riche de l\'espace est trois fois plus grand que le moins riche, les autres entre les deux ; assez grande, sa vignette montre déjà son contenu (statut, dates, extrait, pastilles) ; agrandi, il reprend la taille commune.',
     target: '[data-tour="loupe-node"]',
     side: 'right',
     changes: [
@@ -36,7 +40,7 @@ const elements: HelpElements = {
   fit: {
     title: 'Ajuster',
     short: 'Recadre la carte pour que tous les éléments affichés tiennent à l\'écran. Aucune donnée n\'est modifiée.',
-    text: 'Recadre la carte pour que tous les éléments affichés tiennent à l\'écran.',
+    text: 'Recadre la carte pour que tous les éléments affichés tiennent à l\'écran, et rétablit le recadrage automatique quand la fenêtre change de taille.',
     target: '[data-tour="loupe-fit"]',
     noZone: true,
     side: 'bottom',

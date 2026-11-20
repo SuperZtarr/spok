@@ -9,7 +9,7 @@
  *   openHint : infobulle du bouton Ouvrir (grande) ; titleClassName : retouche du titre propre à une vue (couleur…)
  *   showMeta=false : la vue montre déjà ces infos dans ses propres colonnes (Planning, badge de statut de la Liste) —
  *   seul écart permis au visage commun, pour ne pas les répéter
- *   showPriority=false : la vue a déjà une colonne priorité (Liste à plat) ; sinon la pastille de priorité
+ *   titleLines (ligne) : titre sur 2 ou 3 lignes au lieu d'être tronqué, quand le cadre de la vue est plus haut (Loupe) *   showPriority=false : la vue a déjà une colonne priorité (Liste à plat) ; sinon la pastille de priorité
  *   (face.priority, couleurs de PRIORITIES) s'affiche dans tous les formats, même avec showMeta=false
  * Règles : la vignette remplit son conteneur (h-full en carte/grande) et se tronque si le cadre est fixe (Loupe) ;
  * le bouton Ouvrir et le menu arrêtent les événements (pas de clic sur la vignette). Image illisible = icône.
@@ -40,9 +40,17 @@ interface ItemVignetteProps {
   titleClassName?: string;
   showMeta?: boolean;
   showPriority?: boolean;
+  /** Format ligne : nombre de lignes du titre (1 = tronqué, défaut ; 2 ou 3 quand le cadre est plus haut) */
+  titleLines?: 1 | 2 | 3;
 }
 
 const stop = (event: SyntheticEvent) => event.stopPropagation();
+
+/** Titre du format ligne sur plusieurs lignes (cadre agrandi de la Loupe) ; classes écrites en entier pour Tailwind */
+const TITLE_LINES: Record<number, string> = {
+  2: 'whitespace-normal break-words line-clamp-2',
+  3: 'whitespace-normal break-words line-clamp-3',
+};
 
 function SpacePill({ name }: { name: string }) {
   return (
@@ -69,7 +77,7 @@ function Menu({ children }: { children: ReactNode }) {
   );
 }
 
-export function ItemVignette({ format, face, title, Icon, iconClass = '', color, spaceName, tags, leading, menu, openHint, titleClassName = '', showMeta: metaWanted = true, showPriority = true }: ItemVignetteProps) {
+export function ItemVignette({ format, face, title, Icon, iconClass = '', color, spaceName, tags, leading, menu, openHint, titleClassName = '', showMeta: metaWanted = true, showPriority = true, titleLines = 1 }: ItemVignetteProps) {
   const [imageFailed, setImageFailed] = useState(false);
   // Adresses déjà filtrées par itemFace ; refiltrées ici pour qu'aucun appelant ne puisse faire passer javascript:
   const image = imageFailed ? undefined : safeHref(face.cover.url);
@@ -92,7 +100,7 @@ export function ItemVignette({ format, face, title, Icon, iconClass = '', color,
         {image
           ? <img src={image} alt="" loading="lazy" draggable={false} onError={markFailed} className={`h-6 w-6 flex-shrink-0 rounded border border-border object-cover ${crop}`} />
           : typeIcon('h-4 w-4')}
-        <span className={`min-w-[3rem] flex-1 truncate text-sm ${titleClassName}`} style={iconStyle} title={title}>{title || '—'}</span>
+        <span className={`min-w-[3rem] flex-1 text-sm ${TITLE_LINES[titleLines] ?? 'truncate'} ${titleClassName}`} style={iconStyle} title={title}>{title || '—'}</span>
         {spaceName && <SpacePill name={spaceName} />}
         {metaWanted && face.meta[0] && <span className="max-w-[40%] flex-shrink truncate text-xs text-muted-foreground" style={iconStyle}>{face.meta[0]}</span>}
         {priority && <PriorityPill priority={priority} short />}

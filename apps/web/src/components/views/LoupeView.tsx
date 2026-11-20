@@ -12,8 +12,14 @@
  * Props : items = TOUS les items de l'espace (la vue estompe sans masquer) ; callbacks du menu comme les autres vues.
  * Vignettes : vignette d'élément commune (components/item/ItemVignette, règle lib/itemFace.ts) — minimale = format ligne,
  * intermédiaire = carte, zoomée = grande ; cadre fixe, sauf la vignette au repos, agrandie selon la richesse de l'élément
- * (scales, vignetteScale de loupe-scene.ts : contenus + enfants + relations, jusqu'à ×3) ; le contenu s'y tronque. Élément à
+ * (weightScore de loupe-scene.ts : contenus + enfants + relations + priorité − 1 + éléments d'un article, rapporté à
+ * l'espace par relativeWeights : le plus lourd ×3, le plus léger ×1) ;
+ * le contenu s'y tronque. Élément à
  * miniature (image ou schéma) : vignette agrandie plus haute (tallIds). Item d'un autre espace : seuls ses contenus comptent.
+ * La Loupe sert d'abord à repérer les éléments importants, puis leur détail ; la fenêtre ne bouge pas (2 à 1000 éléments).
+ * Forme au repos (allocateRest, décisions Thomas 2026-11-20) : taille = base × facteur d'écran (place réelle) × poids,
+ * rapports entre éléments conservés ; une vignette qui serait illisible devient pastille-icône (bas du classement
+ * d'abord, les plus importants en dernier). Vignette au repos assez haute = format carte (restFormatFor). Traits au repos épaissis selon le degré (edgeStrength).
  * Calculs (positions, liens, chemin) : loupe-scene.ts. Textes : help/loupe.help.ts. Zones fragiles : aucune modification
  * de la carte mentale ici, radialLayout est seulement importé.
  * Couleur de bord d'une vignette : getTypeHex (registre des types), jamais de table locale.
@@ -35,8 +41,8 @@ import { help } from './help/loupe.help';
 import { ItemVignette } from '../item/ItemVignette';
 import { coverOf, itemFace, type FaceSource, type VignetteFormat } from '../../lib/itemFace';
 import {
-  advanceTrail, buildIndex, buildLocalEdges, collectLocalLinks, computeScene, dims, edgesFromLinks,
-  externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, settlePositions, vignetteScale, worldPositions,
+  advanceTrail, allocateRest, buildIndex, degrees, edgeStrength, restFormatFor, sceneDims, buildLocalEdges, collectLocalLinks, computeScene, edgesFromLinks,
+  externalPosition, fitMap, levelOf, mergeLinks, orderedLinkedIds, relativeWeights, settlePositions, titleLinesFor, weightScore, worldPositions,
   type LoupeEdge, type LoupeSourceItem, type MapView, type Point, type SceneNode, type TrailEntry,
 } from './loupe-scene';
 
@@ -86,16 +92,21 @@ export function LoupeView(props: LoupeViewProps) {
   const [interacting, setInteracting] = useState(false);
   /** Les vignettes n'apparaissent qu'une fois la carte cadrée : sinon elles s'animeraient depuis un mauvais cadrage. */
   const [fitted, setFitted] = useState(false);
+  /** Recadrage automatique au changement de taille du cadre : coupé dès que l'utilisateur déplace ou zoome la carte */
+  const autoFit = useRef(true);
 
   const index = useMemo(() => buildIndex(items), [items]);
   const world = useMemo(() => worldPositions(index), [index]);
-  // Agrandissement de chaque vignette selon sa richesse (vignetteScale) : enfants connus pour l'espace courant seulement
-  const scales = useMemo(() => {
-    const map = new Map<string, number>();
-    items.forEach((item) => map.set(item.id, vignetteScale(item, index.children.get(item.id)?.length ?? 0)));
-    externals.forEach(({ item }) => map.set(item.id, vignetteScale(item)));
-    return map;
+  // Poids de chaque item, relatif à l'espace (weightScore puis relativeWeights : le plus lourd ×3, le plus léger ×1) ;
+  // enfants connus pour l'espace courant seulement
+  const weights = useMemo(() => {
+    const scores = new Map<string, number>();
+    items.forEach((item) => scores.set(item.id, weightScore(item, index.children.get(item.id)?.length ?? 0)));
+    externals.forEach(({ item }) => scores.set(item.id, weightScore(item)));
+    return relativeWeights(scores);
   }, [items, index, externals]);
+  // Forme au repos dans la fenêtre fixe (allocateRest) : les plus importants cèdent la place en dernier
+  const rest = useMemo(() => allocateRest(weights, size.width, size.height), [weights, size.width, size.height]);
   const localEdges = useMemo(() => buildLocalEdges(index), [index]);
 
   const focusId = pinnedId ?? hoverId;
@@ -126,8 +137,17 @@ export function LoupeView(props: LoupeViewProps) {
   useEffect(() => {
     if (fitted || size.width === 0 || world.size === 0) return;
     setFitted(true);
-    setView(fitMap(world, size.width, size.height, scales));
-  }, [fitted, size, world, scales]);
+    setView(fitMap(world, size.width, size.height, rest));
+  }, [fitted, size, world, rest]);
+
+  // Le cadre change de taille (fenêtre, barre latérale, panneau) : recadrage, tant que l'utilisateur n'a ni glissé ni
+  // zoomé la carte (« Ajuster » le rétablit). Diagnostic 2026-11-20 : sans lui, la carte restait centrée sur l'ancienne
+  // largeur (tiers gauche vide, droite coupée). Seule la taille déclenche cet effet, pas l'arrivée de liens.
+  useEffect(() => {
+    if (!fitted || !autoFit.current || size.width === 0 || positions.size === 0) return;
+    setView(fitMap(positions, size.width, size.height, rest));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size.width, size.height]);
 
   // Les liens reçus font apparaître les items des autres espaces ; ils restent sur la carte une fois le zoom figé
   useEffect(() => {
@@ -184,7 +204,7 @@ export function LoupeView(props: LoupeViewProps) {
 
   // L'écartement ne porte que sur l'espace courant et ne dépend que de l'échelle : ni le survol ni le déplacement de la
   // carte ne le relancent (calcul coûteux, il saturait l'interface sur un grand espace). Les autres espaces s'y ajoutent.
-  const settledWorld = useMemo(() => settlePositions(world, view.k, scales), [world, view.k, scales]);
+  const settledWorld = useMemo(() => settlePositions(world, view.k, rest, view.bias), [world, view.k, rest, view.bias]);
   const settled = useMemo(() => {
     if (visibleExternals.size === 0) return settledWorld;
     const all = new Map(settledWorld);
@@ -196,8 +216,8 @@ export function LoupeView(props: LoupeViewProps) {
   }, [settledWorld, visibleExternals, externals, view.k]);
 
   const scene = useMemo(
-    () => computeScene({ positions: settled, offset: { x: view.x, y: view.y }, width: size.width, height: size.height, focusId, linkedIds, previewId, tallIds, scales }),
-    [settled, view.x, view.y, size, focusId, linkedIds, previewId, tallIds, scales],
+    () => computeScene({ positions: settled, offset: { x: view.x, y: view.y }, width: size.width, height: size.height, focusId, linkedIds, previewId, tallIds, rest }),
+    [settled, view.x, view.y, size, focusId, linkedIds, previewId, tallIds, rest],
   );
 
   const edges = useMemo(() => {
@@ -206,6 +226,11 @@ export function LoupeView(props: LoupeViewProps) {
     remoteEdges.forEach((e) => all.set(e.id, e));
     return [...all.values()].filter((e) => scene.has(e.from) && scene.has(e.to));
   }, [localEdges, remoteEdges, scene]);
+  // Degré de chaque élément : épaisseur et opacité des traits au repos (edgeStrength, lot B)
+  const edgeDegrees = useMemo(() => {
+    const degree = degrees(edges);
+    return { degree, max: Math.max(1, ...degree.values()) };
+  }, [edges]);
 
   // Les traits suivent les vignettes pendant leur animation : lecture des positions réelles, image par image, mais
   // seulement pour les traits d'une vignette qui a changé ou d'un trait neuf (tout relire saturait un grand espace)
@@ -351,6 +376,7 @@ export function LoupeView(props: LoupeViewProps) {
     if (!current.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
     if (!current.moved) {
       current.moved = true;
+      autoFit.current = false;
       setInteracting(true);
     }
     setView((v) => ({ ...v, x: current.viewX + dx, y: current.viewY + dy }));
@@ -370,13 +396,14 @@ export function LoupeView(props: LoupeViewProps) {
     if (!el) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      autoFit.current = false;
       const box = el.getBoundingClientRect();
       const px = event.clientX - box.left;
       const py = event.clientY - box.top;
       setInteracting(true);
       setView((v) => {
         const k = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.k * Math.exp(-event.deltaY * 0.0015)));
-        return { k, x: px - ((px - v.x) * k) / v.k, y: py - ((py - v.y) * k) / v.k };
+        return { ...v, k, x: px - ((px - v.x) * k) / v.k, y: py - ((py - v.y) * k) / v.k };
       });
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
       wheelTimer.current = setTimeout(() => setInteracting(false), 150);
@@ -426,13 +453,15 @@ export function LoupeView(props: LoupeViewProps) {
     const data = local ?? external;
     if (!node || !data) return null;
 
-    const { w, h } = dims(node.size, node.scale);
+    const { w, h } = sceneDims(node);
     const level = levelOf(node.size);
+    // Fenêtre fixe : vignette (taille × facteur d'écran × poids) ou pastille-icône si elle serait illisible, au repos seulement
+    const shape = level === 'small' ? node.rest.shape : 'full';
     const typeLabel = referentiels?.typeLabels?.[data.type]?.label ?? data.type;
     const statusLabel = data.status && data.status !== 'undefined' ? statuses.find((s) => s.id === data.status)?.label ?? data.status : null;
     const matches = hasCriteria && matchesActiveCriteria(id, data.type, data.status);
     const fadedByCriteria = hasCriteria && !matches && node.state !== 'focus' && node.state !== 'preview';
-    const format: VignetteFormat = level === 'small' ? 'ligne' : level === 'mid' ? 'carte' : 'grande';
+    const format: VignetteFormat = level === 'small' ? (shape === 'full' ? restFormatFor(h) : 'ligne') : level === 'mid' ? 'carte' : 'grande';
     const source: FaceSource = local
       ? {
           ...local,
@@ -452,6 +481,7 @@ export function LoupeView(props: LoupeViewProps) {
         role="button"
         tabIndex={0}
         aria-label={data.title}
+        title={shape === 'full' ? undefined : data.title}
         {...(isFirst ? { 'data-tour': 'loupe-node', 'data-help-zone': 'loupe:vignette' } : {})}
         onPointerDown={(event) => event.stopPropagation()}
         onMouseEnter={() => {
@@ -479,28 +509,37 @@ export function LoupeView(props: LoupeViewProps) {
           borderLeftColor: getTypeHex(data.type),
           opacity: node.state === 'dim' ? 0.2 : fadedByCriteria ? 0.35 : 1,
           zIndex: node.state === 'preview' ? 40 : node.state === 'focus' ? 30 : level === 'mid' ? 20 : node.state === 'linked' ? 15 : 10,
+          ...(shape === 'mark' ? { backgroundColor: `${getTypeHex(data.type)}26` } : {}),
         }}
         className={[
           'absolute left-0 top-0 overflow-hidden cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary',
           interacting ? '' : 'transition-[transform,width,height,opacity] duration-200 ease-out',
-          'rounded-md border border-l-4 text-foreground',
-          external ? 'border-dashed border-amber-500 bg-amber-50 dark:bg-amber-950/40' : 'border-border bg-card',
-          node.state === 'focus' ? 'shadow-xl p-3' : level === 'mid' ? 'shadow-sm px-2 py-1' : 'px-1.5 py-0.5',
+          shape === 'mark' ? 'flex items-center justify-center rounded-md border text-foreground' : 'rounded-md border border-l-4 text-foreground',
+          external ? 'border-dashed border-amber-500 bg-amber-50 dark:bg-amber-950/40' : shape === 'mark' ? 'border-border' : 'border-border bg-card',
+          node.state === 'focus' ? 'shadow-xl p-3' : level === 'mid' ? 'shadow-sm px-2 py-1' : shape === 'mark' ? 'p-0' : format === 'carte' ? 'px-2 py-1' : 'px-1.5 py-0.5',
           pinnedId === id ? 'ring-2 ring-primary' : '',
           matches ? 'ring-2 ring-amber-400' : '',
         ].join(' ')}
       >
-        <ItemVignette
-          format={format}
-          title={data.title}
-          Icon={getTypeIcon(data.type)}
-          iconClass={getTypeTextColor(data.type, referentiels?.typeLabels)}
-          spaceName={external?.spaceName}
-          tags={local?.tags}
-          face={itemFace(source, format, { type: typeLabel, status: statusLabel })}
-          openHint={help.hints?.openLink}
-          menu={level === 'big' ? <ItemActionMenu groups={menuGroups(id)} onOpenChange={handleMenuOpenChange} /> : undefined}
-        />
+        {shape === 'mark' ? (
+          (() => {
+            const TypeIcon = getTypeIcon(data.type);
+            return <TypeIcon className={`h-3.5 w-3.5 ${getTypeTextColor(data.type, referentiels?.typeLabels)}`} />;
+          })()
+        ) : (
+          <ItemVignette
+            format={format}
+            title={data.title}
+            Icon={getTypeIcon(data.type)}
+            iconClass={getTypeTextColor(data.type, referentiels?.typeLabels)}
+            spaceName={external?.spaceName}
+            tags={local?.tags}
+            face={itemFace(source, format, { type: typeLabel, status: statusLabel })}
+            titleLines={titleLinesFor(h)}
+            openHint={help.hints?.openLink}
+            menu={level === 'big' ? <ItemActionMenu groups={menuGroups(id)} onOpenChange={handleMenuOpenChange} /> : undefined}
+          />
+        )}
       </div>
     );
   };
@@ -553,7 +592,10 @@ export function LoupeView(props: LoupeViewProps) {
           <button
             type="button"
             data-tour="loupe-fit"
-            onClick={() => setView(fitMap(positions, size.width, size.height, scales))}
+            onClick={() => {
+              autoFit.current = true;
+              setView(fitMap(positions, size.width, size.height, rest));
+            }}
             className="inline-flex h-7 items-center gap-1 rounded px-2 font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Maximize2 className="h-3.5 w-3.5" />
@@ -576,6 +618,7 @@ export function LoupeView(props: LoupeViewProps) {
           {edges.map((edge) => {
             const touchesFocus = !!focusId && (edge.from === focusId || edge.to === focusId);
             const meta = edge.kind === 'relation' ? getRelationMeta(edge.relationType) : null;
+            const strength = edgeStrength(edgeDegrees.degree.get(edge.from) ?? 0, edgeDegrees.degree.get(edge.to) ?? 0, edgeDegrees.max);
             return (
               <g key={edge.id}>
                 <line
@@ -584,9 +627,9 @@ export function LoupeView(props: LoupeViewProps) {
                     else lineRefs.current.delete(edge.id);
                   }}
                   stroke={meta ? meta.hex : '#94a3b8'}
-                  strokeWidth={touchesFocus ? 2 : 1}
+                  strokeWidth={!focusId ? strength.width : touchesFocus ? 2 : 1}
                   strokeDasharray={meta ? '5 4' : undefined}
-                  opacity={!focusId ? 0.55 : touchesFocus ? 1 : 0.07}
+                  opacity={!focusId ? strength.opacity : touchesFocus ? 1 : 0.07}
                 />
                 {meta && touchesFocus && (
                   <text
