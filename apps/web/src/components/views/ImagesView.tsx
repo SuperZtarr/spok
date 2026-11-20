@@ -230,7 +230,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
     // Root group first, then sorted by parent name
     const result: ImageGroup[] = [];
     const rootImages = groupMap.get(null);
-    if (rootImages) result.push({ parentId: null, parentTitle: 'Sans parent', images: rootImages });
+    if (rootImages) result.push({ parentId: null, parentTitle: "Racine de l’espace", images: rootImages });
     for (const [parentId, imgs] of groupMap) {
       if (parentId === null) continue;
       result.push({ parentId, parentTitle: parentNames[parentId] || 'Parent inconnu', images: imgs });
@@ -429,7 +429,7 @@ export function ImagesView({ items, onEdit, onDelete, onUpdateStatus, onAddChild
         }
         const portalImageGroups: ImageGroup[] = [];
         const rootImgs = portalGroupMap.get(null);
-        if (rootImgs) portalImageGroups.push({ parentId: null, parentTitle: 'Sans parent', images: rootImgs });
+        if (rootImgs) portalImageGroups.push({ parentId: null, parentTitle: "Racine de l’espace", images: rootImgs });
         for (const [parentId, imgs] of portalGroupMap) {
           if (parentId === null) continue;
           portalImageGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', images: imgs });

@@ -120,7 +120,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
     }
     const result: DocGroup[] = [];
     const rootDocs = groupMap.get(null);
-    if (rootDocs) result.push({ parentId: null, parentTitle: 'Sans parent', docs: rootDocs });
+    if (rootDocs) result.push({ parentId: null, parentTitle: "Racine de l’espace", docs: rootDocs });
     for (const [parentId, docs] of groupMap) {
       if (parentId === null) continue;
       result.push({ parentId, parentTitle: parentNames[parentId] || 'Parent inconnu', docs });
@@ -265,7 +265,7 @@ export function DocumentsView({ items, onEdit, onDelete, onUpdateStatus, onAddCh
         }
         const portalDocGroups: DocGroup[] = [];
         const rootDocs = portalGroupMap.get(null);
-        if (rootDocs) portalDocGroups.push({ parentId: null, parentTitle: 'Sans parent', docs: rootDocs });
+        if (rootDocs) portalDocGroups.push({ parentId: null, parentTitle: "Racine de l’espace", docs: rootDocs });
         for (const [parentId, docs] of portalGroupMap) {
           if (parentId === null) continue;
           portalDocGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', docs });

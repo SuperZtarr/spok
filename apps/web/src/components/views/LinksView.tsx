@@ -196,7 +196,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
     }
     const result: LinkGroup[] = [];
     const rootLinks = groupMap.get(null);
-    if (rootLinks) result.push({ parentId: null, parentTitle: 'Sans parent', links: rootLinks });
+    if (rootLinks) result.push({ parentId: null, parentTitle: "Racine de l’espace", links: rootLinks });
     for (const [parentId, items] of groupMap) {
       if (parentId === null) continue;
       result.push({ parentId, parentTitle: parentNames[parentId] || 'Parent inconnu', links: items });
@@ -284,7 +284,7 @@ export function LinksView({ items, onEdit, onDelete, onUpdateStatus, onAddChild,
         }
         const portalLinkGroups: LinkGroup[] = [];
         const rootLinks = portalGroupMap.get(null);
-        if (rootLinks) portalLinkGroups.push({ parentId: null, parentTitle: 'Sans parent', links: rootLinks });
+        if (rootLinks) portalLinkGroups.push({ parentId: null, parentTitle: "Racine de l’espace", links: rootLinks });
         for (const [parentId, pLinks] of portalGroupMap) {
           if (parentId === null) continue;
           portalLinkGroups.push({ parentId, parentTitle: portalParentNames[parentId] || 'Parent inconnu', links: pLinks });
