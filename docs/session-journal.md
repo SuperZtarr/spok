@@ -14,6 +14,8 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-20 — Loupe : clic sur la vignette figée ouvre la fiche, double-clic retiré ; inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-20 — Séances : tous les droits en mode admin (`cmwo6tyxv001n11vfcxqsp08c`), inscrit PRÊT POUR MEP, NON COMMITÉ.
 - 2026-11-20 — Loupe : vignettes agrandies selon contenus/enfants/relations (`cmwo4wjp8000s11vfi9so7z4u`), inscrit PRÊT POUR MEP, NON COMMITÉ.
 
@@ -80,6 +82,9 @@ _(aucun lot en attente)_
 - 2026-11-11 — FAIT : Thomas a recopié R2_SECRET_ACCESS_KEY (Railway → .env racine) ; `--prod --apply` → 10 images créées, 0 échec. Restent sans aperçu 3 xlsx + 1 pptx (pas de miniature intégrée, attendu). Mémoire `reference_r2_credentials.md` créée.
 
 - 2026-11-11 — Rattrapage aperçus fichiers en prod (`backfill-file-previews.ts --prod --apply`, tunnel Railway) : 30 contenus Fichier en prod (pas ~390), 16 extraits créés, **0 image** (même PDF lus), 0 échec de lecture ; restent 14 sans aperçu (6 pdf, 5 pptx, 3 xlsx). Image : erreur avalée dans storeFilePreview (`.catch(() => null)`) — à diagnostiquer.
+
+### MEP — 2026-11-20 (2)
+- 1 lot poussé : Loupe, clic sur l'élément figé ouvre sa fiche. Annonce datée. Typecheck OK, TNR 3000/3000, en-têtes OK
 
 ### MEP — 2026-11-20
 - 3 lots poussés : « Racine de l'espace » (vues Liens, Documents, Images), Loupe vignettes agrandies, séances tous les droits en mode admin (isAdminModeActive relit le rôle en base). 1 annonce datée. Typecheck OK, TNR 3000/3000, en-têtes OK

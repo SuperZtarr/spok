@@ -15,12 +15,13 @@ const elements: HelpElements = {
   },
   vignette: {
     title: 'Un élément',
-    short: 'Survolez pour l\'agrandir, cliquez pour figer.',
-    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un clic sur un élément lié avance d\'un pas ; un nouveau clic sur l\'élément figé, « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un double-clic ouvre la fiche. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, comme dans les autres vues : au repos, une ligne (miniature, titre, l\'essentiel, pastilles des contenus) ; à mi-taille, une carte (infos du type, début de la description, tags) ; agrandie, tout le détail, avec un bouton « Ouvrir » pour le premier fichier ou lien et le menu ⋮. Au repos, un élément riche en contenus, enfants et relations a une vignette plus grande, jusqu\'à trois fois la taille de base à partir de cinq ; agrandi, il reprend la taille commune.',
+    short: 'Survolez pour l\'agrandir, cliquez pour figer, recliquez pour ouvrir la fiche.',
+    text: 'Le survol l\'agrandit, avec ses éléments liés à mi-taille. Un clic fige le zoom ; un nouveau clic sur l\'élément figé ouvre sa fiche ; un clic sur un élément lié avance d\'un pas. « Libérer le zoom » ou Échap rendent le survol sans perdre le chemin ; un clic sur le fond revient au départ. Zoom figé, le survol d\'un autre élément l\'agrandit seulement le temps de le lire. Plus une vignette est grande, plus elle en dit, comme dans les autres vues : au repos, une ligne (miniature, titre, l\'essentiel, pastilles des contenus) ; à mi-taille, une carte (infos du type, début de la description, tags) ; agrandie, tout le détail, avec un bouton « Ouvrir » pour le premier fichier ou lien et le menu ⋮. Au repos, un élément riche en contenus, enfants et relations a une vignette plus grande, jusqu\'à trois fois la taille de base à partir de cinq ; agrandi, il reprend la taille commune.',
     target: '[data-tour="loupe-node"]',
     side: 'right',
     changes: [
       { id: 'loupe-vignette-scale', kind: 'evolution', text: 'Au repos, les vignettes grandissent avec la richesse de l\'élément : contenus, enfants et relations, jusqu\'à trois fois leur taille.', date: '2026-11-20' },
+      { id: 'loupe-click-pinned-opens', kind: 'evolution', text: 'Un clic sur l\'élément figé ouvre désormais sa fiche (le double-clic n\'est plus utilisé). Pour le libérer : « Libérer le zoom », Échap, ou un clic sur le fond qui revient au départ.', date: '2026-11-20' },
     ],
   },
   chemin: {
@@ -52,7 +53,7 @@ export const help: HelpEntry = {
     ...derived.hints,
     trailEmpty: 'Survolez un élément pour le zoomer, cliquez pour figer le zoom et suivre ses liens.',
     openLink: 'Ouvre le lien ou le fichier dans un nouvel onglet, sans quitter la carte. Aucune donnée n\'est modifiée.',
-    release: 'Libère le zoom figé : le survol fonctionne de nouveau, le chemin est conservé (aussi : clic sur l\'élément figé, touche Échap). Aucune donnée n\'est modifiée.',
+    release: 'Libère le zoom figé : le survol fonctionne de nouveau, le chemin est conservé (aussi : touche Échap ; un clic sur l\'élément figé ouvre sa fiche). Aucune donnée n\'est modifiée.',
     reset: 'Revient au départ : efface le chemin et retire de la carte les éléments des autres espaces. Aucune donnée n\'est modifiée.',
   },
   tour: [

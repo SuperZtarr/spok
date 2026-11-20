@@ -1,8 +1,9 @@
 /*
  * Vue Loupe : explorer les items à travers leurs liens (parent, enfants, relations), y compris vers d'autres espaces.
  * Gestes : survol (ouverture après 0,1 s, fermeture immédiate, décision Thomas 2026-11-06) = zoom sur l'item et zoom intermédiaire sur ses liés ; clic = fige le zoom et ajoute
- * l'item au chemin ; clic sur la vignette figée, bouton « Libérer le zoom » ou Échap = le survol reprend, chemin conservé ; clic sur le fond ou bouton
- * Départ = retour au départ, chemin effacé ; double-clic = fiche ; molette et glisser = déplacer la carte.
+ * l'item au chemin ; clic (ou Entrée) sur la vignette figée = ouvre la fiche (2026-11-20, plus de double-clic) ; bouton
+ * « Libérer le zoom » ou Échap = le survol reprend, chemin conservé ; clic sur le fond ou bouton
+ * Départ = retour au départ, chemin effacé ; molette et glisser = déplacer la carte.
  * Aperçu : zoom figé, le survol d'un autre item l'agrandit à mi-taille sans déplacer la carte ni charger ses liens.
  * Menu ⋮ : seulement sur la vignette zoomée (décision Thomas 2026-11-06). Le zoom reste figé tant que le menu est ouvert.
  * Autre espace : un item n'apparaît qu'en suivant un lien, avec le nom de son espace, et seulement si l'API le renvoie
@@ -310,8 +311,9 @@ export function LoupeView(props: LoupeViewProps) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [pinnedId, releaseZoom]);
 
-  const togglePin = (id: string) => {
-    if (id === pinnedId) releaseZoom();
+  // Clic sur la vignette figée = fiche (décision Thomas 2026-11-20, remplace le double-clic) ; sinon fige le zoom
+  const clickNode = (id: string) => {
+    if (id === pinnedId) openItem(id);
     else pin(id);
   };
 
@@ -464,14 +466,10 @@ export function LoupeView(props: LoupeViewProps) {
         }}
         onClick={(event) => {
           event.stopPropagation();
-          togglePin(id);
-        }}
-        onDoubleClick={(event) => {
-          event.stopPropagation();
-          openItem(id);
+          clickNode(id);
         }}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') togglePin(id);
+          if (event.key === 'Enter') clickNode(id);
         }}
         style={{
           width: w,
