@@ -77,9 +77,10 @@ const elements: HelpElements = {
     side: 'bottom',
   },
   zoom: {
-    title: 'Zoom',
+    title: 'Échelle',
     short: 'Du jour à plusieurs années.',
-    text: 'Du jour à plusieurs années : zoom avant / arrière, ou choisissez le niveau.',
+    text: 'Choisissez l\'échelle de la frise d\'un clic : Jour, Semaine, Mois, Trimestre, Année ou Multi-années (l\'échelle affichée est foncée ; liste déroulante sur petit écran). « Tout le projet », juste à côté, choisit l\'échelle qui montre tous les éléments datés.',
+    changes: [{ id: 'gantt-scale-buttons', kind: 'evolution', text: 'Dans la barre du Gantt, l\'échelle se choisit maintenant par des boutons (Jour à Multi-années) au lieu du zoom avant / arrière, et les boutons à icône portent leur nom (Précédent, Suivant, Réordonner, Sans date, Chemin critique, Tout le projet).', date: '2026-11-20' }],
     target: '[data-tour="timeline-zoom"]',
     noZone: true,
     side: 'bottom',
@@ -102,9 +103,7 @@ export const help: HelpEntry = {
     compactOff: 'Masquer les éléments sans date',
     criticalOn: 'Masquer le chemin critique',
     criticalOff: 'Afficher le chemin critique : la suite de tâches qui fixe la date de fin',
-    zoomIn: 'Zoom avant',
     zoomLevel: 'Échelle de la frise : du jour à plusieurs années',
-    zoomOut: 'Zoom arrière',
     fitProject: 'Tout le projet : ajuste l’échelle et la période à tous les éléments datés',
   },
   tour: [

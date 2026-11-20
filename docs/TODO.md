@@ -275,6 +275,7 @@
 - [x] Données sécurisées d'un élément, chiffrées — 2026-11-20
 - [x] Vignettes - carte et grande montrent statut, dates, assigné quel que soit le type — 2026-11-20
 - [x] Données sécurisées - annonce datée, clé de chiffrement posée en prod — 2026-11-20
+- [x] Gantt - échelle en boutons, boutons nommés — 2026-11-20
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

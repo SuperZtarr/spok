@@ -22,6 +22,8 @@
  * Libellé de plage et sélecteur d'échelle à largeur fixe : naviguer ou zoomer ne décale pas la barre (2026-11-11).
  * Bouton « Tout le projet » (icône seule, groupe zoom, 2026-11-20) : échelle et plage ajustées à la période des éléments
  * affichés, avec marge (fitProjectZoom) ; désactivé si aucun élément n'est daté.
+ * Échelle en boutons d'options tirés de ZOOM_ORDER / ZOOM_CONFIGS (liste déroulante sous md) ; boutons de l'en-tête
+ * avec icône ET texte (texte masqué sous lg), libellés fixes pour que la barre ne bouge pas (2026-11-20).
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type) — ne pas recréer de modale inline ici.
  * Colonne des éléments : GANTT_LABEL_WIDTH (400 px), badge de l'assigné sur chaque ligne (2026-11-05).
@@ -29,7 +31,7 @@
 import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Maximize2 } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
@@ -575,21 +577,6 @@ treeSort: treeSortProp,
   const thumbPercent = Math.max(2, Math.round((visibleDays / SCROLL_RANGE_DAYS) * 100));
   const goToToday = () => setCenterDate(startOfDay(addDays(new Date(), Math.floor(visibleDays / 4))));
 
-  // Zoom controls
-  const zoomIn = () => {
-    const currentIndex = ZOOM_ORDER.indexOf(zoomLevel);
-    if (currentIndex > 0) {
-      setZoomLevel(ZOOM_ORDER[currentIndex - 1]);
-    }
-  };
-
-  const zoomOut = () => {
-    const currentIndex = ZOOM_ORDER.indexOf(zoomLevel);
-    if (currentIndex < ZOOM_ORDER.length - 1) {
-      setZoomLevel(ZOOM_ORDER[currentIndex + 1]);
-    }
-  };
-
   // « Tout le projet » : niveau le plus détaillé où tous les éléments datés affichés tiennent, centré sur la période
   // (fitProjectZoom). Jours visibles d'un niveau : même calcul que visibleDays.
   const projectFit = useMemo(() => fitProjectZoom(items, ZOOM_ORDER, (level) => containerWidth > GANTT_LABEL_WIDTH
@@ -601,8 +588,6 @@ treeSort: treeSortProp,
     setCenterDate(projectFit.center);
   };
 
-  const canZoomIn = ZOOM_ORDER.indexOf(zoomLevel) > 0;
-  const canZoomOut = ZOOM_ORDER.indexOf(zoomLevel) < ZOOM_ORDER.length - 1;
 
   const toggleCollapse = toggleCollapseFromHook;
 
@@ -1132,8 +1117,9 @@ treeSort: treeSortProp,
       <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {/* Navigation */}
         <HelpHint text={TH.previous}>
-          <Button variant="bordered" size="sm" onClick={goToPrevious} aria-label="Précédent">
+          <Button variant="bordered" size="sm" onClick={goToPrevious} aria-label="Précédent" className="gap-1">
             <ChevronLeft className="w-4 h-4" />
+            <span className="hidden lg:inline">Précédent</span>
           </Button>
         </HelpHint>
         <HelpHint text={TH.today}>
@@ -1142,7 +1128,8 @@ treeSort: treeSortProp,
           </Button>
         </HelpHint>
         <HelpHint text={TH.next}>
-          <Button variant="bordered" size="sm" onClick={goToNext} aria-label="Suivant">
+          <Button variant="bordered" size="sm" onClick={goToNext} aria-label="Suivant" className="gap-1">
+            <span className="hidden lg:inline">Suivant</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </HelpHint>
@@ -1157,8 +1144,9 @@ treeSort: treeSortProp,
         </span>
         {canEdit && spaceId && (
           <HelpHint text={TH.chronoReorder}>
-            <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} aria-label="Réordonner chronologiquement" data-tour="timeline-reorder">
+            <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} aria-label="Réordonner chronologiquement" data-tour="timeline-reorder" className="gap-1">
               <ArrowUpDown className="w-4 h-4" />
+              <span className="hidden lg:inline">Réordonner</span>
             </Button>
           </HelpHint>
         )}
@@ -1170,8 +1158,10 @@ treeSort: treeSortProp,
             data-tour="timeline-compact"
             aria-label="Éléments sans date"
             aria-pressed={compactMode}
+            className="gap-1"
           >
             {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
+            <span className="hidden lg:inline">Sans date</span>
           </Button>
         </HelpHint>
         {parentIds.length > 0 && (
@@ -1188,40 +1178,45 @@ treeSort: treeSortProp,
             data-tour="timeline-critical"
             aria-label="Chemin critique"
             aria-pressed={showCriticalPath}
-            className={showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}
+            className={`gap-1 ${showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}`}
           >
             <GitBranch className="w-4 h-4" />
+            <span className="hidden lg:inline">Chemin critique</span>
           </Button>
         </HelpHint>
         <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
-          <HelpHint text={TH.zoomIn}>
-            <Button variant="ghost" size="sm" onClick={zoomIn} disabled={!canZoomIn} aria-label="Zoom avant" className="h-8 px-2">
-              <ZoomIn className="w-4 h-4" />
-            </Button>
+          {/* Échelle : boutons d'options (libellés de ZOOM_CONFIGS) ; liste déroulante sous md, faute de place */}
+          <HelpHint text={TH.zoomLevel} className="hidden md:inline-flex">
+            <div role="radiogroup" aria-label="Échelle" className="flex items-center">
+              {ZOOM_ORDER.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  role="radio"
+                  aria-checked={zoomLevel === level}
+                  onClick={() => setZoomLevel(level)}
+                  className={`h-8 px-2 text-xs font-medium whitespace-nowrap transition-colors ${zoomLevel === level ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                >
+                  {ZOOM_CONFIGS[level].label}
+                </button>
+              ))}
+            </div>
           </HelpHint>
-          <HelpHint text={TH.zoomLevel}>
-          <select
-            className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 w-[120px] text-center"
-            value={zoomLevel}
-            onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
-            aria-label="Niveau de zoom"
-          >
-            <option value="day">Jour</option>
-            <option value="week">Semaine</option>
-            <option value="month">Mois</option>
-            <option value="quarter">Trimestre</option>
-            <option value="year">Année</option>
-            <option value="multiyear">Multi-années</option>
-          </select>
+          <HelpHint text={TH.zoomLevel} className="md:hidden inline-flex">
+            <select
+              className="text-sm bg-transparent px-2 py-1 border-0 focus:ring-0 w-[120px] text-center"
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(e.target.value as ZoomLevel)}
+              aria-label="Échelle"
+            >
+              {ZOOM_ORDER.map((level) => <option key={level} value={level}>{ZOOM_CONFIGS[level].label}</option>)}
+            </select>
           </HelpHint>
-          <HelpHint text={TH.zoomOut}>
-            <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} aria-label="Zoom arrière" className="h-8 px-2">
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-          </HelpHint>
+          <div className="h-4 w-px bg-border" />
           <HelpHint text={TH.fitProject}>
-            <Button variant="ghost" size="sm" onClick={fitProject} disabled={!projectFit} aria-label="Tout le projet" data-tour="timeline-fit" className="h-8 px-2">
+            <Button variant="ghost" size="sm" onClick={fitProject} disabled={!projectFit} aria-label="Tout le projet" data-tour="timeline-fit" className="h-8 px-2 gap-1">
               <Maximize2 className="w-4 h-4" />
+              <span className="hidden lg:inline">Tout le projet</span>
             </Button>
           </HelpHint>
         </div>
