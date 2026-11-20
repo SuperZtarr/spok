@@ -12,9 +12,12 @@
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  * Sous-menu « Statut » : seulement les statuts permis pour le type de l'item (statusesForType, @spok/shared) — une
  * question ne propose que ses 4 issues, les autres types jamais celles-ci (statuts réservés, 2026-11-08).
+ * Ligne « Statut » (2026-11-20) : « Passer à <statut suivant> » (nextStatusForType, @spok/shared — jamais recalculé ici),
+ * même onUpdateStatus que le sous-menu ; la flèche de la ligne ouvre le sous-menu (splitSubmenu). Statut final (aucun
+ * suivant) → « Modifier le statut », sous-menu seul. Les vues passent { item, currentStatusId } pour que le bouton sache où aller.
  */
-import { statusesForType, type StatusConfig } from '@spok/shared';
-import { Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
+import { nextStatusForType, statusesForType, type StatusConfig } from '@spok/shared';
+import { ArrowRight, Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
 import { articlePageUrl, articleReturnState, type ItemOpenMode } from './itemOpenMode';
 import { appNavigate } from './appNavigate';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
@@ -35,7 +38,10 @@ export async function markItemUnread(itemId: string): Promise<void> {
   queryClient.invalidateQueries({ queryKey: ['items'] });
 }
 
-export const hasHeadings = (desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
+/** Rappel fonctionnel du bouton « Passer à … » (affiché en bas du menu au survol) */
+export const NEXT_STATUS_HINT = "Passe l'élément au statut suivant de son parcours (mêmes règles de dates que la fiche). La flèche à droite ouvre la liste pour choisir un autre statut.";
+
+export const hasHeadings =(desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
 
 /**
  * L'item a-t-il des enfants ? (`childCount` fourni par la liste API, ou `children` des vues en arbre).
@@ -103,6 +109,7 @@ export function buildItemMenuGroups(
   } = callbacks;
   const { currentStatusId, extraChildren = [], extraOrganise = [], extraSections = [], itemSpaceId, canEdit = true, item } = options;
   const statusOptions = options.statusOptions ? statusesForType(options.statusOptions as StatusConfig[], item?.type ?? null) : options.statusOptions;
+  const nextStatus = options.statusOptions ? nextStatusForType(options.statusOptions as StatusConfig[], item?.type ?? null, currentStatusId) : null;
 
   // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
   const isLoggedIn = !!useAuthStore.getState().user;
@@ -128,9 +135,10 @@ export function buildItemMenuGroups(
     ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
     ...(onUpdateStatus && statusOptions && statusOptions.length > 0 ? [{
       id: 'status',
-      label: 'Modifier le statut',
-      icon: CheckSquare,
-      onClick: () => {},
+      // Bouton « Passer à <suivant> » (même onUpdateStatus que le sous-menu) ; statut final → sous-menu seul
+      ...(nextStatus
+        ? { label: `Passer à ${nextStatus.label}`, icon: ArrowRight, onClick: () => onUpdateStatus(itemId, nextStatus.id), splitSubmenu: true, hint: NEXT_STATUS_HINT }
+        : { label: 'Modifier le statut', icon: CheckSquare, onClick: () => {} }),
       submenu: statusOptions.map(s => ({
         id: `status-${s.id}`,
         label: s.label,

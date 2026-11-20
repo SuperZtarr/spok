@@ -18,7 +18,8 @@
    hints.contributionVote / contributionVotePending : vote gardé par chaque contribution (ContributionVoteBadge) ; annonce contribution-vote-kept sans date.
    Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans ItemEditModal — sauf
    insertion, déjà expliqué par les infobulles de la barre d'insertion répétée entre les blocs) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête.
-   Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer. */
+   Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer.
+   Élément statut : bouton « Passer à … » du menu ⋮ (pas de fiche propre au menu) ; annonce item-menu-next-status sans date (2026-11-20). */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 import { collapsedModesLabel } from '../../lib/modeTexts';
@@ -146,8 +147,9 @@ export const elements = {
   },
   statut: {
     title: 'Statut',
-    short: 'L\'avancement de l\'élément.',
-    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮.',
+    short: 'L\'avancement de l\'élément (une période n\'en a pas : le champ est absent).',
+    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮. Dans le menu ⋮ d\'un élément, « Passer à … » le fait avancer d\'un cran (À faire → Planifié → En cours → À valider → Terminé, ou le parcours propre à une réunion, un article, une question) ; la flèche à côté ouvre la liste de tous les statuts.',
+    changes: [{ id: 'item-menu-next-status', kind: 'new', text: 'Menu ⋮ d\'un élément : « Passer à En cours » (ou au statut suivant) change le statut en un clic ; la flèche à côté ouvre toujours la liste des statuts.', date: '2026-11-20' }],
     target: '[data-tour="item-status"]',
     noZone: true,
     side: 'left',

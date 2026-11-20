@@ -9,6 +9,8 @@
  * triggerText (2026-11-13) : libellé visible à côté de l'icône du déclencheur (pied de la fiche : « Actions »).
  * hint d'une action (2026-11-13) : rappel fonctionnel affiché en bas du menu au survol / focus de l'entrée — pas en
  * infobulle, que le menu (z 99999) recouvrirait. Sans hint sur aucune entrée, la zone n'existe pas.
+ * splitSubmenu d'une action (2026-11-20, « Passer à <statut suivant> ») : ligne à deux zones — le libellé exécute
+ * l'action, la flèche (clic, tactile, clavier) ou le survol de la ligne ouvre le sous-menu.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreVertical, ChevronRight, Check } from 'lucide-react';
@@ -26,6 +28,8 @@ export interface ItemAction {
   disabled?: boolean;
   checked?: boolean;
   submenu?: ItemAction[];
+  /** Ligne à deux zones : le libellé exécute onClick, la flèche ouvre le sous-menu (survol de la ligne aussi) */
+  splitSubmenu?: boolean;
   /** Ce que fait l'action (rappel fonctionnel), affiché en bas du menu au survol */
   hint?: string;
 }
@@ -220,6 +224,42 @@ export function ItemActionMenu({ groups, triggerClassName, side = 'left', tourId
               {group.actions.map((action) => {
                 const Icon = action.icon;
                 const hasSubmenu = !!action.submenu?.length;
+                if (hasSubmenu && action.splitSubmenu) {
+                  return (
+                    <div
+                      key={action.id}
+                      className="flex items-stretch"
+                      onMouseEnter={(e) => {
+                        setHoveredHint(action.hint ?? null);
+                        openSubmenu(action.id, e.currentTarget.getBoundingClientRect());
+                      }}
+                      onMouseLeave={scheduleCloseSubmenu}
+                    >
+                      <button
+                        onFocus={() => setHoveredHint(action.hint ?? null)}
+                        onClick={(e) => { e.stopPropagation(); action.onClick(); setIsOpen(false); }}
+                        disabled={action.disabled}
+                        className="flex-1 min-w-0 pl-3 pr-2 py-1.5 text-sm flex items-center gap-2 text-foreground hover:bg-accent transition-colors"
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="flex-1 text-left truncate">{action.label}</span>
+                      </button>
+                      <button
+                        aria-label="Choisir un autre statut"
+                        aria-haspopup="menu"
+                        onFocus={() => setHoveredHint(action.hint ?? null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const row = (e.currentTarget.parentElement ?? e.currentTarget).getBoundingClientRect();
+                          openSubmenu(action.id, row);
+                        }}
+                        className="px-2 border-l border-border flex items-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                }
                 return (
                   <button
                     key={action.id}

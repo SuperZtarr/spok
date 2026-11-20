@@ -7,6 +7,7 @@
  * Une étape dont l'élément est absent de l'écran est sautée (runTour, useOnboarding) : une vue sans
  * Ordre ou sans Nouveau ne montre simplement pas l'étape. La dernière étape « point d'interrogation » est
  * ajoutée automatiquement par runTour, sur le « ? » qui a lancé le tour (TOUR_ANCHOR_ATTR).
+ * ITEM_MENU_STEP mentionne « Passer à … » (statut suivant du menu ⋮, 2026-11-20).
  */
 import { elementTourSteps } from './elements';
 import { SPACE_TOOLBAR_ELEMENTS } from './spaceToolbar.elements';
@@ -18,7 +19,7 @@ export const ITEM_MENU_STEP: TourStep[] = [
     element: '[data-tour="item-menu"]',
     popover: {
       title: 'Actions sur un élément',
-      description: 'Le menu ⋮ regroupe toutes les actions : « Afficher » ouvre l\'élément en lecture (mise en page document, à copier ou imprimer), « Ouvrir » ouvre sa fiche (modifiable si vous en avez le droit), « Lire l\'article » ouvre un article sur sa page de lecture, comme un simple clic sur lui ; puis ajouter un enfant, déplacer ou dupliquer vers un autre espace, fusionner, changer le statut (mêmes règles de dates que la fiche : « Non défini » efface début et fin), m\'assigner, supprimer…',
+      description: 'Le menu ⋮ regroupe toutes les actions : « Afficher » ouvre l\'élément en lecture (mise en page document, à copier ou imprimer), « Ouvrir » ouvre sa fiche (modifiable si vous en avez le droit), « Lire l\'article » ouvre un article sur sa page de lecture, comme un simple clic sur lui ; puis ajouter un enfant, déplacer ou dupliquer vers un autre espace, fusionner, passer au statut suivant d\'un clic (« Passer à … », la flèche à côté ouvre la liste des statuts ; mêmes règles de dates que la fiche : « Non défini » efface début et fin), m\'assigner, supprimer…',
       side: 'left',
     },
   },

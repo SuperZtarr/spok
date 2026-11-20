@@ -9,9 +9,13 @@
    statusFamilies / typeInStatusFamily / statusesForFamily en dérivent les familles de statuts (Kanban par famille, 2026-11-19) ;
    withDefaultStatuses les rajoute à un référentiel personnalisé qui ne les a pas et rétablit leur réservation.
    Réunion (7 statuts, terminée = CR envoyé) et Article (4 statuts) ont aussi leurs statuts réservés (2026-11-19) ;
-   statusForType normalise le statut d'un élément selon son type (correspondance par catégorie au changement de type). */
-import type { StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
-import { ITEM_TYPE_REGISTRY } from './typeRegistry.js';
+   statusForType normalise le statut d'un élément selon son type (correspondance par catégorie au changement de type).
+   nextStatusForType donne le statut suivant (bouton « Passer à … » du menu contextuel, 2026-11-20).
+   Période sans statut (typeHasStatus, registre des types, 2026-11-20) : aucun statut proposé, enregistré vide,
+   absente des familles du Kanban. */
+import type { StatusCategory, StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
+import { ITEM_TYPE_REGISTRY, typeHasStatus } from './typeRegistry.js';
+import { statusCategory } from './statusCategory.js';
 
 // =============================================================================
 // DEFAULT STATUS CONFIGS - Configuration par défaut des statuts
@@ -168,6 +172,7 @@ export function statusForType(
   status: string | null | undefined,
   statuses: StatusConfig[] = DEFAULT_STATUSES,
 ): string | null | undefined {
+  if (!typeHasStatus(type)) return null; // Période : jamais de statut (2026-11-19)
   const all = withDefaultStatuses(statuses);
   const own = statusesForType(all, type).filter((s) => s.id !== 'undefined').sort((a, b) => a.order - b.order);
   const reserved = all.some((s) => s.types?.includes(type));
@@ -202,6 +207,7 @@ export function statusAllowedForType(
   statuses: StatusConfig[] = DEFAULT_STATUSES,
 ): boolean {
   if (!statusId || statusId === 'undefined' || statusId === 'none') return true;
+  if (!typeHasStatus(type)) return false; // Période : aucun statut
   const all = withDefaultStatuses(statuses);
   const cfg = all.find((s) => s.id === statusId);
   const typeHasReserved = !!type && all.some((s) => s.types?.includes(type));
@@ -216,9 +222,40 @@ export function statusAllowedForType(
  * les statuts sans réservation.
  */
 export function statusesForType<T extends StatusConfig>(statuses: T[], type: string | null | undefined): T[] {
+  if (!typeHasStatus(type)) return []; // Période : aucun statut proposé
   const reserved = type ? statuses.filter((s) => s.types?.includes(type)) : [];
   if (reserved.length > 0) return reserved;
   return statuses.filter((s) => !s.types?.length);
+}
+
+/** Rang d'avancement d'une catégorie (statut suivant) : un statut hors parcours avance vers un rang supérieur */
+const PROGRESS_RANK: Record<StatusCategory, number> = { none: 0, open: 1, active: 2, late: 2, review: 3, done: 4, cancelled: 4 };
+
+/**
+ * Statut suivant d'un élément (bouton du menu contextuel, décision Thomas 2026-11-20) — source unique de cette règle.
+ * Parcours = statuts visibles du type, dans l'ordre du référentiel, jusqu'au premier statut « terminé » inclus, sans
+ * En retard ni Annulé (ni ce qui suit le premier « terminé » : Reportée d'une réunion ou d'une question).
+ * Statut sur le parcours → le statut d'après ; hors parcours (Non défini, En retard, Reportée…) → le premier statut du
+ * parcours plus avancé (rang de catégorie supérieur) ; statut final (terminé, annulé) ou fin de parcours → null.
+ * Suit l'ordre et les catégories des statuts personnalisés d'une communauté (aucun champ « suivant » à régler).
+ */
+export function nextStatusForType<T extends StatusConfig>(
+  statuses: T[],
+  type: string | null | undefined,
+  current: string | null | undefined,
+): T | null {
+  const own = statusesForType(statuses, type)
+    .filter((s) => s.visible !== false && s.id !== 'undefined')
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); // listes réduites ({ id, label }) passées par certaines vues
+  const catOf = (s: StatusConfig) => statusCategory(s.id, statuses);
+  const firstDone = own.findIndex((s) => catOf(s) === 'done');
+  const path = (firstDone >= 0 ? own.slice(0, firstDone + 1) : own)
+    .filter((s) => !['late', 'cancelled'].includes(catOf(s)));
+  const idx = current ? path.findIndex((s) => s.id === current) : -1;
+  if (idx >= 0) return path[idx + 1] ?? null;
+  const rank = PROGRESS_RANK[statusCategory(current, statuses)];
+  if (rank >= PROGRESS_RANK.done) return null;
+  return path.find((s) => PROGRESS_RANK[catOf(s)] > rank) ?? null;
 }
 
 /**
@@ -249,6 +286,7 @@ export function statusFamilies(statuses: StatusConfig[], items: Iterable<{ type?
   const present = new Set<string>();
   let general = false;
   for (const it of items) {
+    if (!typeHasStatus(it.type)) continue; // Période : dans aucune famille (absente du Kanban)
     if (it.type && reservedTypes.includes(it.type)) present.add(it.type);
     else general = true;
   }
@@ -261,6 +299,7 @@ export function statusFamilies(statuses: StatusConfig[], items: Iterable<{ type?
 /** Un élément de ce type appartient-il à cette famille ? */
 export function typeInStatusFamily(statuses: StatusConfig[], family: StatusFamily, type: string | null | undefined): boolean {
   if (family.types) return !!type && family.types.includes(type);
+  if (!typeHasStatus(type)) return false;
   return !type || !statuses.some((s) => s.types?.includes(type));
 }
 
