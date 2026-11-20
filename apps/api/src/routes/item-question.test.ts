@@ -45,6 +45,11 @@ describe('Statuts réservés', () => {
     expect(statusForType('TASK', 'meeting_minutes_sent')).toBe('done')
     expect(statusForType('MEETING', 'meeting_held')).toBe('meeting_held')
     expect(statusForType('QUESTION', 'meeting_minutes_sent')).toBe(QUESTION_STATUS.OPEN)
+    // Période (2026-11-20) : jamais de statut
+    expect(statusForType('PERIOD', 'in_progress')).toBeNull()
+    expect(statusForType('PERIOD', null)).toBeNull()
+    expect(statusAllowedForType('todo', 'PERIOD')).toBe(false)
+    expect(statusesForType(DEFAULT_STATUSES, 'PERIOD')).toEqual([])
     // Statut propre à une communauté (inconnu des défauts) : conservé
     expect(statusForType('TASK', 'review')).toBe('review')
     expect(statusAllowedForType('review', 'QUESTION')).toBe(false)

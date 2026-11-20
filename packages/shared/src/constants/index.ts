@@ -36,7 +36,7 @@ export * from './searchCategories.js';
 export * from './exportFields.js';
 export * from './volumetry.js';
 export {
-  ITEM_TYPE_REGISTRY, DEFAULT_ITEM_TYPE, getItemTypeDef, isItemType, itemTypesWhere, isComposedType,
+  ITEM_TYPE_REGISTRY, DEFAULT_ITEM_TYPE, getItemTypeDef, isItemType, itemTypesWhere, isComposedType, typeHasStatus,
 } from './typeRegistry.js';
 export type { ItemTypeDefinition, TypeHue } from './typeRegistry.js';
 export * from './menuDefaults.js';

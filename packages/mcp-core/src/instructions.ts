@@ -10,7 +10,7 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 ## Modèle
 - Communauté → Espaces (arborescence) → Items.
 - Un item a un type (sa nature) : PROJECT (ensemble de travail avec dates), TASK (action à faire, statut + échéance),
-  MEETING (réunion datée, à l'heure près), PERIOD (plage de dates sans action, ex. vacances, sprint),
+  MEETING (réunion datée, à l'heure près), PERIOD (plage de dates sans action, ex. vacances, sprint — sans statut),
   UNDEFINED (« Élément » : type par défaut — texte rédigé (notes, compte-rendu, synthèse), photo, fichier ou lien
   déposé seul), ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
   QUESTION (titre = la question ; issue notée par ses statuts réservés question_open / question_decided /

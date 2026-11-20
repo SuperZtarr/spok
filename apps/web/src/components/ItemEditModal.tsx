@@ -109,7 +109,7 @@
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
  * Statuts proposés aux autres types : statusesForType (Réunion et Article : leurs statuts réservés, 2026-11-19) ; au
  * changement de type, statusForType (@spok/shared) remplace un statut non permis par celui de même catégorie, sinon
- * par le premier du type (réunion « À organiser ») ou le retire.
+ * par le premier du type (réunion « À organiser ») ou le retire. Période : pas de champ Statut (typeHasStatus, 2026-11-20).
  * Types à composants (groupe « Compositions » : Article, Question — isComposedType, 2026-11-11) : choisir un de ces types
  * enregistre aussitôt le type seul, fiche ouverte, pour afficher ses composants (règle composed-type-autosave).
  */
@@ -126,7 +126,7 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusForType, statusesForType, getInterfaceMode } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusForType, statusesForType, typeHasStatus, getInterfaceMode } from '@spok/shared';
 import { statusChangeFields } from '../lib/statusChange';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -1769,7 +1769,8 @@ export function ItemEditModal({
               {showAll && type === 'QUESTION' && itemId && item?.type === 'QUESTION' && (
                 <QuestionStatusField spaceId={item.spaceId ?? spaceId} itemId={itemId} statuses={referentiels?.statuses} />
               )}
-              {showAll && type !== 'QUESTION' &&<div className={`space-y-2 ${filledZone(!!status)}`} data-tour="item-status" data-devzone="item-statut">
+              {/* Période : pas de statut (typeHasStatus, 2026-11-20) — champ absent */}
+              {showAll && type !== 'QUESTION' && typeHasStatus(type) &&<div className={`space-y-2 ${filledZone(!!status)}`} data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium flex items-center gap-1.5">Statut <ElementHelp page="item-modal" element="statut" /></label>
                 {canEdit ? (
                   <>

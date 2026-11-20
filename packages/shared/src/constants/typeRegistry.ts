@@ -48,6 +48,11 @@ export interface ItemTypeDefinition {
    * content = info du contenu principal (extension, site), rien sans contenu (le texte suit). Absent = statut (et type en carte).
    */
   display?: 'task' | 'project' | 'meeting' | 'period' | 'content';
+  /**
+   * Type sans statut (Période, décision Thomas 2026-11-19 : une plage de dates n'a pas d'avancement) : aucun statut
+   * proposé ni enregistré, absent du Kanban — typeHasStatus, lu par statusesForType / statusForType / statusFamilies.
+   */
+  noStatus?: boolean;
 }
 
 export const ITEM_TYPE_REGISTRY = [
@@ -55,7 +60,7 @@ export const ITEM_TYPE_REGISTRY = [
   { id: 'PROJECT',   label: 'Projet',     plural: 'Projets',       icon: 'FolderKanban',          emoji: '📁', hue: 'purple',  group: 'activities',   content: false, defaultDuration: 'month', display: 'project' },
   { id: 'TASK',      label: 'Tâche',      plural: 'Tâches',        icon: 'CheckSquare',           emoji: '✅', hue: 'green',   group: 'activities',   content: false, defaultDuration: 'hour', display: 'task' },
   { id: 'MEETING',   label: 'Réunion',    plural: 'Réunions',      icon: 'Calendar',              emoji: '📅', hue: 'orange',  group: 'activities',   content: false, defaultDuration: 'hour', timed: true, display: 'meeting' },
-  { id: 'PERIOD',    label: 'Période',    plural: 'Périodes',      icon: 'CalendarRange',         emoji: '🗓️', hue: 'teal',    group: 'activities',   content: false, defaultDuration: 'day', display: 'period' },
+  { id: 'PERIOD',    label: 'Période',    plural: 'Périodes',      icon: 'CalendarRange',         emoji: '🗓️', hue: 'teal',    group: 'activities',   content: false, defaultDuration: 'day', display: 'period', noStatus: true },
   { id: 'ARTICLE',   label: 'Article',    plural: 'Articles',      icon: 'Newspaper',             emoji: '📰', hue: 'fuchsia', group: 'deliverables', content: true },
   { id: 'QUESTION',  label: 'Question',   plural: 'Questions',     icon: 'MessageCircleQuestion', emoji: '❓', hue: 'sky',     group: 'deliverables', content: true },
 ] as const satisfies readonly ItemTypeDefinition[];
@@ -79,6 +84,11 @@ export function getItemTypeDef(type: string | null | undefined): ItemTypeDefinit
 /** Type à composants propres (groupe « Compositions » : Article, Question) — enregistré dès qu'il est choisi dans la fiche */
 export function isComposedType(type: string | null | undefined): boolean {
   return getItemTypeDef(type)?.group === 'deliverables';
+}
+
+/** Le type a-t-il un statut ? Non pour la Période (noStatus) ; type inconnu ou absent : oui */
+export function typeHasStatus(type: string | null | undefined): boolean {
+  return !getItemTypeDef(type)?.noStatus;
 }
 
 export function isItemType(value: unknown): value is ItemType {

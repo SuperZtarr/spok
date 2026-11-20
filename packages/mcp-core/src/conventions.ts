@@ -40,8 +40,12 @@ function list(values: { id: string; label: string }[]): string {
   return values.map((v) => `${v.id} (${v.label})`).join(', ')
 }
 
-/** Statuts utilisables pour un type : ses statuts réservés s'il en a, sinon les statuts sans réservation. */
+/** Types sans statut — recopie de `noStatus` du registre des types (@spok/shared typeRegistry.ts, Période 2026-11-20) */
+const NO_STATUS_TYPES = ['PERIOD']
+
+/** Statuts utilisables pour un type : aucun (Période), ses statuts réservés s'il en a, sinon les statuts sans réservation. */
 export function statusesForType(conv: SpaceConventions, type?: string): SpaceConventions['statuses'] {
+  if (type && NO_STATUS_TYPES.includes(type)) return []
   const reserved = type ? conv.statuses.filter((s) => s.types?.includes(type)) : []
   return reserved.length ? reserved : conv.statuses.filter((s) => !s.types?.length)
 }
@@ -53,6 +57,7 @@ export function resolveStatus(input: string, conv: SpaceConventions, type?: stri
   if (!found) throw new ConventionError(`Statut « ${input} » inconnu dans cet espace. Valeurs acceptées : ${list(conv.statuses)}.`)
   if (type) {
     const allowed = statusesForType(conv, type)
+    if (!allowed.length) throw new ConventionError(`Le type ${type} n'a pas de statut : n'en donnez pas.`)
     if (!allowed.some((s) => s.id === found.id)) {
       throw new ConventionError(`Statut « ${input} » non permis pour le type ${type}. Valeurs acceptées pour ce type : ${list(allowed)}.`)
     }

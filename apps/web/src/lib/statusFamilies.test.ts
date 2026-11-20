@@ -18,6 +18,12 @@ describe('familles de statuts', () => {
     expect(typeInStatusFamily(DEFAULT_STATUSES, fams[0], 'MEETING')).toBe(false)
   })
 
+  it('une période (sans statut) n’est dans aucune famille (2026-11-20)', () => {
+    expect(statusFamilies(DEFAULT_STATUSES, [{ type: 'PERIOD' }])).toEqual([])
+    const [general] = statusFamilies(DEFAULT_STATUSES, [{ type: 'TASK' }, { type: 'PERIOD' }])
+    expect(typeInStatusFamily(DEFAULT_STATUSES, general, 'PERIOD')).toBe(false)
+  })
+
   it('appartenance et colonnes de chaque famille', () => {
     const [general, question] = statusFamilies(DEFAULT_STATUSES, [{ type: 'TASK' }, { type: 'QUESTION' }])
     expect(typeInStatusFamily(DEFAULT_STATUSES, general, 'TASK')).toBe(true)
