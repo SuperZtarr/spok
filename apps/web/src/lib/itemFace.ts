@@ -4,8 +4,10 @@
  * qu'afficher, chaque vue ne garde que son cadre (glisser, menu ⋮, couleurs, colonnes).
  * Trois formats, contenu progressif :
  *   ligne  (Liste, arbre, Planning, MindMap, Loupe minimale) : miniature 24 px, titre, l'info la plus utile, pastilles
- *   carte  (Kanban, Activité, Favoris, Loupe intermédiaire)   : + infos du type, extrait 2 lignes, tags
- *   grande (Loupe zoomée, copie de vignette)                  : + toutes les infos, description 4 lignes, bouton Ouvrir
+ *   carte  (Kanban, Tags, Activité, Loupe intermédiaire)      : + statut, dates, échéance, assigné (tout type, 2026-11-20),
+ *                                                               extrait 2 lignes, tags
+ *   grande (Loupe zoomée)                                     : + type, durée, enfants, relations, description 4 lignes,
+ *                                                               bouton Ouvrir (la copie de vignette, itemThumbnail.ts, a sa propre composition)
  * Miniature : première image, sinon premier schéma (son aperçu), sinon 1re page du premier fichier qui en a une (avec
  * son extension), sinon icône du type. Pastilles : nombre de contenus par sorte (Images, Fichiers, Liens, Schémas),
  * celui servant de miniature non compté. Extrait : description, sinon début du texte du premier fichier
@@ -44,7 +46,11 @@ export interface FaceSource {
   startDate?: string | Date | null;
   endDate?: string | Date | null;
   assigneeName?: string | null;
+  /** Élément brut des listes (Kanban, Tags…) : l'assigné y est un objet ; assigneeName prime s'il est fourni */
+  assignedTo?: { name?: string | null } | null;
   childCount?: number;
+  /** Nombre de relations (deux sens), affiché en grande ; fourni par la vue qui le connaît (Loupe), sinon omis */
+  relationCount?: number;
   description?: string | null;
 }
 
@@ -154,6 +160,7 @@ export function fileExtension(url: string | null | undefined): string | null {
 }
 
 const childrenOf = (count: number | undefined) => (!count ? null : count === 1 ? '1 enfant' : `${count} enfants`);
+const relationsOf = (count: number | undefined) => (!count ? null : count === 1 ? '1 relation' : `${count} relations`);
 
 /** Contenu principal à ouvrir : premier fichier, sinon premier lien (adresse sûre seulement). */
 function mainContent(contents: FaceContent[]): { kind: ItemContentKind; href: string; name?: string | null } | null {
@@ -171,15 +178,13 @@ function mainInfo(main: ReturnType<typeof mainContent>): string | null {
 }
 
 /**
- * | Type               | ligne               | carte                 | grande : ajoute                     |
- * | Tâche, Anomalie    | statut              | statut, échéance      | assigné                             |
- * | Projet             | statut              | statut, dates         | enfants, assigné                    |
- * | Réunion            | date                | date                  | assigné                             |
- * | Période            | dates               | dates                 | durée                               |
- * | Note               | —                   | —                     | —                                   |
- * | Élément (contenus) | extension ou site   | extension ou site     | adresse d'un lien, bouton Ouvrir    |
- * | Autres             | statut              | type, statut          | —                                   |
- * Texte : aucun en ligne, extrait 2 lignes en carte, description 4 lignes en grande.
+ * Ligne : une seule info, la plus utile selon le profil du type (registre des types, `display`) :
+ * | Tâche, Projet, Autres : statut | Réunion, Période : dates | Élément (contenus) : extension ou site |
+ * Carte et grande (décision Thomas 2026-11-20, « vignettes ouvertes presque vides ») : tout ce qui est renseigné,
+ * quel que soit le type, dans cet ordre —
+ *   carte  : statut, dates (début → fin), échéance, assigné, extension ou site du contenu principal
+ *   grande : type, puis la carte, puis durée (début et fin), enfants, relations ; adresse d'un lien, bouton Ouvrir
+ * Une information absente est omise. Texte : aucun en ligne, extrait 2 lignes en carte, description 4 lignes en grande.
  * Priorité : pastille à part (face.priority), tous types et tous formats.
  */
 export function itemFace(item: FaceSource, format: VignetteFormat, labels: { type: string; status: string | null }): ItemFace {
@@ -188,28 +193,28 @@ export function itemFace(item: FaceSource, format: VignetteFormat, labels: { typ
   const badges = badgesOf(item, cover);
   const big = format === 'grande';
   const main = mainContent(contents);
-  const assignee = big ? item.assigneeName : null;
 
   let meta: (string | null | undefined | false)[];
-  // Profil d'affichage du type : registre des types (display), jamais de test de type ici
-  switch (getItemTypeDef(item.type)?.display) {
-    case 'task':
-      meta = format === 'ligne' ? [labels.status] : [labels.status, dueOf(item), assignee];
-      break;
-    case 'project':
-      meta = format === 'ligne' ? [labels.status] : [labels.status, datesOf(item), big && childrenOf(item.childCount), assignee];
-      break;
-    case 'meeting':
-      meta = [datesOf(item) ?? dueOf(item), assignee];
-      break;
-    case 'period':
-      meta = [datesOf(item), big && durationOf(item)];
-      break;
-    case 'content':
-      meta = [mainInfo(main)];
-      break;
-    default:
-      meta = format === 'ligne' ? [labels.status] : [labels.type, labels.status];
+  if (format === 'ligne') {
+    // Profil d'affichage du type : registre des types (display), jamais de test de type ici
+    switch (getItemTypeDef(item.type)?.display) {
+      case 'meeting': meta = [datesOf(item) ?? dueOf(item)]; break;
+      case 'period': meta = [datesOf(item)]; break;
+      case 'content': meta = [mainInfo(main)]; break;
+      default: meta = [labels.status];
+    }
+  } else {
+    meta = [
+      big && labels.type,
+      labels.status,
+      datesOf(item),
+      dueOf(item),
+      item.assigneeName ?? item.assignedTo?.name,
+      mainInfo(main),
+      big && durationOf(item),
+      big && childrenOf(item.childCount),
+      big && relationsOf(item.relationCount),
+    ];
   }
 
   const face: ItemFace = { cover, badges, meta: meta.filter(isDefined) };

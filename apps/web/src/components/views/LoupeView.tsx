@@ -438,6 +438,7 @@ export function LoupeView(props: LoupeViewProps) {
           ...local,
           assigneeName: local.assignedTo?.name ?? local.assignedToName,
           childCount: index.children.get(id)?.length ?? 0,
+          relationCount: (local.relationsFrom?.length ?? 0) + (local.relationsTo?.length ?? 0),
         }
       : { ...external!, description: remote?.item.id === id ? remote.item.description : undefined };
 

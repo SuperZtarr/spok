@@ -273,6 +273,7 @@
 - [x] Vue Loupe - clic sur l'élément figé ouvre sa fiche — 2026-11-20
 - [x] Gantt - bouton Tout le projet — 2026-11-20
 - [x] Données sécurisées d'un élément, chiffrées — 2026-11-20
+- [x] Vignettes - carte et grande montrent statut, dates, assigné quel que soit le type — 2026-11-20
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
