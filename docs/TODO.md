@@ -269,6 +269,7 @@
 - [x] Statuts propres aux réunions et aux articles, Kanban une famille de statuts à la fois — 2026-11-19
 - [x] Vues Liens, Documents, Images - groupe « Racine de l'espace » — 2026-11-20
 - [x] Vue Loupe - vignettes agrandies selon contenus, enfants et relations — 2026-11-20
+- [x] Séances - tous les droits en mode admin — 2026-11-20
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

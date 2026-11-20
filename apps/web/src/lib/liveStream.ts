@@ -3,9 +3,10 @@
  * Authorization ni de rafraîchir le token). Reconnexion automatique avec backoff (1 s → 15 s max) ;
  * onOpen est appelé à chaque (re)connexion : l'appelant doit alors refetch l'état complet, le flux
  * ne rejouant pas les événements manqués. Retourne une fonction d'arrêt.
+ * Envoie X-Admin-Mode comme fetchApi (adminModeHeaders) : l'admin en mode admin suit toute séance (vue animateur).
  */
 import type { LiveEvent } from '@spok/shared';
-import { getValidAccessToken, LIVE_API_URL } from './api';
+import { adminModeHeaders, getValidAccessToken, LIVE_API_URL } from './api';
 
 export function parseSseChunk(buffer: string): { events: LiveEvent[]; rest: string } {
   const parts = buffer.split('\n\n');
@@ -33,7 +34,7 @@ export function openLiveStream(
       try {
         const token = await getValidAccessToken();
         const res = await fetch(`${LIVE_API_URL}/live-sessions/${sessionId}/stream`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...adminModeHeaders() },
           signal: controller.signal,
         });
         if (res.ok && res.body) {

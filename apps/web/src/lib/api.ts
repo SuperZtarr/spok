@@ -233,6 +233,13 @@ function clearAuth() {
   setTimeout(() => { isLoggingOut = false; }, 100);
 }
 
+/** En-tête X-Admin-Mode quand un admin global a activé le mode admin — pour tout appel hors fetchApi (flux SSE des
+ *  séances, liveStream.ts). L'API relit le rôle en base : l'en-tête seul ne donne aucun droit. */
+export function adminModeHeaders(): Record<string, string> {
+  const { user } = useAuthStore.getState();
+  return user?.globalRole === 'ADMIN' && localStorage.getItem('spok-admin-mode') === 'true' ? { 'X-Admin-Mode': 'true' } : {};
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -269,10 +276,7 @@ async function fetchApi<T>(
   }
 
   // Send admin mode header when the toggle is active
-  const { user } = useAuthStore.getState();
-  if (user?.globalRole === 'ADMIN' && localStorage.getItem('spok-admin-mode') === 'true') {
-    headers['X-Admin-Mode'] = 'true';
-  }
+  Object.assign(headers, adminModeHeaders());
 
   let response: Response;
 

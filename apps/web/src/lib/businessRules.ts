@@ -558,6 +558,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     location: 'apps/api/src/routes/item-relations.ts (GET /:id/links), apps/web/src/components/views/LoupeView.tsx',
   },
   {
+    id: 'loupe-vignette-scale',
+    page: 'Vue Loupe (LoupeView)',
+    trigger: "Affichage d'un élément en petite vignette sur la carte (repos, estompé, lié au-delà de 24) ; zoomé, lié à mi-taille et aperçu gardent leur taille fixe",
+    effect: "Score = nombre de contenus + nombre d'enfants + relations dans les deux sens, chacun compte 1. La vignette est agrandie de 1 (score 0, taille de base) à 3 (score 5 et plus), linéairement : largeur et hauteur, pas la police. L'écartement des vignettes en tient compte. Élément d'un autre espace : seuls ses contenus sont connus, donc comptés. Rien n'est modifié dans SPOK",
+    location: 'apps/web/src/components/views/loupe-scene.ts (vignetteScale, SCALE_CAP, SCALE_MAX), apps/web/src/components/views/LoupeView.tsx',
+  },
+  {
     id: 'item-vignette-format',
     page: 'Loupe, Kanban, Liste (arbre et à plat), Gantt / PERT (colonne des titres), Planning, MindMap, Activité, Favoris, « Copier la vignette »',
     trigger: "Affichage d'un élément dans une vue",
@@ -654,6 +661,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: "Fin d'une séance, ou action de l'animateur sur une séance terminée",
     effect: "À la fin, une Note « Compte-rendu — <nom de la séance> » est créée dans l'espace de séance (un échec n'empêche pas la fin ; l'animateur peut alors la créer). Instantané figé : présents (animateur, présentateurs, personnes ayant rejoint), déroulé dans l'ordre des premiers affichages (réaffichages, sous-éléments révélés, relations des copies, commentaires écrits pendant la séance), nombre d'éléments de la préparation non présentés (jamais leurs titres : la Note est lue par les participants, qui ne voient que le déjà présenté) et suite éventuelle, éléments créés pendant la séance ; une relation vers un élément d'un autre espace s'écrit « un élément d'un autre espace » ; heures de Paris. Les décisions s'écrivent après coup sous le titre « Décisions ». « Régénérer » (animateur) réécrit tout ce qui précède ce titre et garde la section ; la Note se modifie avec les droits normaux de l'espace",
     location: 'apps/api/src/utils/liveReport.ts, apps/api/src/routes/live-sessions.ts (/end, /:id/report), apps/web/src/components/live/LiveSessionBar.tsx',
+  },
+  {
+    id: 'live-session-admin-mode',
+    page: 'Séances live (espace de séance, bandeau, Préparation, fenêtre en direct, bouton de l\'en-tête)',
+    trigger: 'Admin global avec le mode admin activé, sur n\'importe quelle séance',
+    effect: "Tous les droits sur toutes les séances, sans être membre ni animateur : il les voit (y compris les séances en direct dans l'en-tête), les suit en direct et y agit comme l'animateur — présentateurs, invités, démarrer, afficher, révéler, préparer (toutes les lignes), terminer, compte-rendu, créer la suite. Il ne devient pas animateur : l'animateur reste celui qui a créé la séance, y compris pour une suite créée par l'admin. Sans le mode admin, un admin global n'a que ses droits ordinaires (décision Thomas 2026-11-20)",
+    location: 'apps/api/src/routes/live-sessions.ts (adminOn, canHost, hasRoleOrAdmin), apps/api/src/utils/liveHub.ts (asHost), apps/web/src/lib/liveStream.ts (X-Admin-Mode)',
   },
   {
     id: 'bulk-upload-images-documents',
@@ -785,7 +799,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'admin-mode-owner-rights',
     page: "Paramètres de communauté et d'espace, toutes les actions de gestion de communauté et d'espace",
     trigger: 'Admin global avec le mode admin activé, membre ou non de la communauté',
-    effect: "Mêmes droits que le propriétaire : modifier nom, description, visibilité et contexte, images, référentiels, tags, gérer membres, rôles et invitations, envoyer des emails, supprimer la communauté. Sans le mode admin, un admin global n'a que ses droits de membre. Les actions personnelles (rejoindre, quitter, sourdine, céder sa propre propriété) restent liées à l'utilisateur. Côté espace : membres, rôles, invitations, images, emails, suppression. Côté contenu : rôle OWNER dans tout espace (créer, modifier, déplacer, fusionner, convertir, supprimer des éléments, y compris les copies de séance verrouillées, gérer tags, relations, contributions), et création de séances live ; les actions d'animation restent à l'animateur. Hors mode admin, un admin global est un utilisateur normal : aucune lecture d'office des espaces, éléments, graphes ou résultats de recherche hors de ses propres droits",
+    effect: "Mêmes droits que le propriétaire : modifier nom, description, visibilité et contexte, images, référentiels, tags, gérer membres, rôles et invitations, envoyer des emails, supprimer la communauté. Sans le mode admin, un admin global n'a que ses droits de membre. Les actions personnelles (rejoindre, quitter, sourdine, céder sa propre propriété) restent liées à l'utilisateur. Côté espace : membres, rôles, invitations, images, emails, suppression. Côté contenu : rôle OWNER dans tout espace (créer, modifier, déplacer, fusionner, convertir, supprimer des éléments, y compris les copies de séance verrouillées, gérer tags, relations, contributions), et tous les droits sur toutes les séances live (règle live-session-admin-mode). Hors mode admin, un admin global est un utilisateur normal : aucune lecture d'office des espaces, éléments, graphes ou résultats de recherche hors de ses propres droits",
     location: 'apps/api/src/routes/communities.ts (isOwnerOrAdmin), apps/api/src/routes/community-referentiels.ts, apps/api/src/routes/spaces.ts (isSpaceOwnerOrAdmin, GET /:id renvoie OWNER), apps/api/src/routes/items.ts (checkSpaceAccess 4e argument isAdminMode), apps/api/src/routes/live-sessions.ts, apps/web/src/pages/CommunitySettingsPage.tsx et SpaceSettingsPage.tsx (canEdit)',
   },
   {

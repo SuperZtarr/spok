@@ -1,8 +1,9 @@
-/* Tests du client SSE des séances : découpage des messages, commentaires ignorés, reconnexion. */
+/* Tests du client SSE des séances : découpage des messages, commentaires ignorés, reconnexion, en-têtes (token, mode admin). */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { parseSseChunk, openLiveStream } from './liveStream'
 
-vi.mock('./api', () => ({ getValidAccessToken: vi.fn(async () => 'tok'), LIVE_API_URL: '/api' }))
+const adminHeaders = vi.hoisted(() => ({ value: {} as Record<string, string> }))
+vi.mock('./api', () => ({ getValidAccessToken: vi.fn(async () => 'tok'), LIVE_API_URL: '/api', adminModeHeaders: () => adminHeaders.value }))
 
 describe('parseSseChunk', () => {
   it('extrait les événements complets et garde le reste', () => {
@@ -42,6 +43,19 @@ describe('openLiveStream', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('/api/live-sessions/ls-1/stream')
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok')
+    expect((init.headers as Record<string, string>)['X-Admin-Mode']).toBeUndefined()
+    stop()
+  })
+
+  it('envoie X-Admin-Mode quand le mode admin est actif (admin : tous les droits sur les séances)', async () => {
+    adminHeaders.value = { 'X-Admin-Mode': 'true' }
+    const fetchMock = vi.fn(async () => new Response(new ReadableStream({ start(c) { c.close() } }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const stop = openLiveStream('ls-1', { onEvent: vi.fn(), onOpen: vi.fn() })
+    await vi.advanceTimersByTimeAsync(0)
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect((init.headers as Record<string, string>)['X-Admin-Mode']).toBe('true')
+    adminHeaders.value = {}
     stop()
   })
 })

@@ -9,7 +9,9 @@
    dans sa confirmation — vérifiés contre apps/api/src/utils/liveReport.ts.
    « Créer la suite » s'explique dans sa fenêtre (live-window.help.ts, hints.suiteIntro).
    Décision Thomas 2026-10-28 : l'explication d'un bouton du bandeau est affichée DANS ce qu'il ouvre (panneau,
-   confirmation, fenêtre), pas en infobulle au survol. Seul « Démarrer la séance », qui n'ouvre rien, a une infobulle. */
+   confirmation, fenêtre), pas en infobulle au survol. Seul « Démarrer la séance », qui n'ouvre rien, a une infobulle.
+   Mode admin (2026-11-20) : le résumé de la fiche dit que l'admin a les droits de l'animateur (businessRules
+   live-session-admin-mode) ; fonction réservée à l'admin, pas d'annonce dans les nouveautés. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -126,7 +128,7 @@ const derived = helpFromElements(elements);
 
 export const help: HelpEntry = {
   title: 'Séance',
-  summary: 'Une séance présente en direct, à un groupe, des éléments venant de plusieurs espaces, et garde la trace de ce qui a été montré. Elle vit dans son propre espace, sous l\'espace qui l\'a lancée. Rôles : l\'animateur (qui a créé la séance) dirige tout ; les présentateurs préparent et présentent ; les participants regardent, commentent, réorganisent ce qui a été présenté et ajoutent des éléments à la préparation.',
+  summary: 'Une séance présente en direct, à un groupe, des éléments venant de plusieurs espaces, et garde la trace de ce qui a été montré. Elle vit dans son propre espace, sous l\'espace qui l\'a lancée. Rôles : l\'animateur (qui a créé la séance) dirige tout ; les présentateurs préparent et présentent ; les participants regardent, commentent, réorganisent ce qui a été présenté et ajoutent des éléments à la préparation. En mode admin, un administrateur a sur toutes les séances les droits de l\'animateur, sans le devenir.',
   ...derived,
   hints: {
     ...derived.hints,

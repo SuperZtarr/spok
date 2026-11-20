@@ -4,16 +4,18 @@
  * instances, remplacer broadcast() par un relais PostgreSQL LISTEN/NOTIFY — l'interface ne change pas.
  * Les abonnés qui lèvent une erreur (socket fermée) sont retirés silencieusement.
  * broadcastEach : événement calculé par abonné (ex. préparation complète pour l'animateur, filtré pour les participants).
+ * asHost (subscribe) : abonné admin en mode admin, servi comme l'animateur (préparation complète) — jamais diffusé
+ * dans la présence.
  */
 import type { LiveEvent, LiveUser } from '@spok/shared';
 
-interface Subscriber { user: LiveUser; send: (event: LiveEvent) => void }
+interface Subscriber { user: LiveUser; send: (event: LiveEvent) => void; asHost: boolean }
 
 export class LiveHub {
   private sessions = new Map<string, Set<Subscriber>>();
 
-  subscribe(sessionId: string, user: LiveUser, send: (event: LiveEvent) => void): () => void {
-    const sub: Subscriber = { user, send };
+  subscribe(sessionId: string, user: LiveUser, send: (event: LiveEvent) => void, asHost = false): () => void {
+    const sub: Subscriber = { user, send, asHost };
     let set = this.sessions.get(sessionId);
     if (!set) { set = new Set(); this.sessions.set(sessionId, set); }
     set.add(sub);
@@ -30,13 +32,13 @@ export class LiveHub {
     this.broadcastEach(sessionId, () => event);
   }
 
-  broadcastEach(sessionId: string, eventFor: (user: LiveUser) => LiveEvent | null): void {
+  broadcastEach(sessionId: string, eventFor: (user: LiveUser, asHost: boolean) => LiveEvent | null): void {
     const set = this.sessions.get(sessionId);
     if (!set) return;
     const dead: Subscriber[] = [];
     for (const sub of set) {
       try {
-        const event = eventFor(sub.user);
+        const event = eventFor(sub.user, sub.asHost);
         if (event) sub.send(event);
       } catch { dead.push(sub); }
     }

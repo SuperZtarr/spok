@@ -1,6 +1,7 @@
 /* TNR des routes /live-sessions : création (PREPARED, OWNER communauté), accès (membres du parent), démarrage,
  * préparation (ajout/retrait/ordre), affichage (direct ou depuis la préparation), révélation des sous-items, fin,
- * compte-rendu (/end le génère sans bloquer la clôture, /:id/report animateur + séance terminée ; liveReport mocké). */
+ * compte-rendu (/end le génère sans bloquer la clôture, /:id/report animateur + séance terminée ; liveReport mocké),
+ * mode admin (tous les droits sur toutes les séances : une vérification par garde contournée). */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import sensible from '@fastify/sensible'
@@ -822,6 +823,134 @@ describe('/live-sessions', () => {
       prisma.spaceMembership.findUnique.mockResolvedValue({ role: 'MEMBER' })
       const res = await app.inject({ method: 'GET', url: '/live-sessions/ongoing', headers: auth() })
       expect(res.json().map((s: any) => s.id)).toEqual(['b'])
+    })
+  })
+
+  // Mode admin = tous les droits sur toutes les séances (décision Thomas 2026-11-20). Chaque garde : l'admin en mode
+  // admin passe ; le même admin SANS le mode admin reste refusé (utilisateur ordinaire). Non couvert : /:id/stream
+  // (flux SSE détourné, inject ne rend pas la main) — même garde que /by-space (sessionForMember + adminOn).
+  describe('mode admin : tous les droits sur les séances', () => {
+    const HOST = 'h-autre'
+    const adminAuth = () => ({ ...auth(), 'x-admin-mode': 'true' })
+    const presenter = { id: 'x', name: 'X', avatarUrl: null }
+    const sessionWith = (status: string, extra: object = {}) =>
+      ({ ...session, hostId: HOST, status, space: { name: 'S' }, roles: [], entries: [], ...extra })
+
+    beforeEach(() => {
+      prisma.user.findUnique.mockResolvedValue({ id: USER, name: 'Admin', avatarUrl: null, globalRole: 'ADMIN' })
+      // Ni membre, ni rôle dans la séance, ni propriétaire de la communauté, espace privé
+      prisma.spaceMembership.findUnique.mockResolvedValue(null)
+      prisma.liveSessionRole.findUnique.mockResolvedValue(null)
+      prisma.communityMembership.findUnique.mockResolvedValue(null)
+      prisma.space.findUnique.mockResolvedValue({ id: 'parent', name: 'Comité', type: 'GROUP', communityId: 'c1', parentId: null, visibility: 'PRIVATE', community: { visibility: 'PRIVATE', isPublic: false } })
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue([])
+      prisma.liveSessionAgendaItem.aggregate.mockResolvedValue({ _max: { position: null } })
+      prisma.liveSessionEntry.create.mockResolvedValue({ id: 'e1', kind: 'DISPLAY', createdAt: new Date(), user: presenter, itemId: 'copy-1', itemTitle: 'Budget' })
+      prisma.item.findUnique.mockResolvedValue({ id: 'src', spaceId: 'parent', title: 'Budget' })
+      prisma.item.findMany.mockResolvedValue([{ id: 'A', title: 'Accueil' }])
+      prisma.item.count.mockResolvedValue(2)
+    })
+
+    type Case = { name: string; method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: string; payload?: object; status: string; ok: number; without?: number }
+    const cases: Case[] = [
+      { name: 'invités : liste', method: 'GET', url: '/live-sessions/ls-1/invitees', status: 'LIVE', ok: 200 },
+      { name: 'invités : ajout', method: 'POST', url: '/live-sessions/ls-1/invitees', payload: { userIds: ['a'] }, status: 'LIVE', ok: 200 },
+      { name: 'invités : retrait', method: 'DELETE', url: '/live-sessions/ls-1/invitees/a', status: 'LIVE', ok: 200 },
+      { name: 'présentateurs', method: 'PUT', url: '/live-sessions/ls-1/presenters', payload: { userIds: [] }, status: 'LIVE', ok: 200 },
+      { name: 'afficher', method: 'POST', url: '/live-sessions/ls-1/display', payload: { sourceItemId: 'src' }, status: 'LIVE', ok: 200 },
+      { name: 'démarrer', method: 'POST', url: '/live-sessions/ls-1/start', status: 'PREPARED', ok: 200 },
+      { name: 'préparation : ajout', method: 'POST', url: '/live-sessions/ls-1/agenda', payload: { sourceItemId: 'src' }, status: 'LIVE', ok: 200 },
+      { name: 'préparation : ajout groupé', method: 'POST', url: '/live-sessions/ls-1/agenda/bulk', payload: { items: [{ sourceItemId: 'A' }] }, status: 'LIVE', ok: 200 },
+      { name: 'préparation : sous-éléments à proposer', method: 'GET', url: '/live-sessions/ls-1/source-children?sourceItemId=src', status: 'LIVE', ok: 200 },
+      { name: 'sous-éléments à révéler', method: 'GET', url: '/live-sessions/ls-1/pending-children', status: 'LIVE', ok: 200 },
+      // Rien d'affiché : la garde passe, la requête échoue ensuite sur 400 (pas 403)
+      { name: 'révéler', method: 'POST', url: '/live-sessions/ls-1/reveal', payload: { sourceItemId: 'c' }, status: 'LIVE', ok: 400 },
+      { name: 'terminer', method: 'POST', url: '/live-sessions/ls-1/end', status: 'LIVE', ok: 200 },
+      { name: 'compte-rendu', method: 'POST', url: '/live-sessions/ls-1/report', status: 'ENDED', ok: 200 },
+      { name: 'état de la séance (by-space)', method: 'GET', url: '/live-sessions/by-space/sess-space', status: 'LIVE', ok: 200 },
+      { name: 'rejoindre', method: 'POST', url: '/live-sessions/ls-1/join', status: 'LIVE', ok: 200 },
+      { name: 'liste des séances de l\'espace', method: 'GET', url: '/live-sessions?parentSpaceId=parent', status: 'LIVE', ok: 200, without: 404 },
+    ]
+
+    for (const c of cases) {
+      it(`${c.name} : admin en mode admin autorisé, sans le mode refusé`, async () => {
+        prisma.liveSession.findUnique.mockResolvedValue(sessionWith(c.status))
+        prisma.liveSession.findMany.mockResolvedValue([])
+        const run = (headers: Record<string, string>) => app.inject({ method: c.method, url: c.url, headers, ...(c.payload ? { payload: c.payload } : {}) })
+        const withMode = await run(adminAuth())
+        expect(withMode.statusCode, withMode.body).toBe(c.ok)
+        const without = await run(auth())
+        expect(without.statusCode).toBe(c.without ?? 403)
+      })
+    }
+
+    it('préparation : retirer la ligne d\'un autre', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue(sessionWith('LIVE'))
+      prisma.liveSessionAgendaItem.findFirst.mockResolvedValue({ id: 'row1', presenterId: 'x' })
+      expect((await app.inject({ method: 'DELETE', url: '/live-sessions/ls-1/agenda/row1', headers: adminAuth() })).statusCode).toBe(200)
+      expect((await app.inject({ method: 'DELETE', url: '/live-sessions/ls-1/agenda/row1', headers: auth() })).statusCode).toBe(403)
+    })
+
+    it('préparation : réordonner les lignes des autres', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue(sessionWith('LIVE'))
+      prisma.liveSessionAgendaItem.findMany.mockResolvedValue([
+        { id: 'r1', presenterId: 'x', presenter, sourceItemId: 'A', sourceSpaceId: 'parent', title: 'A', position: 0, presentedAt: null },
+        { id: 'r2', presenterId: 'y', presenter: { ...presenter, id: 'y' }, sourceItemId: 'B', sourceSpaceId: 'parent', title: 'B', position: 1, presentedAt: null },
+      ])
+      prisma.$transaction.mockResolvedValue([])
+      prisma.item.findMany.mockResolvedValue([{ id: 'A', contents: [] }, { id: 'B', contents: [] }])
+      const order = (headers: Record<string, string>) => app.inject({ method: 'PUT', url: '/live-sessions/ls-1/agenda/order', headers, payload: { ids: ['r2', 'r1'] } })
+      const ok = await order(adminAuth())
+      expect(ok.statusCode, ok.body).toBe(200)
+      // Vue animateur : toute la préparation renvoyée
+      expect(ok.json()).toHaveLength(2)
+      expect((await order(auth())).statusCode).toBe(403)
+    })
+
+    it('état : vu comme l\'animateur (myRole HOST) sans le devenir', async () => {
+      prisma.liveSession.findUnique.mockResolvedValue(sessionWith('LIVE'))
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/by-space/sess-space', headers: adminAuth() })
+      expect(res.json().myRole).toBe('HOST')
+      expect(res.json().session.hostId).toBe(HOST)
+    })
+
+    it('suite : autorisée, l\'animateur d\'origine reste animateur de la suite', async () => {
+      prisma.liveSession.findUnique.mockImplementation(async ({ where }: any) =>
+        (where.id === 'ls-1' ? sessionWith('ENDED') : where.id === 'ls-2' ? sessionWith('PREPARED', { id: 'ls-2' }) : null))
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      prisma.liveSession.findMany.mockResolvedValue([])
+      prisma.space.create.mockResolvedValue({ id: 'sp-2', name: 'Séance' })
+      prisma.liveSession.create.mockResolvedValue({ id: 'ls-2', spaceId: 'sp-2' })
+      prisma.liveSessionRole.findMany.mockResolvedValue([])
+      prisma.liveSessionInvite.findMany.mockResolvedValue([])
+      const res = await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: adminAuth(), payload: {} })
+      expect(res.statusCode, res.body).toBe(201)
+      expect(prisma.space.create.mock.calls[0][0].data.memberships.create).toEqual({ userId: HOST, role: 'OWNER' })
+      expect(prisma.liveSession.create.mock.calls[0][0].data).toMatchObject({ hostId: HOST, roles: { create: { userId: HOST, role: 'HOST' } } })
+      expect(res.json().myRole).toBe('HOST')
+      expect((await app.inject({ method: 'POST', url: '/live-sessions/ls-1/suite', headers: auth(), payload: {} })).statusCode).toBe(403)
+    })
+
+    it('création et invitables : autorisés sans être propriétaire de la communauté', async () => {
+      prisma.liveSession.findFirst.mockResolvedValue(null)
+      prisma.liveSession.findMany.mockResolvedValue([])
+      prisma.space.create.mockResolvedValue({ id: 'sess-space', name: 'S' })
+      prisma.liveSession.create.mockResolvedValue(session)
+      prisma.liveSession.findUnique.mockResolvedValue({ ...session, roles: [], entries: [] })
+      expect((await app.inject({ method: 'POST', url: '/live-sessions', headers: adminAuth(), payload: { parentSpaceId: 'parent' } })).statusCode).toBe(201)
+      expect((await app.inject({ method: 'POST', url: '/live-sessions', headers: auth(), payload: { parentSpaceId: 'parent' } })).statusCode).toBe(403)
+      expect((await app.inject({ method: 'GET', url: '/live-sessions/invite-candidates?parentSpaceId=parent', headers: adminAuth() })).statusCode).toBe(200)
+      expect((await app.inject({ method: 'GET', url: '/live-sessions/invite-candidates?parentSpaceId=parent', headers: auth() })).statusCode).toBe(403)
+    })
+
+    it('séances en direct (en-tête) : toutes, comme animateur', async () => {
+      prisma.liveSession.findMany.mockResolvedValue([{
+        id: 'z', spaceId: 'sp-z', parentSpaceId: 'p-ko', status: 'LIVE', hostId: HOST,
+        space: { name: 'Séance z', memberships: [] }, parentSpace: { name: 'Parent z' }, roles: [],
+      }])
+      const res = await app.inject({ method: 'GET', url: '/live-sessions/ongoing', headers: adminAuth() })
+      expect(res.json()).toEqual([{ id: 'z', spaceId: 'sp-z', spaceName: 'Séance z', parentSpaceName: 'Parent z', status: 'LIVE', isMember: true, myRole: 'HOST' }])
+      expect((await app.inject({ method: 'GET', url: '/live-sessions/ongoing', headers: auth() })).json()).toEqual([])
     })
   })
 })

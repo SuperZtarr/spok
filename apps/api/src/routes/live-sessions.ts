@@ -2,7 +2,13 @@
  * Routes /live-sessions : séances de présentation en direct (étapes 1 « Socle » et 2 « Préparation »).
  * - Cycle : PREPARED (création) → LIVE (/:id/start, animateur) → ENDED (/:id/end). Afficher/révéler : LIVE seulement.
  * - Création : OWNER de la communauté de l'espace parent (ou admin en mode admin) → sous-espace PRIVATE daté + rôle HOST ;
- *   les actions d'animation restent réservées à l'animateur (hostId), y compris pour un admin ;
+ *   les actions d'animation sont réservées à l'animateur (hostId).
+ * - Mode admin (admin global + X-Admin-Mode, isAdminModeActive de routes/communities) : TOUS les droits sur TOUTES les
+ *   séances (décision Thomas 2026-11-20, remplace « animation réservée à l'animateur, y compris pour un admin ») :
+ *   chaque garde animateur / présentateur / membre passe (canHost, hasRoleOrAdmin, isParentMember et resolveSource
+ *   reçoivent isAdminMode), l'état renvoie myRole 'HOST' et la préparation complète (aussi dans le flux : abonné
+ *   asHost). L'admin agit SANS devenir animateur : hostId ne change pas, une suite lancée par l'admin garde l'animateur
+ *   d'origine. Admin hors mode admin = utilisateur ordinaire. Ne jamais ajouter de garde sans ce contournement ;
  *   une seule séance en cours (PREPARED|LIVE) par espace parent (409 sinon) ; nom unique « Séance date (n) ».
  *   Préparation initiale facultative (agenda: [{ sourceItemId, includeChildren }]) : éléments de l'espace parent
  *   uniquement (400 sinon, rien n'est créé), sous-éléments directs juste après leur parent.
@@ -38,11 +44,12 @@
  * Vignette (thumbnailUrl = fichier de l'item source) : l'animateur les voit toutes, un présentateur seulement celles
  * de ses lignes (l'espace source d'un autre présentateur peut lui être fermé) — y compris dans les réponses HTTP.
  */
-import { FastifyPluginAsync, FastifyReply } from 'fastify';
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { QUESTION_STATUS } from '@spok/shared';
 import type { LiveAgendaItem, LiveEvent, LiveSessionEntry, LiveSessionOngoing, LiveSessionState, LiveUser } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
+import { isAdminModeActive } from './communities.js';
 import { liveHub } from '../utils/liveHub.js';
 import { cloneSessionCopies, copyItemToSession, revealChildInSession, SessionCopyError } from '../utils/sessionCopy.js';
 import { addInvitees, assertInvitable, listInviteCandidates, listInvitees, removeInvitee } from '../utils/liveInvites.js';
@@ -81,16 +88,18 @@ const toEntry = (e: any): LiveSessionEntry => ({
 
 const flattenTags = (item: any) => ({ ...item, tags: (item.tags ?? []).map((t: any) => t.tag ?? t) });
 
-async function isParentMember(prisma: any, userId: string, parentSpaceId: string) {
-  const access = await checkSpaceAccess(prisma, userId, parentSpaceId);
+/** Membre effectif de l'espace parent ; isAdminMode = request.isAdminMode de l'APPELANT (jamais pour un tiers :
+ *  présentateur désigné, présentateur repris dans une suite). */
+async function isParentMember(prisma: any, userId: string, parentSpaceId: string, isAdminMode = false) {
+  const access = await checkSpaceAccess(prisma, userId, parentSpaceId, isAdminMode);
   return !!access && ['OWNER', 'MEMBER', 'ADMIN'].includes(access.role);
 }
 
 /** Résout l'espace d'un item source et vérifie l'accès de l'utilisateur ; null = introuvable/inaccessible. */
-async function resolveSource(prisma: any, userId: string, sourceItemId: string, sourceSpaceId?: string) {
+async function resolveSource(prisma: any, userId: string, sourceItemId: string, sourceSpaceId?: string, isAdminMode = false) {
   const item = await prisma.item.findUnique({ where: { id: sourceItemId }, select: { id: true, spaceId: true, title: true } });
   if (!item || (sourceSpaceId && item.spaceId !== sourceSpaceId)) return null;
-  const access = await checkSpaceAccess(prisma, userId, item.spaceId);
+  const access = await checkSpaceAccess(prisma, userId, item.spaceId, isAdminMode);
   return access ? item : null;
 }
 
@@ -103,8 +112,8 @@ type ParentRows = { rows: Array<{ id: string; title: string | null }> } | { forb
  *  écriture. Seuls des éléments de l'espace parent ; sous-éléments directs juste après leur parent, dans leur ordre.
  *  Un OWNER de communauté peut créer une séance dans un espace privé dont il n'est pas membre : il ne doit pas
  *  pouvoir en recopier les éléments (titres) — même exigence que l'ajout depuis le menu (resolveSource). */
-async function resolveParentRows(prisma: any, userId: string, parentSpaceId: string, wanted: AgendaWish[]): Promise<ParentRows> {
-  if (!(await isParentMember(prisma, userId, parentSpaceId))) return { forbidden: 'Accès à l\'espace requis pour préparer la séance à partir de ses éléments' };
+async function resolveParentRows(prisma: any, userId: string, parentSpaceId: string, wanted: AgendaWish[], isAdminMode = false): Promise<ParentRows> {
+  if (!(await isParentMember(prisma, userId, parentSpaceId, isAdminMode))) return { forbidden: 'Accès à l\'espace requis pour préparer la séance à partir de ses éléments' };
   const ids = wanted.map((w) => w.sourceItemId as string);
   const found = (await prisma.item.findMany({ where: { id: { in: ids }, spaceId: parentSpaceId }, select: { id: true, title: true } })) ?? [];
   const byId = new Map<string, { id: string; title: string | null }>(found.map((i: any) => [i.id, i]));
@@ -167,7 +176,8 @@ async function loadAgenda(prisma: any, sessionId: string): Promise<LiveAgendaIte
 export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = fastify.prisma as any;
 
-  async function loadState(sessionId: string, userId: string): Promise<LiveSessionState | null> {
+  /** État complet vu par userId ; asHost = admin en mode admin : vu comme l'animateur (myRole HOST, préparation complète). */
+  async function loadState(sessionId: string, userId: string, asHost = false): Promise<LiveSessionState | null> {
     const s = await prisma.liveSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -203,20 +213,21 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       },
       spaceName: s.space?.name ?? '',
       roles,
-      myRole: mine?.role ?? 'PARTICIPANT',
+      myRole: asHost ? 'HOST' : mine?.role ?? 'PARTICIPANT',
       entries,
-      agenda: visibleAgenda(await loadAgenda(prisma, s.id), { userId, isHost: s.hostId === userId, hasRole: !!mine }),
+      agenda: visibleAgenda(await loadAgenda(prisma, s.id), { userId, isHost: asHost || s.hostId === userId, hasRole: asHost || !!mine }),
       current,
       presence: liveHub.presence(s.id),
     };
   }
 
-  /** Séance dont l'utilisateur est membre de l'espace ; sinon répond 404/403 et retourne null. */
-  async function sessionForMember(reply: FastifyReply, where: { id: string } | { spaceId: string }, userId: string) {
+  /** Séance dont l'utilisateur est membre de l'espace (ou admin en mode admin) ; sinon répond 404/403 et retourne null. */
+  async function sessionForMember(reply: FastifyReply, where: { id: string } | { spaceId: string }, request: FastifyRequest) {
+    const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where });
     if (!s) { reply.notFound('Séance introuvable'); return null; }
     const m = await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } });
-    if (!m) { reply.forbidden('Rejoignez la séance depuis son espace parent'); return null; }
+    if (!m && !(await adminOn(request))) { reply.forbidden('Rejoignez la séance depuis son espace parent'); return null; }
     return s;
   }
 
@@ -243,9 +254,16 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
   /** Peut ajouter à la préparation : animateur, présentateur, ou tout membre de l'espace de séance (invité, participant
    *  qui a rejoint — demande Thomas 2026-11-04). L'accès à l'élément ajouté reste vérifié par resolveSource. */
-  const canAddToAgenda = async (s: { id: string; spaceId: string }, userId: string) =>
-    !!(await roleOf(s.id, userId))
-    || !!(await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } }));
+  const canAddToAgenda = async (s: { id: string; spaceId: string }, request: FastifyRequest) => {
+    const userId = request.user.userId;
+    return !!(await roleOf(s.id, userId))
+      || !!(await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } }))
+      || adminOn(request);
+  };
+
+  /** Animateur, présentateur, ou admin en mode admin. */
+  const hasRoleOrAdmin = async (s: { id: string }, request: FastifyRequest) =>
+    !!(await roleOf(s.id, request.user.userId)) || adminOn(request);
 
   /** Copie de l'élément actuellement affiché (null si rien d'affiché ou copie supprimée). */
   async function currentCopy(s: any) {
@@ -256,20 +274,23 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   }
 
   /** Diffuse la préparation à chacun selon son rôle (visibleAgenda) ; renvoie la vue de l'appelant (réponse HTTP). */
-  async function broadcastAgenda(s: { id: string; hostId: string }, callerId: string) {
+  /** asHost : abonné admin en mode admin (liveHub) ou appelant admin — vue animateur. */
+  async function broadcastAgenda(s: { id: string; hostId: string }, request: FastifyRequest) {
+    const callerId = request.user.userId;
     const agenda = await loadAgenda(prisma, s.id);
     const roleHolders = new Set(((await prisma.liveSessionRole.findMany({ where: { sessionId: s.id }, select: { userId: true } })) ?? []).map((r: any) => r.userId));
-    const viewOf = (userId: string) => visibleAgenda(agenda, { userId, isHost: s.hostId === userId, hasRole: roleHolders.has(userId) });
-    liveHub.broadcastEach(s.id, (user) => ({ type: 'agenda', agenda: viewOf(user.id) }));
-    return viewOf(callerId);
+    const viewOf = (userId: string, asHost: boolean) =>
+      visibleAgenda(agenda, { userId, isHost: asHost || s.hostId === userId, hasRole: asHost || roleHolders.has(userId) });
+    liveHub.broadcastEach(s.id, (user, asHost) => ({ type: 'agenda', agenda: viewOf(user.id, asHost) }));
+    return viewOf(callerId, await adminOn(request));
   }
 
-  /** Admin global avec le mode admin activé : mêmes droits qu'un OWNER de communauté (création, invitables). */
-  async function isAdminModeOn(userId: string, isAdminMode: boolean): Promise<boolean> {
-    if (!isAdminMode) return false;
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { globalRole: true } });
-    return user?.globalRole === 'ADMIN';
-  }
+  /** Admin global avec le mode admin activé (rôle relu en base) : tous les droits sur les séances. */
+  const adminOn = (request: FastifyRequest) => isAdminModeActive(prisma, request.user.userId, request.isAdminMode);
+
+  /** Animateur de la séance, ou admin en mode admin. */
+  const canHost = async (s: { hostId: string }, request: FastifyRequest) =>
+    s.hostId === request.user.userId || adminOn(request);
 
   // Créer une séance (OWNER de la communauté, ou admin en mode admin)
   fastify.post('/', { preHandler: [fastify.authenticate] }, async (request, reply) => {
@@ -279,7 +300,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parent) return reply.notFound('Espace introuvable');
     if (parent.type !== 'GROUP' || !parent.communityId) return reply.badRequest('Une séance se crée dans un espace de communauté');
     const cm = await prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId: parent.communityId } } });
-    if (cm?.role !== 'OWNER' && !(await isAdminModeOn(userId, request.isAdminMode))) return reply.forbidden('Seul un propriétaire de la communauté peut créer une séance');
+    if (cm?.role !== 'OWNER' && !(await adminOn(request))) return reply.forbidden('Seul un propriétaire de la communauté peut créer une séance');
 
     // Une seule séance en cours (préparée ou en direct) par espace (décision Thomas 2026-10-10)
     if (await ongoingIn(parent.id)) return reply.conflict(ONGOING_MESSAGE);
@@ -288,7 +309,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const wanted = body.agenda ?? [];
     let initialRows: Array<{ id: string; title: string | null }> = [];
     if (wanted.length > 0) {
-      const resolved = await resolveParentRows(prisma, userId, parent.id, wanted);
+      const resolved = await resolveParentRows(prisma, userId, parent.id, wanted, request.isAdminMode);
       if ('forbidden' in resolved) return reply.forbidden(resolved.forbidden);
       if ('badRequest' in resolved) return reply.badRequest(resolved.badRequest);
       initialRows = resolved.rows;
@@ -323,11 +344,11 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(await loadState(s.id, userId));
   });
 
-  /** Animateur de la séance ; sinon répond 404/403 et retourne null. */
-  async function sessionForHost(reply: FastifyReply, id: string, userId: string) {
+  /** Animateur de la séance (ou admin en mode admin) ; sinon répond 404/403 et retourne null. */
+  async function sessionForHost(reply: FastifyReply, id: string, request: FastifyRequest) {
     const s = await prisma.liveSession.findUnique({ where: { id }, include: { space: { select: { name: true } } } });
     if (!s) { reply.notFound('Séance introuvable'); return null; }
-    if (s.hostId !== userId) { reply.forbidden('Réservé à l\'animateur'); return null; }
+    if (!(await canHost(s, request))) { reply.forbidden('Réservé à l\'animateur'); return null; }
     return s;
   }
 
@@ -340,19 +361,19 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parent?.communityId) return reply.notFound('Espace introuvable');
     const cm = await prisma.communityMembership.findUnique({ where: { userId_communityId: { userId, communityId: parent.communityId } } });
     const isHost = await prisma.liveSession.findFirst({ where: { parentSpaceId, hostId: userId }, select: { id: true } });
-    if (cm?.role !== 'OWNER' && !isHost && !(await isAdminModeOn(userId, request.isAdminMode))) return reply.forbidden('Réservé à l\'animateur');
+    if (cm?.role !== 'OWNER' && !isHost && !(await adminOn(request))) return reply.forbidden('Réservé à l\'animateur');
     return listInviteCandidates(prisma, parentSpaceId, [userId]);
   });
 
   fastify.get<{ Params: { id: string } }>('/:id/invitees', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const s = await sessionForHost(reply, request.params.id, request.user.userId);
+    const s = await sessionForHost(reply, request.params.id, request);
     if (!s) return reply;
     return listInvitees(prisma, s.id);
   });
 
   fastify.post<{ Params: { id: string } }>('/:id/invitees', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId;
-    const s = await sessionForHost(reply, request.params.id, userId);
+    const s = await sessionForHost(reply, request.params.id, request);
     if (!s) return reply;
     if (s.status === 'ENDED') return reply.conflict('Séance terminée : plus d\'invitation possible');
     const { userIds } = inviteesSchema.parse(request.body);
@@ -365,7 +386,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Retirer un invité (même séance terminée) : retire aussi l'accès à l'espace de séance que l'invitation avait donné
   fastify.delete<{ Params: { id: string; userId: string } }>('/:id/invitees/:userId', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const s = await sessionForHost(reply, request.params.id, request.user.userId);
+    const s = await sessionForHost(reply, request.params.id, request);
     if (!s) return reply;
     await removeInvitee(prisma, s, request.params.userId);
     return listInvitees(prisma, s.id);
@@ -374,6 +395,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   // Séances en direct auxquelles je suis convié (bouton de l'en-tête) — jamais les séances seulement préparées
   fastify.get('/ongoing', { preHandler: [fastify.authenticate] }, async (request) => {
     const userId = request.user.userId;
+    const admin = await adminOn(request);
     const sessions = await prisma.liveSession.findMany({
       where: { status: 'LIVE' },
       include: {
@@ -387,10 +409,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     for (const s of sessions ?? []) {
       if (s.status !== 'LIVE') continue;
       const isMember = (s.space?.memberships?.length ?? 0) > 0;
-      if (!isMember && !(await isParentMember(prisma, userId, s.parentSpaceId))) continue;
+      if (!isMember && !admin && !(await isParentMember(prisma, userId, s.parentSpaceId))) continue;
       result.push({
         id: s.id, spaceId: s.spaceId, spaceName: s.space?.name ?? '', parentSpaceName: s.parentSpace?.name ?? '',
-        status: s.status, isMember, myRole: s.roles?.[0]?.role ?? 'PARTICIPANT',
+        status: s.status, isMember: isMember || admin, myRole: admin ? 'HOST' : s.roles?.[0]?.role ?? 'PARTICIPANT',
       });
     }
     return result;
@@ -401,7 +423,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const { parentSpaceId } = request.query;
     if (!parentSpaceId) return reply.badRequest('parentSpaceId requis');
-    if (!(await isParentMember(prisma, userId, parentSpaceId))) return reply.notFound('Espace introuvable');
+    if (!(await isParentMember(prisma, userId, parentSpaceId, request.isAdminMode))) return reply.notFound('Espace introuvable');
     const list = await prisma.liveSession.findMany({
       where: { parentSpaceId },
       include: { space: { select: { name: true, memberships: { where: { userId }, select: { id: true } } } } },
@@ -419,9 +441,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { spaceId: request.params.spaceId } });
     if (!s) return reply.send(null);
+    const admin = await adminOn(request);
     const m = await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } });
-    if (!m) return reply.forbidden('Rejoignez la séance depuis son espace parent');
-    return loadState(s.id, userId);
+    if (!m && !admin) return reply.forbidden('Rejoignez la séance depuis son espace parent');
+    return loadState(s.id, userId, admin);
   });
 
   // Rejoindre (membres de l'espace parent)
@@ -429,7 +452,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await isParentMember(prisma, userId, s.parentSpaceId))) return reply.forbidden('Réservé aux membres de l\'espace');
+    if (!(await isParentMember(prisma, userId, s.parentSpaceId, request.isAdminMode))) return reply.forbidden('Réservé aux membres de l\'espace');
     const existing = await prisma.spaceMembership.findUnique({ where: { userId_spaceId: { userId, spaceId: s.spaceId } } });
     if (!existing) {
       await prisma.spaceMembership.create({ data: { userId, spaceId: s.spaceId, role: 'MEMBER' } });
@@ -438,7 +461,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       });
       liveHub.broadcast(s.id, { type: 'join', entry: toEntry(entry) });
     }
-    return loadState(s.id, userId);
+    return loadState(s.id, userId, await adminOn(request));
   });
 
   // Désigner les présentateurs (host) — remplace la liste
@@ -446,7 +469,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     const { userIds } = presentersSchema.parse(request.body);
     const ids = [...new Set(userIds)].filter((id) => id !== s.hostId);
     for (const id of ids) {
@@ -470,8 +493,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    const role = await prisma.liveSessionRole.findUnique({ where: { sessionId_userId: { sessionId: s.id, userId } } });
-    if (!role) return reply.forbidden('Seuls l\'animateur et les présentateurs peuvent afficher');
+    if (!(await hasRoleOrAdmin(s, request))) return reply.forbidden('Seuls l\'animateur et les présentateurs peuvent afficher');
     if (s.status !== 'LIVE') return reply.conflict(s.status === 'PREPARED' ? 'Séance pas encore démarrée' : 'Séance terminée');
     const body = displaySchema.parse(request.body);
     let agendaRow: any = null;
@@ -489,8 +511,8 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
       sourceSpaceId = direct.sourceSpaceId;
     }
     // Ligne ajoutée par un participant depuis un espace que l'animateur ne lit pas : l'accès de son auteur suffit
-    const src = await resolveSource(prisma, userId, sourceItemId, sourceSpaceId)
-      ?? (agendaRow ? await resolveSource(prisma, agendaRow.presenterId, sourceItemId, sourceSpaceId) : null);
+    const src = await resolveSource(prisma, userId, sourceItemId, sourceSpaceId, request.isAdminMode)
+      ??(agendaRow ? await resolveSource(prisma, agendaRow.presenterId, sourceItemId, sourceSpaceId) : null);
     if (!src) return reply.notFound('Élément source introuvable');
 
     let displayed;
@@ -511,7 +533,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     liveHub.broadcast(s.id, event);
     if (agendaRow) {
       await prisma.liveSessionAgendaItem.update({ where: { id: agendaRow.id }, data: { presentedAt: new Date() } });
-      await broadcastAgenda(s, userId);
+      await broadcastAgenda(s, request);
     }
     return { entry: event.entry, displayed: event.displayed };
   });
@@ -520,7 +542,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { id: string } }>('/:id/start', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== request.user.userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     if (s.status !== 'PREPARED') return reply.conflict('Séance déjà démarrée ou terminée');
     const liveAt = new Date();
     await prisma.liveSession.update({ where: { id: s.id }, data: { status: 'LIVE', liveAt } });
@@ -533,10 +555,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await canAddToAgenda(s, userId))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
+    if (!(await canAddToAgenda(s, request))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
     if (s.status === 'ENDED') return reply.conflict('Séance terminée');
     const body = agendaAddSchema.parse(request.body);
-    const src = await resolveSource(prisma, userId, body.sourceItemId, body.sourceSpaceId);
+    const src = await resolveSource(prisma, userId, body.sourceItemId, body.sourceSpaceId, request.isAdminMode);
     if (!src) return reply.notFound('Élément introuvable');
     const max = await prisma.liveSessionAgendaItem.aggregate({ where: { sessionId: s.id }, _max: { position: true } });
     const rows: Array<{ id: string; title: string | null }> = [src];
@@ -555,7 +577,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
     }
-    return broadcastAgenda(s, userId);
+    return broadcastAgenda(s, request);
   });
 
   // Préparation : ajout groupé d'éléments de l'espace parent, en fin de liste (panneau Préparation → « Ajouter des
@@ -564,10 +586,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await roleOf(s.id, userId))) return reply.forbidden('Seuls l\'animateur et les présentateurs modifient la préparation');
+    if (!(await hasRoleOrAdmin(s, request))) return reply.forbidden('Seuls l\'animateur et les présentateurs modifient la préparation');
     if (s.status === 'ENDED') return reply.conflict('Séance terminée');
     const body = agendaBulkSchema.parse(request.body);
-    const resolved = await resolveParentRows(prisma, userId, s.parentSpaceId, body.items);
+    const resolved = await resolveParentRows(prisma, userId, s.parentSpaceId, body.items, request.isAdminMode);
     if ('forbidden' in resolved) return reply.forbidden(resolved.forbidden);
     if ('badRequest' in resolved) return reply.badRequest(resolved.badRequest);
     const max = await prisma.liveSessionAgendaItem.aggregate({ where: { sessionId: s.id }, _max: { position: true } });
@@ -578,7 +600,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
         title: row.title || 'Sans titre', position: start + i,
       })),
     });
-    return broadcastAgenda(s, userId);
+    return broadcastAgenda(s, request);
   });
 
   // Nombre de sous-éléments directs d'un item source (pour proposer de les ajouter à la préparation)
@@ -586,9 +608,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await canAddToAgenda(s, userId))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
+    if (!(await canAddToAgenda(s, request))) return reply.forbidden('Rejoignez la séance pour ajouter à sa préparation');
     if (!request.query.sourceItemId) return reply.badRequest('sourceItemId requis');
-    const src = await resolveSource(prisma, userId, request.query.sourceItemId);
+    const src = await resolveSource(prisma, userId, request.query.sourceItemId, undefined, request.isAdminMode);
     if (!src) return reply.notFound('Élément introuvable');
     const count = await prisma.item.count({ where: { parentId: src.id, spaceId: src.spaceId } });
     return { count };
@@ -601,9 +623,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     if (!s) return reply.notFound('Séance introuvable');
     const row = await prisma.liveSessionAgendaItem.findFirst({ where: { id: request.params.agendaId, sessionId: s.id } });
     if (!row) return reply.notFound('Ligne introuvable');
-    if (s.hostId !== userId && row.presenterId !== userId) return reply.forbidden('Vous ne pouvez retirer que vos propres éléments');
+    if (row.presenterId !== userId && !(await canHost(s, request))) return reply.forbidden('Vous ne pouvez retirer que vos propres éléments');
     await prisma.liveSessionAgendaItem.delete({ where: { id: row.id } });
-    return broadcastAgenda(s, userId);
+    return broadcastAgenda(s, request);
   });
 
   // Préparation : réordonner (host : tout ; présentateur : ses lignes entre leurs positions)
@@ -611,18 +633,18 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (!(await roleOf(s.id, userId))) return reply.forbidden('Réservé à l\'animateur et aux présentateurs');
+    if (!(await hasRoleOrAdmin(s, request))) return reply.forbidden('Réservé à l\'animateur et aux présentateurs');
     const { ids } = agendaOrderSchema.parse(request.body);
     const rows = await prisma.liveSessionAgendaItem.findMany({ where: { sessionId: s.id }, orderBy: { position: 'asc' } });
     if (ids.length !== rows.length || new Set(ids).size !== ids.length || !rows.every((r: any) => ids.includes(r.id))) {
       return reply.badRequest('La liste doit contenir toutes les lignes de la préparation, une seule fois');
     }
-    if (s.hostId !== userId) {
+    if (!(await canHost(s, request))) {
       const moved = rows.some((r: any, i: number) => r.presenterId !== userId && ids[i] !== r.id);
       if (moved) return reply.forbidden('Vous ne pouvez déplacer que vos propres éléments');
     }
     await prisma.$transaction(ids.map((id, position) => prisma.liveSessionAgendaItem.update({ where: { id }, data: { position } })));
-    return broadcastAgenda(s, userId);
+    return broadcastAgenda(s, request);
   });
 
   // Sous-items de l'élément courant pas encore révélés (animateur seul — demande Thomas 2026-10-10)
@@ -630,10 +652,10 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     const copy = await currentCopy(s);
     if (!copy?.sourceItemId || !copy.sourceSpaceId) return [];
-    if (!(await checkSpaceAccess(prisma, userId, copy.sourceSpaceId))) return [];
+    if (!(await checkSpaceAccess(prisma, userId, copy.sourceSpaceId, request.isAdminMode))) return [];
     const revealed = await prisma.item.findMany({ where: { parentId: copy.id }, select: { sourceItemId: true } });
     const revealedIds = new Set(revealed.map((r: any) => r.sourceItemId));
     const children = await prisma.item.findMany({
@@ -647,14 +669,14 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     if (s.status !== 'LIVE') return reply.conflict('Séance non démarrée ou terminée');
     const { sourceItemId } = revealSchema.parse(request.body);
     const copy = await currentCopy(s);
     if (!copy?.sourceItemId || !copy.sourceSpaceId) return reply.badRequest('Aucun élément affiché');
     const child = await prisma.item.findUnique({ where: { id: sourceItemId }, select: { id: true, parentId: true, spaceId: true } });
     if (!child || child.parentId !== copy.sourceItemId) return reply.badRequest('Ce n\'est pas un sous-élément de l\'élément affiché');
-    if (!(await checkSpaceAccess(prisma, userId, child.spaceId))) return reply.notFound('Élément source introuvable');
+    if (!(await checkSpaceAccess(prisma, userId, child.spaceId, request.isAdminMode))) return reply.notFound('Élément source introuvable');
     let revealed;
     try {
       revealed = await revealChildInSession(prisma, {
@@ -668,12 +690,13 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     return { child: revealed };
   });
 
-  // Suite d'une séance terminée (animateur) : nouvelle séance préparée liée à la précédente
+  // Suite d'une séance terminée (animateur) : nouvelle séance préparée liée à la précédente.
+  // Lancée par un admin en mode admin : l'animateur d'origine reste l'animateur de la suite (userId = prev.hostId).
   fastify.post<{ Params: { id: string } }>('/:id/suite', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = request.user.userId;
     const prev = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!prev) return reply.notFound('Séance introuvable');
-    if (prev.hostId !== userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(prev, request))) return reply.forbidden('Réservé à l\'animateur');
+    const userId: string = prev.hostId;
     if (prev.status !== 'ENDED') return reply.conflict('Seule une séance terminée peut avoir une suite');
     if (await prisma.liveSession.findUnique({ where: { previousSessionId: prev.id } })) return reply.conflict('Cette séance a déjà une suite');
     if (await ongoingIn(prev.parentSpaceId)) return reply.conflict(ONGOING_MESSAGE);
@@ -744,14 +767,14 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     // Éléments déjà présentés : recopiés dans le nouvel espace
     await cloneSessionCopies(prisma, { fromSpaceId: prev.spaceId, toSpaceId: space.id });
 
-    return reply.status(201).send(await loadState(next.id, userId));
+    return reply.status(201).send(await loadState(next.id, request.user.userId, await adminOn(request)));
   });
 
   // Terminer (host)
   fastify.post<{ Params: { id: string } }>('/:id/end', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== request.user.userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     const endedAt = new Date();
     await prisma.liveSession.update({ where: { id: s.id }, data: { status: 'ENDED', endedAt } });
     // Compte-rendu : un échec ne doit jamais empêcher la clôture (l'animateur peut le générer ensuite par /report)
@@ -766,7 +789,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { id: string } }>('/:id/report', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const s = await prisma.liveSession.findUnique({ where: { id: request.params.id } });
     if (!s) return reply.notFound('Séance introuvable');
-    if (s.hostId !== request.user.userId) return reply.forbidden('Réservé à l\'animateur');
+    if (!(await canHost(s, request))) return reply.forbidden('Réservé à l\'animateur');
     if (s.status !== 'ENDED') return reply.conflict('Le compte-rendu se génère une fois la séance terminée');
     const reportItemId = await generateLiveReport(prisma, s.id, request.user.userId);
     liveHub.broadcast(s.id, { type: 'report', reportItemId });
@@ -776,8 +799,9 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
   // Flux SSE (exempté du rate-limit global : une connexion longue par participant)
   fastify.get<{ Params: { id: string } }>('/:id/stream', { preHandler: [fastify.authenticate], config: { rateLimit: false } }, async (request, reply) => {
     const userId = request.user.userId;
-    const s = await sessionForMember(reply, { id: request.params.id }, userId);
+    const s = await sessionForMember(reply, { id: request.params.id }, request);
     if (!s) return;
+    const asHost = await adminOn(request);
     const user: LiveUser = await prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT });
 
     // hijack : on écrit nous-mêmes ; recopier les headers déjà posés (CORS, helmet)
@@ -788,7 +812,7 @@ export const liveSessionsRoutes: FastifyPluginAsync = async (fastify) => {
     raw.write(': connected\n\n');
 
     const send = (event: LiveEvent) => { raw.write(`data: ${JSON.stringify(event)}\n\n`); };
-    const unsubscribe = liveHub.subscribe(s.id, user, send);
+    const unsubscribe = liveHub.subscribe(s.id, user, send, asHost);
     const heartbeat = setInterval(() => raw.write(': ping\n\n'), HEARTBEAT_MS);
     request.raw.on('close', () => { clearInterval(heartbeat); unsubscribe(); });
   });

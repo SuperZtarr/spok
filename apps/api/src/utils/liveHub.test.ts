@@ -48,4 +48,14 @@ describe('LiveHub', () => {
     expect(sa).toHaveBeenCalledWith({ type: 'ended', endedAt: 'a' })
     expect(sb).toHaveBeenCalledWith({ type: 'ended', endedAt: 'b' })
   })
+
+  it('broadcastEach : asHost transmis (abonné admin en mode admin servi comme l\'animateur)', () => {
+    const hub = new LiveHub()
+    const sa = vi.fn(); const sb = vi.fn()
+    hub.subscribe('S1', alice, sa, true)
+    hub.subscribe('S1', bob, sb)
+    hub.broadcastEach('S1', (_user, asHost) => ({ type: 'ended', endedAt: String(asHost) }))
+    expect(sa).toHaveBeenCalledWith({ type: 'ended', endedAt: 'true' })
+    expect(sb).toHaveBeenCalledWith({ type: 'ended', endedAt: 'false' })
+  })
 })
