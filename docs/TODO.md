@@ -279,6 +279,7 @@
 - [x] Période sans statut — 2026-11-20
 - [x] Kanban - onglets de famille très visibles avec nombres — 2026-11-20
 - [x] Menu ⋮ - bouton « Passer au statut suivant » — 2026-11-20
+- [x] Vue Loupe - priorité et éléments d'un article dans le poids des vignettes — 2026-11-20
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-20 — MEP : 5 lots (Gantt échelle en boutons, période sans statut, onglets du Kanban, menu ⋮ statut suivant, poids des vignettes de la Loupe). 4 annonces datées. Typecheck OK, TNR 3063/3063. APRÈS : migrate-type-statuses --prod pour les périodes, sur accord de Thomas.
+
+- 2026-11-20 — Loupe : priorité et éléments d'un article ajoutés au poids des vignettes ; inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-20 — Menu ⋮ statut suivant : lot complet, spec SPOK à jour ; inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-20 — MEP : annonce item-secrets datée (clé SECRETS_ENCRYPTION_KEY posée en prod par Thomas). Typecheck OK, TNR 3051/3051.
 
 - 2026-11-20 — MEP : Gantt « Tout le projet », données sécurisées (table item_secrets), vignettes carte et grande (jusqu'à 08f490f) ; poussé d'abord sans la clé. Point mineur : longueur du tag GCM non imposée au déchiffrement. TNR 3051/3051.

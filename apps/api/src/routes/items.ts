@@ -422,7 +422,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         tags: { include: { tag: true } },
         children: { select: { id: true } },
         assignedTo: { select: { id: true, name: true } },
-        _count: { select: { children: true, contributions: true } },
+        // articleBlocks : nombre d'éléments assemblés par un article (poids de sa vignette dans la Loupe, 2026-11-20)
+        _count: { select: { children: true, contributions: true, articleBlocks: true } },
         contents: { select: CONTENTS_LIST_SELECT, orderBy: CONTENTS_ORDER },
         relationsFrom: {
           include: { toItem: { select: { id: true, title: true, type: true, status: true } } },
@@ -483,6 +484,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             tags: item.tags.map((t: any) => t.tag),
             childCount: item._count.children,
             contributionCount: item._count.contributions,
+            articleBlockCount: item._count.articleBlocks ?? 0,
             assignmentReceipt: receipts.get(item.id) ?? null,
             ...(exposedViewedAt !== undefined ? { viewedAt: exposedViewedAt } : {}),
             ...(includeContributions && item.contributions ? { contributions: item.contributions } : {}),

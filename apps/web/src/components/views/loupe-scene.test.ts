@@ -221,6 +221,18 @@ describe('agrandissement selon la richesse (vignetteScale)', () => {
     expect(vignetteScale(item('x', { contents: contents(1), relationsTo: relTo(1) }), 2)).toBeCloseTo(expected);
   });
 
+  it('priorité : ajoute priorité − 1 (Basse 0 … Critique 3), rien si non renseignée', () => {
+    expect(vignetteScale(item('x', { priority: null }))).toBe(1);
+    expect(vignetteScale(item('x', { priority: 1 }))).toBe(1);
+    expect(vignetteScale(item('x', { priority: 2 }))).toBeCloseTo(vignetteScale(item('x'), 1));
+    expect(vignetteScale(item('x', { priority: 4 }))).toBeCloseTo(vignetteScale(item('x'), 3));
+  });
+
+  it('article : 1 par élément assemblé, cumulé avec le reste et plafonné', () => {
+    expect(vignetteScale(item('a', { type: 'ARTICLE', articleBlockCount: 2 }))).toBeCloseTo(vignetteScale(item('x'), 2));
+    expect(vignetteScale(item('a', { type: 'ARTICLE', articleBlockCount: 3, priority: 4 }))).toBeCloseTo(SCALE_MAX);
+  });
+
   it('seule la petite taille est agrandie : zoomé, lié à mi-taille et aperçu gardent leur taille fixe', () => {
     const positions = new Map<string, Point>([['f', { x: 0, y: 0 }], ['l', { x: 200, y: 0 }], ['o', { x: -300, y: 200 }], ['p', { x: 300, y: 300 }]]);
     const scales = new Map([['f', 2], ['l', 1.6], ['o', 1.4], ['p', 1.8]]);

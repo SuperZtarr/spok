@@ -57,7 +57,7 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
       'meeting_to_organize', 'meeting_planned', 'meeting_agenda_sent', 'meeting_held', 'meeting_minutes_sent', 'meeting_postponed', 'meeting_cancelled',
       'article_draft', 'article_to_validate', 'article_published', 'article_cancelled'],
     trigger: 'Choix ou changement du statut, ou du type, d’un élément',
-    effect: "Question (Ouverte, Tranchée, Reportée, Sans conclusion — 2026-11-08), Réunion (À organiser, Planifiée, ODJ envoyé, Réalisée en cours, CR envoyé = terminée, Reportée, Annulée) et Article (Brouillon, À valider, Publié, Annulé — 2026-11-19) ont leurs statuts réservés : ce type n'utilise qu'eux, les autres types jamais. Ils sont livrés partout (ajoutés aux référentiels personnalisés), renommables et recolorables, catégorie fixe, non supprimables. Création : une réunion part « À organiser », un article « Brouillon », une question « Ouverte ». Changement de type : statut de même catégorie parmi ceux du nouveau type, sinon le premier (type à statuts réservés) ou aucun (type ordinaire) ; une question repart toujours « Ouverte ». Éléments d'avant la règle : scripts/migrate-type-statuses.ts (décisions Thomas 2026-11-08 et 2026-11-19)",
+    effect: "Question (Ouverte, Tranchée, Reportée, Sans conclusion — 2026-11-08), Réunion (À organiser, Planifiée, ODJ envoyé, Réalisée en cours, CR envoyé = terminée, Reportée, Annulée) et Article (Brouillon, À valider, Publié, Annulé — 2026-11-19) ont leurs statuts réservés : ce type n'utilise qu'eux, les autres types jamais. Ils sont livrés partout (ajoutés aux référentiels personnalisés), renommables et recolorables, catégorie fixe, non supprimables. Création : une réunion part « À organiser », un article « Brouillon », une question « Ouverte ». Changement de type : statut de même catégorie parmi ceux du nouveau type, sinon le premier (type à statuts réservés) ou aucun (type ordinaire) ; une question repart toujours « Ouverte ». Période : aucun statut (registre des types, noStatus / typeHasStatus — 2026-11-20) : champ absent de la fiche, statut toujours enregistré vide, absente du Kanban, refusé par le MCP. Éléments d'avant la règle : scripts/migrate-type-statuses.ts (décisions Thomas 2026-11-08 et 2026-11-19)",
     location: 'packages/shared/src/constants/defaultReferentiels.ts (DEFAULT_STATUSES, statusForType, statusesForType, statusAllowedForType, withDefaultStatuses), apps/api/src/routes/items.ts, apps/web/src/components/ItemEditModal.tsx, apps/api/scripts/migrate-type-statuses.ts',
   },
   {
@@ -252,6 +252,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     trigger: 'Statut de catégorie « Terminé » ou « Annulé » (statuts personnalisés compris), date de fin vide',
     effect: "Remplit la date de fin à aujourd'hui, quel que soit le chemin (modale, menu ⋯, Kanban, Aujourd'hui, MCP), descendants inclus quand le statut leur est propagé",
     location: 'apps/api/src/utils/statusDates.ts (source unique, PATCH item + propagation) ; miroir affichage : apps/web/src/lib/statusChange.ts (fiche et useSpaceActions.handleInlineUpdate)',
+  },
+  {
+    id: 'status-next',
+    category: 'status',
+    appliesToValues: [],
+    trigger: '« Passer à … » dans le menu ⋮ d’un élément',
+    effect: "Pose le statut suivant du parcours du type : statuts visibles dans l'ordre du référentiel jusqu'au premier Terminé, sans En retard ni Annulé ; hors parcours (Non défini, En retard, Reportée) → premier statut plus avancé ; statut final → pas de bouton, sous-menu seul. Même changement de statut (dates, propagation) que le sous-menu (décision Thomas 2026-11-20)",
+    location: 'packages/shared/src/constants/defaultReferentiels.ts (nextStatusForType, source unique) ; apps/web/src/lib/itemMenuGroups.ts',
   },
   {
     id: 'status-category',
@@ -569,8 +577,8 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'loupe-vignette-scale',
     page: 'Vue Loupe (LoupeView)',
     trigger: "Affichage d'un élément en petite vignette sur la carte (repos, estompé, lié au-delà de 24) ; zoomé, lié à mi-taille et aperçu gardent leur taille fixe",
-    effect: "Score = nombre de contenus + nombre d'enfants + relations dans les deux sens, chacun compte 1. La vignette est agrandie de 1 (score 0, taille de base) à 3 (score 5 et plus), linéairement : largeur et hauteur, pas la police. L'écartement des vignettes en tient compte. Élément d'un autre espace : seuls ses contenus sont connus, donc comptés. Rien n'est modifié dans SPOK",
-    location: 'apps/web/src/components/views/loupe-scene.ts (vignetteScale, SCALE_CAP, SCALE_MAX), apps/web/src/components/views/LoupeView.tsx',
+    effect: "Score = nombre de contenus + nombre d'enfants + relations dans les deux sens, chacun compte 1, + priorité − 1 (Basse 0, Normale 1, Haute 2, Critique 3 ; rien si non renseignée) + nombre d'éléments assemblés pour un article (articleBlockCount de la liste GET /spaces/:id/items). La vignette est agrandie de 1 (score 0, taille de base) à 3 (score 5 et plus), linéairement : largeur et hauteur, pas la police. L'écartement des vignettes en tient compte. Élément d'un autre espace : seuls ses contenus sont connus, donc comptés. Rien n'est modifié dans SPOK",
+    location: 'apps/web/src/components/views/loupe-scene.ts (vignetteScale, SCALE_CAP, SCALE_MAX), apps/web/src/components/views/LoupeView.tsx, apps/api/src/routes/items.ts (_count.articleBlocks)',
   },
   {
     id: 'item-vignette-format',

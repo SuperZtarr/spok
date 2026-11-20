@@ -1,7 +1,7 @@
 /*
  * Calculs de la vue Loupe, sans React : liens d'un item, disposition de la carte, tailles et positions à l'écran, chemin.
  * Trois tailles de vignette : l'item zoomé (big), ses liés (mid), les autres (small, la vignette minimale, jamais moins).
- * Chaque vignette au repos (petite taille seulement) est agrandie selon la richesse de l'item (vignetteScale : contenus + enfants + relations, à égalité,
+ * Chaque vignette au repos (petite taille seulement) est agrandie selon la richesse de l'item (vignetteScale : contenus + enfants + relations, à égalité, + priorité − 1 + éléments d'un article,
  * jusqu'à ×SCALE_MAX au score SCALE_CAP — décision Thomas 2026-11-20) ; scales (id → facteur) est passé à settlePositions
  * et computeScene, et toute dimension passe par dims() : ne jamais relire VIGNETTE_SIZES sans le facteur.
  * Au repos, settlePositions écarte les vignettes minimales qui se recouvrent : la carte reste lisible une fois cadrée.
@@ -30,12 +30,18 @@ export const SCALE_CAP = 5;
 export const SCALE_MAX = 3;
 
 /**
- * Facteur d'agrandissement d'une vignette : score = contenus + enfants + relations (dans les deux sens), chacun compte 1.
+ * Facteur d'agrandissement d'une vignette : score = contenus + enfants + relations (dans les deux sens), chacun compte 1,
+ * + priorité − 1 (Basse 0 … Critique 3, rien si non renseignée) + éléments assemblés par un article (articleBlockCount,
+ * renvoyé par la liste de l'API) — décisions Thomas 2026-11-20.
  * Score 0 → 1 (taille de base, jamais moins) ; linéaire jusqu'à SCALE_CAP → SCALE_MAX, plafonné au-delà.
  * childCount est fourni par l'appelant (index.children) ; un item d'un autre espace n'a que ses contenus de connus.
  */
-export function vignetteScale(item: Pick<LoupeSourceItem, 'contents' | 'relationsFrom' | 'relationsTo'>, childCount = 0): number {
-  const score = (item.contents?.length ?? 0) + childCount + (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0);
+export function vignetteScale(
+  item: Pick<LoupeSourceItem, 'contents' | 'relationsFrom' | 'relationsTo' | 'priority' | 'articleBlockCount'>,
+  childCount = 0,
+): number {
+  const score = (item.contents?.length ?? 0) + childCount + (item.relationsFrom?.length ?? 0) + (item.relationsTo?.length ?? 0)
+    + Math.max(0, (item.priority ?? 1) - 1) + (item.articleBlockCount ?? 0);
   return 1 + (SCALE_MAX - 1) * Math.min(score, SCALE_CAP) / SCALE_CAP;
 }
 
@@ -69,6 +75,8 @@ export interface LoupeSourceItem {
   description?: string | null;
   url?: string | null;
   priority?: number | null;
+  /** Article : nombre d'éléments qu'il assemble (poids de sa vignette, vignetteScale) */
+  articleBlockCount?: number;
   dueDate?: string | Date | null;
   startDate?: string | Date | null;
   endDate?: string | Date | null;

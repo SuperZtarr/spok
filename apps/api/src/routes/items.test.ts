@@ -117,6 +117,22 @@ describe('Items routes', () => {
       expect(include.contributions.include.author.select).toEqual({ id: true, name: true })
     })
 
+    // Poids d'un article dans la Loupe : nombre d'éléments qu'il assemble, compté en SQL
+    it('should return articleBlockCount (0 when absent)', async () => {
+      allowSpaceAccess()
+      prisma.item.findMany.mockResolvedValue([
+        mockItem({ id: 'art', type: 'ARTICLE', _count: { children: 0, contributions: 0, articleBlocks: 3 } }),
+        mockItem({ id: 'item-2' }),
+      ])
+      prisma.item.count.mockResolvedValue(2)
+
+      const res = await app.inject({ method: 'GET', url: `/spaces/${SPACE_ID}/items`, headers: { authorization: `Bearer ${token}` } })
+
+      expect(prisma.item.findMany.mock.calls[0][0].include._count.select.articleBlocks).toBe(true)
+      const body = JSON.parse(res.body)
+      expect((body.items ?? body.data).map((i: any) => i.articleBlockCount)).toEqual([3, 0])
+    })
+
     it('should list items with pagination', async () => {
       allowSpaceAccess()
       const items = [mockItem({ id: 'item-1' }), mockItem({ id: 'item-2', title: 'Second' })]

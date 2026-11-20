@@ -80,6 +80,8 @@ export interface ItemWithRelations extends Item {
     name: string;
   } | null;
   reactionSummary?: ReactionSummary[];
+  /** Liste d'un espace : nombre d'éléments assemblés par un article (0 pour les autres types) */
+  articleBlockCount?: number;
   _count?: {
     contributions?: number;
   };
