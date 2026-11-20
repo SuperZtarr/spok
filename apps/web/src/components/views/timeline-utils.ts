@@ -231,3 +231,39 @@ export function getStatusColor(status: string | null | undefined, statuses: Stat
   if (!statusConfig) return 'bg-gray-100 text-gray-800';
   return statusConfig.color;
 }
+
+/**
+ * Bouton « Tout le projet » du Gantt (demande Thomas 2026-11-20, élément SPOK cmwoq1r7a002bmpd6ccry1sbb) : niveau de
+ * zoom le plus détaillé où tous les éléments datés tiennent dans la largeur visible, et date centrale de la frise.
+ * - période : du plus tôt au plus tard des dates AFFICHÉES (displayedBarDates : barre ouverte = jusqu'à aujourd'hui) ;
+ *   éléments sans aucune date (ni début, ni fin, ni échéance) ignorés
+ * - marge : 5 % de la durée de chaque côté, au moins 2 jours
+ * - aucun niveau assez large → le plus large (Multi-années), centré quand même
+ * - params : visibleDaysFor(niveau) = nombre de jours visibles à ce niveau (dépend de la largeur de la vue)
+ * Renvoie null si aucun élément n'est daté (bouton désactivé).
+ */
+export function fitProjectZoom<L extends string>(
+  items: { startDate?: string | Date | null; endDate?: string | Date | null; dueDate?: string | Date | null }[],
+  levels: readonly L[],
+  visibleDaysFor: (level: L) => number,
+  today: Date = startOfDay(new Date()),
+): { level: L; center: Date } | null {
+  let min: number | null = null;
+  let max: number | null = null;
+  for (const item of items) {
+    if (!item.startDate && !item.endDate && !item.dueDate) continue;
+    const { start, end } = displayedBarDates(item, today);
+    const due = item.dueDate ? startOfDay(new Date(item.dueDate)).getTime() : null;
+    const lo = Math.min(startOfDay(start).getTime(), due ?? Infinity);
+    const hi = Math.max(startOfDay(end).getTime(), due ?? -Infinity);
+    min = min === null ? lo : Math.min(min, lo);
+    max = max === null ? hi : Math.max(max, hi);
+  }
+  if (min === null || max === null || levels.length === 0) return null;
+  const spanDays = Math.round((max - min) / 86400000) + 1;
+  const margin = Math.max(2, Math.ceil(spanDays * 0.05));
+  const needed = spanDays + 2 * margin;
+  const level = levels.find(l => visibleDaysFor(l) >= needed) ?? levels[levels.length - 1];
+  const center = startOfDay(new Date(min + ((max - min) / 2)));
+  return { level, center };
+}

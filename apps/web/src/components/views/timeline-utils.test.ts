@@ -1,7 +1,7 @@
 /* Tests des utilitaires purs du Gantt : fin de référence d'un déplacement de barre (moveInitialEnd),
  * types de relation qui ordonnent le chemin critique (computeCriticalPath). */
 import { describe, it, expect } from 'vitest';
-import { moveInitialEnd, computeCriticalPath, rollupEnd, displayedBarDates } from './timeline-utils';
+import { moveInitialEnd, computeCriticalPath, rollupEnd, displayedBarDates, fitProjectZoom } from './timeline-utils';
 import type { Item, ItemRelation } from '@spok/shared';
 
 const now = new Date(2026, 8, 28, 10, 0); // 28 sept 2026 10:00 local
@@ -121,5 +121,29 @@ describe('computeCriticalPath — fin du projet (CPM standard)', () => {
 
   it('aucune relation d\'ordre : aucun chemin critique', () => {
     expect(computeCriticalPath([mk('A', 1, 3), mk('B', 4, 9)], []).size).toBe(0);
+  });
+});
+
+describe('fitProjectZoom (bouton « Tout le projet »)', () => {
+  const today = new Date(2026, 10, 20);
+  const levels = ['day', 'week', 'month', 'year'] as const;
+  const days = { day: 10, week: 40, month: 120, year: 500 };
+  const fit = (items: Parameters<typeof fitProjectZoom>[0]) => fitProjectZoom(items, levels, l => days[l], today);
+
+  it('aucun élément daté : null', () => {
+    expect(fit([{}, { startDate: null }])).toBeNull();
+  });
+  it('niveau le plus détaillé qui contient la période et sa marge', () => {
+    // 1er au 30 novembre : 30 j + 2 × 2 j de marge = 34 → week (40)
+    expect(fit([{ startDate: '2026-11-01', endDate: '2026-11-30' }])?.level).toBe('week');
+    // 38 j + 2 × 2 = 42 > 40 → month
+    expect(fit([{ startDate: '2026-11-01', endDate: '2026-12-08' }])?.level).toBe('month');
+  });
+  it('centre au milieu de la période, éléments sans date ignorés', () => {
+    const r = fit([{ startDate: '2026-11-01', endDate: '2026-11-05' }, { startDate: '2026-11-07', endDate: '2026-11-09' }, {}]);
+    expect(r?.center).toEqual(new Date(2026, 10, 5));
+  });
+  it('trop long pour tous les niveaux : le plus large', () => {
+    expect(fit([{ startDate: '2020-01-01', endDate: '2026-01-01' }])?.level).toBe('year');
   });
 });

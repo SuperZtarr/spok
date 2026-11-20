@@ -20,6 +20,8 @@
  * Ne pas modifier la logique de relationDrag sans vérifier timelineAreaRef et les offsets de coordonnées.
  * En-tête : chaque commande sous HelpHint (textes : timeline.help.ts → hints), pas de `title` natif.
  * Libellé de plage et sélecteur d'échelle à largeur fixe : naviguer ou zoomer ne décale pas la barre (2026-11-11).
+ * Bouton « Tout le projet » (icône seule, groupe zoom, 2026-11-20) : échelle et plage ajustées à la période des éléments
+ * affichés, avec marge (fitProjectZoom) ; désactivé si aucun élément n'est daté.
  * Modales de relation : composants partagés components/relations/RelationCreateDialog / RelationEditDialog
  * (phrases « A bloque B » + explication du type) — ne pas recréer de modale inline ici.
  * Colonne des éléments : GANTT_LABEL_WIDTH (400 px), badge de l'assigné sur chaque ligne (2026-11-05).
@@ -27,7 +29,7 @@
 import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 
-import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ZoomIn, ZoomOut, ChevronsDownUp, ChevronsUpDown, ArrowUpDown, GitBranch, Maximize2 } from 'lucide-react';
 import { ViewHelpButton } from '../ViewHelpButton';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
@@ -52,7 +54,7 @@ import { RelationEditDialog } from '../relations/RelationEditDialog';
 import { Button } from '../ui/Button';
 import { ZoomLevel, ZOOM_CONFIGS, ZOOM_ORDER } from './timeline-constants';
 import { RELATION_TYPE_LIST, getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
-import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd, rollupEnd, displayedBarDates } from './timeline-utils';
+import { startOfDay, addDays, differenceInDays, formatDateShort, formatDateFull, getWeekNumber, getMonthName, getStatusColor, computeCriticalPath, moveInitialEnd, rollupEnd, displayedBarDates, fitProjectZoom } from './timeline-utils';
 import { buildTree, flattenTree, type TreeItem } from './timeline-tree';
 import { RelationCommentIconSvg } from '../RelationCommentIcon';
 import { TreeItemRow, RootDropZone } from './TreeItemRow';
@@ -586,6 +588,17 @@ treeSort: treeSortProp,
     if (currentIndex < ZOOM_ORDER.length - 1) {
       setZoomLevel(ZOOM_ORDER[currentIndex + 1]);
     }
+  };
+
+  // « Tout le projet » : niveau le plus détaillé où tous les éléments datés affichés tiennent, centré sur la période
+  // (fitProjectZoom). Jours visibles d'un niveau : même calcul que visibleDays.
+  const projectFit = useMemo(() => fitProjectZoom(items, ZOOM_ORDER, (level) => containerWidth > GANTT_LABEL_WIDTH
+    ? Math.max(7, Math.floor((containerWidth - GANTT_LABEL_WIDTH) / ZOOM_CONFIGS[level].dayWidth))
+    : ZOOM_CONFIGS[level].days), [items, containerWidth]);
+  const fitProject = () => {
+    if (!projectFit) return;
+    setZoomLevel(projectFit.level);
+    setCenterDate(projectFit.center);
   };
 
   const canZoomIn = ZOOM_ORDER.indexOf(zoomLevel) > 0;
@@ -1204,6 +1217,11 @@ treeSort: treeSortProp,
           <HelpHint text={TH.zoomOut}>
             <Button variant="ghost" size="sm" onClick={zoomOut} disabled={!canZoomOut} aria-label="Zoom arrière" className="h-8 px-2">
               <ZoomOut className="w-4 h-4" />
+            </Button>
+          </HelpHint>
+          <HelpHint text={TH.fitProject}>
+            <Button variant="ghost" size="sm" onClick={fitProject} disabled={!projectFit} aria-label="Tout le projet" data-tour="timeline-fit" className="h-8 px-2">
+              <Maximize2 className="w-4 h-4" />
             </Button>
           </HelpHint>
         </div>

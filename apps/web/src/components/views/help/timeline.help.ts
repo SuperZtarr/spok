@@ -35,6 +35,15 @@ const elements: HelpElements = {
     noZone: true,
     side: 'bottom',
   },
+  fitProject: {
+    title: 'Tout le projet',
+    short: 'Ajuste l’échelle et la période pour voir tout le projet',
+    text: 'Choisit l’échelle la plus détaillée où tous les éléments datés affichés tiennent, de la date la plus ancienne à la plus tardive, avec une petite marge, et centre la frise sur cette période. Les éléments sans date sont ignorés ; une barre sans date de fin compte jusqu’à aujourd’hui. Grisé quand aucun élément n’est daté. Rien n’est modifié dans les éléments.',
+    target: '[data-tour="timeline-fit"]',
+    noZone: true,
+    side: 'bottom',
+    changes: [{ id: 'gantt-fit-project', kind: 'new', text: 'Nouveau bouton « Tout le projet » dans la barre du Gantt : il ajuste l’échelle et la période pour voir tous les éléments d’un coup.', date: '2026-11-20' }],
+  },
   chronoReorder: {
     title: 'Réordonner chronologiquement',
     short: 'Réordonner chronologiquement : range les éléments par date de début (ordre enregistré)',
@@ -96,6 +105,7 @@ export const help: HelpEntry = {
     zoomIn: 'Zoom avant',
     zoomLevel: 'Échelle de la frise : du jour à plusieurs années',
     zoomOut: 'Zoom arrière',
+    fitProject: 'Tout le projet : ajuste l’échelle et la période à tous les éléments datés',
   },
   tour: [
     {

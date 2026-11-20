@@ -271,6 +271,7 @@
 - [x] Vue Loupe - vignettes agrandies selon contenus, enfants et relations — 2026-11-20
 - [x] Séances - tous les droits en mode admin — 2026-11-20
 - [x] Vue Loupe - clic sur l'élément figé ouvre sa fiche — 2026-11-20
+- [x] Gantt - bouton Tout le projet — 2026-11-20
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
