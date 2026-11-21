@@ -32,7 +32,7 @@ export interface ItemTypeDefinition {
   hue: TypeHue;
   /**
    * Groupe du sélecteur de type de la fiche. `deliverables` (libellé « Compositions », 2026-11-11) = types à composants
-   * propres (Article : blocs ; Question : réponses, votes, issue ; Process à venir) : la fiche s'enregistre d'elle-même
+   * propres (Article : blocs ; Question : réponses, votes, issue ; Process : canevas) : la fiche s'enregistre d'elle-même
    * dès qu'on choisit un de ces types, pour afficher ses composants (isComposedType).
    */
   group: 'default' | 'activities' | 'deliverables';
@@ -63,6 +63,8 @@ export const ITEM_TYPE_REGISTRY = [
   { id: 'PERIOD',    label: 'Période',    plural: 'Périodes',      icon: 'CalendarRange',         emoji: '🗓️', hue: 'teal',    group: 'activities',   content: false, defaultDuration: 'day', display: 'period', noStatus: true },
   { id: 'ARTICLE',   label: 'Article',    plural: 'Articles',      icon: 'Newspaper',             emoji: '📰', hue: 'fuchsia', group: 'deliverables', content: true },
   { id: 'QUESTION',  label: 'Question',   plural: 'Questions',     icon: 'MessageCircleQuestion', emoji: '❓', hue: 'sky',     group: 'deliverables', content: true },
+  // Process (2026-11-21) : canevas d'éléments de tous espaces (places, couloirs, liens), comme l'Article ; page dédiée
+  { id: 'PROCESS',   label: 'Process',    plural: 'Process',       icon: 'Workflow',              emoji: '🔀', hue: 'indigo',  group: 'deliverables', content: false },
 ] as const satisfies readonly ItemTypeDefinition[];
 
 /** Identifiant d'un type d'élément, tiré du registre */
@@ -81,7 +83,7 @@ export function getItemTypeDef(type: string | null | undefined): ItemTypeDefinit
   return type ? BY_ID.get(type) : undefined;
 }
 
-/** Type à composants propres (groupe « Compositions » : Article, Question) — enregistré dès qu'il est choisi dans la fiche */
+/** Type à composants propres (groupe « Compositions » : Article, Question, Process) — enregistré dès qu'il est choisi dans la fiche */
 export function isComposedType(type: string | null | undefined): boolean {
   return getItemTypeDef(type)?.group === 'deliverables';
 }

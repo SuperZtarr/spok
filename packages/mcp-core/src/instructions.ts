@@ -4,6 +4,7 @@
  * Contenus : outils *_item_content décrits ici (lot 5 contenus multiples).
  * Tags : portée global, communauté ou espace hérité par les sous-espaces (2026-11-12).
  * Références externes (règle item-external-refs, 2026-11-13) : format « Outil : référence », liste remplacée en entier.
+ * Type PROCESS (2026-11-21) : canevas (places, couloirs) non géré par MCP ; ses relations passent par create_relation.
  */
 export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informations.
 
@@ -14,7 +15,9 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
   UNDEFINED (« Élément » : type par défaut — texte rédigé (notes, compte-rendu, synthèse), photo, fichier ou lien
   déposé seul), ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
   QUESTION (titre = la question ; issue notée par ses statuts réservés question_open / question_decided /
-  question_postponed / question_no_conclusion, qu'elle seule utilise ; options et votes ne se gèrent pas par MCP).
+  question_postponed / question_no_conclusion, qu'elle seule utilise ; options et votes ne se gèrent pas par MCP),
+  PROCESS (canevas où l'on pose des éléments de tous espaces, en couloirs, reliés par leurs relations ; ses places et
+  couloirs ne se gèrent pas par MCP — les relations, elles, se créent normalement avec create_relation).
   MEETING et ARTICLE ont aussi leurs statuts réservés (meeting_* : à organiser → CR envoyé ; article_* : brouillon →
   publié) : get_space_conventions indique pour chaque statut réservé le type qui l'utilise.
   Les types réellement utilisés et leurs libellés dépendent de la communauté : voir get_space_conventions.

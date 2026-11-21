@@ -5,7 +5,8 @@
  * - onglet « Éléments » : arbre des éléments de l'espace choisi (articlesApi.browseItems, 500 max, articles exclus),
  *   dépliable, type et statut ; pastilles de type (liste à plat) ; recherche dès 2 caractères (articlesApi.candidates,
  *   portée espace ou Partout, extrait surligné) ;
- * - onglet « Processus » si l'espace en a un : tout le processus ou un couloir → onAddProcess ;
+ * - onglet « Processus » si l'espace a des éléments Process non vides (2026-11-21) : pour chacun, tout le process ou
+ *   un de ses couloirs → onAddProcess({ kind: 'process', processId, laneId? }) ;
  * - sélection multiple gardée d'un espace à l'autre ; éléments déjà présents grisés « déjà ajouté » ; options « avec
  *   ses enfants » / « ce qui en découle » ; « Ajouter (n) » → onAdd(ids dans l'ordre de l'arbre, options).
  * Arbre et ordre : articleBrowserTree.ts. Textes : pages/help/article.help.ts (browser*, pick*, addProcess…).
@@ -149,7 +150,7 @@ export function ArticleBrowser({ isOpen, onClose, spaceId, articleId, presentIds
               <button key={s.spaceId} type="button" onClick={() => { setActiveSpace(s.spaceId); setTab('items'); setTypes(new Set()); setExpanded(new Set()); }}
                 className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm transition-colors ${s.spaceId === activeSpace ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent'}`}>
                 <span className="truncate flex-1">{s.name}</span>
-                {s.process && <Workflow className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />}
+                {s.processes.length > 0 && <Workflow className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />}
                 <span className="text-xs text-muted-foreground flex-shrink-0">{s.itemCount}</span>
               </button>
             ))}
@@ -160,25 +161,30 @@ export function ArticleBrowser({ isOpen, onClose, spaceId, articleId, presentIds
           <div role="tablist" className="flex items-center gap-1 border-b border-border">
             <button role="tab" type="button" aria-selected={tab === 'items'} onClick={() => setTab('items')}
               className={`px-3 py-1.5 text-sm border-b-2 -mb-px ${tab === 'items' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground'}`}>Éléments</button>
-            {space?.process && (
+            {!!space?.processes.length && (
               <button role="tab" type="button" aria-selected={tab === 'process'} onClick={() => setTab('process')}
                 className={`px-3 py-1.5 text-sm border-b-2 -mb-px ${tab === 'process' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground'}`}>Processus</button>
             )}
           </div>
 
-          {tab === 'process' && space?.process ? (
-            <div className="space-y-2">
+          {tab === 'process' && space?.processes.length ? (
+            <div className="space-y-3 overflow-y-auto min-h-0">
               <p className="text-xs text-muted-foreground">{pageHint('article', 'addProcess')}</p>
-              <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => onAddProcess({ kind: 'process', spaceId: space.spaceId })} className="text-xs px-2 py-1 rounded border border-primary/60 text-primary hover:bg-primary/10">
-                  Tout le processus ({space.process.nodeCount})
-                </button>
-                {space.process.lanes.map((l) => (
-                  <button key={l.id} type="button" onClick={() => onAddProcess({ kind: 'process', spaceId: space.spaceId, laneId: l.id })} className="text-xs px-2 py-1 rounded border border-border hover:bg-accent truncate max-w-[16rem]">
-                    {l.title}
-                  </button>
-                ))}
-              </div>
+              {space.processes.map((p) => (
+                <div key={p.id} className="space-y-1">
+                  <p className="text-sm font-medium truncate">{p.title || 'Sans titre'}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={() => onAddProcess({ kind: 'process', processId: p.id })} className="text-xs px-2 py-1 rounded border border-primary/60 text-primary hover:bg-primary/10">
+                      Tout le process ({p.nodeCount})
+                    </button>
+                    {p.lanes.map((l) => (
+                      <button key={l.id} type="button" onClick={() => onAddProcess({ kind: 'process', processId: p.id, laneId: l.id })} className="text-xs px-2 py-1 rounded border border-border hover:bg-accent truncate max-w-[16rem]">
+                        {l.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <>

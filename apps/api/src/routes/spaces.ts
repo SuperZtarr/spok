@@ -10,6 +10,7 @@
  * POST / et PATCH visibility : OPEN/READONLY/PRIVATE ou null (= héritée) — POST l'applique dès la création (GROUP). GET /:id renvoie inheritedVisibility +
  * inheritedFrom ('parent' | 'community') pour l'écran des paramètres.
  * Communauté publique = visibility !== 'PRIVATE' uniquement (isPublic déprécié, jamais lu).
+ * GET / : processCount (éléments Process de l'espace, utils/processCounts.ts) pour l'indicateur de la barre latérale.
  * Images avatar/cover : formats et tailles via validateUpload('image') de @spok/shared.
  * GET / (sidebar) : espaces non-membre filtrés sur la visibilité EFFECTIVE (keepVisibleWithRole) — jamais
  * sur la visibilité propre seule, sinon un sous-espace d'un parent privé fuit dans la liste.
@@ -46,6 +47,7 @@ import { createNotification, sendInvitationEmail } from '../utils/notifications.
 import { createInvitation as createInvitationHelper } from './invitations.js';
 import { createItemTree } from '../utils/itemTree.js';
 import { remapOutOfScopeItemTags } from '../utils/tagScope.js';
+import { withProcessCounts } from '../utils/processCounts.js';
 
 const createSpaceSchema = z.object({
   name: z.string().min(1),
@@ -138,7 +140,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
   }
 
   // List spaces (authenticated: all accessible; anonymous: public community spaces only)
-  // processNodeCount : nombre d'items placés dans la vue Process de l'espace (indicateur de la barre latérale)
+  // processCount : nombre d'éléments Process de l'espace (indicateur de la barre latérale, withProcessCounts)
   fastify.get<{ Querystring: { communityId?: string; parentId?: string } }>('/', { preHandler: [fastify.optionalAuthenticate] }, async (request) => {
     const { communityId } = request.query;
     const userId = request.user?.userId;
@@ -155,21 +157,20 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
             OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }],
           },
           include: {
-            _count: { select: { memberships: true, items: true, processNodes: true } },
+            _count: { select: { memberships: true, items: true } },
             community: { select: { id: true, name: true, avatarUrl: true } },
             parent: { select: { id: true, name: true } },
           },
           orderBy: SPACE_ORDER_BY,
         });
 
-        return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
+        return withProcessCounts(fastify.prisma, (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
           ...s,
           role,
           memberCount: s._count.memberships,
           itemCount: s._count.items,
-          processNodeCount: s._count.processNodes,
           isMember: false,
-        }));
+        })));
       }
 
       const community = await fastify.prisma.community.findUnique({
@@ -181,21 +182,20 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       const spaces = await fastify.prisma.space.findMany({
         where: { communityId, type: 'GROUP', OR: [{ visibility: null }, { visibility: { not: 'PRIVATE' } }] },
         include: {
-          _count: { select: { memberships: true, items: true, processNodes: true } },
+          _count: { select: { memberships: true, items: true } },
           community: { select: { id: true, name: true, avatarUrl: true } },
           parent: { select: { id: true, name: true } },
         },
         orderBy: SPACE_ORDER_BY,
       });
 
-      return (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
+      return withProcessCounts(fastify.prisma, (await keepVisibleWithRole(spaces)).map(({ space: s, role }) => ({
         ...s,
         role,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
-        processNodeCount: s._count.processNodes,
         isMember: false,
-      }));
+      })));
     }
 
     // Build filter based on communityId parameter
@@ -238,7 +238,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         space: {
           include: {
             _count: {
-              select: { memberships: true, items: true, processNodes: true },
+              select: { memberships: true, items: true },
             },
             community: {
               select: {
@@ -276,7 +276,6 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       role: (m.space.communityId && ownedCommunityIds.has(m.space.communityId) ? 'OWNER' : m.role) as Role,
       memberCount: m.space._count.memberships,
       itemCount: m.space._count.items,
-      processNodeCount: m.space._count.processNodes,
       isMember: true,
       owner: (m.space as any).memberships?.[0]?.user || null,
     }));
@@ -312,7 +311,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         where: communitySpaceFilter,
         include: {
           _count: {
-            select: { memberships: true, items: true, processNodes: true },
+            select: { memberships: true, items: true },
           },
           community: {
             select: { id: true, name: true },
@@ -344,16 +343,15 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         role: roleById.get(s.id)!,
         memberCount: s._count.memberships,
         itemCount: s._count.items,
-        processNodeCount: s._count.processNodes,
         isMember: false,
         owner: (s as any).memberships?.[0]?.user || null,
       }));
 
       // Deux requêtes fusionnées : ordre manuel global (position puis nom), voir utils/spaceOrder.ts
-      return [...memberSpaces, ...nonMemberSpaces].sort(compareSpaceOrder);
+      return withProcessCounts(fastify.prisma, [...memberSpaces, ...nonMemberSpaces].sort(compareSpaceOrder));
     }
 
-    return memberSpaces;
+    return withProcessCounts(fastify.prisma, memberSpaces);
   });
 
   // Create space
@@ -517,7 +515,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
           space: {
             include: {
               _count: {
-                select: { memberships: true, items: true, processNodes: true },
+                select: { memberships: true, items: true },
               },
               community: {
                 select: { id: true, name: true },
@@ -546,7 +544,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
         const adminSpace = await fastify.prisma.space.findUnique({
           where: { id: request.params.id },
           include: {
-            _count: { select: { memberships: true, items: true, processNodes: true } },
+            _count: { select: { memberships: true, items: true } },
             community: { select: { id: true, name: true } },
             parent: { select: { id: true, name: true } },
           },
@@ -570,7 +568,7 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
       const space = await fastify.prisma.space.findUnique({
         where: { id: request.params.id },
         include: {
-          _count: { select: { memberships: true, items: true, processNodes: true } },
+          _count: { select: { memberships: true, items: true } },
           community: { select: { id: true, name: true } },
           parent: { select: { id: true, name: true } },
         },

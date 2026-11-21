@@ -4,8 +4,13 @@
    Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune.
    Modes d'interface (2026-11-13) : listes de modes, favoris, vues d'ouverture et catégories générées par lib/modeTexts
    depuis MODE_REGISTRY — jamais recopiées en clair dans une règle.
-   Export (2026-11-18) : export-fields-choice (choix des champs, registre EXPORT_FIELD_REGISTRY). */
-import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, statusIdsIn } from '@spok/shared';
+   Export (2026-11-18) : export-fields-choice (choix des champs, registre EXPORT_FIELD_REGISTRY).
+   Types à composants (2026-11-21) : COMPOSED_TYPES / COMPOSED_TYPE_LABELS dérivés du registre des types (groupe deliverables). */
+import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, getItemTypeDef, itemTypesWhere, statusIdsIn } from '@spok/shared';
+
+/** Types à composants (groupe « Compositions » du registre des types) : valeurs et libellés dérivés, jamais recopiés */
+const COMPOSED_TYPES = itemTypesWhere((t) => t.group === 'deliverables');
+const COMPOSED_TYPE_LABELS = COMPOSED_TYPES.map((t) => getItemTypeDef(t)?.label ?? t).join(', ');
 import { collapsedModesLabel, contextModeSentence, favoritesByModeSentence, modesList, openingViewsSentence, viewCategoriesList } from './modeTexts';
 
 export interface ItemBusinessRule {
@@ -79,9 +84,9 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   {
     id: 'composed-type-autosave',
     category: 'type',
-    appliesToValues: ['ARTICLE', 'QUESTION'],
-    trigger: 'Choix d’un type à composants (groupe « Compositions » : Article, Question, Process à venir) dans la fiche',
-    effect: "Le type est enregistré aussitôt, fiche ouverte, pour afficher ses composants (bloc Question, mode Composer) ; seul le type part, les autres saisies attendent « Enregistrer ». Le statut est alors fixé par l'API (une question repart « Ouverte »). Un brouillon resté vide reste supprimé à la fermeture sans enregistrement : le type ne compte pas (décision Thomas 2026-11-11)",
+    appliesToValues: COMPOSED_TYPES,
+    trigger: `Choix d’un type à composants (groupe « Compositions » : ${COMPOSED_TYPE_LABELS}) dans la fiche`,
+    effect: "Le type est enregistré aussitôt, fiche ouverte, pour afficher ses composants (bloc Question, mode Composer, lien « Ouvrir le process ») ; seul le type part, les autres saisies attendent « Enregistrer ». Le statut est alors fixé par l'API (une question repart « Ouverte »). Un brouillon resté vide reste supprimé à la fermeture sans enregistrement : le type ne compte pas (décision Thomas 2026-11-11)",
     location: 'packages/shared/src/constants/typeRegistry.ts (isComposedType), apps/web/src/components/ItemEditModal.tsx',
   },
   {
@@ -372,10 +377,10 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'process-canvas',
-    page: 'Espace → vue Process',
-    trigger: 'Poser, déplacer ou retirer un item du canevas ; double-clic sur le vide',
-    effect: "Un seul process par espace, positions partagées entre membres (table process_nodes) et jamais recalculées. Seuls les items de l'espace courant (pas ceux des sous-espaces inclus). « Retirer du process » renvoie l'item dans le panneau sans le supprimer ; supprimer l'item le retire du canevas. Double-clic sur le vide = nouvelle NOTE posée à cet endroit. Relier deux items crée une vraie relation (visible dans les autres vues). « Réorganiser en processus » (appliqué directement, sans confirmation, pour tous les membres) : une colonne par rang de dépendance « Bloque » / « Permet » (calcul du PERT), items sans lien d'ordre en première colonne (ordre vertical conservé), les suivants à la hauteur moyenne de leurs prédécesseurs pour garder chaque branche sur sa ligne (décalage vers le bas si conflit) — seule disposition automatique. Panneau « Non placés » en arborescence (parent placé → enfant à la racine). Couloirs : « Définir comme couloir » fait d'un item une bande nommée (il cesse d'être un nœud), ajoutée en dernier, vide ; y poser un item ne fait que le ranger visuellement (ni parent ni relation) ; un nœud appartient au couloir sous son centre ; retirer un couloir laisse ses items en place, hors couloir ; un lien vers ou depuis l'item d'un couloir est conservé et rattaché au couloir (sous-processus) ; replier un couloir (préférence locale) le réduit en petite boîte (hauteur et longueur), masque ses items, rattache leurs liens au couloir et masque ses liens internes ; un couloir se déplace librement par son titre (position partagée, ses items suivent), « Réorganiser » le remet dans la pile ; Réorganiser garde chaque item dans son couloir avec des colonnes communes et range les items libres sous les couloirs. VIEWER : lecture seule",
-    location: 'apps/web/src/components/views/ProcessView.tsx, apps/web/src/components/views/process-utils.ts (layoutAsProcess), apps/web/src/components/views/ProcessUnplacedPanel.tsx, apps/web/src/hooks/useProcessNodes.ts, apps/api/src/routes/process-nodes.ts',
+    page: 'Espace → vue Process (liste des process, canevas d\'un process)',
+    trigger: 'Créer un process ; poser, déplacer ou retirer un élément du canevas ; double-clic sur le vide',
+    effect: "Un process est un élément de type PROCESS (2026-11-21) : plusieurs par espace ; la vue Process liste ceux de l'espace, un clic ouvre son canevas (?process=). Places et couloirs rattachés au process (tables process_item_nodes / process_item_lanes), partagés entre membres et jamais recalculés ; les anciens process d'espace ne sont pas repris. On peut poser des éléments de tous les espaces lisibles (panneau = éléments de l'espace du process ; « Ajouter d'un autre espace » = recherche, posé au centre de la vue) ; un élément moins visible que le process demande confirmation. Un élément n'est montré que si la personne qui l'a posé peut encore le lire (sinon case « Élément indisponible », sans titre ni liens) ; le lecteur voit titre et statut sans accès à l'espace source, et ne l'ouvre que s'il lit cet espace (nouvel onglet pour un autre espace). Un élément déplacé d'espace garde sa place. Modifier le canevas : OWNER/MEMBER de l'espace du process, process non verrouillé. Une Question posée s'affiche en losange avec ses réponses en pastilles ; chaque réponse qui renvoie à un élément posé devient une flèche en pointillés étiquetée (réponse retenue en vert), non modifiable sur le canevas. « Retirer du process » enlève l'élément du canevas sans le supprimer ; supprimer l'élément le retire du canevas. Double-clic sur le vide = nouvel élément de l'espace du process posé à cet endroit. Une relation se crée depuis un élément que le lecteur peut ouvrir. Relier deux items crée une vraie relation (visible dans les autres vues). « Réorganiser en processus » (appliqué directement, sans confirmation, pour tous les membres) : une colonne par rang de dépendance « Bloque » / « Permet » (calcul du PERT), items sans lien d'ordre en première colonne (ordre vertical conservé), les suivants à la hauteur moyenne de leurs prédécesseurs pour garder chaque branche sur sa ligne (décalage vers le bas si conflit) — seule disposition automatique. Panneau « Non placés » en arborescence (parent placé → enfant à la racine). Couloirs : « Définir comme couloir » fait d'un item une bande nommée (il cesse d'être un nœud), ajoutée en dernier, vide ; y poser un item ne fait que le ranger visuellement (ni parent ni relation) ; un nœud appartient au couloir sous son centre ; retirer un couloir laisse ses items en place, hors couloir ; un lien vers ou depuis l'item d'un couloir est conservé et rattaché au couloir (sous-processus) ; replier un couloir (préférence locale) le réduit en petite boîte (hauteur et longueur), masque ses items, rattache leurs liens au couloir et masque ses liens internes ; un couloir se déplace librement par son titre (position partagée, ses items suivent), « Réorganiser » le remet dans la pile ; Réorganiser garde chaque item dans son couloir avec des colonnes communes et range les items libres sous les couloirs. VIEWER : lecture seule",
+    location: 'apps/web/src/components/views/ProcessView.tsx, ProcessesView.tsx, ProcessNode.tsx, process-utils.ts (layoutAsProcess, buildQuestionEdges), ProcessUnplacedPanel.tsx ; apps/web/src/hooks/useProcessCanvas.ts ; apps/api/src/routes/item-process.ts',
   },
   {
     id: 'space-default-view-by-context',

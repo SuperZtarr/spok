@@ -4,7 +4,7 @@
  * 401 sans session (visiteur anonyme) : simple ApiError, jamais d'expiration forcée (hasSession).
  * Uploads de fichiers : toujours via uploadFile (passe par fetchApi → header admin + refresh).
  * liveSessionsApi + getValidAccessToken / LIVE_API_URL : séances live (le flux SSE est dans lib/liveStream.ts).
- * processApi : positions du canevas de la vue Process (via hooks/useProcessNodes, pas d'appel direct dans les vues).
+ * processApi : canevas d'un élément Process (via hooks/useProcessCanvas, pas d'appel direct dans les vues).
  * questionsApi : question (type QUESTION) — via hooks/useQuestion, pas d'appel direct dans les composants.
  * itemContentsApi : contenus d'un élément (images, fichiers, liens, schémas) — via hooks/useItemContents.
  * itemsApi.links : liens d'un item pour la vue Loupe (via hooks/useItemLinks, pas d'appel direct dans les vues).
@@ -80,6 +80,7 @@ import type {
   LiveInvitee,
   LiveInviteCandidate,
   ArticleView,
+  ProcessCanvasView,
   ArticleCandidate,
   ArticleBatchSource,
   ArticleBatchPreview,
@@ -959,7 +960,7 @@ export const communitiesApi = {
     }),
 };
 
-// Vue Process : positions des items sur le canevas de l'espace (routes/process-nodes.ts)
+// Process (type PROCESS) : places et couloirs d'un élément Process (routes/item-process.ts)
 type ProcessNodePosition = { itemId: string; x: number; y: number; laneId?: string | null };
 type ProcessLaneRow = { id: string; itemId: string; position: number; x?: number | null; y?: number | null };
 
@@ -1064,42 +1065,35 @@ export const articlesApi = {
 };
 
 export const processApi = {
-  list: (spaceId: string) =>
-    fetchApi<ProcessNodePosition[]>(`/spaces/${spaceId}/process-nodes`),
+  // Canevas d'un élément Process (routes/item-process.ts) : places, couloirs, relations entre éléments montrés
+  get: (spaceId: string, processId: string) =>
+    fetchApi<ProcessCanvasView>(`/spaces/${spaceId}/items/${processId}/process`),
 
-  // laneId : couloir (x/y relatifs), null = libre (x/y absolus), absent = couloir inchangé
-  place: (spaceId: string, itemId: string, x: number, y: number, laneId?: string | null) =>
-    fetchApi<ProcessNodePosition>(`/spaces/${spaceId}/process-nodes/${itemId}`, {
-      method: 'PUT',
-      body: JSON.stringify(laneId === undefined ? { x, y } : { x, y, laneId }),
-    }),
+  // laneId : couloir (x/y relatifs), null = libre (x/y absolus), absent = couloir inchangé.
+  // Nouvelle place : ApiError 409 LESS_VISIBLE → confirmer puis renvoyer confirmLessVisible ; 409 IS_LANE ; 403 illisible
+  place: (spaceId: string, processId: string, itemId: string, p: { x: number; y: number; laneId?: string | null; confirmLessVisible?: boolean }) =>
+    fetchApi<ProcessNodePosition>(`/spaces/${spaceId}/items/${processId}/process/nodes/${itemId}`, { method: 'PUT', body: JSON.stringify(p) }),
 
-  // Couloirs (bandes nommées par un item)
-  listLanes: (spaceId: string) =>
-    fetchApi<ProcessLaneRow[]>(`/spaces/${spaceId}/process-lanes`),
+  remove: (spaceId: string, processId: string, itemId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${processId}/process/nodes/${itemId}`, { method: 'DELETE' }),
 
-  createLane: (spaceId: string, itemId: string) =>
-    fetchApi<ProcessLaneRow>(`/spaces/${spaceId}/process-lanes`, { method: 'POST', body: JSON.stringify({ itemId }) }),
+  // Enregistrement groupé des places existantes (Réorganiser, retrait d'un couloir) : un seul appel
+  placeMany: (spaceId: string, processId: string, positions: ProcessNodePosition[]) =>
+    fetchApi<ProcessNodePosition[]>(`/spaces/${spaceId}/items/${processId}/process/nodes`, { method: 'PUT', body: JSON.stringify({ positions }) }),
 
-  reorderLanes: (spaceId: string, ids: string[]) =>
-    fetchApi<void>(`/spaces/${spaceId}/process-lanes/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+  // Couloirs (bandes nommées par un élément) ; même contrôle LESS_VISIBLE qu'une nouvelle place
+  createLane: (spaceId: string, processId: string, itemId: string, confirmLessVisible?: boolean) =>
+    fetchApi<ProcessLaneRow>(`/spaces/${spaceId}/items/${processId}/process/lanes`, { method: 'POST', body: JSON.stringify({ itemId, confirmLessVisible }) }),
+
+  reorderLanes: (spaceId: string, processId: string, ids: string[]) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${processId}/process/lanes/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
 
   // Position libre des couloirs (x/y null = remis dans la pile)
-  layoutLanes: (spaceId: string, lanes: Array<{ id: string; x: number | null; y: number | null }>) =>
-    fetchApi<void>(`/spaces/${spaceId}/process-lanes/layout`, { method: 'PUT', body: JSON.stringify({ lanes }) }),
+  layoutLanes: (spaceId: string, processId: string, lanes: Array<{ id: string; x: number | null; y: number | null }>) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${processId}/process/lanes/layout`, { method: 'PUT', body: JSON.stringify({ lanes }) }),
 
-  deleteLane: (spaceId: string, laneId: string) =>
-    fetchApi<void>(`/spaces/${spaceId}/process-lanes/${laneId}`, { method: 'DELETE' }),
-
-  remove: (spaceId: string, itemId: string) =>
-    fetchApi<void>(`/spaces/${spaceId}/process-nodes/${itemId}`, { method: 'DELETE' }),
-
-  // Enregistrement groupé (réorganisation en processus) : un seul appel pour toutes les positions
-  placeMany: (spaceId: string, positions: ProcessNodePosition[]) =>
-    fetchApi<ProcessNodePosition[]>(`/spaces/${spaceId}/process-nodes`, {
-      method: 'PUT',
-      body: JSON.stringify({ positions }),
-    }),
+  deleteLane: (spaceId: string, processId: string, laneId: string) =>
+    fetchApi<void>(`/spaces/${spaceId}/items/${processId}/process/lanes/${laneId}`, { method: 'DELETE' }),
 };
 
 // Items

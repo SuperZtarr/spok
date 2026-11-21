@@ -7,6 +7,7 @@
  *   'read' sinon (visiteur anonyme ou membre en lecture seule) — règle businessRules « item-open-mode-default ».
  * articlePageUrl : adresse de la page de lecture d'un article ; on y va avec { state: { from } } pour que son
  * « Retour à l'espace » ramène à la vue d'origine (articleReturnState).
+ * processPageUrl : canevas d'un élément Process (vue Process de son espace, ?process=<id>, SpacePage).
  * itemShareUrl : lien court et complet d'un élément (https://…/items/<id>, « Copier le lien » de la fiche) ; la page
  * /items/:itemId (ItemLinkPage) retrouve l'espace puis redirige vers itemUrl — règle item-share-link.
  * Ne pas lire `mode` ailleurs qu'ici : parseItemMode / itemUrl sont la seule source du format d'URL. */
@@ -46,6 +47,11 @@ export function resolveItemMode(requested: ItemOpenMode | undefined, canEditSpac
 /** Adresse de la page de lecture d'un article. */
 export function articlePageUrl(spaceId: string, articleId: string): string {
   return `/spaces/${spaceId}/articles/${articleId}`;
+}
+
+/** Canevas d'un élément Process (2026-11-21) : vue Process de son espace, process ouvert par ?process=. */
+export function processPageUrl(spaceId: string, processId: string): string {
+  return `/spaces/${spaceId}?view=process&process=${processId}`;
 }
 
 /** État de navigation vers cette page : l'adresse à retrouver avec son « Retour à l'espace ». */

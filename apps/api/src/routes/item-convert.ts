@@ -1,6 +1,6 @@
 /* Conversion d'un item en espace : crée l'espace, migre les enfants en items racine.
- * Refusé sur copie de séance verrouillée (itemLock). La place des items migrés dans la vue Process (positions,
- * couloirs) part avec eux (moveProcessPlacement, même transaction).
+ * Refusé sur copie de séance verrouillée (itemLock). Les places des items migrés dans un process (type PROCESS)
+ * ne bougent pas : elles sont rattachées au process, pas à l'espace (2026-11-21).
  * Tags : tagMapping (utils/tagScope.ts, 2026-11-11) — plus de copie en tags d'espace ; tags de communauté et globaux
  * suivent (avant : seuls les tags d'espace étaient repris). */
 import { FastifyPluginAsync } from 'fastify';
@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { createAuditLog, serializeItemForAudit, serializeSpaceForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
-import { moveProcessPlacement } from '../utils/processPlacement.js';
 import { tagMapping } from '../utils/tagScope.js';
 
 const convertToSpaceSchema = z.object({
@@ -152,8 +151,6 @@ export const itemConvertRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      // Place dans la vue Process (positions, couloirs) : suit les items dans le nouvel espace
-      await moveProcessPlacement(tx, allItemIds, request.params.spaceId, newSpace.id);
     });
 
     // Audit: log space creation

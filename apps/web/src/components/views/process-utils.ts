@@ -1,7 +1,10 @@
 /*
  * Logique pure de la vue Process (sans React) :
- * - splitPlaced : répartit les items de l'espace entre placés (position connue) et non placés (panneau) ;
- *   une position dont l'item n'est plus dans la liste (supprimé, déplacé d'espace) est ignorée.
+ * - Élément Process (2026-11-21) : le canevas vient de l'API (ProcessCanvasView, éléments de tous espaces).
+ *   canvasItemOf convertit une place ou un couloir en CanvasItem (indisponible = « Élément indisponible », sans contenu) ;
+ *   placedFromView donne les places ; unplacedItems = éléments de l'espace du process ni posés, ni couloirs, ni le
+ *   process lui-même (panneau) ; buildQuestionEdges = flèches en pointillés d'une Question vers les éléments posés
+ *   auxquels renvoient ses réponses (réponse retenue en évidence).
  * - buildProcessEdges : arêtes xyflow des relations dont les DEUX extrémités sont placées, types officiels
  *   seulement (source unique constants/relationTypes.ts) ; data.relationId sert à la modale d'édition.
  * - filterUnplaced : recherche du panneau, insensible à la casse et aux accents.
@@ -11,7 +14,7 @@
  *   findLaneAt (couloir sous un point). Un membre a des x/y relatifs à son couloir, un item libre des x/y absolus.
  */
 import { MarkerType, type Edge } from '@xyflow/react';
-import type { Item, ItemRelation } from '@spok/shared';
+import type { Item, ItemRelation, ProcessCanvasView, ProcessItemView, ProcessQuestionView } from '@spok/shared';
 import { getRelationMeta, isOfficialRelationType } from '../../constants/relationTypes';
 import { buildPertGraph, computePertRanks } from './pert-utils';
 
@@ -22,23 +25,91 @@ export type ProcessPosition = { itemId: string; x: number; y: number; laneId?: s
  * x/y : position libre (couloir déplacé à la main) ; null/absent = empilé automatiquement.
  */
 export type ProcessLane = { id: string; itemId: string; position: number; x?: number | null; y?: number | null };
-export type PlacedItem = { item: Item; x: number; y: number; laneId?: string | null };
+/**
+ * Élément tel que le canevas l'affiche : vue de l'API, ou case « indisponible » (élément devenu illisible pour la
+ * personne qui l'a posé : ni titre, ni type, ni lien). Seuls id / title / type / status servent aux calculs de mise en page.
+ */
+export type CanvasItem = {
+  id: string;
+  title: string;
+  type: Item['type'];
+  status: string | null;
+  parentId: string | null;
+  available: boolean;
+  canOpen: boolean;
+  canEdit: boolean;
+  /** Espace de l'élément, seulement si le lecteur peut l'ouvrir */
+  spaceId: string | null;
+  question: ProcessQuestionView | null;
+};
+export type PlacedItem = { item: CanvasItem; x: number; y: number; laneId?: string | null };
 
-export function splitPlaced(
-  items: Item[],
-  positions: ProcessPosition[],
-  laneItemIds: Set<string> = new Set(),
-): { placed: PlacedItem[]; unplaced: Item[] } {
-  const byId = new Map(positions.map((p) => [p.itemId, p]));
-  const placed: PlacedItem[] = [];
-  const unplaced: Item[] = [];
-  for (const item of items) {
-    if (laneItemIds.has(item.id)) continue; // titre d'un couloir : ni nœud ni « non placé »
-    const pos = byId.get(item.id);
-    if (pos) placed.push({ item, x: pos.x, y: pos.y, laneId: pos.laneId ?? null });
-    else unplaced.push(item);
+export const UNAVAILABLE_TITLE = 'Élément indisponible';
+
+export function canvasItemOf(itemId: string, view: ProcessItemView | null): CanvasItem {
+  if (!view) {
+    return { id: itemId, title: UNAVAILABLE_TITLE, type: 'UNDEFINED', status: null, parentId: null, available: false, canOpen: false, canEdit: false, spaceId: null, question: null };
   }
-  return { placed, unplaced };
+  return {
+    id: view.id, title: view.title, type: view.type, status: view.status, parentId: view.parentId,
+    available: true, canOpen: view.canOpen, canEdit: view.canEdit, spaceId: view.spaceId, question: view.question,
+  };
+}
+
+/** Places du canevas ; une place rangée dans un couloir disparu redevient libre (évite un parentId orphelin xyflow). */
+export function placedFromView(view: ProcessCanvasView | undefined): PlacedItem[] {
+  if (!view) return [];
+  const laneIds = new Set(view.lanes.map((l) => l.id));
+  return view.nodes.map((n) => ({
+    item: canvasItemOf(n.itemId, n.item), x: n.x, y: n.y, laneId: n.laneId && laneIds.has(n.laneId) ? n.laneId : null,
+  }));
+}
+
+/** Panneau « Non placés » : éléments de l'espace du process ni posés, ni couloirs, ni le process lui-même. */
+export function unplacedItems(spaceItems: Item[], view: ProcessCanvasView | undefined, processId: string): Item[] {
+  const taken = new Set<string>([processId, ...(view?.nodes.map((n) => n.itemId) ?? []), ...(view?.lanes.map((l) => l.itemId) ?? [])]);
+  return spaceItems.filter((i) => !taken.has(i.id));
+}
+
+/**
+ * Branches d'une Question posée sur le canevas : une flèche en pointillés vers chaque élément posé auquel renvoie une
+ * réponse (refItemId, déjà limité par l'API aux éléments montrés), étiquetée par la réponse ; la réponse retenue
+ * (question tranchée) est pleine et plus épaisse. Ce ne sont pas des relations : ni modifiables ni supprimables ici.
+ * endpoint : nœud qui représente un élément (lui-même, son couloir, un couloir replié) ou null s'il n'est pas affiché.
+ */
+export const QUESTION_BRANCH_HEX = '#6366f1';
+export const QUESTION_CHOSEN_HEX = '#16a34a';
+export function buildQuestionEdges(
+  placed: PlacedItem[],
+  endpoint: (itemId: string) => string | null,
+): Edge[] {
+  const edges: Edge[] = [];
+  for (const { item } of placed) {
+    const q = item.question;
+    if (!q) continue;
+    const source = endpoint(item.id);
+    if (!source) continue;
+    for (const o of q.options) {
+      const target = o.refItemId ? endpoint(o.refItemId) : null;
+      if (!target || target === source) continue;
+      const chosen = q.chosenOptionId === o.id;
+      const color = chosen ? QUESTION_CHOSEN_HEX : QUESTION_BRANCH_HEX;
+      edges.push({
+        id: `choice-${o.id}`,
+        source,
+        target,
+        type: 'smoothstep',
+        label: o.label,
+        labelStyle: { fontSize: 11, fontWeight: chosen ? 700 : 500, fill: color },
+        labelBgStyle: { fill: '#ffffff' },
+        markerEnd: { type: MarkerType.ArrowClosed, color },
+        style: { stroke: color, strokeWidth: chosen ? 2.5 : 1.5, ...(chosen ? {} : { strokeDasharray: '6 4' }) },
+        focusable: false,
+        data: { choice: true },
+      });
+    }
+  }
+  return edges;
 }
 
 // ── Voies des flèches (2026-10-21) ──
@@ -255,13 +326,16 @@ export function findLaneAt(layout: LaneLayout, point: { x: number; y: number }):
     && point.y >= l.y && point.y <= l.y + l.height)?.id ?? null;
 }
 
+/** Relation dessinée sur le canevas (ProcessRelationView de l'API, ou ItemRelation) */
+export type ProcessEdgeRelation = Pick<ItemRelation, 'id' | 'fromItemId' | 'toItemId' | 'type'> & { label?: string | null };
+
 /**
  * endpointOverrides : item → nœud qui le représente à la place de son propre nœud (2026-10-21) — titre d'un couloir
  * (le lien est gardé, relié au couloir comme à un sous-processus) ou membre d'un couloir replié. Un lien dont les
  * deux extrémités tombent sur le même nœud (lien interne d'un couloir replié) est masqué.
  */
 export function buildProcessEdges(
-  relations: ItemRelation[],
+  relations: ProcessEdgeRelation[],
   placedIds: Set<string>,
   endpointOverrides: Map<string, string> = new Map(),
   titleOf: (itemId: string) => string = () => '',
@@ -270,7 +344,7 @@ export function buildProcessEdges(
   return relations
     .filter((r) => isOfficialRelationType(r.type))
     .map((r) => ({ r, source: endpoint(r.fromItemId), target: endpoint(r.toItemId) }))
-    .filter((e): e is { r: ItemRelation; source: string; target: string } => !!e.source && !!e.target && e.source !== e.target)
+    .filter((e): e is { r: ProcessEdgeRelation; source: string; target: string } => !!e.source && !!e.target && e.source !== e.target)
     .map(({ r, source, target }) => {
       const color = getRelationMeta(r.type).hex;
       return {
@@ -311,11 +385,12 @@ export const PROCESS_ROW_GAP = 90;
  */
 export function layoutAsProcess(
   placed: PlacedItem[],
-  relations: ItemRelation[],
+  relations: Array<Pick<ItemRelation, 'fromItemId' | 'toItemId' | 'type'>>,
   lanes: ProcessLane[] = [],
 ): ProcessPosition[] {
-  const items = placed.map((p) => p.item);
-  const { predecessors, successors } = buildPertGraph(items, relations);
+  // Le graphe PERT ne lit que les identifiants : un CanvasItem suffit
+  const items = placed.map((p) => p.item) as unknown as Item[];
+  const { predecessors, successors } = buildPertGraph(items, relations as ItemRelation[]);
   const ranks = computePertRanks(items, predecessors, successors);
 
   if (lanes.length === 0) {

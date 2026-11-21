@@ -15,7 +15,8 @@
  * PATCH …/article/blocks/:blockId (width/align/beside — beside : à droite du bloc précédent), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
  * (retire la référence, ne supprime jamais l'élément).
  * Sélecteur à parcourir (même droit, espaces lisibles hors mode admin, portée pickerSpaces community | all | space) :
- * GET …/article/browse/spaces?scope= → ArticleBrowseSpace[] (nombre d'éléments, processus éventuel) ;
+ * GET …/article/browse/spaces?scope= → ArticleBrowseSpace[] (nombre d'éléments, éléments Process non vides ; titre d'un
+ * couloir seulement si le demandeur lit l'espace de son élément, sinon « Élément indisponible ») ;
  * GET …/article/browse/items?spaceId= → { items: ArticleBrowseItem[] (500 max, sans ARTICLE), truncated } ;
  * GET …/article/candidates?q=&scope=&spaceId= : recherche, sans ARTICLE ni l'article lui-même — les éléments déjà
  * présents sont renvoyés (le web les grise) ; q vide = 15 récents de l'espace de l'article ; sinon titres (100 max) +
@@ -23,7 +24,7 @@
  * Ajout groupé (même droit, 2026-10-24) : POST …/article/batch/preview { source } → ArticleBatchPreview ;
  * POST …/article/batch { source, position?, confirmLessVisible? } → 201 { blocks } (400 TOO_MANY > 100, 400 EMPTY,
  * 409 LESS_VISIBLE). Source = éléments cochés (chacun avec enfants et/ou chaîne de relations sortantes, dans l'ordre
- * reçu, sans doublon) ou processus d'un espace / d'un couloir, ordonnée par utils/articleBatch.ts ; articles,
+ * reçu, sans doublon) ou élément Process (processId) entier ou un de ses couloirs, ordonnée par utils/articleBatch.ts ; articles,
  * éléments présents et illisibles (hors mode admin) sautés et comptés. Photo au moment de l'ajout.
  * Droits du parcours (2026-11-06) : racine cochée illisible hors mode admin → 403 SOURCE_UNREADABLE sur toute la requête ;
  * un élément illisible atteint reste sauté et compté, mais on ne suit ni ses enfants ni ses relations. Budget de
@@ -65,7 +66,7 @@ const isoOrNull = (d: Date | string | null | undefined): string | null => {
 };
 
 /** Statuts de chaque espace : référentiels de sa communauté, sinon statuts par défaut. */
-async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<Map<string, StatusConfig[]>> {
+export async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<Map<string, StatusConfig[]>> {
   const spaces: { id: string; community: { referentiels: unknown } | null }[] = spaceIds.length
     ? (await prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, community: { select: { referentiels: true } } } })) ?? []
     : [];
@@ -244,7 +245,7 @@ const BATCH_VISIT_MAX = 10 * BATCH_MAX;
 const BROWSE_MAX = 500;
 const batchSourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('items'), itemIds: z.array(z.string().min(1)).min(1).max(BATCH_MAX), children: z.boolean(), chain: z.boolean() }),
-  z.object({ kind: z.literal('process'), spaceId: z.string().min(1), laneId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('process'), processId: z.string().min(1), laneId: z.string().min(1).optional() }),
 ]);
 const batchPreviewSchema = z.object({ source: batchSourceSchema });
 const batchInsertSchema = z.object({
@@ -273,11 +274,14 @@ function readableSpacesMemo(prisma: any, userId: string): ReadableOf {
 /** Éléments d'une source, ordonnés (articleBatch.ts), avant filtrage ; 'overflow' si le budget de parcours est dépassé. */
 async function orderedSourceIds(prisma: any, userId: string, source: ArticleBatchSource): Promise<string[] | BatchError | 'overflow'> {
   if (source.kind === 'process') {
-    const readable = await filterReadableSpaceIds(prisma, userId, [source.spaceId], false);
+    // Élément Process (2026-11-21) : ses places et couloirs ; les éléments illisibles sont sautés ensuite, comme ailleurs
+    const process = await prisma.item.findUnique({ where: { id: source.processId }, select: { id: true, type: true, spaceId: true } });
+    if (!process || process.type !== 'PROCESS') return { status: 404, message: 'Process not found' };
+    const readable = await filterReadableSpaceIds(prisma, userId, [process.spaceId], false);
     if (readable.length === 0) return { status: 403, code: 'SOURCE_UNREADABLE', message: 'You cannot read this process' };
-    const lanes = await prisma.processLane.findMany({ where: { spaceId: source.spaceId }, select: { id: true, itemId: true, position: true } });
+    const lanes = await prisma.processLane.findMany({ where: { processId: process.id }, select: { id: true, itemId: true, position: true } });
     if (source.laneId && !lanes.some((l: { id: string }) => l.id === source.laneId)) return { status: 404, message: 'Lane not found' };
-    const nodes = await prisma.processNode.findMany({ where: { spaceId: source.spaceId }, select: { itemId: true, laneId: true, x: true, y: true } });
+    const nodes = await prisma.processNode.findMany({ where: { processId: process.id }, select: { itemId: true, laneId: true, x: true, y: true } });
     return orderProcess(lanes, nodes, source.laneId);
   }
   const itemIds = [...new Set(source.itemIds)];
@@ -433,27 +437,35 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     const { spaceIds } = await pickerSpaces(fastify.prisma, ctx.article.spaceId, ctx.userId, request.query.scope);
     if (spaceIds.length === 0) return [];
     const prisma = fastify.prisma as any;
-    const [spaces, itemCounts, nodeCounts] = await Promise.all([
+    const [spaces, itemCounts, processItems] = await Promise.all([
       prisma.space.findMany({ where: { id: { in: spaceIds } }, select: { id: true, name: true, parentId: true, community: { select: { name: true } } }, orderBy: { name: 'asc' } }),
       prisma.item.groupBy({ by: ['spaceId'], where: { spaceId: { in: spaceIds }, type: { not: 'ARTICLE' } }, _count: { _all: true } }),
-      prisma.processNode.groupBy({ by: ['spaceId'], where: { spaceId: { in: spaceIds } }, _count: { _all: true } }),
+      // Éléments Process de ces espaces (2026-11-21), avec nombre de places et couloirs, pour l'ajout groupé
+      prisma.item.findMany({
+        where: { spaceId: { in: spaceIds }, type: 'PROCESS' },
+        orderBy: { title: 'asc' },
+        select: {
+          id: true, title: true, spaceId: true,
+          _count: { select: { processNodes: true } },
+          processLanes: { orderBy: { position: 'asc' }, select: { id: true, item: { select: { title: true, spaceId: true } } } },
+        },
+      }),
     ]);
-    const count = (rows: { spaceId: string; _count: { _all: number } }[]) => new Map(rows.map((r) => [r.spaceId, r._count._all]));
-    const items = count(itemCounts);
-    const nodes = count(nodeCounts);
-    const withProcess = [...nodes.entries()].filter(([, n]) => n > 0).map(([id]) => id);
-    const lanes: { id: string; spaceId: string; item: { title: string } }[] = withProcess.length
-      ? await prisma.processLane.findMany({ where: { spaceId: { in: withProcess } }, orderBy: { position: 'asc' }, select: { id: true, spaceId: true, item: { select: { title: true } } } })
-      : [];
+    const items = new Map<string, number>(itemCounts.map((r: { spaceId: string; _count: { _all: number } }) => [r.spaceId, r._count._all]));
+    type ProcRow = { id: string; title: string; spaceId: string; _count: { processNodes: number }; processLanes: { id: string; item: { title: string; spaceId: string } }[] };
+    // L'élément d'un couloir peut venir d'un autre espace : son titre n'est donné qu'à qui peut lire cet espace
+    const laneSpaceIds = (processItems as ProcRow[]).flatMap((p) => p.processLanes.map((l) => l.item.spaceId));
+    const readableLaneSpaces = new Set(await filterReadableSpaceIds(prisma, ctx.userId, laneSpaceIds, false));
+    const laneTitle = (l: ProcRow['processLanes'][number]) => (readableLaneSpaces.has(l.item.spaceId) ? l.item.title : 'Élément indisponible');
     const result: ArticleBrowseSpace[] = spaces.map((s: { id: string; name: string; parentId: string | null; community: { name: string } | null }) => ({
       spaceId: s.id,
       name: s.name,
       parentId: s.parentId,
       communityName: s.community?.name ?? null,
       itemCount: items.get(s.id) ?? 0,
-      process: (nodes.get(s.id) ?? 0) > 0
-        ? { nodeCount: nodes.get(s.id)!, lanes: lanes.filter((l) => l.spaceId === s.id).map((l) => ({ id: l.id, title: l.item.title })) }
-        : null,
+      processes: (processItems as ProcRow[])
+        .filter((p) => p.spaceId === s.id && (p._count.processNodes > 0 || p.processLanes.length > 0))
+        .map((p) => ({ id: p.id, title: p.title, nodeCount: p._count.processNodes, lanes: p.processLanes.map((l) => ({ id: l.id, title: laneTitle(l) })) })),
     }));
     return result;
   });

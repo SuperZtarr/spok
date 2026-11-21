@@ -20,6 +20,7 @@ import {
   Presentation,
   Newspaper,
   MessageCircleQuestion,
+  Workflow,
 } from 'lucide-react';
 import type { SVGProps } from 'react';
 import type { ItemType, ItemTypeDefinition, StatusConfig, TypeHue, TypeLabelConfig } from '@spok/shared';
@@ -61,7 +62,7 @@ export function getTypeIcon(type: string): IconComponent {
 
 /** Icônes lucide citées par le registre des types (champ `icon`) — un test vérifie que chaque nom est déclaré ici */
 export const TYPE_ICON_COMPONENTS: Record<string, IconComponent> = {
-  Box, FileText, FolderKanban, CheckSquare, Calendar, CalendarRange, Newspaper, MessageCircleQuestion,
+  Box, FileText, FolderKanban, CheckSquare, Calendar, CalendarRange, Newspaper, MessageCircleQuestion, Workflow,
 };
 
 // Ancien type APPOINTMENT (données d'avant la Réunion) : repli d'affichage seulement, absent du registre

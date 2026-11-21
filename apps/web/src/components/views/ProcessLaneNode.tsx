@@ -10,17 +10,18 @@
  * Clics : xyflow rend ce nœud transparent aux clics (pointer-events: none) ; seule la zone de titre les réactive
  * (pointer-events: auto) — ne pas le retirer, sinon le titre et son menu deviennent inaccessibles (bug 2026-10-21).
  * data-lane-body : repère du corps de bande, lu par le double-clic de ProcessView (nouvelle note dans le couloir).
+ * Élément Process (2026-11-21) : l'élément du couloir peut venir d'un autre espace (CanvasItem) — « Ouvrir » et le clic
+ * sur le nom seulement si le lecteur peut l'ouvrir ; indisponible → nom « Élément indisponible », non cliquable.
  */
 import { memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, X } from 'lucide-react';
-import type { Item } from '@spok/shared';
 import { ItemActionMenu, type ItemActionGroup } from '../ui/ItemActionMenu';
-import { LANE_HEADER_WIDTH } from './process-utils';
+import { LANE_HEADER_WIDTH, type CanvasItem } from './process-utils';
 
 export type ProcessLaneData = {
   laneId: string;
-  item: Item;
+  item: CanvasItem;
   width: number;
   height: number;
   colorIndex: number;
@@ -52,7 +53,7 @@ function ProcessLaneNodeComponent({ data }: NodeProps<ProcessLaneFlowNode>) {
   const color = LANE_COLORS[colorIndex % LANE_COLORS.length];
 
   const groups: ItemActionGroup[] = [
-    { actions: [{ id: 'lane-open', label: 'Ouvrir l\'item', icon: ExternalLink, onClick: () => onOpen?.(item.id) }] },
+    ...(item.canOpen ? [{ actions: [{ id: 'lane-open', label: 'Ouvrir l\'élément', icon: ExternalLink, onClick: () => onOpen?.(item.id) }] }] : []),
     ...(canEdit ? [{
       actions: [
         { id: 'lane-up', label: 'Monter', icon: ArrowUp, onClick: () => onMoveUp(laneId), disabled: isFirst },
@@ -104,8 +105,9 @@ function ProcessLaneNodeComponent({ data }: NodeProps<ProcessLaneFlowNode>) {
         </button>
         <button
           type="button"
-          onClick={() => onOpen?.(item.id)}
-          className={`nodrag flex-1 min-w-0 text-left text-xs font-semibold leading-snug break-words hover:underline ${collapsed ? 'truncate' : 'line-clamp-3'}`}
+          onClick={() => { if (item.canOpen) onOpen?.(item.id); }}
+          disabled={!item.canOpen}
+          className={`nodrag flex-1 min-w-0 text-left text-xs font-semibold leading-snug break-words ${item.canOpen ? 'hover:underline' : 'cursor-default'} ${item.available ? '' : 'italic text-muted-foreground'} ${collapsed ? 'truncate' : 'line-clamp-3'}`}
         >
           {item.title || 'Sans titre'}
           {collapsed && memberCount > 0 && <span className="ml-1 font-normal text-muted-foreground">({memberCount})</span>}

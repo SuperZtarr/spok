@@ -13,8 +13,8 @@
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
  * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
  * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
- * Indicateur process (2026-10-28) : icône Workflow après le nom d'un espace dont processNodeCount > 0 (GET /spaces) ;
- * la liste n'est rafraîchie que quand un process apparaît ou disparaît (useProcessNodes), jamais par polling.
+ * Indicateur process (2026-10-28, éléments Process depuis le 2026-11-21) : icône Workflow après le nom d'un espace dont
+ * processCount > 0 (GET /spaces) ; la liste est rafraîchie à la création d'un process (vue Process), jamais par polling.
  * Grille de navigation mobile : sections hors catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 2026-11-13).
  * Référentiels (2026-11-13) : icônes via getNavIcon (constants/viewIcons, plus de NAV_ICONS local) ; boutons de mode
  * dérivés de MODE_REGISTRY (@spok/shared), infobulles générées (lib/modeTexts).
@@ -361,9 +361,9 @@ function SpaceTreeItem({
         >
           <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} communityId={node.communityId} />
           <span className="truncate">{node.name}</span>
-          {/* Indicateur : l'espace a un process (items placés dans sa vue Process) */}
-          {!!node.processNodeCount && (
-            <HelpHint text={SIDEBAR_HINTS.process(node.processNodeCount)} className="inline-flex flex-shrink-0">
+          {/* Indicateur : l'espace contient des éléments Process */}
+          {!!node.processCount && (
+            <HelpHint text={SIDEBAR_HINTS.process(node.processCount)} className="inline-flex flex-shrink-0">
               <Workflow className="w-3 h-3 text-muted-foreground" aria-label="Contient un process" />
             </HelpHint>
           )}

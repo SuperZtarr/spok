@@ -69,6 +69,8 @@ model User {
   liveSessionInvitesBy        LiveSessionInvite[]     @relation("LiveSessionInviter")
   personalAccessTokens        PersonalAccessToken[]
   articleBlocksAdded          ArticleBlock[]     @relation("ArticleBlockAddedBy")
+  processNodesAdded           ProcessNode[]      @relation("ProcessNodeAddedBy")
+  processLanesAdded           ProcessLane[]      @relation("ProcessLaneAddedBy")
   questionsDecided            Question[]         @relation("QuestionDecidedBy")
   questionVotes               QuestionVote[]
   itemContentsAdded           ItemContent[]      @relation("ItemContentCreatedBy")
@@ -106,9 +108,7 @@ model Space {
 
   memberships SpaceMembership[]
   items       Item[]
-  processNodes ProcessNode[]
-  processLanes ProcessLane[]
-  tags        Tag[]
+  tags       Tag[]
   auditLogs   AuditLog[]
   invitations Invitation[]
   favoritedBy SpaceFavorite[]
@@ -375,8 +375,10 @@ model Item {
   dayPlanEntries DayPlanEntry[]
   liveSessionEntries LiveSessionEntry[]
   liveSessionReport  LiveSession?   @relation("LiveSessionReport")
-  processNodes  ProcessNode[]
-  processLanes  ProcessLane[]
+  processNodes      ProcessNode[] @relation("ProcessNodes")
+  processLanes      ProcessLane[] @relation("ProcessLanes")
+  processPlacements ProcessNode[] @relation("ProcessPlacements")
+  processLaneOf     ProcessLane[] @relation("ProcessLaneItems")
   articleBlocks ArticleBlock[] @relation("ArticleBlocks")
   referencedIn  ArticleBlock[] @relation("ArticleReferences")
   question        Question?
@@ -474,45 +476,54 @@ model ArticleBlock {
   @@map("article_blocks")
 }
 
-// Position d'un item sur le canevas de la vue Process de son espace (2026-10-20).
-// Une ligne = item placé ; absence de ligne = item « non placé ». Partagé entre membres.
+// Place d'un élément sur le canevas d'un élément Process (type PROCESS, 2026-11-21 ; avant : process unique de
+// l'espace, tables process_nodes / process_lanes abandonnées sans reprise, accord Thomas). Une ligne = élément placé.
+// L'élément placé peut venir de n'importe quel espace, comme un bloc d'Article : addedById = la personne qui l'a posé,
+// ses droits de lecture décident à la lecture si l'élément est montré (null = case « indisponible »).
 model ProcessNode {
   id        String   @id @default(cuid())
-  spaceId   String
-  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  processId String
+  process   Item     @relation("ProcessNodes", fields: [processId], references: [id], onDelete: Cascade)
   itemId    String
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item      Item     @relation("ProcessPlacements", fields: [itemId], references: [id], onDelete: Cascade)
   x         Float
   y         Float
   // Couloir (2026-10-21) : null = item libre (x/y absolus) ; sinon x/y relatifs au couloir. Couloir supprimé → libre.
   laneId    String?
   lane      ProcessLane? @relation(fields: [laneId], references: [id], onDelete: SetNull)
+  addedById String?
+  addedBy   User?    @relation("ProcessNodeAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   updatedAt DateTime @updatedAt
 
-  @@unique([spaceId, itemId])
-  @@index([spaceId])
+  @@unique([processId, itemId])
+  @@index([processId])
+  @@index([itemId])
   @@index([laneId])
-  @@map("process_nodes")
+  @@map("process_item_nodes")
 }
 
-// Couloir (flux) de la vue Process (2026-10-21) : bande horizontale nommée par un item de l'espace, où l'on range
-// visuellement des items (aucun effet sur parent/relations). position = ordre d'empilement, de haut en bas.
+// Couloir (flux) d'un élément Process (2026-10-21, rattaché au process le 2026-11-21) : bande horizontale nommée par
+// un élément (de n'importe quel espace, droits comme ProcessNode), où l'on range visuellement des éléments (aucun
+// effet sur parent/relations). position = ordre d'empilement, de haut en bas.
 model ProcessLane {
   id        String   @id @default(cuid())
-  spaceId   String
-  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  processId String
+  process   Item     @relation("ProcessLanes", fields: [processId], references: [id], onDelete: Cascade)
   itemId    String
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item      Item     @relation("ProcessLaneItems", fields: [itemId], references: [id], onDelete: Cascade)
   position  Int      @default(0)
   // Position libre (2026-10-21) : null = couloir empilé automatiquement (selon position) ; sinon posé à (x, y)
   x         Float?
   y         Float?
+  addedById String?
+  addedBy   User?    @relation("ProcessLaneAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   nodes     ProcessNode[]
 
-  @@unique([spaceId, itemId])
-  @@index([spaceId])
-  @@map("process_lanes")
+  @@unique([processId, itemId])
+  @@index([processId])
+  @@index([itemId])
+  @@map("process_item_lanes")
 }
 
 // Contenu d'un élément (refonte « contenus multiples », lot 1, 2026-11-08) : un élément porte plusieurs contenus de
@@ -606,6 +617,7 @@ enum ItemType {
   PERIOD
   ARTICLE
   QUESTION
+  PROCESS
 }
 
 // Relations entre éléments

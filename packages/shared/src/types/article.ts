@@ -61,11 +61,11 @@ export type ArticleCandidate = {
 };
 
 /** Ajout groupé (POST …/article/batch[/preview]) : des éléments cochés (1 à 100, ordre d'affichage), chacun avec ses
- *  enfants et/ou la chaîne de ses relations sortantes blocks / implements / drives, ou le processus d'un espace
- *  (entier ou un couloir). Photo au moment de l'ajout. */
+ *  enfants et/ou la chaîne de ses relations sortantes blocks / implements / drives, ou un élément Process
+ *  (entier ou un couloir, 2026-11-21). Photo au moment de l'ajout. */
 export type ArticleBatchSource =
   | { kind: 'items'; itemIds: string[]; children: boolean; chain: boolean }
-  | { kind: 'process'; spaceId: string; laneId?: string };
+  | { kind: 'process'; processId: string; laneId?: string };
 
 export type ArticleBatchPreview = {
   count: number;
@@ -75,14 +75,15 @@ export type ArticleBatchPreview = {
 };
 
 /** Espace proposé par le sélecteur à parcourir (GET …/article/browse/spaces) : lisible hors mode admin, dans la
- *  portée ; itemCount sans les articles ; process renseigné seulement s'il a au moins un élément placé. */
+ *  portée ; itemCount sans les articles ; processes = éléments Process de l'espace ayant au moins une place ou un
+ *  couloir (2026-11-21, avant : process unique de l'espace). */
 export type ArticleBrowseSpace = {
   spaceId: string;
   name: string;
   parentId: string | null;
   communityName: string | null;
   itemCount: number;
-  process: { nodeCount: number; lanes: { id: string; title: string }[] } | null;
+  processes: { id: string; title: string; nodeCount: number; lanes: { id: string; title: string }[] }[];
 };
 
 /** Élément d'un espace pour l'arbre du sélecteur (GET …/article/browse/items, 500 au plus, articles exclus). */

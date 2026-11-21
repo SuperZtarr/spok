@@ -28,6 +28,7 @@
  * contents (contenus multiples, 2026-11-08) : renvoyés triés par sorte puis position ; le détail les donne complets,
  * la liste sans xml (poids des schémas). Écriture : item-contents.ts (seule source des médias, plus de pont).
  * Types d'item (z.enum, filtre ?type=) : ITEM_TYPES / isItemType du registre des types (@spok/shared), jamais recopiés.
+ * Sous-routes de canevas : article (item-article.ts) et process (item-process.ts, 2026-11-21), lecture anonyme possible.
  */
 import { FastifyPluginAsync } from 'fastify';
 import { statusDateDefaults } from '../utils/statusDates.js';
@@ -50,6 +51,7 @@ import { itemConvertRoutes } from './item-convert.js';
 import { itemMergeRoutes } from './item-merge.js';
 import { itemReactionRoutes } from './item-reactions.js';
 import { itemArticleReadRoutes, itemArticleWriteRoutes } from './item-article.js';
+import { itemProcessReadRoutes, itemProcessWriteRoutes } from './item-process.js';
 import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
 import { itemContentRoutes } from './item-contents.js';
 import { itemSecretRoutes } from './item-secrets.js';
@@ -364,6 +366,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     await authInstance.register(itemMergeRoutes);
     await authInstance.register(itemReactionRoutes);
     await authInstance.register(itemArticleWriteRoutes);
+    await authInstance.register(itemProcessWriteRoutes);
     await authInstance.register(itemQuestionWriteRoutes);
     await authInstance.register(itemContentRoutes);
     await authInstance.register(itemSecretRoutes);
@@ -372,6 +375,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Lecture d'un article (authentification facultative : un article public se lit en anonyme)
   await fastify.register(itemArticleReadRoutes);
+  // Lecture d'un process (authentification facultative, comme un article)
+  await fastify.register(itemProcessReadRoutes);
   // Question : décompte lisible en anonyme (sans vote)
   await fastify.register(itemQuestionReadRoutes);
 

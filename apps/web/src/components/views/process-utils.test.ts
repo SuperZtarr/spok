@@ -1,34 +1,86 @@
-/* TNR de la logique pure de la vue Process : placés / non placés, arêtes des relations, recherche du panneau. */
+/* TNR de la logique pure de la vue Process : canevas d'un élément Process (places, non placés, éléments indisponibles,
+   branches d'une Question — 2026-11-21), arêtes des relations, recherche du panneau, rangement, couloirs. */
 import { describe, it, expect } from 'vitest';
-import type { Item, ItemRelation } from '@spok/shared';
+import type { Item, ItemRelation, ProcessCanvasView, ProcessItemView } from '@spok/shared';
 import {
-  splitPlaced, buildProcessEdges, filterUnplaced, layoutAsProcess, computeLaneLayout, findLaneAt, assignEdgeChannels,
+  placedFromView, unplacedItems, canvasItemOf, buildQuestionEdges, UNAVAILABLE_TITLE, QUESTION_CHOSEN_HEX, buildProcessEdges, filterUnplaced, layoutAsProcess, computeLaneLayout, findLaneAt, assignEdgeChannels,
   PROCESS_NODE_WIDTH,
   PROCESS_COLUMN_GAP, PROCESS_ROW_GAP, LANE_MIN_HEIGHT, LANE_GAP, LANE_PADDING, LANE_CONTENT_X, PROCESS_NODE_HEIGHT,
   LANE_COLLAPSED_HEIGHT, LANE_COLLAPSED_WIDTH,
 } from './process-utils';
 import { getRelationMeta } from '../../constants/relationTypes';
 
-const item = (id: string, title = id) => ({ id, title, type: 'NOTE' } as unknown as Item);
+// Élément minimal : sert à la fois d'Item (panneau) et de CanvasItem (places) dans ces tests
+const item = (id: string, title = id) => ({ id, title, type: 'NOTE' } as any);
 const rel = (id: string, fromItemId: string, toItemId: string, type = 'relates'): ItemRelation => ({ id, fromItemId, toItemId, type });
 
-describe('splitPlaced', () => {
-  it('sépare placés et non placés', () => {
-    const [a, b, c] = [item('a'), item('b'), item('c')];
-    const { placed, unplaced } = splitPlaced([a, b, c], [{ itemId: 'b', x: 1, y: 2 }]);
-    expect(placed).toEqual([{ item: b, x: 1, y: 2, laneId: null }]);
-    expect(unplaced).toEqual([a, c]);
+const view = (id: string, extra: Partial<ProcessItemView> = {}): ProcessItemView => ({
+  id, type: 'UNDEFINED', title: `T-${id}`, status: null, statusLabel: null, priority: null, dueDate: null, parentId: null,
+  canOpen: true, canEdit: true, spaceId: 's1', question: null, ...extra,
+});
+const canvas = (nodes: ProcessCanvasView['nodes'], lanes: ProcessCanvasView['lanes'] = []): ProcessCanvasView => ({
+  processId: 'proc', spaceId: 's1', canEditProcess: true, nodes, lanes, relations: [],
+});
+
+describe('canevas d’un élément Process', () => {
+  it('élément indisponible : case sans contenu, ni ouvrable ni modifiable', () => {
+    expect(canvasItemOf('x', null)).toEqual({
+      id: 'x', title: UNAVAILABLE_TITLE, type: 'UNDEFINED', status: null, parentId: null,
+      available: false, canOpen: false, canEdit: false, spaceId: null, question: null,
+    });
   });
 
-  it('exclut les items devenus titres de couloir', () => {
-    const { placed, unplaced } = splitPlaced([item('a'), item('p1')], [], new Set(['p1']));
-    expect(placed).toEqual([]);
-    expect(unplaced.map((i) => i.id)).toEqual(['a']);
+  it('places : couloir disparu → place libre', () => {
+    const v = canvas(
+      [
+        { itemId: 'a', x: 1, y: 2, laneId: 'L1', available: true, item: view('a') },
+        { itemId: 'b', x: 3, y: 4, laneId: 'gone', available: true, item: view('b') },
+      ],
+      [{ id: 'L1', itemId: 'l', position: 0, x: null, y: null, available: true, item: view('l') }],
+    );
+    expect(placedFromView(v).map((p) => [p.item.id, p.laneId])).toEqual([['a', 'L1'], ['b', null]]);
+    expect(placedFromView(undefined)).toEqual([]);
   });
 
-  it("ignore une position d'item disparu", () => {
-    const { placed } = splitPlaced([item('a')], [{ itemId: 'zz', x: 0, y: 0 }]);
-    expect(placed).toEqual([]);
+  it('non placés : éléments de l’espace ni posés, ni couloirs, ni le process lui-même', () => {
+    const v = canvas(
+      [{ itemId: 'a', x: 0, y: 0, laneId: null, available: true, item: view('a') }],
+      [{ id: 'L1', itemId: 'l', position: 0, x: null, y: null, available: true, item: view('l') }],
+    );
+    const unplaced = unplacedItems([item('a'), item('l'), item('proc'), item('c')], v, 'proc');
+    expect(unplaced.map((i: Item) => i.id)).toEqual(['c']);
+  });
+});
+
+describe('buildQuestionEdges', () => {
+  const q = (chosen: string | null) => ({
+    item: canvasItemOf('q', view('q', {
+      type: 'QUESTION',
+      question: {
+        options: [{ id: 'o1', label: 'Oui', refItemId: 'a' }, { id: 'o2', label: 'Non', refItemId: 'b' }, { id: 'o3', label: 'Peut-être', refItemId: null }],
+        chosenOptionId: chosen, decided: !!chosen,
+      },
+    })),
+    x: 0, y: 0,
+  });
+  const shown = new Set(['q', 'a']);
+  const endpoint = (id: string) => (shown.has(id) ? id : null);
+
+  it('une flèche en pointillés par réponse qui renvoie à un élément affiché, étiquetée', () => {
+    const edges = buildQuestionEdges([q(null)], endpoint);
+    expect(edges.map((e) => [e.id, e.source, e.target, e.label])).toEqual([['choice-o1', 'q', 'a', 'Oui']]);
+    expect(edges[0].style).toMatchObject({ strokeDasharray: '6 4' });
+    expect(edges[0].data).toEqual({ choice: true });
+  });
+
+  it('réponse retenue : trait plein, vert', () => {
+    const [edge] = buildQuestionEdges([q('o1')], endpoint);
+    expect(edge.style).not.toHaveProperty('strokeDasharray');
+    expect(edge.style).toMatchObject({ stroke: QUESTION_CHOSEN_HEX });
+  });
+
+  it('réponse vers un élément représenté par le même nœud (couloir replié) : pas de flèche', () => {
+    expect(buildQuestionEdges([q(null)], (id) => (id === 'q' || id === 'a' ? 'lane-L1' : null))).toEqual([]);
   });
 });
 

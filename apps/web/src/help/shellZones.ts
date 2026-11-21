@@ -13,7 +13,7 @@ const elementZone = ({ title, text }: HelpElement): HelpZone => ({ title, text }
 
 /** Infobulles de la barre latérale (lues par HelpHint dans Layout.tsx). */
 export const SIDEBAR_HINTS = {
-  process: (count: number) => `Cet espace contient un process (${count} élément${count > 1 ? 's' : ''} placé${count > 1 ? 's' : ''}) — vue Process de l'espace.`,
+  process: (count: number) => `Cet espace contient ${count} process — vue Process de l'espace.`,
 };
 
 export const SHELL_ZONES: Record<string, HelpZone> = {

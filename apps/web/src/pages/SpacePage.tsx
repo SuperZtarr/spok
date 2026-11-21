@@ -4,8 +4,11 @@
  * même communauté (2026-11-13) > vue de l'espace > vue du contexte de sa communauté > Liste — attend le chargement
  * de la communauté avant de choisir. Plus de vue « overview »
  * (supprimée le 2026-11-13) : la présentation est la page SpaceOverviewPage, bouton « Présentation » de la barre.
- * Vue Process : reçoit les seuls items de l'espace courant (pas ceux des sous-espaces inclus — les positions
- * process_nodes sont par espace) et onCreateNote (double-clic sur le canevas = NOTE vide + modale).
+ * Vue Process (élément Process, 2026-11-21) : sans ?process=, liste des process de l'espace (ProcessesView,
+ * « Nouveau process » crée un élément PROCESS et ouvre sa fiche) ; avec ?process=<id>, son canevas (ProcessView) :
+ * éléments de l'espace courant pour le panneau, onCreateNote (double-clic = élément vide + fiche), onOpenItem (fiche ici,
+ * nouvel onglet pour un élément d'un autre espace). Le paramètre tombe quand on quitte la vue Process.
+ * Clic sur un élément Process dans une autre vue : son canevas (processPageUrl).
  * Vues plein cadre (canevas, Gantt, PERT, Process…) : listées dans les 3 conteneurs (h-full / overflow-hidden) —
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
@@ -100,6 +103,8 @@ import { PriorityView } from '../components/views/PriorityView';
 import { ImagesView } from '../components/views/ImagesView';
 import { LinksView } from '../components/views/LinksView';
 import { ArticlesView } from '../components/views/ArticlesView';
+import { ProcessesView } from '../components/views/ProcessesView';
+import type { CanvasItem } from '../components/views/process-utils';
 import { DocumentsView } from '../components/views/DocumentsView';
 import { TagsView } from '../components/views/TagsView';
 import { TodoView } from '../components/views/TodoView';
@@ -113,7 +118,7 @@ import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
-import { articlePageUrl, articleReturnState, parseItemMode, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
+import { articlePageUrl, articleReturnState, itemUrl, parseItemMode, processPageUrl, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
@@ -259,6 +264,8 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       next.set('view', viewMode);
+      // Canevas d'un process ouvert : seulement dans la vue Process
+      if (viewMode !== 'process') next.delete('process');
       return next;
     }, { replace: true });
   }, [viewMode, spaceId, setSearchParams]);
@@ -343,9 +350,26 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     const clicked = itemsData?.data?.find((i) => i.id === itemId);
     if (clicked?.type === 'ARTICLE') {
       navigate(articlePageUrl(clicked.spaceId ?? spaceId!, itemId), { state: articleReturnState(location) });
+    } else if (clicked?.type === 'PROCESS') {
+      navigate(processPageUrl(clicked.spaceId ?? spaceId!, itemId));
     } else {
       setEditingItemId(itemId);
     }
+  };
+
+  // Vue Process : process ouvert sur son canevas (?process=<id>), sinon la liste des process de l'espace
+  const openProcessId = viewMode === 'process' ? searchParams.get('process') : null;
+  const setOpenProcessId = (id: string | null) => setSearchParams(prev => {
+    const next = new URLSearchParams(prev);
+    if (id) next.set('process', id); else next.delete('process');
+    return next;
+  });
+  // Élément du canevas : fiche ici s'il est de l'espace, sinon dans un nouvel onglet (son espace) ; un process imbriqué
+  // ouvre son propre canevas (openItemFromView)
+  const openCanvasItem = (item: CanvasItem) => {
+    if (!item.spaceId) return;
+    if (item.spaceId === spaceId) { openItemFromView(item.id); return; }
+    window.open(item.type === 'PROCESS' ? processPageUrl(item.spaceId, item.id) : itemUrl(item.spaceId, item.id), '_blank', 'noopener');
   };
 
   const portalGroups = useMemo(() => {
@@ -381,10 +405,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     enabled: !!spaceId && (viewMode === 'text' || viewMode === 'thread'),
   });
 
-  // Vue Process : items de l'espace courant seulement (positions par espace) — mémorisés pour ne pas
+  // Vue Process : éléments de l'espace courant (panneau du canevas) — mémorisés pour ne pas
   // reconstruire les nœuds du canevas (et annuler un glisser en cours) à chaque rendu de la page
   const processItems = useMemo(() => (allItemsData?.data || []).filter((item: Item) => item.spaceId === spaceId), [allItemsData?.data, spaceId]);
-  const allRelations = useMemo(() => (allItemsData?.data || []).flatMap((item: any) => item.relationsFrom || []), [allItemsData?.data]);
 
   // All items for lookups (allItemsData preferred, fallback to itemsData)
   const allItems = useMemo(() => allItemsData?.data || itemsData?.data || [], [allItemsData?.data, itemsData?.data]);
@@ -996,36 +1019,48 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
               onTreeSortChange={setTreeSort}
             />
           ) : viewMode === 'process' ? (
-            <ProcessView
-              items={processItems}
-              relations={allRelations}
-              spaceId={spaceId!}
-              referentiels={referentiels}
-              canEdit={canEdit}
-              canEditItem={canEditItem}
-              highlightType={activeTypeFilter}
-              highlightStatus={activeStatusFilter}
-              searchMatchIds={searchMatchIds}
-              onEdit={openItemFromView}
-              onDelete={actions.handleDelete}
-              onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
-              onAddChild={handleAddChild}
-              onMoveToSpace={(id) => setMoveItemId(id)}
-              onDuplicateToSpace={(id) => setDuplicateItemId(id)}
-              onConvertToSpace={actions.handleConvertToSpace}
-              onSelfAssign={handleSelfAssign}
-              onMerge={actions.handleMerge}
-              onAbsorbChildren={actions.handleAbsorbChildren}
-              onSplitDescription={actions.handleSplitDescription}
-              onOpen={actions.handleOpen}
-              onOpenInNewTab={actions.handleOpenInNewTab}
-              onCreateRelation={actions.handleCreateRelation}
-              onUpdateRelation={actions.handleUpdateRelation}
-              onDeleteRelation={actions.handleDeleteRelation}
-              onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'UNDEFINED', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
-              onStartTour={() => startViewTour(viewMode)}
-              pulseHelp={pulseHelp}
-            />
+            openProcessId ? (
+              <ProcessView
+                key={openProcessId}
+                spaceId={spaceId!}
+                processId={openProcessId}
+                processTitle={processItems.find((i: Item) => i.id === openProcessId)?.title}
+                spaceItems={processItems}
+                referentiels={referentiels}
+                highlightType={activeTypeFilter}
+                highlightStatus={activeStatusFilter}
+                searchMatchIds={searchMatchIds}
+                onOpenItem={openCanvasItem}
+                onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'UNDEFINED', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
+                onBack={() => setOpenProcessId(null)}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+              />
+            ) : (
+              <ProcessesView
+                items={filterBySearch(allItemsData?.data)}
+                currentSpaceId={spaceId!}
+                canEdit={canEdit}
+                canEditItem={canEditItem}
+                onOpenProcess={(p) => setOpenProcessId(p.id)}
+                onCreateProcess={canEdit ? () => { createItemMutation.mutateAsync({ type: 'PROCESS', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); }); } : undefined}
+                onEdit={(id) => setEditingItemId(id)}
+                onDelete={actions.handleDelete}
+                onUpdateStatus={(id, status) => actions.handleInlineUpdate(id, { status })}
+                onAddChild={handleAddChild}
+                onMoveToSpace={(id) => setMoveItemId(id)}
+                onDuplicateToSpace={(id) => setDuplicateItemId(id)}
+                onConvertToSpace={actions.handleConvertToSpace}
+                onSelfAssign={handleSelfAssign}
+                onMerge={actions.handleMerge}
+                onAbsorbChildren={actions.handleAbsorbChildren}
+                onSplitDescription={actions.handleSplitDescription}
+                onOpen={actions.handleOpen}
+                onOpenInNewTab={actions.handleOpenInNewTab}
+                onStartTour={() => startViewTour(viewMode)}
+                pulseHelp={pulseHelp}
+              />
+            )
           ) : viewMode === 'pert' ? (
             <PertView
               items={filterBySearch(allItemsData?.data)}

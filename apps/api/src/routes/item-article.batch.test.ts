@@ -2,6 +2,7 @@
  * TNR de l'ajout groupé dans un article (2026-10-24) : aperçu et insertion d'une grappe ou d'un processus, liste des
  * espaces et éléments à parcourir (sélecteur). Mêmes simulacres que item-article.test.ts (droits pilotés par articleAccess).
  * Bloc « droits et coût du parcours » (2026-11-06) : racine illisible, nœuds illisibles non étendus, doublons, budget.
+ * Source « process » = élément Process (processId, 2026-11-21) ; le sélecteur liste ses éléments Process non vides.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
@@ -114,11 +115,13 @@ describe('Article — ajout groupé', () => {
     known.l1 = { type: 'NOTE', spaceId: SPACE }
     known.n1 = { type: 'NOTE', spaceId: SPACE }
     known.n2 = { type: 'NOTE', spaceId: SPACE }
+    known.proc = { type: 'PROCESS', spaceId: SPACE }
     prisma.processLane.findMany.mockResolvedValue([{ id: 'L1', itemId: 'l1', position: 0 }])
     prisma.processNode.findMany.mockResolvedValue([{ itemId: 'n1', laneId: 'L1', x: 50, y: 0 }, { itemId: 'n2', laneId: 'L1', x: 10, y: 0 }])
-    const res = await post('/batch', { source: { kind: 'process', spaceId: SPACE }, position: 1 })
+    const res = await post('/batch', { source: { kind: 'process', processId: 'proc' }, position: 1 })
     expect(res.statusCode).toBe(201)
     expect(prisma.articleBlock.updateMany).toHaveBeenCalledWith({ where: { articleId: 'art', position: { gte: 1 } }, data: { position: { increment: 3 } } })
+    expect(prisma.processLane.findMany.mock.calls[0][0].where).toEqual({ processId: 'proc' })
     expect(prisma.articleBlock.createMany).toHaveBeenCalledWith({ data: [
       { articleId: 'art', itemId: 'l1', position: 1, addedById: USER },
       { articleId: 'art', itemId: 'n2', position: 2, addedById: USER },
@@ -148,10 +151,14 @@ describe('Article — ajout groupé', () => {
     expect(res.json().code).toBe('EMPTY')
   })
 
-  it('processus illisible → 403 ; couloir d’un autre espace → 404', async () => {
-    expect((await post('/batch/preview', { source: { kind: 'process', spaceId: 'priv' } })).statusCode).toBe(403)
+  it('processus illisible → 403 ; couloir d’un autre process → 404 ; élément qui n’est pas un Process → 404', async () => {
+    known.procPriv = { type: 'PROCESS', spaceId: 'priv' }
+    known.proc = { type: 'PROCESS', spaceId: SPACE }
+    known.note = { type: 'NOTE', spaceId: SPACE }
+    expect((await post('/batch/preview', { source: { kind: 'process', processId: 'procPriv' } })).statusCode).toBe(403)
     prisma.processLane.findMany.mockResolvedValue([{ id: 'L1', itemId: 'l1', position: 0 }])
-    expect((await post('/batch/preview', { source: { kind: 'process', spaceId: SPACE, laneId: 'ailleurs' } })).statusCode).toBe(404)
+    expect((await post('/batch/preview', { source: { kind: 'process', processId: 'proc', laneId: 'ailleurs' } })).statusCode).toBe(404)
+    expect((await post('/batch/preview', { source: { kind: 'process', processId: 'note' } })).statusCode).toBe(404)
   })
 
   it('plusieurs éléments cochés avec enfants : ordre reçu, sans doublon', async () => {
@@ -277,19 +284,25 @@ describe('Article — ajout groupé', () => {
     })
   })
 
-  it('espaces à parcourir : portée, nombre d’éléments, processus éventuel', async () => {
+  it('espaces à parcourir : portée, nombre d’éléments, éléments Process non vides', async () => {
     prisma.space.findUnique.mockResolvedValue({ id: SPACE, communityId: 'c1' })
     prisma.space.findMany.mockImplementation(async ({ where }: any) => where?.communityId
       ? [{ id: SPACE }, { id: 's2' }, { id: 'priv' }]
       : [{ id: SPACE, name: 'Espace 1', parentId: null, community: { name: 'C1' } }, { id: 's2', name: 'Espace 2', parentId: SPACE, community: { name: 'C1' } }])
     prisma.item.groupBy.mockResolvedValue([{ spaceId: SPACE, _count: { _all: 12 } }, { spaceId: 's2', _count: { _all: 3 } }])
-    prisma.processNode.groupBy.mockResolvedValue([{ spaceId: SPACE, _count: { _all: 4 } }])
-    prisma.processLane.findMany.mockResolvedValue([{ id: 'L1', spaceId: SPACE, item: { title: 'Couloir A' } }])
+    prisma.item.findMany.mockImplementation(async ({ where }: any) => where?.type === 'PROCESS' ? [
+      { id: 'P1', title: 'Flux A', spaceId: SPACE, _count: { processNodes: 4 }, processLanes: [
+        { id: 'L1', item: { title: 'Couloir A', spaceId: SPACE } },
+        // Élément d'un espace illisible pour le demandeur : titre jamais renvoyé
+        { id: 'L2', item: { title: 'Secret', spaceId: 'priv' } },
+      ] },
+      { id: 'P2', title: 'Vide', spaceId: SPACE, _count: { processNodes: 0 }, processLanes: [] },
+    ] : [])
     const res = await getSpaces()
     expect(res.statusCode).toBe(200)
     expect(res.json()).toEqual([
-      { spaceId: SPACE, name: 'Espace 1', parentId: null, communityName: 'C1', itemCount: 12, process: { nodeCount: 4, lanes: [{ id: 'L1', title: 'Couloir A' }] } },
-      { spaceId: 's2', name: 'Espace 2', parentId: SPACE, communityName: 'C1', itemCount: 3, process: null },
+      { spaceId: SPACE, name: 'Espace 1', parentId: null, communityName: 'C1', itemCount: 12, processes: [{ id: 'P1', title: 'Flux A', nodeCount: 4, lanes: [{ id: 'L1', title: 'Couloir A' }, { id: 'L2', title: 'Élément indisponible' }] }] },
+      { spaceId: 's2', name: 'Espace 2', parentId: SPACE, communityName: 'C1', itemCount: 3, processes: [] },
     ])
     expect(prisma.item.groupBy.mock.calls[0][0].where).toMatchObject({ spaceId: { in: [SPACE, 's2'] }, type: { not: 'ARTICLE' } })
   })

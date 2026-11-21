@@ -28,8 +28,8 @@ const checkbox = (title: string) => screen.getByRole('checkbox', { name: title }
 describe('ArticleBrowser', () => {
   beforeEach(() => {
     api.browseSpaces.mockReset().mockResolvedValue([
-      { spaceId: 's1', name: 'Espace un', parentId: null, communityName: 'C', itemCount: 3, process: { nodeCount: 2, lanes: [{ id: 'L1', title: 'Couloir A' }] } },
-      { spaceId: 's2', name: 'Espace deux', parentId: null, communityName: 'C', itemCount: 1, process: null },
+      { spaceId: 's1', name: 'Espace un', parentId: null, communityName: 'C', itemCount: 3, processes: [{ id: 'P1', title: 'Flux', nodeCount: 2, lanes: [{ id: 'L1', title: 'Couloir A' }] }] },
+      { spaceId: 's2', name: 'Espace deux', parentId: null, communityName: 'C', itemCount: 1, processes: [] },
     ]);
     api.browseItems.mockReset().mockImplementation(async (_s: string, _a: string, browsed: string) => browsed === 's1'
       ? { items: [item('b', null, 1), item('a', null, 0), item('p', null, 2)], truncated: false }
@@ -68,7 +68,7 @@ describe('ArticleBrowser', () => {
     await screen.findByText('Titre a');
     fireEvent.click(screen.getByRole('tab', { name: 'Processus' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Couloir A' }));
-    await waitFor(() => expect(onAddProcess).toHaveBeenCalledWith({ kind: 'process', spaceId: 's1', laneId: 'L1' }));
+    await waitFor(() => expect(onAddProcess).toHaveBeenCalledWith({ kind: 'process', processId: 'P1', laneId: 'L1' }));
   });
 
   it('aucun élément coché : Ajouter désactivé', async () => {

@@ -6,9 +6,12 @@
  * Les items devenus titres de couloir n'y figurent pas (filtrés par ProcessView). Chaque ligne se glisse vers le canevas (HTML5 drag & drop,
  * type MIME PROCESS_DRAG_TYPE = id de l'item ; le dépôt est géré par ProcessView). Non glissable si !canEdit.
  * Repliable pour libérer de la place au canevas.
+ * Élément Process (2026-11-21) : items = éléments de l'espace du process (unplacedItems) ; bouton « Ajouter d'un autre
+ * espace » (onSearchElsewhere, si canEdit) qui ouvre la recherche de ProcessView — ainsi la pose d'un élément venu
+ * d'ailleurs ne repose pas sur un geste caché.
  */
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Rows3, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Globe, Rows3, Search } from 'lucide-react';
 import type { Item } from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { filterUnplaced } from './process-utils';
@@ -26,9 +29,11 @@ interface ProcessUnplacedPanelProps {
   canEdit: boolean;
   /** « Définir comme couloir » (bouton au survol d'une ligne) : l'item devient un couloir du process */
   onMakeLane?: (itemId: string) => void;
+  /** « Ajouter d'un autre espace » : ouvre la recherche d'éléments de tous les espaces lisibles */
+  onSearchElsewhere?: () => void;
 }
 
-export function ProcessUnplacedPanel({ items, canEdit, onMakeLane }: ProcessUnplacedPanelProps) {
+export function ProcessUnplacedPanel({ items, canEdit, onMakeLane, onSearchElsewhere }: ProcessUnplacedPanelProps) {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -86,10 +91,22 @@ export function ProcessUnplacedPanel({ items, canEdit, onMakeLane }: ProcessUnpl
             className="flex-1 min-w-0 bg-transparent text-xs outline-none"
           />
         </div>
+        {canEdit && onSearchElsewhere && (
+          <HelpHint text={PH.searchElsewhere} className="block mt-1.5">
+            <button
+              type="button"
+              onClick={onSearchElsewhere}
+              data-tour="process-elsewhere"
+              className="w-full inline-flex items-center justify-center gap-1 h-7 rounded border border-dashed border-input text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <Globe className="w-3.5 h-3.5" /> Ajouter d'un autre espace
+            </button>
+          </HelpHint>
+        )}
       </div>
       <ul className="flex-1 overflow-y-auto py-1">
         {items.length === 0 && (
-          <li className="px-3 py-2 text-xs text-muted-foreground">Tous les items sont placés</li>
+          <li className="px-3 py-2 text-xs text-muted-foreground">Tous les éléments de l'espace sont placés</li>
         )}
         {rows.map(({ item, depth, hasChildren }) => {
           const Icon = getTypeIcon(item.type);

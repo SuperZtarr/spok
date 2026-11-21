@@ -105,6 +105,8 @@
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
+ * Type PROCESS (2026-11-21) : lien « Ouvrir le process » (canevas, processPageUrl) au-dessus de la zone Contenus, une fois
+ * enregistré comme Process ; avant, phrase openProcessUnsaved. La fiche se ferme en suivant le lien.
  * Type QUESTION (2026-11-08) : bloc QuestionPanel (réponses, votes, issue) au-dessus de la zone Contenus et en mode Afficher ;
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
  * Statuts proposés aux autres types : statusesForType (Réunion et Article : leurs statuts réservés, 2026-11-19) ; au
@@ -132,7 +134,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Building2, Eye, EyeOff, BookOpen } from 'lucide-react';
+import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Building2, Eye, EyeOff, BookOpen, Workflow } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { QuestionPanel } from './question/QuestionPanel';
@@ -142,7 +144,7 @@ import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
 import { useSpace } from '../hooks/useSpaces';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { itemShareUrl, processPageUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -1221,6 +1223,21 @@ export function ItemEditModal({
       {type === 'ARTICLE' && (!itemId || item?.type !== 'ARTICLE') && (
         <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
       )}
+      {/* Process : son canevas s'ouvre dans la vue Process de son espace — seulement une fois enregistré comme Process */}
+      {type === 'PROCESS' && (itemId && item?.type === 'PROCESS' ? (
+        <HelpHint text={itemHints?.openProcess}>
+          <Link
+            to={processPageUrl(item.spaceId ?? spaceId, itemId)}
+            onClick={onClose}
+            data-tour="item-open-process"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors"
+          >
+            <Workflow className="w-4 h-4" /> Ouvrir le process
+          </Link>
+        </HelpHint>
+      ) : (
+        <p className="text-xs text-muted-foreground">{itemHints?.openProcessUnsaved}</p>
+      ))}
       {/* Question : options, votes, issue (QuestionPanel) — seulement une fois enregistrée comme Question */}
       {type === 'QUESTION' && (itemId && item?.type === 'QUESTION'
         ? <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />

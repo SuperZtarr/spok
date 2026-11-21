@@ -14,6 +14,10 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-21 — MEP : Process = élément de type PROCESS. Poussé SANS sauvegarde des anciennes tables process_nodes / process_lanes (décision de Thomas, supprimées au démarrage de l'API). CLI Railway déconnecté : déploiement non surveillé par la session. Typecheck OK, TNR 3051/3051.
+
+- 2026-11-21 — Process devenu un élément de type PROCESS (plusieurs par espace, éléments de tous espaces, Question en losange) : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-20 — MEP : Loupe, taille selon l'importance dans l'espace, ajustée à l'écran. 2 annonces datées. Typecheck OK, TNR 3073/3073.
 
 - 2026-11-20 — Loupe : facteur d'écran unique + poids relatif à l'espace ; doc, aide, spec à jour ; inscrit PRÊT POUR MEP sur demande de Thomas, NON COMMITÉ.

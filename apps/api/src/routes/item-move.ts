@@ -3,8 +3,8 @@
  * frères. Utilisé par le DnD des vues (ListView, Gantt). Garde anti-cycle.
  * Copies de séance verrouillées : réorganisation libre ici, mais déplacement vers un autre espace refusé.
  * bulk-move (vers un autre espace) : un MEMBER ne déplace que des items qu'il a créés ou qui lui sont
- * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête. La place des items dans la vue
- * Process (positions, couloirs) part avec eux (moveProcessPlacement, même transaction).
+ * assignés (canMemberManageItem) — un seul item étranger refuse toute la requête. Un process (type PROCESS, 2026-11-21)
+ * garde les éléments déplacés à leur place : ses places sont rattachées au process, pas à l'espace.
  * Règle de déplacement vers un autre espace (spec MoveToSpaceModal) : aucune branche coupée entre deux espaces. Un item
  * dont le parent ne part pas arrive à la racine ; un enfant qui ne part pas remonte à la racine de son espace.
  * /move : un parent qui change doit être dans le même espace (utils/itemParent.ts).
@@ -21,7 +21,6 @@ import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
-import { moveProcessPlacement } from '../utils/processPlacement.js';
 import { privatizeItemSecrets } from '../utils/itemSecrets.js';
 import { parentViolation } from '../utils/itemParent.js';
 import { tagMapping } from '../utils/tagScope.js';
@@ -370,8 +369,6 @@ export const itemMoveRoutes: FastifyPluginAsync = async (fastify) => {
         },
       });
 
-      // Place dans la vue Process (positions, couloirs) : suit les éléments dans l'espace d'arrivée
-      await moveProcessPlacement(tx, allItemIds, request.params.spaceId, targetSpaceId);
 
       // Données sécurisées : les membres de l'espace d'arrivée ne les reçoivent pas (« moi seul », utils/itemSecrets.ts)
       if (targetSpaceId !== request.params.spaceId) await privatizeItemSecrets(tx, allItemIds);
