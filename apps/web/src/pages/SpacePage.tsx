@@ -1033,6 +1033,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 onOpenItem={openCanvasItem}
                 onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'UNDEFINED', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
                 onBack={() => setOpenProcessId(null)}
+                onOpenProcess={() => setEditingItemId(openProcessId)}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
               />

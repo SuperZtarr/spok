@@ -114,6 +114,7 @@ export const help: HelpEntry = {
     ...derived.hints,
     makeLane: 'Définir comme couloir : cet élément devient une bande où ranger d\'autres éléments',
     back: 'Tous les process : revient à la liste des process de l\'espace. Le canevas reste tel quel.',
+    openProcessSheet: 'Ouvre la fiche de ce process (titre, description, statut…). Le canevas reste affiché derrière.',
     newProcess: 'Nouveau process : crée un élément de type « Process » dans cet espace et ouvre sa fiche',
     listEmpty: 'Un process est un canevas où poser des éléments de tous vos espaces, les ranger en couloirs et les relier. Créez-en un avec « Nouveau process », ou donnez le type « Process » à un élément depuis sa fiche.',
     searchElsewhere: 'Ajouter d\'un autre espace : cherche un élément dans vos autres espaces et le pose au centre de la vue. L\'élément reste dans son espace.',

@@ -14,6 +14,12 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-21 — MEP : 3 lots (contenus déplacer et restauration, panneau « À ajouter » de l'article, titre du canevas Process). Laissés hors MEP (travail en cours d'une autre session) : item-question.ts, defaultReferentiels.ts, itemMenuGroups.nextStatus.test.ts, skill spok-triage. Vérifié sur une copie exacte des commits. 2 annonces datées.
+
+- 2026-11-21 — Glisser dans les arborescences (`cmwqiehge00357iccoco9r4ut`) : cause trouvée (position avant/dedans/après calculée dans onDragOver de dnd-kit, déclenché seulement au changement de ligne → figée à l'entrée), NON CORRIGÉ : création du hook partagé refusée par les permissions, modifications de SpacePage annulées.
+
+- 2026-11-21 — Article : panneau « À ajouter » modèle Process (ElementTray partagé) : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-21 — MEP : Process = élément de type PROCESS. Poussé SANS sauvegarde des anciennes tables process_nodes / process_lanes (décision de Thomas, supprimées au démarrage de l'API). CLI Railway déconnecté : déploiement non surveillé par la session. Typecheck OK, TNR 3051/3051.
 
 - 2026-11-21 — Process devenu un élément de type PROCESS (plusieurs par espace, éléments de tous espaces, Question en losange) : inscrit PRÊT POUR MEP, NON COMMITÉ.

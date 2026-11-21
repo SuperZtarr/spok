@@ -1,6 +1,7 @@
 /*
  * ProcessView — canevas d'un élément Process (type PROCESS, 2026-11-21 ; avant : un process unique par espace) : on y
  * pose des éléments de tous les espaces lisibles, puis on les relie par de vraies relations SPOK.
+ * - En-tête : « Tous les process » (onBack) ; titre cliquable = fiche de l'élément Process (onOpenProcess, 2026-11-21).
  * - Données : useProcessCanvas(spaceId, processId) — places, couloirs, relations entre éléments montrés, droit de
  *   modifier (canEditProcess). Un élément devenu illisible pour la personne qui l'a posé est une case « indisponible ».
  * - Panneau gauche (ProcessUnplacedPanel) : éléments de l'espace du process non posés (spaceItems, unplacedItems), à
@@ -92,6 +93,8 @@ export interface ProcessViewProps {
   onCreateNote?: () => Promise<{ id: string }>;
   /** Retour à la liste des process de l'espace */
   onBack?: () => void;
+  /** Ouvre la fiche de l'élément Process (clic sur le titre de l'en-tête) */
+  onOpenProcess?: () => void;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
@@ -107,7 +110,7 @@ export function ProcessView(props: ProcessViewProps) {
 function ProcessCanvas({
   spaceId, processId, processTitle, spaceItems, referentiels,
   highlightType, highlightStatus, searchMatchIds,
-  onOpenItem, onCreateNote, onBack, onStartTour, pulseHelp,
+  onOpenItem, onCreateNote, onBack, onOpenProcess, onStartTour, pulseHelp,
 }: ProcessViewProps) {
   const {
     view, isLoading, isError, move, placeNew, remove, placeMany, addLane, reorderLanes, removeLane, moveLanes,
@@ -405,7 +408,13 @@ function ProcessCanvas({
             </button>
           </HelpHint>
         )}
-        {processTitle && <span className="min-w-0 truncate text-sm font-semibold px-1" data-tour="process-title">{processTitle}</span>}
+        {/* Titre = retour à la fiche de l'élément Process (signalement cmwqhjvuf000n7icc1phb14fg, 2026-11-21) */}
+        {processTitle && (onOpenProcess ? (
+          <HelpHint text={PH.openProcessSheet}>
+            <button type="button" onClick={onOpenProcess} data-tour="process-title"
+              className="min-w-0 truncate text-sm font-semibold px-1 rounded hover:bg-accent hover:underline">{processTitle}</button>
+          </HelpHint>
+        ) : <span className="min-w-0 truncate text-sm font-semibold px-1" data-tour="process-title">{processTitle}</span>)}
         {canEdit && (
           <HelpHint text={PH.reorganize}>
             <button
