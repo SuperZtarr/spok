@@ -12,15 +12,19 @@
  *   → ArticleBatchConfirm → state.addBatch (confirmLessVisible = aperçu.lessVisible) ;
  * - 409 LESS_VISIBLE → ConfirmModal (texte de la fiche) puis renvoi avec confirmLessVisible ; 409 DUPLICATE_REFERENCE → message ;
  *   ajout groupé 403 SOURCE_UNREADABLE (élément ou processus illisible) → message batchForbidden de la fiche.
+ * - panneau « À ajouter » à gauche (ElementTray, même modèle que le Process — demande Thomas 2026-11-21) : éléments de
+ *   l'espace de l'article pas encore présents (articlesApi.browseItems, cache partagé avec ArticleBrowser), à glisser
+ *   sur une barre d'insertion (ARTICLE_DRAG_TYPE, la barre visée s'éclaire) ou « + » = ajout en fin ; « Ajouter d'un
+ *   autre espace » (ItemSearchPicker, ajout en fin) ; « Sélection multiple… » = ArticleBrowser en fin. Replié sur mobile.
  * Props : spaceId, articleId, article (ArticleView), state (retour de useArticle). Textes : pages/help/article.help.ts.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Type, ExternalLink, Trash2, AlignCenter, AlignLeft, AlignRight } from 'lucide-react';
+import { GripVertical, Plus, Type, ExternalLink, Trash2, AlignCenter, AlignLeft, AlignRight, ListChecks } from 'lucide-react';
 import type { ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleView } from '@spok/shared';
 import { ApiError, articlesApi, itemsApi } from '../../lib/api';
 import type { useArticle } from '../../hooks/useArticle';
@@ -33,6 +37,12 @@ import { ArticleBlock } from './ArticleBlock';
 import { ArticleBrowser } from './ArticleBrowser';
 import { ArticleBatchConfirm } from './ArticleBatchConfirm';
 import { moveBlock } from './articleLayout';
+import { ElementTray, TrayElsewhereButton } from '../ElementTray';
+import { ItemSearchPicker } from '../ItemSearchPicker';
+import { Modal } from '../ui/Modal';
+
+/** Type MIME du glisser depuis le panneau « À ajouter » vers une barre d'insertion (valeur = id de l'élément) */
+export const ARTICLE_DRAG_TYPE = 'application/spok-article-item';
 
 type ArticleState = ReturnType<typeof useArticle>;
 
@@ -141,9 +151,26 @@ function SortableBlock({ spaceId, articleId, block, state, isFirst }: { spaceId:
   );
 }
 
-function InsertBar({ onItem, onText }: { onItem: () => void; onText: () => void }) {
+function InsertBar({ onItem, onText, onDropItem }: { onItem: () => void; onText: () => void; onDropItem: (itemId: string) => void }) {
+  // Zone de dépôt d'un élément glissé depuis le panneau « À ajouter »
+  const [over, setOver] = useState(false);
+  const accepts = (e: React.DragEvent) => e.dataTransfer.types.includes(ARTICLE_DRAG_TYPE);
   return (
-    <div className="flex items-center justify-center gap-2 py-1 opacity-60 hover:opacity-100 transition-opacity" data-tour="article-insert">
+    <div
+      className={`flex items-center justify-center gap-2 py-1 rounded transition-opacity ${over ? 'opacity-100 bg-primary/10 ring-2 ring-primary' : 'opacity-60 hover:opacity-100'}`}
+      data-tour="article-insert"
+      data-testid="article-insert"
+      onDragOver={(e) => { if (!accepts(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        setOver(false);
+        if (!accepts(e)) return;
+        e.preventDefault();
+        const id = e.dataTransfer.getData(ARTICLE_DRAG_TYPE);
+        if (id) onDropItem(id);
+      }}
+    >
+      {over && <span className="text-xs text-primary">{pageHint('article', 'dropHere')}</span>}
       <HelpHint text={pageHint('article', 'addItem')}>
         <button type="button" onClick={onItem} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-border hover:bg-accent">
           <Plus className="w-3.5 h-3.5" /> Élément
@@ -212,13 +239,54 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
     if (itemIds.length === 1 && !w.children && !w.chain) add(itemIds[0], position);
     else startBatch({ kind: 'items', itemIds, children: w.children, chain: w.chain }, position);
   };
-  const presentIds = new Set(article.blocks.map((b) => b.item?.id).filter((id): id is string => !!id));
+  const presentIds = useMemo(
+    () => new Set(article.blocks.map((b) => b.item?.id).filter((id): id is string => !!id)),
+    [article.blocks],
+  );
   const bar = (position: number) => (
-    <InsertBar onItem={() => setPickAt(position)} onText={() => state.addText.mutate(position)} />
+    <InsertBar onItem={() => setPickAt(position)} onText={() => state.addText.mutate(position)} onDropItem={(id) => add(id, position)} />
   );
 
+  // Panneau « À ajouter » : éléments de l'espace de l'article (même requête et cache que le sélecteur), hors présents
+  const trayQuery = useQuery({
+    queryKey: ['article-browse-items', spaceId, articleId, spaceId],
+    queryFn: () => articlesApi.browseItems(spaceId, articleId, spaceId),
+  });
+  const trayItems = useMemo(() => (trayQuery.data?.items ?? []).filter((i) => !presentIds.has(i.id)), [trayQuery.data, presentIds]);
+  const [elsewhereOpen, setElsewhereOpen] = useState(false);
+  const atEnd = () => article.blocks.length;
+  const [narrow] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 767px)').matches);
+
   return (
-    <div>
+    <div className="flex items-start gap-3">
+      <div className="sticky top-0 self-start flex max-h-[65vh]" data-tour="article-tray">
+        <ElementTray
+          items={trayItems}
+          canEdit
+          dragType={ARTICLE_DRAG_TYPE}
+          labels={{ title: 'À ajouter', empty: pageHint('article', 'trayEmpty') ?? '', dragHint: pageHint('article', 'trayDrag') }}
+          headerExtra={(<>
+            <TrayElsewhereButton onClick={() => setElsewhereOpen(true)} hint={pageHint('article', 'trayElsewhere') ?? ''} />
+            <HelpHint text={pageHint('article', 'trayMultiple')} className="block mt-1.5">
+              <button type="button" onClick={() => setPickAt(atEnd())}
+                className="w-full inline-flex items-center justify-center gap-1 h-7 rounded border border-dashed border-input text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+                <ListChecks className="w-3.5 h-3.5" /> Sélection multiple…
+              </button>
+            </HelpHint>
+          </>)}
+          rowAction={(i) => (
+            <HelpHint text={pageHint('article', 'trayAdd')} className="inline-flex flex-shrink-0">
+              <button type="button" onClick={() => add(i.id, atEnd())} aria-label={`Ajouter « ${i.title || 'Sans titre'} » à la fin`}
+                className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground opacity-60 group-hover:opacity-100 hover:bg-background hover:text-foreground">
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </HelpHint>
+          )}
+          defaultCollapsed={narrow}
+          className="w-56 border border-border rounded-md"
+        />
+      </div>
+      <div className="flex-1 min-w-0">
       {message && <p className="mb-2 text-sm text-destructive">{message}</p>}
       {bar(0)}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -231,6 +299,19 @@ export function ArticleEditor({ spaceId, articleId, article, state }: { spaceId:
           ))}
         </SortableContext>
       </DndContext>
+      </div>
+
+      <Modal isOpen={elsewhereOpen} onClose={() => setElsewhereOpen(false)} title="Ajouter d'un autre espace" devName="ArticleEditor/AddElsewhere">
+        <p className="text-xs text-muted-foreground mb-2">{pageHint('article', 'trayElsewhereIntro')}</p>
+        <ItemSearchPicker
+          spaceId={spaceId}
+          defaultScope="community"
+          doneIds={presentIds}
+          actionLabel="Ajouter"
+          autoFocus
+          onPick={(hit) => { setElsewhereOpen(false); add(hit.id, atEnd()); }}
+        />
+      </Modal>
 
       <ArticleBrowser
         isOpen={pickAt !== null}

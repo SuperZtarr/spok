@@ -77,6 +77,14 @@ export const help: HelpEntry = {
     browserPresent: 'Déjà dans l\'article : un élément n\'y figure qu\'une fois.',
     browserAdd: 'Ajoute les éléments cochés à cet endroit, dans l\'ordre de l\'arbre. Un seul élément sans option est ajouté directement ; sinon le nombre d\'éléments est confirmé avant l\'ajout.',
     browserEmptySpace: 'Aucun élément dans cet espace.',
+    // Panneau « À ajouter » du mode Composer (ElementTray, ArticleEditor — 2026-11-21)
+    trayEmpty: 'Tous les éléments de l\'espace sont dans l\'article.',
+    trayDrag: 'glissez-le entre deux blocs, ou « + » pour l\'ajouter à la fin',
+    trayAdd: 'Ajoute cet élément à la fin de l\'article. Pour le placer ailleurs, glissez la ligne sur une barre entre deux blocs.',
+    trayElsewhere: 'Ajouter d\'un autre espace : cherche un élément dans vos autres espaces et l\'ajoute à la fin de l\'article. L\'élément reste dans son espace.',
+    trayElsewhereIntro: 'Choisissez un élément : il est ajouté à la fin de l\'article, d\'où vous le déplacez. Il reste dans son espace ; seuls les éléments que vous pouvez lire sont proposés.',
+    trayMultiple: 'Ouvre le sélecteur à cocher : plusieurs éléments à la fois, avec leurs enfants ou ce qui en découle, ou tout un processus. Ajout à la fin de l\'article.',
+    dropHere: 'Déposer ici',
   },
   tour: [
     {

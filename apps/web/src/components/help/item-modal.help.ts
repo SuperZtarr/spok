@@ -60,6 +60,16 @@ export const elements = {
     noZone: true,
     side: 'top',
   },
+  // Panneau « À ajouter » du Composer (ElementTray dans ArticleEditor, même modèle que le Process — 2026-11-21)
+  panneauArticle: {
+    title: 'Éléments à ajouter',
+    short: 'Les éléments de l\'espace pas encore dans l\'article.',
+    text: 'En mode Composer, le panneau « À ajouter » liste les éléments de l\'espace de l\'article qui n\'y sont pas encore, en arbre (chevrons pour replier) ; la recherche donne une liste à plat. Glissez une ligne sur une barre entre deux blocs pour l\'y insérer, ou cliquez « + » pour l\'ajouter à la fin. « Ajouter d\'un autre espace » cherche dans vos autres espaces ; « Sélection multiple… » ouvre le sélecteur à cocher (plusieurs éléments, enfants, suites, processus). Le panneau se replie pour laisser la place aux blocs.',
+    target: '[data-tour="article-tray"]',
+    noZone: true,
+    side: 'right',
+    changes: [{ id: 'article-tray', kind: 'evolution', text: 'Article : en mode Composer, un panneau liste les éléments de l\'espace à ajouter ; glissez-les entre deux blocs, comme dans un process.', date: '2026-11-21' }],
+  },
   // Présent dans tous les modes ; fiche réduite, les étapes Type → Relations n'apparaissent qu'une fois dépliée (Tags : toujours)
   champs: {
     title: 'Plus de champs',
