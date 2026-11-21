@@ -3,13 +3,18 @@
  * Copie de séance verrouillée (itemLock) : seul le rangement (parentId, position) peut être restauré.
  * Recréation d'espace/communauté : utils/audit.ts (spaceRestoreData, communityRestoreData) — l'ancien
  * isPublic des entrées d'audit antérieures est converti en visibility.
- * Alerte d'accumulation : plus ici (2026-11-18), voir utils/volumetryWatch.ts ; purges manuelles en fin de fichier. */
+ * Alerte d'accumulation : plus ici (2026-11-18), voir utils/volumetryWatch.ts ; purges manuelles en fin de fichier.
+ * Restauration d'un élément supprimé (unitaire et par lot, 2026-11-21) : recrée aussi ses contenus et données
+ * sécurisées sauvegardés dans « before » (restoreItemContents / restoreItemSecrets). Liste : redactAuditChanges
+ * (chiffrés jamais renvoyés). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 import { assignmentStamp } from '../../utils/assignment.js';
 import { isLocked, LOCKED_MESSAGE } from '../../utils/itemLock.js';
 import { communityRestoreData, restoredCommunityVisibility, spaceRestoreData } from '../../utils/audit.js';
+import { restoreItemContents } from '../../utils/itemContentCopy.js';
+import { restoreItemSecrets, redactAuditChanges } from '../../utils/itemSecrets.js';
 
 const querySchema = z.object({
   entity: z.enum(['Item', 'ItemRelation', 'Space', 'Community', 'Tag']).optional(),
@@ -93,6 +98,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       data: logs.map((log) => ({
         ...log,
+        // Données sécurisées : chiffrés jamais renvoyés (libellés gardés pour l'admin)
+        changes: redactAuditChanges(log.changes, { keepLabels: true }) as any,
         action: log.action as AuditAction,
         entity: log.entity as AuditEntity,
       })),
@@ -336,6 +343,9 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             parentId,
           } as any,
         });
+        // Contenus et données sécurisées sauvegardés à la suppression (2026-11-21)
+        await restoreItemContents(fastify.prisma, restoredItem.id, before.contents);
+        await restoreItemSecrets(fastify.prisma, restoredItem.id, before.secrets);
 
         await fastify.prisma.auditLog.create({
           data: {
@@ -641,6 +651,8 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
                 parentId,
               } as any,
             });
+            await restoreItemContents(fastify.prisma, before.id as string, before.contents);
+            await restoreItemSecrets(fastify.prisma, before.id as string, before.secrets);
             results.push({ logId: log.id, entity: 'Item', entityId: log.entityId, status: 'restored' });
             break;
           }

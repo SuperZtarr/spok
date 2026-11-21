@@ -22,14 +22,16 @@
  * (zones data-help-zone item-contents:*, rappels pageHint('item-contents', …)). Règle de gestion : item-contents-zone.
  * Données sécurisées (2026-11-20) : dernière section (ITEM_CONTENT_SECTIONS), entrée « Donnée sécurisée » du menu
  * « + Ajouter » ; rendues par ItemSecretsSection (table et routes à part, jamais dans item.contents).
+ * « Déplacer vers… » (2026-11-21) : bouton → au pied de chaque vignette, MoveToItemDialog (choix de l'élément cible).
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Lock, Trash2, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Lock, Trash2, MoveRight, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
 import { fileExtension, hostOf } from '../../lib/itemFace';
 import { ITEM_CONTENT_KINDS, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection } from '@spok/shared';
 import { useItemContents } from '../../hooks/useItemContents';
 import { useItemSecretList } from '../../hooks/useItemSecrets';
 import { ItemSecretsSection } from './ItemSecretsSection';
+import { MoveToItemDialog } from './MoveToItemDialog';
 import { isSafeUrl, safeHref } from '../../lib/sanitizeHtml';
 import { HelpHint } from '../../help/HelpHint';
 import { FieldHelp } from '../../help/FieldHelp';
@@ -89,6 +91,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
   const [menuOpen, setMenuOpen] = useState(false);
   const [adding, setAdding] = useState<ItemContentSection | null>(null);
   const [toRemove, setToRemove] = useState<ItemContent | null>(null);
+  const [toMove, setToMove] = useState<ItemContent | null>(null);
   const [lightbox, setLightbox] = useState<ItemContent | null>(null);
   const groups = groupContents(contents);
   const writable = canEdit && !!itemId;
@@ -180,7 +183,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
                 <ContentRow key={c.id} content={c} canEdit={writable}
                   first={i === 0} last={i === list.length - 1}
                   onUp={() => move(list, i, -1)} onDown={() => move(list, i, 1)}
-                  onRemove={() => setToRemove(c)} onOpenImage={() => setLightbox(c)}
+                  onRemove={() => setToRemove(c)} onMoveTo={() => setToMove(c)} onOpenImage={() => setLightbox(c)}
                   onRename={(name) => api.update.mutate({ id: c.id, name: name || null })}
                   diagram={kind === 'DIAGRAM' ? {
                     save: (xml) => api.update.mutateAsync({ id: c.id, xml }),
@@ -196,6 +199,11 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
       </div>
 
       {lightbox?.url && isSafeUrl(lightbox.url) && <Lightbox url={lightbox.url} alt={displayName(lightbox) ?? ''} onClose={() => setLightbox(null)} />}
+      {toMove && itemId && (
+        <MoveToItemDialog isOpen onClose={() => setToMove(null)} spaceId={spaceId} itemId={itemId}
+          what={displayName(toMove) ?? KIND_LABELS[toMove.kind]}
+          onMove={(hit) => api.move.mutateAsync({ id: toMove.id, target: hit })} />
+      )}
       <ConfirmModal
         isOpen={!!toRemove}
         onClose={() => setToRemove(null)}
@@ -253,13 +261,15 @@ interface RowProps {
   onUp: () => void;
   onDown: () => void;
   onRemove: () => void;
+  /** « Déplacer vers… » : ouvre le choix de l'élément cible */
+  onMoveTo: () => void;
   onRename: (name: string) => void;
   onOpenImage: () => void;
   diagram?: { save: (xml: string) => Promise<unknown>; preview: (png: Blob) => Promise<unknown> };
 }
 
 /** Un contenu : aperçu selon sa sorte + actions (renommer, monter, descendre, retirer) */
-function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onRename, onOpenImage, diagram }: RowProps) {
+function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRename, onOpenImage, diagram }: RowProps) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name ?? '');
   useEffect(() => { if (!renaming) setName(c.name ?? ''); }, [c.name, renaming]);
@@ -287,6 +297,11 @@ function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, 
           </HelpHint>
         </>
       )}
+      <HelpHint text={pageHint('item-contents', 'moveTo')}>
+        <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground" onClick={onMoveTo} aria-label="Déplacer vers un autre élément">
+          <MoveRight className="w-3.5 h-3.5" />
+        </button>
+      </HelpHint>
       <HelpHint text={pageHint('item-contents', 'removeHint')}>
         <button type="button" className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive" onClick={onRemove} aria-label="Retirer">
           <Trash2 className="w-3.5 h-3.5" />

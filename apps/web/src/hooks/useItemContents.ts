@@ -3,7 +3,7 @@
  * multiples, lot 2). Pas de lecture propre : les contenus arrivent avec l'élément (item.contents, clé
  * ['item', spaceId, itemId]) — détail complet avec le xml des schémas.
  * Mutations : add (lien, image par adresse, schéma), upload (image ou fichier ; previewOf = aperçu PNG d'un schéma),
- * update (nom, adresse, xml), remove, reorder (ordre complet d'une sorte).
+ * update (nom, adresse, xml), remove, reorder (ordre complet d'une sorte), move (vers un autre élément, 2026-11-21).
  * Après chaque écriture, la fiche ['item', …] et les listes ['items', spaceId] sont relues : updatedAt a changé (sinon
  * faux conflit 409 à l'enregistrement de la fiche) et les vignettes des listes reprennent les contenus.
  * Réservé à ItemContentsSection.
@@ -41,5 +41,16 @@ export function useItemContents(spaceId: string, itemId: string | undefined) {
     onSuccess: refresh,
   });
 
-  return { add, upload, update, remove, reorder };
+  // Déplacement vers un autre élément (2026-11-21) : la fiche de la cible est relue aussi
+  const move = useMutation({
+    mutationFn: ({ id, target }: { id: string; target: { id: string; spaceId: string } }) =>
+      itemContentsApi.move(spaceId, itemId!, id, target.id),
+    onSuccess: (_d, { target }) => Promise.all([
+      refresh(),
+      queryClient.invalidateQueries({ queryKey: ['item', target.spaceId, target.id] }),
+      queryClient.invalidateQueries({ queryKey: ['items', target.spaceId] }),
+    ]),
+  });
+
+  return { add, upload, update, remove, reorder, move };
 }

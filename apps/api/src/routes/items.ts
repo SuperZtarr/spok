@@ -12,6 +12,8 @@
  * Verrou de sÃ©ance (copies lockedAt) : cf. utils/itemLock.ts â€” PATCH (organisation seule), DELETE (OWNER),
  * split refusÃ©, propagation de statut ignore les enfants verrouillÃ©s.
  * CommunautÃ© publique = visibility !== 'PRIVATE' uniquement (isPublic dÃ©prÃ©ciÃ©, jamais lu).
+ * DELETE (2026-11-21) : l'Ã©tat « before » de l'audit porte aussi contents et secrets (chiffrÃ©s) de chaque Ã©lÃ©ment
+ * supprimÃ©, lus AVANT la cascade â€” la restauration les recrÃ©e (utils/itemContentCopy.ts, utils/itemSecrets.ts).
  * MEMBER : modifie/supprime les items qu'il a crÃ©Ã©s OU qui lui sont assignÃ©s (canMemberManageItem, utils/itemOwnership.ts).
  * Dates liÃ©es au statut (PATCH et propagation aux descendants) : utils/statusDates.ts â€” source unique,
  * tous chemins confondus (modale, menu â‹¯, Kanban, Today, MCP) ; ne complÃ¨te que les dates vides.
@@ -55,6 +57,8 @@ import { itemProcessReadRoutes, itemProcessWriteRoutes } from './item-process.js
 import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question.js';
 import { itemContentRoutes } from './item-contents.js';
 import { itemSecretRoutes } from './item-secrets.js';
+import { snapshotItemContents } from '../utils/itemContentCopy.js';
+import { snapshotItemSecrets } from '../utils/itemSecrets.js';
 import { itemHistoryRoutes } from './item-history.js';
 
 // Contenus renvoyés avec l'élément : ordre d'affichage (enum Prisma déclaré IMAGE, FILE, LINK, DIAGRAM)
@@ -1108,6 +1112,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.forbidden(LOCKED_MESSAGE);
         }
 
+        // Contenus et données sécurisées sauvegardés dans l'audit AVANT la cascade (restauration complète, 2026-11-21)
+        const [descContents, descSecrets] = await Promise.all([
+          snapshotItemContents(fastify.prisma, descendantIds), snapshotItemSecrets(fastify.prisma, descendantIds),
+        ]);
+
         await fastify.prisma.item.deleteMany({
           where: { id: { in: descendantIds } },
         });
@@ -1122,7 +1131,11 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
             spaceId: request.params.spaceId,
             batchId,
             changes: {
-              before: serializeItemForAudit(descendant),
+              before: {
+                ...serializeItemForAudit(descendant),
+                contents: descContents.get(descendant.id) ?? [],
+                secrets: descSecrets.get(descendant.id) ?? [],
+              },
             },
           });
         }
@@ -1130,7 +1143,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Save state before delete for audit
-    const beforeState = serializeItemForAudit(item);
+    const [ownContents, ownSecrets] = await Promise.all([
+      snapshotItemContents(fastify.prisma, [item.id]), snapshotItemSecrets(fastify.prisma, [item.id]),
+    ]);
+    const beforeState = {
+      ...serializeItemForAudit(item),
+      contents: ownContents.get(item.id) ?? [],
+      secrets: ownSecrets.get(item.id) ?? [],
+    };
 
     await fastify.prisma.item.delete({
       where: { id: request.params.id },

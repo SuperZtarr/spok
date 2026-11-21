@@ -10,6 +10,7 @@
  * Contenus (lot 4 contenus multiples) : plus de champ url ; le paramètre url de create_item / update_item AJOUTE un
  * contenu Lien (POST …/contents) ; get_item liste les contenus avec leur id. Lot 5 : add_item_content (lien, schéma),
  * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
+ * update_item_content.targetItemId (2026-11-21) : déplace un contenu vers un autre item (POST …/contents/:id/move).
  * Données sécurisées (2026-11-20) : get_item liste leurs libellés (GET …/secrets) ; aucun outil ne les révèle ni ne
  * les écrit, et l'API refuse la révélation à un jeton MCP (garde secrets-leak.test.ts).
  * Tags (2026-11-12) : portée global, communauté ou espace (tag d'espace proposé aussi dans ses sous-espaces) ;
@@ -429,8 +430,9 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       url: z.string().url().optional().describe('Nouvelle adresse (lien seulement)'),
       xml: z.string().optional().describe('Nouveau XML draw.io (schéma seulement)'),
       position: z.number().int().min(1).optional().describe('Nouvelle place dans sa sorte, 1 = premier'),
+      targetItemId: zId().optional().describe('Déplace le contenu vers cet item (même espace ou autre), en fin de sa sorte ; appliqué en dernier'),
     },
-    async ({ spaceId, itemId, contentId, name, url, xml, position }) => {
+    async ({ spaceId, itemId, contentId, name, url, xml, position, targetItemId }) => {
       const body: Record<string, unknown> = {}
       if (name !== undefined) body.name = name
       if (url !== undefined) body.url = url
@@ -446,7 +448,11 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
         ids.splice(Math.min(position - 1, ids.length), 0, contentId)
         await client.put(`/spaces/${spaceId}/items/${itemId}/contents/order`, { ids })
       }
-      if (Object.keys(body).length === 0 && position === undefined) throw new ConventionError('Rien à modifier : donner name, url, xml ou position.')
+      if (targetItemId !== undefined) {
+        await client.post(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}/move`, { targetItemId })
+        return ok(`Contenu ${contentId} déplacé vers l'item ${targetItemId}.`)
+      }
+      if (Object.keys(body).length === 0 && position === undefined) throw new ConventionError('Rien à modifier : donner name, url, xml, position ou targetItemId.')
       return ok(`Contenu ${contentId} mis à jour.`)
     })
 

@@ -3,7 +3,8 @@
  * sur un élément, dernière section de la zone (ITEM_CONTENT_SECTIONS de @spok/shared).
  * Une ligne par donnée : libellé, identifiant et valeur masqués, « Afficher » (valeur visible 30 s puis re-masquée),
  * « Copier » (presse-papiers vidé au bout de 30 s), visibilité (« Moi seul » / « Membres de l'espace »), nombre de
- * consultations pour l'auteur, modifier (auteur) et retirer (auteur ou mode admin, confirmation).
+ * consultations pour l'auteur, modifier (auteur), déplacer vers un autre élément (auteur, MoveToItemDialog, 2026-11-21)
+ * et retirer (auteur ou mode admin, confirmation).
  * Props : spaceId, itemId (absent = élément non enregistré : rien), canAdd (droit d'écrire sur l'élément), adding /
  * onAddingDone (formulaire d'ajout ouvert par « + Ajouter » de ItemContentsSection), readOnly (mode Afficher : pas de
  * formulaire ni de modification, Afficher / Copier gardés).
@@ -14,7 +15,8 @@
  * Règle de gestion : item-secrets.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Lock, Eye, EyeOff, Copy, Pencil, Trash2, X } from 'lucide-react';
+import { Lock, Eye, EyeOff, Copy, Pencil, Trash2, X, MoveRight } from 'lucide-react';
+import { MoveToItemDialog } from './MoveToItemDialog';
 import { ITEM_SECRET_LIMITS, ITEM_SECRET_VISIBILITIES, type ItemSecretSummary, type ItemSecretVisibility } from '@spok/shared';
 import { itemSecretsApi, type ItemSecretInput } from '../../lib/api';
 import { useItemSecretList, useItemSecrets } from '../../hooks/useItemSecrets';
@@ -46,6 +48,7 @@ export function ItemSecretsSection({ spaceId, itemId, canAdd, adding = false, on
   const { data: secrets = [] } = useItemSecretList(spaceId, itemId);
   const api = useItemSecrets(spaceId, itemId);
   const [toRemove, setToRemove] = useState<ItemSecretSummary | null>(null);
+  const [toMove, setToMove] = useState<ItemSecretSummary | null>(null);
   const error = [api.add, api.update, api.remove].find((m) => m.isError)?.error as Error | undefined;
 
   if (!itemId || (secrets.length === 0 && !adding)) return null;
@@ -63,9 +66,13 @@ export function ItemSecretsSection({ spaceId, itemId, canAdd, adding = false, on
           <SecretRow key={s.id} spaceId={spaceId} itemId={itemId} secret={s} readOnly={readOnly}
             onUpdate={(body, done) => api.update.mutate({ id: s.id, ...body }, { onSuccess: done })}
             updating={api.update.isPending}
-            onRemove={() => setToRemove(s)} />
+            onRemove={() => setToRemove(s)} onMoveTo={() => setToMove(s)} />
         ))}
       </ul>
+      {toMove && (
+        <MoveToItemDialog isOpen onClose={() => setToMove(null)} spaceId={spaceId} itemId={itemId} what={toMove.label}
+          onMove={(hit) => api.move.mutateAsync({ id: toMove.id, target: hit })} />
+      )}
       <ConfirmModal
         isOpen={!!toRemove}
         onClose={() => setToRemove(null)}
@@ -88,9 +95,10 @@ interface RowProps {
   updating: boolean;
   onUpdate: (body: Partial<ItemSecretInput>, done: () => void) => void;
   onRemove: () => void;
+  onMoveTo: () => void;
 }
 
-function SecretRow({ spaceId, itemId, secret: s, readOnly, updating, onUpdate, onRemove }: RowProps) {
+function SecretRow({ spaceId, itemId, secret: s, readOnly, updating, onUpdate, onRemove, onMoveTo }: RowProps) {
   const [revealed, setRevealed] = useState<{ login: string | null; value: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -170,6 +178,13 @@ function SecretRow({ spaceId, itemId, secret: s, readOnly, updating, onUpdate, o
           <HelpHint text={pageHint('item-contents', 'secretEdit')}>
             <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)} aria-label="Modifier">
               <Pencil className="w-4 h-4" />
+            </Button>
+          </HelpHint>
+        )}
+        {s.canEdit && !readOnly && (
+          <HelpHint text={pageHint('item-contents', 'secretMoveTo')}>
+            <Button type="button" variant="ghost" size="sm" onClick={onMoveTo} aria-label="Déplacer vers un autre élément">
+              <MoveRight className="w-4 h-4" />
             </Button>
           </HelpHint>
         )}

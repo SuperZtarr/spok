@@ -138,6 +138,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/components/ItemEditModal.tsx (mediaSection), apps/web/src/components/ItemReadView.tsx',
   },
   {
+    id: 'item-contents-move-restore',
+    category: 'type',
+    appliesToValues: [],
+    trigger: "« Déplacer vers… » un contenu ou une donnée sécurisée ; restauration d'un élément supprimé",
+    effect: "Déplacer : le contenu (ou la donnée) change d'élément sans copie ni effacement de fichier ni déchiffrement ; droits d'écriture exigés sur les DEUX éléments (OWNER/MEMBER de chaque espace, aucun verrouillé), plafond de la cible ; donnée sécurisée : auteur seul, « Moi seul » si l'espace change ; journal sur les deux éléments (movedToId / movedFromId). Suppression d'un élément : son état d'audit « before » garde ses contenus et ses données sécurisées (chiffrées, même id) ; la restauration (admin, unitaire ou par lot) les recrée — les suppressions antérieures au 2026-11-21 n'en ont pas. Le journal renvoyé par l'API ne contient jamais de chiffré (redactAuditChanges).",
+    location: 'apps/api/src/routes/item-contents.ts (move, writableTargetItem), apps/api/src/routes/item-secrets.ts (move), apps/api/src/routes/items.ts (DELETE), apps/api/src/routes/auditLogs.ts, apps/api/src/routes/admin/auditLogs.ts, apps/api/src/utils/itemContentCopy.ts, apps/api/src/utils/itemSecrets.ts, apps/web/src/components/contents/MoveToItemDialog.tsx',
+  },
+  {
     id: 'item-secrets',
     category: 'type',
     appliesToValues: [],

@@ -4,6 +4,7 @@
  * éléments, recherche, export, activité, articles, séances, notifications, vignettes…) ne peut donc pas renvoyer une
  * valeur qu'elle ne lit pas. Le MCP (packages/mcp-core) ne doit jamais appeler la révélation.
  * Un nouvel accès à la table = l'ajouter ici en connaissance de cause, après revue.
+ * Sauvegarde / restauration dans l'audit (2026-11-21) : passent par utils/itemSecrets.ts (snapshot, restore, redact).
  */
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'

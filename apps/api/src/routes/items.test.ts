@@ -719,6 +719,21 @@ describe('Items routes', () => {
       expect(prisma.item.delete).toHaveBeenCalledWith({ where: { id: 'item-1' } })
     })
 
+    it('sauvegarde contenus et données sécurisées (chiffrées) dans l\'audit avant la cascade (2026-11-21)', async () => {
+      const { createAuditLog } = await import('../utils/audit.js')
+      allowSpaceAccess()
+      prisma.item.findFirst.mockResolvedValue(mockItem({ tags: [] }))
+      prisma.item.delete.mockResolvedValue(mockItem())
+      prisma.itemContent.findMany.mockResolvedValue([{ id: 'c1', itemId: 'item-1', kind: 'LINK', url: 'https://x.test', name: 'Doc', position: 0 }])
+      prisma.itemSecret.findMany.mockResolvedValue([{ id: 's1', itemId: 'item-1', label: 'Accès', valueEnc: 'v1:a:b:c', createdById: 'u' }])
+      const res = await app.inject({ method: 'DELETE', url: `/spaces/${SPACE_ID}/items/item-1`, headers: { authorization: `Bearer ${token}` } })
+      expect(res.statusCode).toBe(200)
+      const before = (createAuditLog as any).mock.calls.at(-1)[1].changes.before
+      expect(before.contents).toEqual([expect.objectContaining({ id: 'c1', kind: 'LINK', url: 'https://x.test' })])
+      expect(before.secrets).toEqual([expect.objectContaining({ id: 's1', valueEnc: 'v1:a:b:c' })])
+      expect(prisma.itemSecret.findMany.mock.invocationCallOrder[0]).toBeLessThan(prisma.item.delete.mock.invocationCallOrder[0])
+    })
+
     it('should delete with cascade (children)', async () => {
       allowSpaceAccess()
       prisma.item.findFirst.mockResolvedValue(mockItem({ tags: [] }))

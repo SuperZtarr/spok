@@ -26,10 +26,11 @@ const elements: HelpElements = {
   contenus: {
     title: 'Contenus',
     short: 'Ce que porte l\'élément, rangé par sorte.',
-    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Schémas. Le haut de chaque vignette montre un aperçu ; sous le nom, le poids d\'un fichier ou d\'une image envoyée, le site d\'un lien. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
+    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Schémas. Le haut de chaque vignette montre un aperçu ; sous le nom, le poids d\'un fichier ou d\'une image envoyée, le site d\'un lien. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme, la flèche longue → la déplace vers un autre élément et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
     side: 'top',
     changes: [
       { id: 'item-contents', kind: 'evolution', text: 'Un élément porte maintenant plusieurs contenus (images, fichiers, liens, schémas), quel que soit son type : « + Ajouter » sous la description.', date: '2026-11-11' },
+      { id: 'content-move', kind: 'new', text: 'Un contenu ou une donnée sécurisée se déplace vers un autre élément : flèche longue → au pied de sa vignette, puis choix de l\'élément.', date: '2026-11-21' },
       { id: 'file-size-100', kind: 'evolution', text: `Les fichiers joints peuvent maintenant peser jusqu'à ${DOCUMENT_MAX_MB} Mo, et le poids de chaque fichier ou image s'affiche sous son nom.`, date: '2026-11-15' },
     ],
   },
@@ -69,6 +70,8 @@ export const help: HelpEntry = {
     secretRemoveHint: 'Retirer cette donnée sécurisée (une confirmation est demandée).',
     secretRemove: 'La donnée est effacée définitivement, pour tous ceux qui pouvaient la voir. Elle ne peut pas être restaurée. L\'élément et ses autres contenus restent.',
     secretVisibility: 'Qui peut afficher la valeur : « Moi seul » ou « Membres de l\'espace ». Si l\'élément part dans un autre espace, elle repasse « Moi seul ».',
+    moveTo: 'Déplacer ce contenu vers un autre élément (de cet espace ou d\'un autre) : il quitte celui-ci tout de suite. Vous devez pouvoir modifier les deux éléments.',
+    secretMoveTo: 'Déplacer cette donnée vers un autre élément : elle quitte celui-ci tout de suite, toujours chiffrée. Vers un autre espace, elle repasse « Moi seul ».',
     secretSave: 'Enregistre tout de suite la donnée, chiffrée. Le libellé reste lisible ; la valeur et l\'identifiant ne le sont qu\'avec l\'œil ou Copier.',
     addLinkConfirm: 'Enregistre le lien tout de suite sur l\'élément.',
     rename: 'Renommer ce contenu (le fichier lui-même n\'est pas modifié).',
@@ -82,7 +85,8 @@ export const help: HelpEntry = {
     unsaved: 'Enregistrez d\'abord l\'élément pour lui ajouter des contenus.',
     empty: 'Aucun contenu. « + Ajouter » joint un fichier, une image, un lien ou un schéma.',
     link: 'L\'adresse doit commencer par http:// ou https://.',
-    secretValue: 'La valeur et l\'identifiant sont chiffrés et ne s\'affichent qu\'à la demande. Le libellé, lui, reste lisible : n\'y mettez rien de secret.',
+    move: 'Choisissez l\'élément qui recevra ce contenu, puis « Déplacer ici ». Il y est rangé en dernier de sa sorte ; le déplacement est noté dans l\'historique des deux éléments.',
+    secretValue:'La valeur et l\'identifiant sont chiffrés et ne s\'affichent qu\'à la demande. Le libellé, lui, reste lisible : n\'y mettez rien de secret.',
     secretVisibility: '« Moi seul » : vous seul pourrez l\'afficher. « Membres de l\'espace » : chaque membre pourra l\'afficher et la copier. L\'administrateur ne peut pas lire la valeur.',
   },
   tour: [

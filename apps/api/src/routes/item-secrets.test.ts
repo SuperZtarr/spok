@@ -195,6 +195,23 @@ describe('Routes données sécurisées', () => {
     expect(JSON.stringify(prisma.itemSecret.update.mock.calls)).not.toContain(WITNESS)
   })
 
+  it('déplacement vers un autre espace : auteur seul, « moi seul », aucune valeur exposée', async () => {
+    prisma.item.findUnique.mockResolvedValue({ id: 'i2', spaceId: 'space-2', lockedAt: null })
+    prisma.itemSecret.findFirst.mockResolvedValue(listed(row({ visibility: 'SPACE' })))
+    const res = await app.inject({ method: 'POST', url: `${BASE}/s1/move`, headers: auth(), payload: { targetItemId: 'i2' } })
+    expect(res.statusCode).toBe(200)
+    const data = prisma.itemSecret.update.mock.calls[0][0].data
+    expect(data).toMatchObject({ itemId: 'i2', visibility: 'PRIVATE' })
+    expect(data.valueEnc).toBeUndefined()
+    expect(res.body).not.toContain(WITNESS)
+    expect(res.body).not.toContain('v1:')
+    expect(auditDump()).not.toContain(WITNESS)
+    expect(auditDump()).toContain('movedToId')
+    prisma.itemSecret.findFirst.mockResolvedValue(listed(row({ createdById: 'other', visibility: 'SPACE' })))
+    const other = await app.inject({ method: 'POST', url: `${BASE}/s1/move`, headers: auth(), payload: { targetItemId: 'i2' } })
+    expect(other.statusCode).toBe(403)
+  })
+
   it('modification par un non-auteur : 403', async () => {
     prisma.itemSecret.findFirst.mockResolvedValue(listed(row({ createdById: 'other', visibility: 'SPACE' })))
     const res = await app.inject({ method: 'PATCH', url: `${BASE}/s1`, headers: auth(), payload: { label: 'x' } })

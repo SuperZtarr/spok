@@ -28,3 +28,39 @@ export async function copyItemContents(
   }
   return contents.length;
 }
+
+/*
+ * Sauvegarde des contenus dans l'audit d'une suppression (2026-11-21, bug cmwqmg75f00co7icccb0lgguw) : la suppression
+ * d'un élément est définitive (cascade sur item_contents) et sa restauration repart de l'état « before » de l'audit.
+ * snapshotItemContents lit les contenus de plusieurs éléments (par élément) ; restoreItemContents les recrée avec leur
+ * id (fichiers du stockage jamais effacés à la suppression : les adresses restent valides). Auteur disparu → null.
+ */
+const CONTENT_BACKUP_KEYS = ['id', 'kind', 'url', 'name', 'mimeType', 'size', 'xml', 'previewUrl', 'excerpt', 'position', 'createdById', 'createdAt'] as const;
+
+export async function snapshotItemContents(prisma: any, itemIds: string[]): Promise<Map<string, Record<string, unknown>[]>> {
+  const byItem = new Map<string, Record<string, unknown>[]>();
+  if (itemIds.length === 0) return byItem;
+  const rows = await prisma.itemContent.findMany({ where: { itemId: { in: itemIds } }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
+  for (const r of rows) {
+    const backup = Object.fromEntries(CONTENT_BACKUP_KEYS.map((k) => [k, r[k] ?? null]));
+    byItem.set(r.itemId, [...(byItem.get(r.itemId) ?? []), backup]);
+  }
+  return byItem;
+}
+
+export async function restoreItemContents(prisma: any, itemId: string, backups: unknown): Promise<number> {
+  if (!Array.isArray(backups) || backups.length === 0) return 0;
+  const authors = [...new Set(backups.map((b: any) => b?.createdById).filter((v): v is string => typeof v === 'string'))];
+  const existing = new Set<string>(authors.length
+    ? (await prisma.user.findMany({ where: { id: { in: authors } }, select: { id: true } })).map((u: any) => u.id) : []);
+  const data = backups
+    .filter((b: any) => b && typeof b.id === 'string' && typeof b.kind === 'string')
+    .map((b: any) => ({
+      id: b.id, itemId, kind: b.kind, url: b.url ?? null, name: b.name ?? null, mimeType: b.mimeType ?? null,
+      size: b.size ?? null, xml: b.xml ?? null, previewUrl: b.previewUrl ?? null, excerpt: b.excerpt ?? null,
+      position: typeof b.position === 'number' ? b.position : 0,
+      createdById: existing.has(b.createdById) ? b.createdById : null,
+    }));
+  if (data.length) await prisma.itemContent.createMany({ data, skipDuplicates: true });
+  return data.length;
+}

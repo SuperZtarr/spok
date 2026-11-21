@@ -24,7 +24,8 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 - Contenus : un item de n'importe quel type porte des images, fichiers, liens et schémas (plusieurs de chaque).
   get_item les liste avec leur id. Par MCP : add_item_content ajoute un lien ou un schéma draw.io (xml) — le
   paramètre url de create_item / update_item ajoute aussi un lien ; update_item_content renomme, change l'adresse
-  d'un lien ou le xml d'un schéma, ou déplace un contenu dans sa sorte ; delete_item_content le retire (après
+  d'un lien ou le xml d'un schéma, déplace un contenu dans sa sorte, ou vers un autre item (targetItemId, droits
+  d'écriture sur les deux items) ; delete_item_content le retire (après
   confirmation de l'utilisateur). Images et fichiers ne s'envoient pas par MCP. Au plus 30 contenus par item.
   Données sécurisées (mots de passe, codes) : get_item n'en montre que les libellés ; leurs valeurs ne sont jamais
   lisibles ni modifiables par MCP — l'utilisateur les consulte dans SPOK.

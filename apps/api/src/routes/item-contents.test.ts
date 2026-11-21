@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { ITEM_CONTENTS_MAX, sortItemContents } from '@spok/shared'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
+import { createAuditLog } from '../utils/audit.js'
 
 vi.mock('../utils/audit.js', () => ({
   createAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -233,5 +234,55 @@ describe('Contenus renvoyés avec l\'élément', () => {
     const c = (id: string, kind: any, position: number) => ({ id, kind, position, createdAt: '2026-11-08' })
     const sorted = sortItemContents([c('d', 'DIAGRAM', 0), c('l2', 'LINK', 1), c('i', 'IMAGE', 0), c('l1', 'LINK', 0), c('f', 'FILE', 0)])
     expect(sorted.map((x) => x.id)).toEqual(['i', 'f', 'l1', 'l2', 'd'])
+  })
+})
+
+describe('Déplacer un contenu vers un autre élément (2026-11-21)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+  const TARGET = { id: 'i2', type: 'TASK', spaceId: 'space-2', createdById: 'other', lockedAt: null, url: null }
+  const MOVE = `${BASE}/c1/move`
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    ;({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm', userId: USER, spaceId: SPACE, role: 'MEMBER', joinedAt: new Date() })
+    prisma.item.findFirst.mockResolvedValue(ITEM)
+    prisma.item.findUnique.mockResolvedValue(TARGET)
+    prisma.item.update.mockResolvedValue(ITEM)
+    prisma.itemContent.findFirst.mockResolvedValue({ id: 'c1', itemId: 'i1', kind: 'LINK', url: 'https://x.test', name: 'Doc' })
+    prisma.itemContent.count.mockResolvedValue(0)
+    prisma.itemContent.aggregate.mockResolvedValue({ _max: { position: 3 } })
+    prisma.itemContent.update.mockResolvedValue({ id: 'c1', itemId: 'i2' })
+  })
+
+  it('rattache le contenu à la cible, en fin de sa sorte, et trace les deux côtés', async () => {
+    const res = await app.inject({ method: 'POST', url: MOVE, headers: auth(), payload: { targetItemId: 'i2' } })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.itemContent.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { itemId: 'i2', position: 4 } })
+    const changes = (createAuditLog as any).mock.calls.map((c: any[]) => c[1].changes.after.contentChange)
+    expect(changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ op: 'remove', movedToId: 'i2' }),
+      expect.objectContaining({ op: 'add', movedFromId: 'i1' }),
+    ]))
+  })
+
+  it('cible inaccessible : 404 ; cible en lecture seule : 403 ; plafond de la cible : 400', async () => {
+    prisma.item.findUnique.mockResolvedValueOnce(null)
+    expect((await app.inject({ method: 'POST', url: MOVE, headers: auth(), payload: { targetItemId: 'zz' } })).statusCode).toBe(404)
+    prisma.spaceMembership.findUnique.mockImplementation(async ({ where }: any) => ({
+      id: 'm', userId: USER, spaceId: where.userId_spaceId.spaceId, joinedAt: new Date(),
+      role: where.userId_spaceId.spaceId === 'space-2' ? 'VIEWER' : 'MEMBER',
+    }))
+    expect((await app.inject({ method: 'POST', url: MOVE, headers: auth(), payload: { targetItemId: 'i2' } })).statusCode).toBe(403)
+    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm', userId: USER, spaceId: SPACE, role: 'MEMBER', joinedAt: new Date() })
+    prisma.itemContent.count.mockResolvedValue(ITEM_CONTENTS_MAX)
+    expect((await app.inject({ method: 'POST', url: MOVE, headers: auth(), payload: { targetItemId: 'i2' } })).statusCode).toBe(400)
+    expect(prisma.itemContent.update).not.toHaveBeenCalled()
+  })
+
+  it('vers le même élément : 400', async () => {
+    expect((await app.inject({ method: 'POST', url: MOVE, headers: auth(), payload: { targetItemId: 'i1' } })).statusCode).toBe(400)
   })
 })

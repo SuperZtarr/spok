@@ -10,6 +10,8 @@
  * Entrées anciennes : tags et assigné n'y figurent pas (tracés depuis le 2026-11-12), rien n'est inventé.
  * Données sécurisées (2026-11-20, routes/item-secrets.ts) : « Donnée sécurisée ajoutée / modifiée / retirée » sans
  * libellé ; consultations (action READ) jamais montrées.
+ * Déplacement d'un contenu ou d'une donnée vers un autre élément (2026-11-21) : contentChange.movedToId / movedFromId →
+ * « déplacé vers / reçu de « titre » » (titre seulement si le lecteur peut lire l'autre élément).
  */
 import { getItemTypeDef } from '@spok/shared';
 import type { ItemHistoryLine } from '@spok/shared';
@@ -49,6 +51,9 @@ export function collectHistoryRefs(logs: HistoryLog[], itemId: string) {
     for (const s of [before, after]) {
       if (typeof s.assignedToId === 'string') userIds.add(s.assignedToId);
       if (typeof s.parentId === 'string') itemIds.add(s.parentId);
+      // Déplacement d'un contenu (2026-11-21) : l'autre élément est résolu comme un parent (titre si lisible)
+      const cc = s.contentChange as { movedToId?: unknown; movedFromId?: unknown } | undefined;
+      for (const id of [cc?.movedToId, cc?.movedFromId]) if (typeof id === 'string') itemIds.add(id);
       if (log.action === 'BULK_MOVE' && typeof s.spaceId === 'string') spaceIds.add(s.spaceId);
       if (log.entity === 'ItemRelation') {
         const other = s.fromItemId === itemId ? s.toItemId : s.fromItemId;
@@ -104,7 +109,11 @@ export function describeHistoryLog(log: HistoryLog, ctx: HistoryContext): ItemHi
 
   const content = after.contentChange as { op?: string; kind?: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean } | undefined;
   // Donnée sécurisée : sans son libellé (celui d'une donnée « moi seul » ne regarde que son auteur)
+  const moved = content as { movedToId?: string; movedFromId?: string } | undefined;
+  const otherTitle = (id?: string) => quoted(id ? ctx.itemTitle(id) : undefined);
   if (content?.kind === 'SECRET') {
+    if (content.op === 'add' && moved?.movedFromId) return [{ label: 'Donnée sécurisée reçue de', after: otherTitle(moved.movedFromId) }];
+    if (content.op === 'remove' && moved?.movedToId) return [{ label: 'Donnée sécurisée déplacée vers', after: otherTitle(moved.movedToId) }];
     if (content.op === 'add') return [{ label: 'Donnée sécurisée ajoutée' }];
     if (content.op === 'remove') return [{ label: 'Donnée sécurisée retirée' }];
     if (content.op === 'update') return [{ label: 'Donnée sécurisée modifiée' }];
@@ -113,6 +122,8 @@ export function describeHistoryLog(log: HistoryLog, ctx: HistoryContext): ItemHi
   if (content) {
     const kind = CONTENT_KIND_LABELS[content.kind ?? ''] ?? 'Contenu';
     const what = content.name ? `${kind} « ${content.name} »` : kind;
+    if (content.op === 'add' && moved?.movedFromId) return [{ label: `Contenu reçu de ${otherTitle(moved.movedFromId)}`, after: what }];
+    if (content.op === 'remove' && moved?.movedToId) return [{ label: `Contenu déplacé vers ${otherTitle(moved.movedToId)}`, before: what }];
     switch (content.op) {
       case 'add': return [{ label: 'Contenu ajouté', after: what }];
       case 'remove': return [{ label: 'Contenu retiré', before: what }];

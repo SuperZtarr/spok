@@ -372,6 +372,14 @@ describe('contenus (lot 5)', () => {
     expect(client.patch).not.toHaveBeenCalled()
   })
 
+  it('update_item_content : targetItemId → POST …/move vers l\'autre item', async () => {
+    const client = fakeClient()
+    const { mcp } = await connect('public', client)
+    const r = await mcp.callTool({ name: 'update_item_content', arguments: { spaceId: 's1', itemId: 'i1', contentId: 'c', targetItemId: 'i2' } })
+    expect(r.isError).toBeFalsy()
+    expect(client.post).toHaveBeenCalledWith('/spaces/s1/items/i1/contents/c/move', { targetItemId: 'i2' })
+  })
+
   it('delete_item_content : route du contenu ; public-read n\'a pas les outils de contenus', async () => {
     const { mcp, client } = await connect('public')
     await mcp.callTool({ name: 'delete_item_content', arguments: { spaceId: 's1', itemId: 'i1', contentId: 'c1' } })

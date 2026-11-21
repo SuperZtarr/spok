@@ -95,6 +95,7 @@ describe('données sécurisées dans l\'historique', () => {
     expect(c({ op: 'add', kind: 'SECRET', name: 'Accès privé' })).toEqual([{ label: 'Donnée sécurisée ajoutée' }])
     expect(c({ op: 'update', kind: 'SECRET', name: 'Accès privé', previousName: 'x', valueChanged: true })).toEqual([{ label: 'Donnée sécurisée modifiée' }])
     expect(c({ op: 'remove', kind: 'SECRET', name: 'Accès privé' })).toEqual([{ label: 'Donnée sécurisée retirée' }])
+    expect(c({ op: 'remove', kind: 'SECRET', name: 'Accès privé', movedToId: 'zz' })).toEqual([{ label: 'Donnée sécurisée déplacée vers', after: 'un élément non accessible' }])
     expect(describeHistoryLog({ action: 'READ', entity: 'Item', entityId: 'i1', changes: { after: { secretRead: { secretId: 's1', label: 'Accès privé' } } } }, ctx)).toEqual([])
   })
 })

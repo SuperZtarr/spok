@@ -10,6 +10,9 @@
  *                                             verrouillé, ITEM_SECRETS_MAX).
  * - PATCH  /:id/secrets/:secretId { label?, login?, value?, visibility? } → auteur seul ; login null l'efface.
  * - DELETE /:id/secrets/:secretId           → auteur, ou mode admin.
+ * - POST   /:id/secrets/:secretId/move { targetItemId } (2026-11-21) → vers un autre élément : auteur seul, écriture
+ *                                             sur les deux éléments (writableTargetItem), plafond de la cible ; aucun
+ *                                             déchiffrement (AAD = id inchangé) ; autre espace → « Moi seul ».
  * - POST   /:id/secrets/:secretId/reveal    → { login, value } avec Cache-Control: no-store. Auteur, ou visibilité
  *                                             SPACE + membre réel (adhésion explicite OWNER/MEMBER ou propriétaire de
  *                                             la communauté — jamais le rôle implicite d'un espace OPEN / d'une
@@ -28,6 +31,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ITEM_SECRETS_MAX, ITEM_SECRET_LIMITS, ITEM_SECRET_VISIBILITIES, type ItemSecretSummary } from '@spok/shared';
 import { checkSpaceAccess, isCommunityOwnerOfSpace } from './items.js';
+import { writableTargetItem } from './item-contents.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { createAuditLog } from '../utils/audit.js';
 import { getRequestContext } from '../utils/requestContext.js';
@@ -112,7 +116,9 @@ function toSummary(a: Access, s: any): ItemSecretSummary {
   };
 }
 
-type SecretChange = { op: 'add' | 'update' | 'remove'; kind: 'SECRET'; name: string; previousName?: string; valueChanged?: boolean; visibility?: string };
+type SecretChange = { op: 'add' | 'update' | 'remove'; kind: 'SECRET'; name: string; previousName?: string; valueChanged?: boolean; visibility?: string; movedToId?: string };
+
+const moveSchema = z.object({ targetItemId: z.string().min(1).max(64) });
 
 const logSecretChange = (prisma: any, request: any, itemId: string, change: SecretChange) =>
   createAuditLog(prisma, {
@@ -217,6 +223,43 @@ export const itemSecretRoutes: FastifyPluginAsync = async (fastify) => {
     await touchItem(fastify.prisma, item.id, access.userId);
     await logSecretChange(fastify.prisma, request, item.id, { op: 'remove', kind: 'SECRET', name: secret.label });
     return reply.status(204).send();
+  });
+
+  // Déplacement vers un autre élément (2026-11-21) : auteur seul, droits d'écriture sur les deux éléments.
+  // Aucun déchiffrement : l'AAD est l'id de la donnée, inchangé. Autre espace → « Moi seul ».
+  fastify.post<{ Params: PS }>('/:id/secrets/:secretId/move', async (request, reply) => {
+    const { targetItemId } = moveSchema.parse(request.body);
+    const access = await accessOf(fastify, request, reply);
+    if (!access) return reply;
+    const item = await itemOf(fastify, request, reply);
+    if (!item) return reply;
+    const secret = await findSecret(fastify.prisma, item.id, request.params.secretId);
+    if (!secret || !canSee(access, secret)) return reply.notFound('Donnée introuvable');
+    if (secret.createdById !== access.userId || !access.canWrite) return reply.forbidden("Seul l'auteur déplace une donnée sécurisée");
+    if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
+    if (targetItemId === item.id) return reply.badRequest('La donnée est déjà sur cet élément');
+    const target = await writableTargetItem(fastify, request, reply, targetItemId);
+    if (!target) return reply;
+    const total = await fastify.prisma.itemSecret.count({ where: { itemId: target.id } });
+    if (total >= ITEM_SECRETS_MAX) return reply.conflict(`L'élément cible porte déjà ${ITEM_SECRETS_MAX} données sécurisées`);
+    const last = await fastify.prisma.itemSecret.aggregate({ where: { itemId: target.id }, _max: { position: true } });
+    const max = last?._max?.position;
+    const moved = await fastify.prisma.itemSecret.update({
+      where: { id: secret.id },
+      data: {
+        itemId: target.id, position: typeof max === 'number' ? max + 1 : 0,
+        ...(target.spaceId !== item.spaceId ? { visibility: 'PRIVATE' } : {}),
+      },
+      select: SUMMARY_SELECT,
+    });
+    await touchItem(fastify.prisma, item.id, access.userId);
+    await touchItem(fastify.prisma, target.id, access.userId);
+    await logSecretChange(fastify.prisma, request, item.id, { op: 'remove', kind: 'SECRET', name: secret.label, movedToId: target.id });
+    await createAuditLog(fastify.prisma, {
+      action: 'UPDATE', entity: 'Item', entityId: target.id, userId: access.userId, spaceId: target.spaceId,
+      changes: { after: { contentChange: { op: 'add', kind: 'SECRET', name: secret.label, movedFromId: item.id } } },
+    });
+    return toSummary(access, moved);
   });
 
   // Révélation : seule réponse qui porte la valeur

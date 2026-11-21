@@ -16,6 +16,10 @@
  *                                        plus utilisé par aucun autre contenu ni par la colonne items.url (gardée en
  *                                        sauvegarde depuis le lot 4 : une restauration doit retrouver son fichier).
  * - PUT    /:id/contents/order { ids }   → ordre complet des contenus d'UNE sorte (ids de cette sorte, tous).
+ * - POST   /:id/contents/:contentId/move { targetItemId } (2026-11-21) → le contenu passe sur un autre élément (même
+ *                                        espace ou autre), en fin de sa sorte ; droits d'écriture sur les DEUX éléments
+ *                                        (writableTargetItem), plafond de la cible ; fichier ni copié ni effacé.
+ *                                        Journal : remove + movedToId sur la source, add + movedFromId sur la cible.
  * Droits : OWNER ou MEMBER de l'espace ; VIEWER refusé ; copie de séance verrouillée refusée.
  * Plafond ITEM_CONTENTS_MAX par élément. Toute écriture marque l'élément modifié (updatedAt / updatedById).
  * Lecture : les contenus sont renvoyés avec l'élément (items.ts — détail avec xml, liste sans xml).
@@ -54,7 +58,8 @@ const patchSchema = z.object({
   url: urlField.nullable().optional(),
   xml: z.string().max(XML_MAX).optional(),
 });
-const orderSchema = z.object({ ids: z.array(z.string()).min(1).max(ITEM_CONTENTS_MAX) });
+const moveSchema = z.object({ targetItemId: z.string().min(1).max(64) });
+const orderSchema =z.object({ ids: z.array(z.string()).min(1).max(ITEM_CONTENTS_MAX) });
 const uploadQuerySchema = z.object({ kind: z.enum(['image', 'file']), previewOf: z.string().min(1).max(64).optional() });
 
 /** Élément modifiable par le lecteur, ou réponse d'erreur déjà envoyée (null). */
@@ -93,7 +98,7 @@ async function nextPosition(prisma: any, itemId: string, kind: string): Promise<
   return typeof max === 'number' ? max + 1 : 0;
 }
 
-type ContentChange = { op: 'add' | 'update' | 'remove' | 'reorder'; kind: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean };
+type ContentChange = { op: 'add' | 'update' | 'remove' | 'reorder'; kind: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean; movedToId?: string; movedFromId?: string };
 
 /** Entrée de journal d'un changement de contenus, rattachée à l'élément (voir en-tête) */
 const logContentChange = (prisma: any, request: any, itemId: string, change: ContentChange) =>
@@ -259,4 +264,42 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     await logContentChange(fastify.prisma, request, item.id, { op: 'reorder', kind });
     return fastify.prisma.itemContent.findMany({ where: { itemId: item.id }, orderBy: [{ kind: 'asc' }, { position: 'asc' }] });
   });
+
+  // Déplacement vers un autre élément (2026-11-21) : le contenu change d'élément, rien n'est recopié ni effacé
+  fastify.post<{ Params: PC }>('/:id/contents/:contentId/move', async (request, reply) => {
+    const { targetItemId } = moveSchema.parse(request.body);
+    const item = await writableItem(fastify, request, reply);
+    if (!item) return reply;
+    const content = await fastify.prisma.itemContent.findFirst({ where: { id: request.params.contentId, itemId: item.id } });
+    if (!content) return reply.notFound('Contenu introuvable');
+    if (targetItemId === item.id) return reply.badRequest('Le contenu est déjà sur cet élément');
+    const target = await writableTargetItem(fastify, request, reply, targetItemId);
+    if (!target) return reply;
+    const position = await nextPosition(fastify.prisma, target.id, content.kind);
+    if (position === null) return reply.badRequest(`L'élément cible porte déjà ${ITEM_CONTENTS_MAX} contenus`);
+    const moved = await fastify.prisma.itemContent.update({ where: { id: content.id }, data: { itemId: target.id, position } });
+    await touchItem(fastify.prisma, item.id, request.user.userId);
+    await touchItem(fastify.prisma, target.id, request.user.userId);
+    const name = contentLabel(content);
+    await logContentChange(fastify.prisma, request, item.id, { op: 'remove', kind: content.kind, name, movedToId: target.id });
+    await createAuditLog(fastify.prisma, {
+      action: 'UPDATE', entity: 'Item', entityId: target.id, userId: request.user.userId, spaceId: target.spaceId,
+      changes: { after: { contentChange: { op: 'add', kind: content.kind, name, movedFromId: item.id } } },
+    });
+    return moved;
+  });
 };
+
+/**
+ * Élément cible d'un déplacement (contenu ou donnée sécurisée), écrivable par le lecteur : OWNER/MEMBER de SON espace
+ * (éventuellement un autre que la source), non verrouillé. Sans accès → 404 (n'en confirme pas l'existence).
+ * Réponse d'erreur déjà envoyée si null. Partagé avec routes/item-secrets.ts.
+ */
+export async function writableTargetItem(fastify: any, request: any, reply: any, targetItemId: string) {
+  const target = await fastify.prisma.item.findUnique({ where: { id: targetItemId } });
+  const membership = target ? await checkSpaceAccess(fastify.prisma, request.user.userId, target.spaceId, request.isAdminMode) : null;
+  if (!target || !membership) { reply.notFound('Élément cible introuvable'); return null; }
+  if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') { reply.forbidden("Vous ne pouvez pas modifier l'élément cible"); return null; }
+  if (isLocked(target)) { reply.forbidden(LOCKED_MESSAGE); return null; }
+  return target;
+}

@@ -998,6 +998,9 @@ export const itemContentsApi = {
     fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (spaceId: string, itemId: string, contentId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'DELETE' }),
+  /** Déplace le contenu vers un autre élément (droits d'écriture sur les deux) */
+  move: (spaceId: string, itemId: string, contentId: string, targetItemId: string) =>
+    fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}/move`, { method: 'POST', body: JSON.stringify({ targetItemId }) }),
   /** Ordre complet des contenus d'UNE sorte */
   reorder: (spaceId: string, itemId: string, ids: string[]) =>
     fetchApi<ItemContent[]>(`/spaces/${spaceId}/items/${itemId}/contents/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
@@ -1015,6 +1018,8 @@ export const itemSecretsApi = {
     fetchApi<ItemSecretSummary>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (spaceId: string, itemId: string, secretId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}`, { method: 'DELETE' }),
+  move: (spaceId: string, itemId: string, secretId: string, targetItemId: string) =>
+    fetchApi<ItemSecretSummary>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}/move`, { method: 'POST', body: JSON.stringify({ targetItemId }) }),
   reveal: (spaceId: string, itemId: string, secretId: string) =>
     fetchApi<ItemSecretRevealed>(`/spaces/${spaceId}/items/${itemId}/secrets/${secretId}/reveal`, { method: 'POST' }),
 };
