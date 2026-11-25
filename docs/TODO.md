@@ -304,6 +304,7 @@
 - [x] Contenus - icône de l'application sur un fichier sans aperçu — 2026-11-25
 - [x] Statut par défaut de chaque type — 2026-11-25
 - [x] Contenus - aperçu des liens, image du site — 2026-11-25
+- [x] Arborescences - glisser sous un élément — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

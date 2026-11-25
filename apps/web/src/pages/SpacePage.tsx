@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { spacesApi, itemsApi, communitiesApi, tagsApi, ApiError } from '../lib/api';
 import { matchesTags } from '../lib/itemHighlight';
+import { useTreeDropPosition } from '../lib/useTreeDropPosition';
 import { SpaceUnavailable } from '../components/SpaceUnavailable';
 import type { Item, ItemType } from '@spok/shared';
 import { buildStatusColorMap, buildStatusLabelMap } from '@spok/shared';
@@ -472,16 +473,9 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   // --- DnD state & handlers ---
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [dropMode, setDropMode] = useState<'reorder' | 'nest'>('nest');
-  const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
-  const pointerYRef = useRef(0);
-
-  useEffect(() => {
-    if (!activeId) return;
-    const handler = (e: PointerEvent) => { pointerYRef.current = e.clientY; };
-    window.addEventListener('pointermove', handler);
-    return () => window.removeEventListener('pointermove', handler);
-  }, [activeId]);
+  // Position recalculée à chaque mouvement du pointeur (useTreeDropPosition) — pas dans onDragOver
+  const dropPosition = useTreeDropPosition(activeId, overId, (id) => `[data-item-id="${id}"]`);
+  const dropMode: 'reorder' | 'nest' = dropPosition === 'nest' ? 'nest' : 'reorder';
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -492,38 +486,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const currentOverId = event.over?.id as string | null;
-    setOverId(currentOverId);
-
-    if (!event.over || !currentOverId || currentOverId === 'root') {
-      setDropMode('nest');
-      setDropPosition('nest');
-      return;
-    }
-
-    const overElement = document.querySelector(`[data-item-id="${currentOverId}"]`) as HTMLElement | null;
-    const liveRect = overElement?.getBoundingClientRect();
-    const pointerY = pointerYRef.current;
-
-    if (!liveRect || liveRect.height === 0) {
-      setDropMode('nest');
-      setDropPosition('nest');
-      return;
-    }
-
-    const relativeY = pointerY - liveRect.top;
-    const ratio = relativeY / liveRect.height;
-
-    if (ratio < 0.33) {
-      setDropMode('reorder');
-      setDropPosition('before');
-    } else if (ratio > 0.67) {
-      setDropMode('reorder');
-      setDropPosition('after');
-    } else {
-      setDropMode('nest');
-      setDropPosition('nest');
-    }
+    setOverId((event.over?.id as string | null) ?? null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -532,8 +495,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
     const currentDropPosition = dropPosition;
     setActiveId(null);
     setOverId(null);
-    setDropMode('nest');
-    setDropPosition('nest');
 
     if (!over || active.id === over.id) return;
 
@@ -566,8 +527,6 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   const handleDragCancel = () => {
     setActiveId(null);
     setOverId(null);
-    setDropMode('nest');
-    setDropPosition('nest');
   };
 
   const activeItem = activeId ? allItems.find((item: Item) => item.id === activeId) : null;
