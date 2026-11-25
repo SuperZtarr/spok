@@ -1,6 +1,8 @@
 /*
  * Tableau de bord personnel : aujourd'hui, échéances (DeadlinesView embedded), assignés à moi.
  * Deux requêtes (allData non terminés / doneData terminés) suivent toutes deux filters.queryParams.
+ * Panneaux Priorités / En retard / Aujourd'hui / Assignés à moi : une requête chacun, filtrée par le serveur
+ * (2026-11-25) — jamais un filtre côté navigateur d'allData, tronquée (P1 et assignés manquaient).
  * Layout : ligne A = Échéances + colonne de listes (Priorités/En retard/Aujourd'hui/Assignés) ;
  * ligne B pleine largeur = répartitions (Par statut / Par type / Progression) en grille.
  * Types (filtre par défaut, couleurs de la répartition) : tirés du registre des types, jamais recopiés.
@@ -32,9 +34,8 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { userTasksApi, spacesApi } from '../../lib/api';
-import { useAuthStore } from '../../stores/auth';
 import { DEFAULT_STATUSES, DEFAULT_TYPE_LABELS, ITEM_TYPES, OPEN_CATEGORIES, isClosedStatus, isStatusIn, statusIdsIn } from '@spok/shared';
-import type { GlobalTask } from '../../lib/api';
+import type { GlobalTask, GlobalTaskFilters } from '../../lib/api';
 import { getPriorityConfig, getStatusHex, getTypeHex, TYPE_ICONS } from '../../constants/ui';
 import { useGlobalTaskFilters } from '../../hooks/useGlobalTaskFilters';
 import { GlobalTaskFilterBar } from '../GlobalTaskFilterBar';
@@ -252,7 +253,6 @@ function Section({ title, icon, count, children, variant = 'default' }: {
 // ---------------------------------------------------------------------------
 
 export function MyDashboardView() {
-  const user = useAuthStore(s => s.user);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
@@ -283,6 +283,30 @@ export function MyDashboardView() {
     }),
   });
 
+  // Panneaux Priorités / En retard / Aujourd'hui / Assignés à moi (2026-11-25) : une requête chacun, filtrée par le
+  // serveur — filtrer allData (tronquée) cachait les P1 et les assignés. Filtres du tableau de bord conservés.
+  const openStatusParam = filters.queryParams.status || statusIdsIn(OPEN_CATEGORIES).join(',');
+  const panelParams = (extra: Partial<GlobalTaskFilters>): GlobalTaskFilters => ({
+    ...filters.queryParams, status: openStatusParam, myTasks: true, sortBy: 'dueDate', sortDir: 'asc', page: 1, pageSize: 500, ...extra,
+  });
+  const yesterdayEnd = new Date(today.getTime() - 1).toISOString();
+  const { data: priorityData } = useQuery({
+    queryKey: ['my-dashboard-panel', 'priority', filters.queryParams],
+    queryFn: () => userTasksApi.list(panelParams({ priority: filters.queryParams.priority || '1,2,3,4', sortBy: 'priority', sortDir: 'desc' })),
+  });
+  const { data: overdueData } = useQuery({
+    queryKey: ['my-dashboard-panel', 'overdue', filters.queryParams, yesterdayEnd],
+    queryFn: () => userTasksApi.list(panelParams({ dueDateFrom: undefined, dueDateTo: yesterdayEnd })),
+  });
+  const { data: todayDueData } = useQuery({
+    queryKey: ['my-dashboard-panel', 'today', filters.queryParams, today.toISOString()],
+    queryFn: () => userTasksApi.list(panelParams({ dueDateFrom: today.toISOString(), dueDateTo: todayEnd.toISOString() })),
+  });
+  const { data: assignedData } = useQuery({
+    queryKey: ['my-dashboard-panel', 'assigned', filters.queryParams],
+    queryFn: () => userTasksApi.list(panelParams({ myTasks: undefined, assignedToMe: true })),
+  });
+
   // Fetch done items for KPIs (created by or assigned to me).
   // Reprend filters.queryParams (type/espace/priorité/recherche/échéances/communauté) — comme allData —
   // en forçant les statuts « terminé » (catégorie done) : ces panneaux (répartitions, progression, KPI terminés) ne montrent
@@ -309,10 +333,12 @@ export function MyDashboardView() {
   const rawDoneTasks = doneData?.data || [];
 
   // Filter by selected communities (client-side)
-  const allTasks = useMemo(() => {
-    if (filters.selectedCommunities.length === 0) return rawAllTasks;
-    return rawAllTasks.filter(t => t.communityId && filters.selectedCommunities.includes(t.communityId));
-  }, [rawAllTasks, filters.selectedCommunities]);
+  const inCommunities = useCallback((list: GlobalTask[] | undefined) => {
+    if (!list) return [];
+    if (filters.selectedCommunities.length === 0) return list;
+    return list.filter(t => t.communityId && filters.selectedCommunities.includes(t.communityId));
+  }, [filters.selectedCommunities]);
+  const allTasks = useMemo(() => inCommunities(rawAllTasks), [rawAllTasks, inCommunities]);
 
   const doneTasks = useMemo(() => {
     if (filters.selectedCommunities.length === 0) return rawDoneTasks;
@@ -320,11 +346,7 @@ export function MyDashboardView() {
   }, [rawDoneTasks, filters.selectedCommunities]);
 
   // --- Priorities (P1 + P2, non terminés) ---
-  const rawPriorityTasks = useMemo(() =>
-    allTasks.filter(t => t.priority && t.priority >= 1)
-      .sort((a, b) => (b.priority || 0) - (a.priority || 0)),
-    [allTasks]
-  );
+  const rawPriorityTasks = useMemo(() => inCommunities(priorityData?.data), [priorityData, inCommunities]);
 
   // Sync priorityOrder when raw data changes (new items, removed items)
   useEffect(() => {
@@ -357,28 +379,19 @@ export function MyDashboardView() {
   }, []);
 
   // --- Overdue ---
-  const overdueTasks = useMemo(() =>
-    allTasks.filter(t =>
-      t.dueDate && new Date(t.dueDate) < today && !isClosedStatus(t.status)
-    ).sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
-    [allTasks, today]
-  );
+  const overdueTasks = useMemo(() => inCommunities(overdueData?.data), [overdueData, inCommunities]);
 
-  // --- Today ---
-  const todayTasks = useMemo(() =>
-    allTasks.filter(t => {
-      if (!t.dueDate && !t.startDate) return false;
-      const d = new Date(t.dueDate || t.startDate!);
-      return d >= today && d <= todayEnd;
-    }),
-    [allTasks, today, todayEnd]
-  );
+  // --- Today --- échéance du jour (requête serveur) + éléments sans échéance qui débutent aujourd'hui (allData)
+  const todayTasks = useMemo(() => {
+    const due = inCommunities(todayDueData?.data);
+    const ids = new Set(due.map(t => t.id));
+    const starting = allTasks.filter(t => !t.dueDate && t.startDate && !ids.has(t.id)
+      && new Date(t.startDate) >= today && new Date(t.startDate) <= todayEnd);
+    return [...due, ...starting];
+  }, [todayDueData, allTasks, inCommunities, today, todayEnd]);
 
-  // --- Assigned to me ---
-  const assignedTasks = useMemo(() =>
-    allTasks.filter(t => t.assignedToId && t.assignedToId === user?.id),
-    [allTasks, user?.id]
-  );
+  // --- Assigned to me --- (assignation en saisie libre, sans compte : exclue, rien ne la relie au compte)
+  const assignedTasks = useMemo(() => inCommunities(assignedData?.data), [assignedData, inCommunities]);
 
   // --- KPI computed ---
   const inProgressTasks = useMemo(() =>

@@ -111,7 +111,7 @@
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
  * Statuts proposés aux autres types : statusesForType (Réunion et Article : leurs statuts réservés, 2026-11-19) ; au
  * changement de type, statusForType (@spok/shared) remplace un statut non permis par celui de même catégorie, sinon
- * par le premier du type (réunion « À organiser ») ou le retire. Période : pas de champ Statut (typeHasStatus, 2026-11-20).
+ * par le premier du type (réunion « À organiser ») ou le retire. Type sans statut (typeHasStatus, aucun aujourd'hui) : pas de champ Statut.
  * Types à composants (groupe « Compositions » : Article, Question — isComposedType, 2026-11-11) : choisir un de ces types
  * enregistre aussitôt le type seul, fiche ouverte, pour afficher ses composants (règle composed-type-autosave).
  */
@@ -1547,7 +1547,8 @@ export function ItemEditModal({
               {mediaSection}
 
               {/* Description — visible pour tous les types, y compris Lien/Doc/Image/Diagramme (demande 2026-07-15) ;
-                  hauteur doublée (480 px mini, 80vh maxi en fiche simple) — demande 2026-11-18 */}
+                  hauteur : 120 px vide, grandit avec le contenu jusqu'à 80vh puis défile, dans les deux fiches
+                  (2026-11-25, remplace le minimum de 480 px du 2026-11-18) */}
               <div className={`space-y-2 ${filledZone(hasText(description))}`} data-tour="item-description" data-devzone="item-description">
                 <label className="text-sm font-medium flex items-center gap-1.5">Description <ElementHelp page="item-modal" element="description" /></label>
                 <RichTextEditor
@@ -1556,8 +1557,8 @@ export function ItemEditModal({
                   onChange={setDescription}
                   editable={canEdit}
                   spaceId={spaceId}
-                  minHeight={480}
-                  defaultMaxHeight={!showAll ? '80vh' : undefined}
+                  minHeight={120}
+                  defaultMaxHeight="80vh"
                   mentionableItems={allItems.map((i) => ({ id: i.id, title: i.title, type: i.type }))}
                 />
               </div>
@@ -1786,7 +1787,7 @@ export function ItemEditModal({
               {showAll && type === 'QUESTION' && itemId && item?.type === 'QUESTION' && (
                 <QuestionStatusField spaceId={item.spaceId ?? spaceId} itemId={itemId} statuses={referentiels?.statuses} />
               )}
-              {/* Période : pas de statut (typeHasStatus, 2026-11-20) — champ absent */}
+              {/* Type sans statut (typeHasStatus — aucun aujourd'hui) : champ absent */}
               {showAll && type !== 'QUESTION' && typeHasStatus(type) &&<div className={`space-y-2 ${filledZone(!!status)}`} data-tour="item-status" data-devzone="item-statut">
                 <label className="text-sm font-medium flex items-center gap-1.5">Statut <ElementHelp page="item-modal" element="statut" /></label>
                 {canEdit ? (

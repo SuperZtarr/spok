@@ -14,6 +14,10 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-25 — MEP : 3 commits du 2026-11-21 poussés (CI verte), puis 10 lots dont coordonnées (enum ItemContentKind + PHONE/EMAIL/ADDRESS, colonne item_contents.value, db push). 5 annonces datées. Typecheck OK, TNR 3107/3109 (item-contents et NewSessionDialog instables sous charge, 30/30 seuls). APRÈS : restore-period-statuses.ts --prod sur accord de Thomas. CLI Railway déconnecté : déploiements non surveillés.
+
+- 2026-11-25 — Coordonnées terminées (zone Contenus, aide, doc) ; inscrites PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-21 — MEP : 3 lots (contenus déplacer et restauration, panneau « À ajouter » de l'article, titre du canevas Process). Laissés hors MEP (travail en cours d'une autre session) : item-question.ts, defaultReferentiels.ts, itemMenuGroups.nextStatus.test.ts, skill spok-triage. Vérifié sur une copie exacte des commits. 2 annonces datées.
 
 - 2026-11-21 — Glisser dans les arborescences (`cmwqiehge00357iccoco9r4ut`) : cause trouvée (position avant/dedans/après calculée dans onDragOver de dnd-kit, déclenché seulement au changement de ligne → figée à l'entrée), NON CORRIGÉ : création du hook partagé refusée par les permissions, modifications de SpacePage annulées.
