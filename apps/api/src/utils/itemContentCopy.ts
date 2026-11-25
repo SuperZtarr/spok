@@ -7,6 +7,7 @@
  * l'effacement d'un contenu n'efface un fichier que s'il n'est plus utilisé, item-contents.ts).
  * Le lot 5 (copier/coller, fusion, déplacement) réutilise ce module.
  * Aperçu d'un fichier (previewUrl, excerpt — 2026-11-11) : recopié comme l'adresse, image dupliquée si copyFiles.
+ * Coordonnées (value, 2026-11-25) : recopiées, sauvegardées et restaurées comme le reste.
  */
 import { isR2Configured, isR2Url, copyR2Object } from './r2.js';
 
@@ -22,7 +23,7 @@ export async function copyItemContents(
     await prisma.itemContent.create({
       data: {
         itemId: toItemId, kind: c.kind, url, name: c.name, mimeType: c.mimeType, size: c.size, xml: c.xml,
-        previewUrl, excerpt: c.excerpt ?? null, position: c.position, createdById: opts.userId,
+        previewUrl, excerpt: c.excerpt ?? null, value: c.value ?? null, position: c.position, createdById: opts.userId,
       },
     });
   }
@@ -35,7 +36,7 @@ export async function copyItemContents(
  * snapshotItemContents lit les contenus de plusieurs éléments (par élément) ; restoreItemContents les recrée avec leur
  * id (fichiers du stockage jamais effacés à la suppression : les adresses restent valides). Auteur disparu → null.
  */
-const CONTENT_BACKUP_KEYS = ['id', 'kind', 'url', 'name', 'mimeType', 'size', 'xml', 'previewUrl', 'excerpt', 'position', 'createdById', 'createdAt'] as const;
+const CONTENT_BACKUP_KEYS = ['id', 'kind', 'url', 'name', 'mimeType', 'size', 'xml', 'previewUrl', 'excerpt', 'value', 'position', 'createdById', 'createdAt'] as const;
 
 export async function snapshotItemContents(prisma: any, itemIds: string[]): Promise<Map<string, Record<string, unknown>[]>> {
   const byItem = new Map<string, Record<string, unknown>[]>();
@@ -57,7 +58,7 @@ export async function restoreItemContents(prisma: any, itemId: string, backups: 
     .filter((b: any) => b && typeof b.id === 'string' && typeof b.kind === 'string')
     .map((b: any) => ({
       id: b.id, itemId, kind: b.kind, url: b.url ?? null, name: b.name ?? null, mimeType: b.mimeType ?? null,
-      size: b.size ?? null, xml: b.xml ?? null, previewUrl: b.previewUrl ?? null, excerpt: b.excerpt ?? null,
+      size: b.size ?? null, xml: b.xml ?? null, previewUrl: b.previewUrl ?? null, excerpt: b.excerpt ?? null, value: b.value ?? null,
       position: typeof b.position === 'number' ? b.position : 0,
       createdById: existing.has(b.createdById) ? b.createdById : null,
     }));

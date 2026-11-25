@@ -65,3 +65,17 @@ describe('planContentMerge', () => {
     expect(plan.total).toBe(ITEM_CONTENTS_MAX + 1);
   });
 });
+
+describe('coordonnées dans la fusion (2026-11-25)', () => {
+  it('même sorte et même valeur (casse, espaces) = doublon ; autre sorte = gardée', () => {
+    const kept = [c('t', 'EMAIL', { value: 'Contact@Exemple.test' }), c('t', 'PHONE', { value: '01 23  45' })]
+    const inc = [
+      c('s', 'EMAIL', { value: ' contact@exemple.test ' }),
+      c('s', 'PHONE', { value: '01 23 45' }),
+      c('s', 'ADDRESS', { value: 'contact@exemple.test' }),
+    ]
+    const plan = planContentMerge(kept, inc)
+    expect(plan.duplicateIds).toEqual([inc[0].id, inc[1].id])
+    expect(plan.moves.map((m) => m.id)).toEqual([inc[2].id])
+  })
+})

@@ -285,6 +285,7 @@
 - [x] Contenus - déplacer vers un autre élément, restauration complète — 2026-11-21
 - [x] Article - panneau « À ajouter » à glisser — 2026-11-21
 - [x] Process - titre du canevas ouvre la fiche — 2026-11-21
+- [x] Contenus - coordonnées téléphone, e-mail, adresse — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

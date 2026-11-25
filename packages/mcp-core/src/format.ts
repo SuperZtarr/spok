@@ -29,13 +29,15 @@ export function extractText(description: any): string {
   return (description.content ?? []).map(collectText).join('\n').trim()
 }
 
-const KIND_LABELS: Record<string, string> = { IMAGE: 'Image', FILE: 'Fichier', LINK: 'Lien', DIAGRAM: 'Schéma' }
+// Recopie du registre @spok/shared ITEM_CONTENT_KIND_DEFS (singular) — mcp-core ne dépend pas de shared ; vérifiée par
+// apps/api/src/itemContentKinds.guard.test.ts (2026-11-25)
+const KIND_LABELS: Record<string, string> = { IMAGE: 'Image', FILE: 'Fichier', LINK: 'Lien', PHONE: 'Téléphone', EMAIL: 'E-mail', ADDRESS: 'Adresse', DIAGRAM: 'Schéma' }
 
-/** Contenus d'un item (images, fichiers, liens, schémas), un par ligne avec leur id (outils *_item_content) ;
+/** Contenus d'un item (images, fichiers, liens, coordonnées, schémas), un par ligne avec leur id (outils *_item_content) ;
  *  '' s'il n'en a pas */
 export function formatContents(contents: any[] | undefined): string {
   return (contents ?? [])
-    .map((c) => `- [${c.id}] ${KIND_LABELS[c.kind] ?? c.kind} : ${[c.name, c.url].filter(Boolean).join(' — ') || '(sans adresse)'}`)
+    .map((c) => `- [${c.id}] ${KIND_LABELS[c.kind] ?? c.kind} : ${[c.name, c.url, c.value].filter(Boolean).join(' — ') || '(sans adresse)'}`)
     .join('\n')
 }
 

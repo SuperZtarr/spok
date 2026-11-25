@@ -545,6 +545,8 @@ model ItemContent {
   xml         String?         @db.Text
   previewUrl  String?
   excerpt     String?         @db.Text
+  // Coordonnée (PHONE / EMAIL / ADDRESS, 2026-11-25) : numéro, e-mail ou adresse en clair
+  value       String?         @db.Text
   position    Int             @default(0)
   createdById String?
   createdBy   User?           @relation("ItemContentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -607,6 +609,10 @@ enum ItemContentKind {
   FILE
   LINK
   DIAGRAM
+  // Coordonnées (2026-11-25) : valeur en clair dans ItemContent.value
+  PHONE
+  EMAIL
+  ADDRESS
 }
 
 enum ItemType {

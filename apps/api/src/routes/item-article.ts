@@ -529,7 +529,7 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
         id: { notIn: [...excluded, ...titleRows.map((r) => r.id)] },
         OR: [
           { description: { contains: term, mode: 'insensitive' } },
-          { contents: { some: { OR: [{ url: { contains: term, mode: 'insensitive' } }, { name: { contains: term, mode: 'insensitive' } }] } } },
+          { contents: { some: { OR: [{ url: { contains: term, mode: 'insensitive' } }, { name: { contains: term, mode: 'insensitive' } }, { value: { contains: term, mode: 'insensitive' } }] } } },
         ],
       },
       orderBy: { updatedAt: 'desc' },

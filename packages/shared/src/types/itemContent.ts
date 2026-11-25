@@ -3,12 +3,16 @@
  * Source unique de l'ordre d'affichage entre sortes (ITEM_CONTENT_KINDS) et du plafond par élément — API et web.
  * position = ordre à l'intérieur d'une même sorte ; l'ordre entre sortes est fixe et ne se règle pas.
  * xml (schéma draw.io) n'est renvoyé que par le détail d'un élément, jamais par la liste (poids).
- * previewUrl / excerpt : aperçu d'un fichier (page 1, début du texte), calculé par l'API à l'envoi (2026-11-11). */
+ * previewUrl / excerpt : aperçu d'un fichier (page 1, début du texte), calculé par l'API à l'envoi (2026-11-11).
+ * Sortes et libellés : registre constants/itemContentKinds.ts (2026-11-25) ; coordonnées dans `value`. */
 
-export type ItemContentKind = 'IMAGE' | 'FILE' | 'LINK' | 'DIAGRAM';
+import { ITEM_CONTENT_KIND_DEFS } from '../constants/itemContentKinds.js';
 
-/** Ordre fixe d'affichage des sortes : Images, Fichiers, Liens, Schémas */
-export const ITEM_CONTENT_KINDS: readonly ItemContentKind[] = ['IMAGE', 'FILE', 'LINK', 'DIAGRAM'];
+/** Sortes stockées dans item_contents — dérivées du registre constants/itemContentKinds.ts (2026-11-25) */
+export type ItemContentKind = (typeof ITEM_CONTENT_KIND_DEFS)[number]['id'];
+
+/** Ordre fixe d'affichage des sortes (ordre du registre) */
+export const ITEM_CONTENT_KINDS: readonly ItemContentKind[] = ITEM_CONTENT_KIND_DEFS.map((d) => d.id);
 
 /** Sections de la zone Contenus, dans l'ordre d'affichage : les sortes de item_contents puis les données sécurisées
  *  (table à part item_secrets, types/itemSecret.ts — 2026-11-20). ITEM_CONTENT_KINDS reste la liste des sortes
@@ -35,6 +39,8 @@ export interface ItemContent {
   previewUrl?: string | null;
   /** FILE : début du texte (PDF, docx, texte brut) — calculé à l'envoi, absent sinon */
   excerpt?: string | null;
+  /** PHONE / EMAIL / ADDRESS : la coordonnée, en clair (2026-11-25) */
+  value?: string | null;
   position: number;
   createdById?: string | null;
   createdAt: string;

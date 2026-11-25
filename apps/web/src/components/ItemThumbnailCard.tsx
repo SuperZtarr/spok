@@ -5,11 +5,14 @@
  * Format « grande » de la vignette commune (lib/itemFace.ts) : pastilles de contenus écrites en toutes lettres
  * (« 2 fichiers »), lisibles hors de SPOK. */
 import type { ItemContentKind } from '@spok/shared';
+import { itemContentKindDef } from '@spok/shared';
 import { TYPE_ICONS } from '../constants/ui';
 import type { ItemThumbnail } from '../lib/itemThumbnail';
 
-const BADGE_WORDS: Record<ItemContentKind, [string, string]> = {
-  IMAGE: ['image', 'images'], FILE: ['fichier', 'fichiers'], LINK: ['lien', 'liens'], DIAGRAM: ['schéma', 'schémas'],
+/** Mot d'une pastille (singulier / pluriel) — registre @spok/shared (2026-11-25) */
+const badgeWord = (kind: ItemContentKind, count: number) => {
+  const d = itemContentKindDef(kind);
+  return d ? (count > 1 ? d.lowerPlural : d.lower) : kind;
 };
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -56,7 +59,7 @@ export function ItemThumbnailCard({ thumb }: { thumb: ItemThumbnail }) {
 
       {thumb.badges.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-          {thumb.badges.map(({ kind, count }) => <Chip key={kind}>{`${count} ${BADGE_WORDS[kind][count > 1 ? 1 : 0]}`}</Chip>)}
+          {thumb.badges.map(({ kind, count }) => <Chip key={kind}>{`${count} ${badgeWord(kind, count)}`}</Chip>)}
         </div>
       )}
 

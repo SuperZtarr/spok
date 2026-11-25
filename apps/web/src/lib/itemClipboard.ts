@@ -2,7 +2,7 @@
  * Une seule copie, deux formats : text/html (collage mis en forme dans Word, mail, Notion) et
  * text/plain en Markdown (éditeur texte, Claude, champ simple). Seuls les champs renseignés apparaissent.
  * Contenus (lot 5 contenus multiples) : TOUS les contenus de l'élément sont copiés, avant la description, dans l'ordre de
- * la fiche (Images, Fichiers, Liens, Schémas — buildContents) ; `media` (premier visuel) ne sert plus qu'à la vignette.
+ * la fiche (Images, Fichiers, Liens, coordonnées — tel:, mailto:, carte, 2026-11-25 —, Schémas — buildContents) ; `media` (premier visuel) ne sert plus qu'à la vignette.
  * Chaque contenu : images et schémas intégrés comme image — à la copie, l'image est téléchargée et
  * convertie en PNG dans le HTML (data URL : les fichiers stockés sont en WebP, mal lus par Word / Outlook) ;
  * si c'est impossible (CORS, réseau), <img> pointe sur l'adresse rendue absolue (les uploads locaux du dev sont
@@ -21,7 +21,7 @@
  * scripts fix-confluence-split-images / fix-drawio-attachments) est retirée — l'image n'apparaît qu'une fois.
  * Impression et PDF restent dans itemExport.ts. */
 import type { Item, ItemRelation, ContributionWithAuthor } from '@spok/shared';
-import { formatExternalRefs } from '@spok/shared';
+import { formatExternalRefs, CONTACT_CONTENT_KINDS, contactHref, itemContentKindDef } from '@spok/shared';
 import { sanitizeHtml, isSafeUrl } from './sanitizeHtml';
 
 export interface ItemSheetLabels {
@@ -88,13 +88,22 @@ export function fileNameFromUrl(url: string): string {
   return name.replace(/^\d{10,}-/, '') || last;
 }
 
-// Contenus copiés dans l'ordre de la fiche (lot 5) : Images, Fichiers, Liens, Schémas
-const CONTENT_ORDER = [MEDIA_ORDER[0], MEDIA_ORDER[2], MEDIA_ORDER[3], MEDIA_ORDER[1]] as const;
+// Coordonnées (2026-11-25) : copiées comme des liens (tel:, mailto:, carte), libellé du registre
+const CONTACT_ORDER = CONTACT_CONTENT_KINDS.map((kind) => ({ kind, media: 'url' as const, label: itemContentKindDef(kind)!.singular }));
+
+// Contenus copiés dans l'ordre de la fiche (lot 5) : Images, Fichiers, Liens, Téléphones, E-mails, Adresses, Schémas
+const CONTENT_ORDER = [MEDIA_ORDER[0], MEDIA_ORDER[2], MEDIA_ORDER[3], ...CONTACT_ORDER, MEDIA_ORDER[1]];
+const isContact = (kind: string) => (CONTACT_CONTENT_KINDS as readonly string[]).includes(kind);
 
 /** Tous les contenus à l'adresse sûre, rangés Images, Fichiers, Liens, Schémas (chaque sorte dans son ordre). */
 function buildContents(item: Item): SheetMedia[] {
   const contents = [...(item.contents ?? [])].sort((a, b) => a.position - b.position);
-  return CONTENT_ORDER.flatMap((m) => contents
+  return CONTENT_ORDER.flatMap((m) => isContact(m.kind)
+    ? contents.filter((c) => c.kind === m.kind && contactHref(c.kind, c.value)).map((c) => ({
+        kind: m.media, label: m.label, url: contactHref(c.kind, c.value)!,
+        name: [c.name?.trim(), c.value!.trim().replace(/\s*\n\s*/g, ', ')].filter(Boolean).join(' : '),
+      }))
+    : contents
     .filter((c) => c.kind === m.kind && c.url && isSafeUrl(c.url))
     .map((c) => ({
       kind: m.media, label: m.label, url: c.url!,

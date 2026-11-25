@@ -22,12 +22,17 @@
  * (zones data-help-zone item-contents:*, rappels pageHint('item-contents', …)). Règle de gestion : item-contents-zone.
  * Données sécurisées (2026-11-20) : dernière section (ITEM_CONTENT_SECTIONS), entrée « Donnée sécurisée » du menu
  * « + Ajouter » ; rendues par ItemSecretsSection (table et routes à part, jamais dans item.contents).
+ * Coordonnées (Téléphone, E-mail, Adresse — 2026-11-25) : lignes compactes (ContactRow) dans les deux modes, saisie
+ * ContactForm ; libellés et icônes du registre (@spok/shared, constants/itemContentIcons.ts).
+ * Aperçu des liens (2026-11-25) : image du site (previewUrl, rangée par l'API) en haut de la vignette d'un lien ; bouton
+ * « Actualiser l'aperçu » (↻) au pied ; fiche relue 6 s après l'ajout d'un lien (aperçu cherché en tâche de fond).
  * « Déplacer vers… » (2026-11-21) : bouton → au pied de chaque vignette, MoveToItemDialog (choix de l'élément cible).
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Image as ImageIcon, FileText, Link2, Workflow, Lock, Trash2, MoveRight, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Trash2, MoveRight, RefreshCw, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
 import { fileExtension, hostOf } from '../../lib/itemFace';
-import { ITEM_CONTENT_KINDS, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection } from '@spok/shared';
+import { ITEM_CONTENT_KINDS, ITEM_CONTENT_KIND_DEFS, CONTACT_CONTENT_KINDS, CONTACT_VALUE_MAX, PHONE_PATTERN, contactHref, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection, type ContactContentKind } from '@spok/shared';
+import { ITEM_CONTENT_ICONS } from '../../constants/itemContentIcons';
 import { useItemContents } from '../../hooks/useItemContents';
 import { useItemSecretList } from '../../hooks/useItemSecrets';
 import { ItemSecretsSection } from './ItemSecretsSection';
@@ -45,11 +50,17 @@ import { ConfirmModal } from '../ConfirmModal';
 import { fileNameToTitle, urlToTitle } from '../item-edit-helpers';
 import { FilePreviewThumb, hasFilePreview } from './FilePreviewThumb';
 
-export const KIND_LABELS: Record<ItemContentSection, string> = { IMAGE: 'Images', FILE: 'Fichiers', LINK: 'Liens', DIAGRAM: 'Schémas', SECRET: 'Données sécurisées' };
-const ADD_LABELS: Record<ItemContentSection, string> = { FILE: 'Fichier', IMAGE: 'Image', LINK: 'Lien', DIAGRAM: 'Schéma', SECRET: 'Donnée sécurisée' };
+// Libellés : registre @spok/shared (ITEM_CONTENT_KIND_DEFS, 2026-11-25) + section des données sécurisées
+export const KIND_LABELS = Object.fromEntries([
+  ...ITEM_CONTENT_KIND_DEFS.map((d) => [d.id, d.label]), ['SECRET', 'Données sécurisées'],
+]) as Record<ItemContentSection, string>;
+const ADD_LABELS = Object.fromEntries([
+  ...ITEM_CONTENT_KIND_DEFS.map((d) => [d.id, d.singular]), ['SECRET', 'Donnée sécurisée'],
+]) as Record<ItemContentSection, string>;
 /** Ordre du menu « + Ajouter » (décision Thomas) — l'affichage, lui, suit ITEM_CONTENT_SECTIONS */
-const ADD_ORDER: ItemContentSection[] = ['FILE', 'IMAGE', 'LINK', 'DIAGRAM', 'SECRET'];
-const KIND_ICONS = { IMAGE: ImageIcon, FILE: FileText, LINK: Link2, DIAGRAM: Workflow, SECRET: Lock } as const;
+const ADD_ORDER: ItemContentSection[] = ['FILE', 'IMAGE', 'LINK', 'PHONE', 'EMAIL', 'ADDRESS', 'DIAGRAM', 'SECRET'];
+const KIND_ICONS = ITEM_CONTENT_ICONS;
+const isContact = (k: string): k is ContactContentKind => (CONTACT_CONTENT_KINDS as readonly string[]).includes(k);
 
 /** Taille lisible (Ko / Mo) */
 export function formatSize(size: number | null | undefined): string | null {
@@ -66,7 +77,7 @@ export function groupContents(contents: ItemContent[] | undefined): Array<[ItemC
     .filter(([, list]) => list.length > 0);
 }
 
-const displayName = (c: ItemContent) => c.name?.trim() || (c.kind === 'LINK' ? c.url : null) || KIND_LABELS[c.kind];
+const displayName = (c: ItemContent) => c.name?.trim() || (c.kind === 'LINK' ? c.url : null) || c.value || KIND_LABELS[c.kind];
 
 /** Image en plein écran (clic pour fermer) — aussi utilisée par les blocs d'article (ArticleBlock) */
 export function Lightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
@@ -172,18 +183,41 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
           }} />
       )}
 
+      {adding && isContact(adding) && (
+        <ContactForm kind={adding} pending={api.add.isPending} onCancel={() => setAdding(null)}
+          onSubmit={(value, name) => api.add.mutate({ kind: adding, value, name: name || null }, { onSuccess: () => setAdding(null) })} />
+      )}
+
       {error && <p className="text-sm text-destructive">{error.message || 'Opération impossible sur ce contenu'}</p>}
 
       <div className="space-y-3" data-help-zone="item-contents:contenus">
         {groups.map(([kind, list]) => (
           <section key={kind} className="space-y-1.5" aria-label={KIND_LABELS[kind]}>
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{KIND_LABELS[kind]}</h4>
+            {isContact(kind) ? (
+              <ul className="space-y-1">
+                {list.map((c) => (
+                  <ContactRow key={c.id} content={c} actions={writable ? (
+                    <span className="flex items-center gap-0.5">
+                      <HelpHint text={pageHint('item-contents', 'moveTo')}>
+                        <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground" onClick={() => setToMove(c)} aria-label="Déplacer vers un autre élément"><MoveRight className="w-3.5 h-3.5" /></button>
+                      </HelpHint>
+                      <HelpHint text={pageHint('item-contents', 'removeHint')}>
+                        <button type="button" className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive" onClick={() => setToRemove(c)} aria-label="Retirer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </HelpHint>
+                    </span>
+                  ) : null} />
+                ))}
+              </ul>
+            ) : (
             <div className="flex flex-wrap gap-2">
               {list.map((c, i) => (
                 <ContentRow key={c.id} content={c} canEdit={writable}
                   first={i === 0} last={i === list.length - 1}
                   onUp={() => move(list, i, -1)} onDown={() => move(list, i, 1)}
                   onRemove={() => setToRemove(c)} onMoveTo={() => setToMove(c)} onOpenImage={() => setLightbox(c)}
+                  onRefreshPreview={() => api.refreshPreview.mutate(c.id)}
+                  refreshing={api.refreshPreview.isPending && api.refreshPreview.variables === c.id}
                   onRename={(name) => api.update.mutate({ id: c.id, name: name || null })}
                   diagram={kind === 'DIAGRAM' ? {
                     save: (xml) => api.update.mutateAsync({ id: c.id, xml }),
@@ -191,6 +225,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
                   } : undefined} />
               ))}
             </div>
+            )}
           </section>
         ))}
         {/* Dernière section (ITEM_CONTENT_SECTIONS) : données sécurisées, table et routes à part */}
@@ -230,6 +265,50 @@ function AddSlot({ children, onCancel }: { children: React.ReactNode; onCancel: 
   );
 }
 
+/** Coordonnée (2026-11-25) : ligne compacte — icône, libellé, valeur cliquable (tel:, mailto:, carte) */
+function ContactRow({ content: c, actions }: { content: ItemContent; actions?: React.ReactNode }) {
+  const Icon = KIND_ICONS[c.kind];
+  const href = contactHref(c.kind, c.value);
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      <Icon className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" aria-hidden />
+      {c.name && <span className="text-muted-foreground">{c.name} :</span>}
+      <span className="whitespace-pre-line">
+        {href ? <a href={href} target={c.kind === 'ADDRESS' ? '_blank' : undefined} rel="noopener noreferrer" className="text-primary hover:underline">{c.value}</a> : c.value}
+      </span>
+      {c.kind === 'ADDRESS' && href && <span className="text-xs text-muted-foreground">(carte)</span>}
+      {actions && <span className="ml-auto">{actions}</span>}
+    </li>
+  );
+}
+
+/** Saisie d'une coordonnée : valeur (adresse sur plusieurs lignes) et libellé facultatif — l'API vérifie le format */
+function ContactForm({ kind, onSubmit, onCancel, pending }: { kind: ContactContentKind; onSubmit: (value: string, name: string) => void; onCancel: () => void; pending: boolean }) {
+  const [value, setValue] = useState('');
+  const [name, setName] = useState('');
+  const v = value.trim();
+  const valid = kind === 'PHONE' ? PHONE_PATTERN.test(v) : kind === 'EMAIL' ? /^\S+@\S+\.\S+$/.test(v) : v.length > 0;
+  const submit = () => { if (valid) onSubmit(v, name.trim()); };
+  const label = ADD_LABELS[kind];
+  return (
+    <div className="rounded-md border border-dashed p-2 space-y-2">
+      {kind === 'ADDRESS'
+        ? <textarea className="w-full rounded-md border bg-background p-2 text-sm" rows={3} value={value} autoFocus maxLength={CONTACT_VALUE_MAX[kind]}
+            onChange={(e) => setValue(e.target.value)} aria-label={label} placeholder="N°, rue, code postal, ville" />
+        : <Input type={kind === 'EMAIL' ? 'email' : 'tel'} value={value} autoFocus maxLength={CONTACT_VALUE_MAX[kind]} placeholder={label}
+            onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }} aria-label={label} />}
+      <Input value={name} placeholder="Libellé (facultatif, ex. Standard)" onChange={(e) => setName(e.target.value)} aria-label="Libellé" />
+      <FieldHelp page="item-contents" field="contact" />
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="bordered" size="sm" onClick={onCancel}>Annuler</Button>
+        <HelpHint text={pageHint('item-contents', 'addContactConfirm')}>
+          <Button type="button" size="sm" disabled={!valid || pending} onClick={submit}>Ajouter</Button>
+        </HelpHint>
+      </div>
+    </div>
+  );
+}
+
 /** Saisie d'un lien : adresse (obligatoire, http/https) et nom facultatif */
 function LinkForm({ onSubmit, onCancel, pending }: { onSubmit: (url: string, name: string) => void; onCancel: () => void; pending: boolean }) {
   const [url, setUrl] = useState('');
@@ -263,19 +342,30 @@ interface RowProps {
   onRemove: () => void;
   /** « Déplacer vers… » : ouvre le choix de l'élément cible */
   onMoveTo: () => void;
+  /** Lien : relancer la récupération de l'image du site (2026-11-25) */
+  onRefreshPreview?: () => void;
+  refreshing?: boolean;
   onRename: (name: string) => void;
   onOpenImage: () => void;
   diagram?: { save: (xml: string) => Promise<unknown>; preview: (png: Blob) => Promise<unknown> };
 }
 
 /** Un contenu : aperçu selon sa sorte + actions (renommer, monter, descendre, retirer) */
-function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRename, onOpenImage, diagram }: RowProps) {
+function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRefreshPreview, refreshing, onRename, onOpenImage, diagram }: RowProps) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name ?? '');
   useEffect(() => { if (!renaming) setName(c.name ?? ''); }, [c.name, renaming]);
 
   const actions = canEdit && (
     <div className="flex items-center gap-0.5 shrink-0">
+      {c.kind === 'LINK' && onRefreshPreview && (
+        <HelpHint text={pageHint('item-contents', 'refreshPreview')}>
+          <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-40" disabled={refreshing}
+            onClick={onRefreshPreview} aria-label="Actualiser l'aperçu">
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </HelpHint>
+      )}
       {c.kind !== 'DIAGRAM' && (
         <HelpHint text={pageHint('item-contents', 'rename')}>
           <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground" onClick={() => setRenaming(true)} aria-label="Renommer">
@@ -372,6 +462,14 @@ function TilePreview({ content: c, onOpenImage }: { content: ItemContent; onOpen
       </a>
     );
   }
+  // Lien avec l'image d'aperçu du site, rangée chez nous (2026-11-25) : jamais d'appel au site à l'affichage
+  if (c.kind === 'LINK' && c.previewUrl && isSafeUrl(c.previewUrl)) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} — Ouvrir`} className="block h-full w-full hover:opacity-90 transition-opacity">
+        <img src={c.previewUrl} alt="" className="h-full w-full object-cover" />
+      </a>
+    );
+  }
   const ext = c.kind === 'FILE' ? fileExtension(c.name) ?? fileExtension(c.url) : null;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} — Ouvrir`} className="block h-full w-full hover:bg-accent/50 transition-colors">
@@ -451,6 +549,7 @@ export function ItemContentsRead({ contents }: { contents?: ItemContent[] }) {
           {(groups.length > 1 || list.length > 1) && (
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{KIND_LABELS[kind]}</h3>
           )}
+          {isContact(kind) ? <ul className="space-y-1">{list.map((c) => <ContactRow key={c.id} content={c} />)}</ul> : (
           <div className="flex flex-wrap gap-3">
             {list
               // Image sans adresse sûre : rien à montrer ; fichier ou lien sans adresse sûre : rien à ouvrir
@@ -459,6 +558,7 @@ export function ItemContentsRead({ contents }: { contents?: ItemContent[] }) {
                 <ContentTile key={c.id} content={c} wide preview={<TilePreview content={c} onOpenImage={() => setLightbox(c)} />} />
               ))}
           </div>
+          )}
         </div>
       ))}
       {lightbox?.url && <Lightbox url={lightbox.url} alt={displayName(lightbox) ?? ''} onClose={() => setLightbox(null)} />}

@@ -10,6 +10,7 @@
  * Contenus (lot 4 contenus multiples) : plus de champ url ; le paramètre url de create_item / update_item AJOUTE un
  * contenu Lien (POST …/contents) ; get_item liste les contenus avec leur id. Lot 5 : add_item_content (lien, schéma),
  * update_item_content (nom, adresse, xml, place dans la sorte via PUT …/contents/order), delete_item_content.
+ * Coordonnées (2026-11-25) : add_item_content / update_item_content acceptent PHONE / EMAIL / ADDRESS avec value.
  * update_item_content.targetItemId (2026-11-21) : déplace un contenu vers un autre item (POST …/contents/:id/move).
  * Données sécurisées (2026-11-20) : get_item liste leurs libellés (GET …/secrets) ; aucun outil ne les révèle ni ne
  * les écrit, et l'API refuse la révélation à un jeton MCP (garde secrets-leak.test.ts).
@@ -407,17 +408,20 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
     {
       spaceId: zId().describe('ID de l\'espace'),
       itemId: zId().describe('ID de l\'item'),
-      kind: z.enum(['LINK', 'DIAGRAM']).describe('LINK = lien ; DIAGRAM = schéma draw.io'),
+      kind: z.enum(['LINK', 'DIAGRAM', 'PHONE', 'EMAIL', 'ADDRESS']).describe('LINK = lien ; DIAGRAM = schéma draw.io ; PHONE / EMAIL / ADDRESS = coordonnée'),
       url: z.string().url().optional().describe('Adresse du lien (obligatoire pour LINK)'),
       xml: z.string().optional().describe('XML draw.io du schéma (obligatoire pour DIAGRAM)'),
-      name: z.string().max(200).optional().describe('Nom affiché'),
+      value: z.string().max(500).optional().describe('Numéro, e-mail ou adresse (obligatoire pour PHONE / EMAIL / ADDRESS)'),
+      name: z.string().max(200).optional().describe('Nom affiché (coordonnée : libellé, ex. « Standard »)'),
     },
-    async ({ spaceId, itemId, kind, url, xml, name }) => {
+    async ({ spaceId, itemId, kind, url, xml, value, name }) => {
       if (kind === 'LINK' && !url) throw new ConventionError('Un contenu LINK exige une url.')
       if (kind === 'DIAGRAM' && !xml) throw new ConventionError('Un contenu DIAGRAM exige le xml du schéma.')
-      const body = kind === 'LINK' ? { kind, url, name } : { kind, xml, name }
+      const contact = kind === 'PHONE' || kind === 'EMAIL' || kind === 'ADDRESS'
+      if (contact && !value) throw new ConventionError(`Un contenu ${kind} exige une value.`)
+      const body = kind === 'LINK' ? { kind, url, name } : contact ? { kind, value, name } : { kind, xml, name }
       const content = await client.post(`/spaces/${spaceId}/items/${itemId}/contents`, body)
-      return ok(`Contenu ajouté : [${content.id}] ${kind === 'LINK' ? 'Lien' : 'Schéma'}${name ? ` « ${name} »` : ''}`)
+      return ok(`Contenu ajouté : [${content.id}] ${formatContents([content]).replace(/^- \[[^\]]+\] /, '')}`)
     })
 
   define('write', 'update_item_content',
@@ -429,11 +433,13 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
       name: z.string().max(200).nullable().optional().describe('Nom affiché ; null efface'),
       url: z.string().url().optional().describe('Nouvelle adresse (lien seulement)'),
       xml: z.string().optional().describe('Nouveau XML draw.io (schéma seulement)'),
+      value: z.string().max(500).optional().describe('Nouvelle valeur (coordonnée seulement)'),
       position: z.number().int().min(1).optional().describe('Nouvelle place dans sa sorte, 1 = premier'),
       targetItemId: zId().optional().describe('Déplace le contenu vers cet item (même espace ou autre), en fin de sa sorte ; appliqué en dernier'),
     },
-    async ({ spaceId, itemId, contentId, name, url, xml, position, targetItemId }) => {
+    async ({ spaceId, itemId, contentId, name, url, xml, value, position, targetItemId }) => {
       const body: Record<string, unknown> = {}
+      if (value !== undefined) body.value = value
       if (name !== undefined) body.name = name
       if (url !== undefined) body.url = url
       if (xml !== undefined) body.xml = xml
@@ -452,7 +458,7 @@ export function registerTools(server: McpServer, client: SpokClient, profile: To
         await client.post(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}/move`, { targetItemId })
         return ok(`Contenu ${contentId} déplacé vers l'item ${targetItemId}.`)
       }
-      if (Object.keys(body).length === 0 && position === undefined) throw new ConventionError('Rien à modifier : donner name, url, xml, position ou targetItemId.')
+      if (Object.keys(body).length === 0 && position === undefined) throw new ConventionError('Rien à modifier : donner name, url, xml, value, position ou targetItemId.')
       return ok(`Contenu ${contentId} mis à jour.`)
     })
 

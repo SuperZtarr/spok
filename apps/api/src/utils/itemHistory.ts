@@ -13,7 +13,7 @@
  * Déplacement d'un contenu ou d'une donnée vers un autre élément (2026-11-21) : contentChange.movedToId / movedFromId →
  * « déplacé vers / reçu de « titre » » (titre seulement si le lecteur peut lire l'autre élément).
  */
-import { getItemTypeDef } from '@spok/shared';
+import { getItemTypeDef, itemContentKindDef } from '@spok/shared';
 import type { ItemHistoryLine } from '@spok/shared';
 
 export interface HistoryLog {
@@ -36,7 +36,6 @@ export interface HistoryContext {
 type State = Record<string, unknown>;
 
 const PRIORITY_LABELS: Record<number, string> = { 1: 'Basse', 2: 'Normale', 3: 'Haute', 4: 'Urgente' };
-const CONTENT_KIND_LABELS: Record<string, string> = { IMAGE: 'Image', FILE: 'Fichier', LINK: 'Lien', DIAGRAM: 'Schéma' };
 const RELATION_FROM: Record<string, string> = { blocks: 'bloque', implements: 'permet', drives: 'entraîne', relates: 'lié à', parent: 'parent de' };
 const RELATION_TO: Record<string, string> = { blocks: 'bloqué par', implements: 'permis par', drives: 'entraîné par', relates: 'lié à', parent: 'enfant de' };
 const EMPTY_DESCRIPTIONS = new Set(['', '<p></p>', '<p><br></p>', '<p><br/></p>', '<p> </p>']);
@@ -120,7 +119,7 @@ export function describeHistoryLog(log: HistoryLog, ctx: HistoryContext): ItemHi
     return [];
   }
   if (content) {
-    const kind = CONTENT_KIND_LABELS[content.kind ?? ''] ?? 'Contenu';
+    const kind = itemContentKindDef(content.kind ?? '')?.singular ?? 'Contenu';
     const what = content.name ? `${kind} « ${content.name} »` : kind;
     if (content.op === 'add' && moved?.movedFromId) return [{ label: `Contenu reçu de ${otherTitle(moved.movedFromId)}`, after: what }];
     if (content.op === 'remove' && moved?.movedToId) return [{ label: `Contenu déplacé vers ${otherTitle(moved.movedToId)}`, before: what }];
@@ -133,6 +132,7 @@ export function describeHistoryLog(log: HistoryLog, ctx: HistoryContext): ItemHi
         if (has(content, 'previousName')) lines.push({ label: `${kind} renommé`, before: content.previousName ?? null, after: content.name ?? null });
         if (content.urlChanged) lines.push({ label: `Adresse modifiée : ${what}` });
         if (content.xmlChanged) lines.push({ label: `Schéma modifié : ${what}` });
+        if ((content as { valueChanged?: boolean }).valueChanged) lines.push({ label: `Valeur modifiée : ${what}` });
         return lines;
       }
       default: return [];

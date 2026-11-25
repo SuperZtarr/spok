@@ -56,7 +56,7 @@ describe('ItemContentsSection', () => {
     const onTitleHint = vi.fn()
     renderZone({ onTitleHint })
     fireEvent.click(screen.getByRole('button', { name: /Ajouter/ }))
-    expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Fichier', 'Image', 'Lien', 'Schéma', 'Donnée sécurisée'])
+    expect(screen.getAllByRole('menuitem').map((m) => m.textContent?.trim())).toEqual(['Fichier', 'Image', 'Lien', 'Téléphone', 'E-mail', 'Adresse', 'Schéma', 'Donnée sécurisée'])
     fireEvent.click(screen.getByRole('menuitem', { name: /Lien/ }))
     fireEvent.change(screen.getByLabelText('Adresse du lien'), { target: { value: 'https://exemple.fr/page' } })
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter le lien' }))
@@ -123,5 +123,34 @@ describe('ItemContentsSection', () => {
     renderZone({ itemId: undefined })
     expect(screen.queryByRole('button', { name: /Ajouter/ })).toBeNull()
     expect(screen.getByText(/Enregistrez d'abord l'élément/)).toBeTruthy()
+  })
+})
+
+describe('coordonnées (2026-11-25)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('lecture : lignes cliquables tel:, mailto:, carte', () => {
+    const { container } = render(<ItemContentsRead contents={[
+      c('p1', 'PHONE', 0, { url: null, name: 'Standard', value: '+33 1 23 45' }),
+      c('e1', 'EMAIL', 0, { url: null, name: null, value: 'a@b.test' }),
+      c('a1', 'ADDRESS', 0, { url: null, name: null, value: '1 rue X\n75000 Paris' }),
+    ]} />)
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'))
+    expect(hrefs).toEqual(['tel:+33123' + '45', 'mailto:a@b.test', 'https://www.openstreetmap.org/search?query=1%20rue%20X%2C%2075000%20Paris'])
+    expect(screen.getByText('Standard :')).toBeTruthy()
+  })
+
+  it('ajout d\'un e-mail : bouton actif seulement si la forme est valide, envoi kind EMAIL + value', async () => {
+    api.add.mockResolvedValue({ id: 'n' })
+    renderZone()
+    fireEvent.click(screen.getByText('Ajouter'))
+    fireEvent.click(screen.getByText('E-mail'))
+    const input = screen.getByLabelText('E-mail')
+    fireEvent.change(input, { target: { value: 'pas-un-mail' } })
+    const btn = screen.getAllByText('Ajouter').at(-1)!.closest('button')!
+    expect(btn.disabled).toBe(true)
+    fireEvent.change(input, { target: { value: 'a@b.test' } })
+    fireEvent.click(btn)
+    await waitFor(() => expect(api.add).toHaveBeenCalledWith('s1', 'i1', { kind: 'EMAIL', value: 'a@b.test', name: null }))
   })
 })

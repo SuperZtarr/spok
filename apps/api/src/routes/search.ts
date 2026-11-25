@@ -192,7 +192,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       const itemWhere: Record<string, unknown> = buildWordsWhere(words, [
         { name: 'title' }, { name: 'description', nullable: true },
         // Contenus multiples (lot 3a) : noms des fichiers / contenus et adresses des liens
-        { relation: 'contents', fields: ['name', 'url'] },
+        { relation: 'contents', fields: ['name', 'url', 'value'] },
         // Références externes « Application : référence » (règle item-external-refs)
         { relation: 'externalRefs', fields: ['value'] },
       ]);
@@ -383,7 +383,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
       spaceFilter = { spaceId: { in: spaceIds } };
     }
 
-    // Search items (title + description + noms et adresses des contenus)
+    // Search items (title + description + noms, adresses et coordonnées des contenus)
     const itemWhere = {
       ...spaceFilter,
       OR: [
@@ -392,6 +392,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         { contents: { some: { OR: [
           { name: { contains: query, mode: 'insensitive' as const } },
           { url: { contains: query, mode: 'insensitive' as const } },
+          { value: { contains: query, mode: 'insensitive' as const } },
         ] } } },
         { externalRefs: { some: { value: { contains: query, mode: 'insensitive' as const } } } },
       ],

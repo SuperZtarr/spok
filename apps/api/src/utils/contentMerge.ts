@@ -15,8 +15,9 @@
  * Fichiers : un contenu déplacé garde son url (fichier rangé sous items/<ancien id>/) ; le doublon retiré n'efface pas
  * son fichier — comme la suppression d'un élément, rien n'est effacé du stockage ici (pas de risque d'effacer un
  * fichier encore utilisé). Règle de gestion : item-contents-merge (lib/businessRules.ts côté web).
+ * Coordonnées (2026-11-25) : doublon = même sorte + même valeur (casse et espaces ignorés).
  */
-import { ITEM_CONTENTS_MAX } from '@spok/shared';
+import { ITEM_CONTENTS_MAX, CONTACT_CONTENT_KINDS } from '@spok/shared';
 
 export interface MergeableContent {
   id: string;
@@ -26,6 +27,8 @@ export interface MergeableContent {
   name: string | null;
   size: number | null;
   xml?: string | null;
+  /** Coordonnée (PHONE / EMAIL / ADDRESS) */
+  value?: string | null;
   position: number;
 }
 
@@ -62,6 +65,9 @@ function identityKeys(c: MergeableContent): string[] {
   const keys: string[] = [];
   if (c.kind === 'LINK') {
     if (c.url) keys.push(`LINK|${normalizeLinkUrl(c.url)}`);
+  } else if (isContactKind(c.kind)) {
+    // Coordonnée (2026-11-25) : même sorte + même valeur (casse et espaces ignorés)
+    if (c.value) keys.push(`${c.kind}|value|${c.value.trim().toLowerCase().replace(/\s+/g, ' ')}`);
   } else if (c.kind === 'DIAGRAM') {
     if (c.xml) keys.push(`DIAGRAM|xml|${c.xml}`);
     else if (c.url) keys.push(`DIAGRAM|url|${c.url}`);
@@ -100,7 +106,8 @@ export function planContentMerge(kept: MergeableContent[], incoming: MergeableCo
   };
 }
 
-const CONTENT_SELECT = { id: true, itemId: true, kind: true, url: true, name: true, size: true, xml: true, position: true } as const;
+const CONTENT_SELECT = { id: true, itemId: true, kind: true, url: true, name: true, size: true, xml: true, value: true, position: true } as const;
+const isContactKind = (k: string) => (CONTACT_CONTENT_KINDS as readonly string[]).includes(k);
 
 /** Lit les contenus de l'élément gardé et des éléments réunis (dans l'ordre de `fromItemIds`), puis calcule le plan. */
 export async function loadContentMergePlan(prisma: any, keptItemId: string, fromItemIds: string[]): Promise<ContentMergePlan> {

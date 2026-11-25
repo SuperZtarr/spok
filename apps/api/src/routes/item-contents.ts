@@ -15,6 +15,11 @@
  *                                        CET élément — une adresse saisie ne vise jamais l'objet d'un autre) et n'est
  *                                        plus utilisé par aucun autre contenu ni par la colonne items.url (gardée en
  *                                        sauvegarde depuis le lot 4 : une restauration doit retrouver son fichier).
+ * - POST   /:id/contents/:contentId/preview (2026-11-25) → aperçu d'un LIEN (image du site, utils/linkPreview.ts, protégé
+ *                                        contre les SSRF) récupéré tout de suite ; aussi lancé en tâche de fond à l'ajout
+ *                                        d'un lien et au changement de son adresse (ancien aperçu effacé).
+ * - Coordonnées (2026-11-25) : POST { kind: PHONE | EMAIL | ADDRESS, value, name? } ; PATCH { value?, name? } — règles
+ *                                        du registre @spok/shared (contactValue) ; valeur en clair dans `value`.
  * - PUT    /:id/contents/order { ids }   → ordre complet des contenus d'UNE sorte (ids de cette sorte, tous).
  * - POST   /:id/contents/:contentId/move { targetItemId } (2026-11-21) → le contenu passe sur un autre élément (même
  *                                        espace ou autre), en fin de sa sorte ; droits d'écriture sur les DEUX éléments
@@ -32,11 +37,12 @@
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { ITEM_CONTENTS_MAX, validateUpload } from '@spok/shared';
+import { ITEM_CONTENTS_MAX, validateUpload, CONTACT_CONTENT_KINDS, CONTACT_VALUE_MAX, PHONE_PATTERN, type ContactContentKind } from '@spok/shared';
 import { isR2Configured, isR2Url, isItemStorageUrl, processImage, uploadImageToR2, uploadFileToR2, deleteFileFromR2 } from '../utils/r2.js';
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { storeFilePreview } from '../utils/filePreview.js';
+import { storeLinkPreview } from '../utils/linkPreview.js';
 import { createAuditLog } from '../utils/audit.js';
 
 type P = { spaceId: string; id: string };
@@ -48,15 +54,28 @@ const urlField = z.string().trim().url().max(2000)
 const nameField = z.string().trim().max(255).nullable().optional();
 const XML_MAX = 5_000_000;
 
+/** Valeur d'une coordonnée (2026-11-25) : règles du registre @spok/shared (CONTACT_VALUE_MAX, PHONE_PATTERN) */
+function contactValue(kind: ContactContentKind) {
+  const base = z.string().trim().min(1, 'Valeur obligatoire').max(CONTACT_VALUE_MAX[kind]);
+  if (kind === 'PHONE') return base.regex(PHONE_PATTERN, 'Numéro : chiffres, espaces, + . - ( ) seulement');
+  if (kind === 'EMAIL') return base.email('Adresse e-mail invalide');
+  return base;
+}
+const isContact = (kind: string): kind is ContactContentKind => (CONTACT_CONTENT_KINDS as readonly string[]).includes(kind);
+
 const createSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('LINK'), url: urlField, name: nameField }),
   z.object({ kind: z.literal('IMAGE'), url: urlField, name: nameField }),
   z.object({ kind: z.literal('DIAGRAM'), xml: z.string().max(XML_MAX), url: urlField.nullable().optional(), name: nameField }),
+  z.object({ kind: z.literal('PHONE'), value: contactValue('PHONE'), name: nameField }),
+  z.object({ kind: z.literal('EMAIL'), value: contactValue('EMAIL'), name: nameField }),
+  z.object({ kind: z.literal('ADDRESS'), value: contactValue('ADDRESS'), name: nameField }),
 ]);
 const patchSchema = z.object({
   name: nameField,
   url: urlField.nullable().optional(),
   xml: z.string().max(XML_MAX).optional(),
+  value: z.string().optional(),
 });
 const moveSchema = z.object({ targetItemId: z.string().min(1).max(64) });
 const orderSchema =z.object({ ids: z.array(z.string()).min(1).max(ITEM_CONTENTS_MAX) });
@@ -98,7 +117,7 @@ async function nextPosition(prisma: any, itemId: string, kind: string): Promise<
   return typeof max === 'number' ? max + 1 : 0;
 }
 
-type ContentChange = { op: 'add' | 'update' | 'remove' | 'reorder'; kind: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean; movedToId?: string; movedFromId?: string };
+type ContentChange = { op: 'add' | 'update' | 'remove' | 'reorder'; kind: string; name?: string | null; previousName?: string | null; urlChanged?: boolean; xmlChanged?: boolean; valueChanged?: boolean; movedToId?: string; movedFromId?: string };
 
 /** Entrée de journal d'un changement de contenus, rattachée à l'élément (voir en-tête) */
 const logContentChange = (prisma: any, request: any, itemId: string, change: ContentChange) =>
@@ -108,12 +127,19 @@ const logContentChange = (prisma: any, request: any, itemId: string, change: Con
   });
 
 /** Nom affichable d'un contenu : son nom, sinon son adresse */
-const contentLabel = (c: { name?: string | null; url?: string | null }) => c.name || c.url || null;
+const contentLabel = (c: { name?: string | null; url?: string | null; value?: string | null }) => c.name || c.url || c.value || null;
 
 /** Après toute écriture de contenus : élément marqué modifié */
 const touchItem = async (prisma: any, itemId: string, userId: string) => {
   await prisma.item.update({ where: { id: itemId }, data: { updatedAt: new Date(), updatedById: userId } });
 };
+
+/** Aperçu d'un lien en tâche de fond : jamais bloquant, ancienne image effacée si remplacée */
+function previewInBackground(fastify: any, content: { id: string; itemId: string; kind: string; url?: string | null; previewUrl?: string | null }) {
+  void storeLinkPreview(fastify.prisma, content)
+    .then((r) => (r?.previous ? deleteIfUnused(fastify.prisma, r.previous, content.itemId) : undefined))
+    .catch((e: unknown) => fastify.log?.warn?.({ err: e }, 'aperçu de lien impossible'));
+}
 
 const LIMIT_MESSAGE = `Un élément porte au plus ${ITEM_CONTENTS_MAX} contenus`;
 
@@ -132,12 +158,15 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
         url: 'url' in body ? body.url ?? null : null,
         name: body.name ?? null,
         xml: body.kind === 'DIAGRAM' ? body.xml : null,
+        value: 'value' in body ? body.value : null,
         position,
         createdById: request.user.userId,
       },
     });
     await touchItem(fastify.prisma, item.id, request.user.userId);
     await logContentChange(fastify.prisma, request, item.id, { op: 'add', kind: content.kind, name: contentLabel(content) });
+    // Lien : aperçu du site cherché en tâche de fond, après la réponse (utils/linkPreview.ts)
+    if (content.kind === 'LINK') previewInBackground(fastify, content);
     return reply.status(201).send(content);
   });
 
@@ -210,23 +239,49 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.badRequest('L\'adresse d\'un fichier envoyé ne se modifie pas');
     }
     if (body.url === null && content.kind !== 'DIAGRAM') return reply.badRequest('Adresse obligatoire');
+    if (body.value !== undefined && !isContact(content.kind)) return reply.badRequest('Seule une coordonnée porte une valeur');
+    if (body.url !== undefined && isContact(content.kind)) return reply.badRequest("Une coordonnée n'a pas d'adresse web");
+    const value = body.value !== undefined && isContact(content.kind) ? contactValue(content.kind).parse(body.value) : undefined;
     const data: Record<string, unknown> = {};
+    if (value !== undefined) data.value = value;
     if (body.name !== undefined) data.name = body.name;
     if (body.url !== undefined) data.url = body.url;
     if (body.xml !== undefined) data.xml = body.xml;
+    // Lien dont l'adresse change : l'ancien aperçu ne vaut plus, le nouveau est cherché en tâche de fond
+    const linkMoved = content.kind === 'LINK' && body.url !== undefined && body.url !== content.url;
+    if (linkMoved) data.previewUrl = null;
     const updated = await fastify.prisma.itemContent.update({ where: { id: content.id }, data });
+    if (linkMoved) {
+      await deleteIfUnused(fastify.prisma, content.previewUrl, item.id);
+      previewInBackground(fastify, updated);
+    }
     await touchItem(fastify.prisma, item.id, request.user.userId);
     const renamed = body.name !== undefined && (body.name ?? null) !== (content.name ?? null);
     const urlChanged = body.url !== undefined && body.url !== content.url;
     const xmlChanged = body.xml !== undefined && body.xml !== content.xml;
-    if (renamed || urlChanged || xmlChanged) {
+    const valueChanged = value !== undefined && value !== content.value;
+    if (renamed || urlChanged || xmlChanged || valueChanged) {
       await logContentChange(fastify.prisma, request, item.id, {
         op: 'update', kind: content.kind, name: contentLabel(updated),
         ...(renamed ? { previousName: contentLabel(content) } : {}),
         ...(urlChanged ? { urlChanged: true } : {}), ...(xmlChanged ? { xmlChanged: true } : {}),
+        ...(valueChanged ? { valueChanged: true } : {}),
       });
     }
     return updated;
+  });
+
+  // Actualiser l'aperçu d'un lien (2026-11-25) : récupération synchrone ; previewFound = une image a été trouvée
+  fastify.post<{ Params: PC }>('/:id/contents/:contentId/preview', async (request, reply) => {
+    const item = await writableItem(fastify, request, reply);
+    if (!item) return reply;
+    const content = await fastify.prisma.itemContent.findFirst({ where: { id: request.params.contentId, itemId: item.id } });
+    if (!content) return reply.notFound('Contenu introuvable');
+    if (content.kind !== 'LINK') return reply.badRequest("Seul un lien a un aperçu de site");
+    const stored = await storeLinkPreview(fastify.prisma, content);
+    if (stored?.previous) await deleteIfUnused(fastify.prisma, stored.previous, item.id);
+    const fresh = await fastify.prisma.itemContent.findFirst({ where: { id: content.id } });
+    return { ...(fresh ?? content), previewFound: !!stored };
   });
 
   // Suppression (fichier effacé du stockage seulement s'il n'est plus utilisé nulle part)

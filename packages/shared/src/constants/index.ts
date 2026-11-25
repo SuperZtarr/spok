@@ -41,3 +41,4 @@ export {
 export type { ItemTypeDefinition, TypeHue } from './typeRegistry.js';
 export * from './menuDefaults.js';
 export type { MenuOverride } from '../types/menuItem.js';
+export * from './itemContentKinds.js';

@@ -372,6 +372,18 @@ describe('contenus (lot 5)', () => {
     expect(client.patch).not.toHaveBeenCalled()
   })
 
+  it('add_item_content : coordonnée PHONE avec value, sans value refusée', async () => {
+    const client = fakeClient()
+    client.post.mockImplementation(async (_p: string, body: any) => ({ id: 'k1', ...body }))
+    const { mcp } = await connect('public', client)
+    const r = await mcp.callTool({ name: 'add_item_content', arguments: { spaceId: 's1', itemId: 'i1', kind: 'PHONE', value: '+33 1 23', name: 'Standard' } })
+    expect(r.isError).toBeFalsy()
+    expect(client.post).toHaveBeenCalledWith('/spaces/s1/items/i1/contents', { kind: 'PHONE', value: '+33 1 23', name: 'Standard' })
+    expect(text(r)).toContain('Téléphone : Standard — +33 1 23')
+    const bad = await mcp.callTool({ name: 'add_item_content', arguments: { spaceId: 's1', itemId: 'i1', kind: 'EMAIL' } })
+    expect(bad.isError).toBe(true)
+  })
+
   it('update_item_content : targetItemId → POST …/move vers l\'autre item', async () => {
     const client = fakeClient()
     const { mcp } = await connect('public', client)
