@@ -75,6 +75,8 @@ export interface QuestionOutcomeInput {
   chosenOptionId?: string | null;
   answerText?: string | null;
   note?: string | null;
+  /** Reportée : date de reprise (AAAA-MM-JJ), posée comme échéance de la question (2026-11-21) */
+  resumeDate?: string | null;
 }
 
 /** Corps de PUT …/question/options : liste complète, dans l'ordre (id absent = nouvelle option) */

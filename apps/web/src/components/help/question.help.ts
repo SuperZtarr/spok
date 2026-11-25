@@ -1,6 +1,9 @@
 /* Aide utilisateur du bloc « Question » (QuestionPanel : fiche d'un élément Question et fenêtre en direct d'une séance),
    écrite en éléments d'aide (help/elements.ts) — registre help/pageHelp.ts, clé 'question'.
-   Étapes numérotées (2026-11-11) : éléments « 1. Réponses possibles », « 2. Votes », « 3. Issue », comme le bloc.
+   Étapes numérotées (2026-11-11) : éléments « 1. Réponses possibles », « 2. Votes », « 3. Conclure » (clé issue), comme le bloc.
+   Issues (2026-11-21) : Tranchée = réponse du groupe (decide), Arbitrée = décision d'une autorité (arbitrate,
+   decideOther) ; meaning_<statut> = sens affiché sous chaque issue (QuestionStatusField) ; doneGroup / doneArbitrated
+   = bandeau d'une question close ; concludeLead = phrase sous « Conclure ».
    hints : rappels fonctionnels de chaque action à effet (voter, retenir, noter une issue, rouvrir, retirer une
    réponse, choix multiple, modèle de réponse (template ; templatesLead = intitulé de la ligne), lier / délier un élément, ouvrir l'élément lié — réponses enregistrées au fil de l'eau ; statusDecided = bouton « Tranchée » du champ Statut, QuestionStatusField),
    vérifiés dans apps/api/src/routes/item-question.ts ; fields : phrases à lire avant d'agir (en ligne visible). */
@@ -22,15 +25,16 @@ const elements: HelpElements = {
   },
   vote: {
     title: '2. Votes',
-    short: 'Chaque membre choisit sa réponse ; le responsable en retient une.',
-    text: 'Chaque membre qui peut contribuer choisit une réponse (ou plusieurs en choix multiple) et la change tant que la question est ouverte. Le décompte est nominatif ; la réponse en tête est mise en avant, avec un badge « Unanimité » si tous les votants (au moins deux) l\'ont choisie. Chacun peut revoir son vote pour converger. Une autre réponse s\'écrit en commentaire. Un visiteur voit le décompte sans voter. Le responsable de la question tranche avec « Retenir » sur la ligne de la réponse choisie.',
+    short: 'Chaque membre choisit sa réponse ; le responsable valide celle du groupe ou arbitre.',
+    text: 'Chaque membre qui peut contribuer choisit une réponse (ou plusieurs en choix multiple) et la change tant que la question est ouverte. Le décompte est nominatif ; la réponse en tête est mise en avant, avec un badge « Unanimité » si tous les votants (au moins deux) l\'ont choisie. Une autre réponse s\'écrit en commentaire. Un visiteur voit le décompte sans voter. Le responsable de la question conclut sur la ligne d\'une réponse : « Valider la réponse du groupe » (sur la réponse en tête : la question est Tranchée) ou « Arbitrer » (sur n\'importe quelle réponse : il décide lui-même, la question est Arbitrée).',
     side: 'top',
   },
   issue: {
-    title: '3. Issue',
-    short: 'Ce qui a été conclu.',
-    text: 'L\'issue est le statut de la question : Ouverte, Tranchée (réponse retenue ou autre réponse écrite), Reportée ou Sans conclusion, avec une ligne de précision possible. Le même statut se choisit dans le champ Statut de la fiche complète. Les votes ne tranchent jamais : l\'issue est notée par le responsable de la question, ou en séance par l\'animateur.',
+    title: '3. Conclure',
+    short: 'Ce qui a été conclu, et par qui.',
+    text: 'L\'issue est le statut de la question : Ouverte (on vote encore), Reportée (même question mise en attente, avec une date de reprise possible ; « Rouvrir » pour la reprendre), Tranchée (réponse du groupe : celle en tête des votes), Arbitrée (une autorité — responsable, manager, MJ — décide, même contre les votes ou par une réponse écrite) ou Sans conclusion (close sans réponse). Une ligne de précision est possible. Le même statut se choisit dans le champ Statut de la fiche complète, où le sens de chaque issue est écrit sous son nom.',
     side: 'top',
+    changes: [{ id: 'question-conclude', kind: 'evolution', text: 'Question : on conclut clairement. « Valider la réponse du groupe » sur la réponse en tête des votes (Tranchée) ou « Arbitrer » sur n\'importe quelle réponse (nouvelle issue Arbitrée : décision d\'une autorité). « Reporter » garde la même question, avec une date de reprise. Le sens de chaque issue est écrit à l\'écran, et les couleurs suivent celles des tâches.', date: '2026-11-25' }],
   },
 };
 
@@ -45,11 +49,22 @@ export const help: HelpEntry = {
     vote: 'Enregistre votre choix, visible par tous avec votre nom. Vous pouvez le changer tant que la question est ouverte ; il est figé dès qu\'une issue est notée. Il ne tranche pas la question.',
     voteClear: 'Retire votre vote.',
     unanimous: 'Tous les votants (au moins deux) ont choisi cette option. C’est une indication : la question n’est pas tranchée pour autant, l’issue reste à noter.',
-    decide: 'Note la question « Tranchée » avec cette réponse comme réponse retenue. Les votes sont figés. Réversible : « Ouverte » efface l\'issue.',
-    statusDecided: 'Une question se tranche en retenant une réponse : ce bouton amène aux votes, où « Retenir » note la réponse choisie (ou écrivez une autre réponse dans l\'issue).',
-    decideOther: 'Note la question « Tranchée » avec la réponse écrite ici, hors des options. Les votes sont figés.',
-    postpone: 'Note la question « Reportée » : les votes sont figés. En séance, elle sera reprise dans la préparation de la suite, et rouverte quand on la présentera de nouveau.',
-    noConclusion: 'Note la question « Sans conclusion » : une issue normale quand l\'échange n\'aboutit pas. Les votes sont figés.',
+    decide: 'Réponse du groupe : note la question « Tranchée » avec cette réponse, en tête des votes. Les votes sont figés. Réversible : « Rouvrir » efface l\'issue.',
+    arbitrate: 'Arbitrage : vous décidez de cette réponse, quel que soit le résultat des votes. La question est « Arbitrée » à votre nom, les votes sont figés. Réversible : « Rouvrir » efface l\'issue.',
+    statusDecided: 'Tranchée = la réponse du groupe : ce bouton amène aux votes, où « Valider la réponse du groupe » est sur la réponse en tête.',
+    statusArbitrated: 'Arbitrée = une autorité décide : ce bouton amène aux votes, où « Arbitrer » est sur chaque réponse (ou arbitrez par une réponse écrite dans « Conclure »).',
+    decideOther: 'Arbitrage par une réponse écrite, hors des réponses possibles : la question est « Arbitrée » à votre nom. Les votes sont figés.',
+    postpone: 'Met la question en attente (« Reportée ») : c\'est la même question, réponses et votes gardés, votes figés. La date de reprise, si vous en donnez une, devient son échéance. « Rouvrir » la reprend. En séance, elle est reprise dans la préparation de la suite.',
+    noConclusion: 'Clôt la question sans réponse (« Sans conclusion ») : une issue normale quand l\'échange n\'aboutit pas. Les votes sont figés ; « Rouvrir » la reprend.',
+    doneGroup: 'Réponse du groupe',
+    doneArbitrated: 'Arbitrée par {who}',
+    resumeLabel: 'Reprise le',
+    pickAnswer: 'Choisissez la réponse dans les votes : « Valider la réponse du groupe » ou « Arbitrer ».',
+    meaning_question_open: 'on vote encore',
+    meaning_question_postponed: 'en attente, à reprendre',
+    meaning_question_decided: 'réponse du groupe',
+    meaning_question_arbitrated: 'décision d\'une autorité',
+    meaning_question_no_conclusion: 'close sans réponse',
     reopen: 'Remet la question « Ouverte » : l\'issue et sa précision sont effacées, les votes redeviennent modifiables.',
     note: 'Enregistre la ligne de précision avec l\'issue actuelle.',
     templatesLead: 'Partir d\'un modèle :',
@@ -64,7 +79,7 @@ export const help: HelpEntry = {
     liveCopy: 'En séance, l\'issue notée par l\'animateur est aussi reportée sur la question d\'origine s\'il peut la modifier.',
   },
   fields: {
-    otherAnswer: 'Autre réponse : une réponse qui n\'est pas parmi les options.',
+    concludeLead: 'Validez une réponse dans les votes (réponse du groupe ou arbitrage), ou concluez autrement :',
     comment: 'Une réponse qui n\'est pas dans la liste ? Écrivez-la en commentaire de la question.',
     frozen: 'Question close : les votes sont figés.',
     unsaved: 'Enregistrement de la question…',

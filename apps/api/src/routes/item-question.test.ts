@@ -24,7 +24,10 @@ const Q = { id: 'q1', type: 'QUESTION', spaceId: SPACE, status: QUESTION_STATUS.
 
 describe('Statuts réservés', () => {
   it('une question ne propose que ses 4 issues, les autres types jamais', () => {
-    expect(statusesForType(DEFAULT_STATUSES, 'QUESTION').map((s) => s.id)).toEqual(Object.values(QUESTION_STATUS))
+    // Ordre du registre (2026-11-21) : Ouverte, Reportée, Tranchée, Arbitrée, Sans conclusion
+    expect(statusesForType(DEFAULT_STATUSES, 'QUESTION').map((s) => s.id)).toEqual([
+      QUESTION_STATUS.OPEN, QUESTION_STATUS.POSTPONED, QUESTION_STATUS.DECIDED, QUESTION_STATUS.ARBITRATED, QUESTION_STATUS.NO_CONCLUSION,
+    ])
     expect(statusesForType(DEFAULT_STATUSES, 'TASK').some((s) => s.id.startsWith('question_'))).toBe(false)
     expect(statusesForType(DEFAULT_STATUSES, null).some((s) => s.types?.length)).toBe(false)
   })
@@ -45,11 +48,11 @@ describe('Statuts réservés', () => {
     expect(statusForType('TASK', 'meeting_minutes_sent')).toBe('done')
     expect(statusForType('MEETING', 'meeting_held')).toBe('meeting_held')
     expect(statusForType('QUESTION', 'meeting_minutes_sent')).toBe(QUESTION_STATUS.OPEN)
-    // Période (2026-11-20) : jamais de statut
-    expect(statusForType('PERIOD', 'in_progress')).toBeNull()
-    expect(statusForType('PERIOD', null)).toBeNull()
-    expect(statusAllowedForType('todo', 'PERIOD')).toBe(false)
-    expect(statusesForType(DEFAULT_STATUSES, 'PERIOD')).toEqual([])
+    // Période (2026-11-25) : statuts ordinaires, comme une tâche
+    expect(statusForType('PERIOD', 'in_progress')).toBe('in_progress')
+    expect(statusForType('PERIOD', 'meeting_minutes_sent')).toBe('done')
+    expect(statusAllowedForType('todo', 'PERIOD')).toBe(true)
+    expect(statusesForType(DEFAULT_STATUSES, 'PERIOD').some((s) => s.id === 'todo')).toBe(true)
     // Statut propre à une communauté (inconnu des défauts) : conservé
     expect(statusForType('TASK', 'review')).toBe('review')
     expect(statusAllowedForType('review', 'QUESTION')).toBe(false)
@@ -60,7 +63,7 @@ describe('Statuts réservés', () => {
       { id: QUESTION_STATUS.DECIDED, label: 'Décidée', color: 'c', borderColor: 'b', order: 1, visible: true }]
     const out = withDefaultStatuses(custom)
     expect(out.find((s) => s.id === QUESTION_STATUS.DECIDED)).toMatchObject({ label: 'Décidée', types: ['QUESTION'] })
-    expect(out.filter((s) => s.types?.includes('QUESTION'))).toHaveLength(4)
+    expect(out.filter((s) => s.types?.includes('QUESTION'))).toHaveLength(5)
   })
 })
 
@@ -184,10 +187,18 @@ describe('Routes question', () => {
     expect((await put('vote', { optionIds: [] })).statusCode).toBe(403)
   })
 
-  it('tranchée exige une option retenue ou une réponse écrite', async () => {
+  it('tranchée = réponse en tête des votes ; arbitrée = toute réponse ou réponse écrite (2026-11-21)', async () => {
     expect((await put('outcome', { status: QUESTION_STATUS.DECIDED })).statusCode).toBe(400)
     prisma.questionOption.findFirst.mockResolvedValue({ id: 'o1' })
     prisma.question.upsert.mockResolvedValue({})
+    // Réponse écrite : arbitrage seulement
+    expect((await put('outcome', { status: QUESTION_STATUS.DECIDED, answerText: 'autre' })).statusCode).toBe(400)
+    // o1 pas en tête (o2 a plus de votes) : Tranchée refusée, Arbitrée acceptée
+    prisma.questionVote.findMany.mockResolvedValue([{ optionId: 'o2' }, { optionId: 'o2' }, { optionId: 'o1' }])
+    expect((await put('outcome', { status: QUESTION_STATUS.DECIDED, chosenOptionId: 'o1' })).statusCode).toBe(400)
+    expect((await put('outcome', { status: QUESTION_STATUS.ARBITRATED, chosenOptionId: 'o1' })).statusCode).toBe(200)
+    expect((await put('outcome', { status: QUESTION_STATUS.ARBITRATED, answerText: 'autre' })).statusCode).toBe(200)
+    prisma.questionVote.findMany.mockResolvedValue([{ optionId: 'o1' }])
     const res = await put('outcome', { status: QUESTION_STATUS.DECIDED, chosenOptionId: 'o1', note: 'à confirmer' })
     expect(res.statusCode).toBe(200)
     expect(prisma.item.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: QUESTION_STATUS.DECIDED }) }))

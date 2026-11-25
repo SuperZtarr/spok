@@ -11,18 +11,19 @@ export const SPOK_INSTRUCTIONS = `SPOK structure, relie et planifie des informat
 ## Modèle
 - Communauté → Espaces (arborescence) → Items.
 - Un item a un type (sa nature) : PROJECT (ensemble de travail avec dates), TASK (action à faire, statut + échéance),
-  MEETING (réunion datée, à l'heure près), PERIOD (plage de dates sans action, ex. vacances, sprint — sans statut),
+  MEETING (réunion datée, à l'heure près), PERIOD (plage de dates sans action, ex. vacances, sprint),
   UNDEFINED (« Élément » : type par défaut — texte rédigé (notes, compte-rendu, synthèse), photo, fichier ou lien
   déposé seul), ARTICLE (page qui assemble des éléments existants ; ses blocs ne se gèrent pas par MCP),
   QUESTION (titre = la question ; issue notée par ses statuts réservés question_open / question_decided /
-  question_postponed / question_no_conclusion, qu'elle seule utilise ; options et votes ne se gèrent pas par MCP),
+  question_postponed / question_no_conclusion / question_arbitrated (Tranchée = réponse du groupe, Arbitrée =
+  décision d'une autorité ; l'issue avec sa réponse se note dans l'interface), qu'elle seule utilise ; options et votes ne se gèrent pas par MCP),
   PROCESS (canevas où l'on pose des éléments de tous espaces, en couloirs, reliés par leurs relations ; ses places et
   couloirs ne se gèrent pas par MCP — les relations, elles, se créent normalement avec create_relation).
   MEETING et ARTICLE ont aussi leurs statuts réservés (meeting_* : à organiser → CR envoyé ; article_* : brouillon →
   publié) : get_space_conventions indique pour chaque statut réservé le type qui l'utilise.
   Les types réellement utilisés et leurs libellés dépendent de la communauté : voir get_space_conventions.
-- Contenus : un item de n'importe quel type porte des images, fichiers, liens et schémas (plusieurs de chaque).
-  get_item les liste avec leur id. Par MCP : add_item_content ajoute un lien ou un schéma draw.io (xml) — le
+- Contenus : un item de n'importe quel type porte des images, fichiers, liens, coordonnées (téléphone, e-mail, adresse) et schémas (plusieurs de chaque).
+  get_item les liste avec leur id. Par MCP : add_item_content ajoute un lien, un schéma draw.io (xml) ou une coordonnée (PHONE / EMAIL / ADDRESS, value) — le
   paramètre url de create_item / update_item ajoute aussi un lien ; update_item_content renomme, change l'adresse
   d'un lien ou le xml d'un schéma, déplace un contenu dans sa sorte, ou vers un autre item (targetItemId, droits
   d'écriture sur les deux items) ; delete_item_content le retire (après

@@ -134,7 +134,7 @@ describe('Community referentiels routes', () => {
       // Statuts envoyés + issues d'une question (réservées, non supprimables) rajoutées
       const expected = withDefaultStatuses(newStatuses)
       expect(body.referentiels.statuses.slice(0, 1)).toEqual(newStatuses)
-      expect(body.referentiels.statuses.filter((s: any) => s.types?.includes('QUESTION'))).toHaveLength(4)
+      expect(body.referentiels.statuses.filter((s: any) => s.types?.includes('QUESTION'))).toHaveLength(5) // 5 issues dont Arbitrée (2026-11-21)
       expect(body.referentiels.typeLabels).toEqual(customReferentiels.typeLabels) // conservé
       expect(prisma.community.update).toHaveBeenCalledWith(expect.objectContaining({
         where: { id: COM_ID },

@@ -19,7 +19,7 @@
  * Donc pas de titres de la préparation non présentée (un nombre seulement — ils ne voient que le déjà présenté) et,
  * pour une relation vers un élément d'un autre espace, « un élément d'un autre espace » au lieu de son titre.
  */
-import { DEFAULT_STATUSES, QUESTION_STATUS } from '@spok/shared';
+import { DEFAULT_STATUSES, QUESTION_STATUS, isQuestionAnswered } from '@spok/shared';
 
 const TZ = 'Europe/Paris';
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
@@ -129,7 +129,7 @@ export function buildReportHtml(d: ReportData): string {
     parts.push('<h2>Questions</h2>');
     const label = (id: string | null) => DEFAULT_STATUSES.find((x) => x.id === (id || QUESTION_STATUS.OPEN))?.label ?? id ?? '';
     const items = d.questions.map((q) => {
-      const answer = q.status === QUESTION_STATUS.DECIDED && q.answer ? ` : ${esc(q.answer)}` : '';
+      const answer = isQuestionAnswered(q.status) && q.answer ? ` : ${esc(q.answer)}` : '';
       const suite = q.status === QUESTION_STATUS.POSTPONED && d.suiteName ? ` (reprise dans la suite « ${esc(d.suiteName)} »)` : '';
       const note = q.note ? ` — ${esc(q.note)}` : '';
       const head = `<strong>${esc(q.title)}</strong> — ${esc(label(q.status))}${answer}${suite}${note}`;

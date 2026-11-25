@@ -288,6 +288,7 @@
 - [x] Contenus - coordonnées téléphone, e-mail, adresse — 2026-11-25
 - [x] Périodes - retour aux statuts ordinaires — 2026-11-25
 - [x] Export - références externes, contenus, auteur, registre couvrant tout l'élément — 2026-11-25
+- [x] Questions - conclure, Tranchée ou Arbitrée, Reportée avec reprise — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

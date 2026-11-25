@@ -55,13 +55,26 @@ describe('QuestionPanel', () => {
     await waitFor(() => expect(api.vote).toHaveBeenCalledWith('s1', 'q1', ['o2']))
   })
 
-  it('issue : boutons seulement pour qui peut décider ; un clic tranche avec l’option', async () => {
+  it('séance : réponse en tête → Tranchée (groupe), autre réponse → Arbitrée', async () => {
+    api.get.mockResolvedValue(view({ canDecide: true }))
+    api.setOutcome.mockResolvedValue(view({ canDecide: true }))
+    const { findByText, getByText } = renderPanel('live')
+    await findByText('Clore sans conclusion')
+    fireEvent.click(getByText(/Non/, { selector: 'button' }))
+    await waitFor(() => expect(api.setOutcome).toHaveBeenCalledWith('s1', 'q1', { status: 'question_arbitrated', chosenOptionId: 'o2' }))
+    fireEvent.click(getByText(/Oui/, { selector: 'button' }))
+    await waitFor(() => expect(api.setOutcome).toHaveBeenLastCalledWith('s1', 'q1', { status: 'question_decided', chosenOptionId: 'o1' }))
+  })
+
+  it('fiche : « Valider la réponse du groupe » seulement sur la réponse en tête, « Arbitrer » sur chaque réponse', async () => {
     api.get.mockResolvedValue(view({ canDecide: true }))
     api.setOutcome.mockResolvedValue(view({ status: 'question_decided', open: false }))
-    const { findByText, getByText } = renderPanel('live')
-    await findByText('Reportée')
-    fireEvent.click(getByText('Non', { selector: 'button' }))
-    await waitFor(() => expect(api.setOutcome).toHaveBeenCalledWith('s1', 'q1', { status: 'question_decided', chosenOptionId: 'o2' }))
+    const { findAllByText, getAllByText } = renderPanel()
+    expect(await findAllByText(/Valider la réponse du groupe/)).toHaveLength(1)
+    // 2 réponses + « Arbitrer autrement » (réponse écrite) dans « Conclure »
+    expect(getAllByText('Arbitrer', { selector: 'button' })).toHaveLength(3)
+    fireEvent.click(getAllByText(/Valider la réponse du groupe/)[0])
+    await waitFor(() => expect(api.setOutcome).toHaveBeenCalledWith('s1', 'q1', { status: 'question_decided', chosenOptionId: 'o1' }))
   })
 
   it('question close : pas de vote, issue affichée ; pas d’édition des options en séance', async () => {

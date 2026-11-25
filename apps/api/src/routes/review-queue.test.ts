@@ -121,7 +121,7 @@ describe('GET /user/review-queue', () => {
     // au CR envoyé ou annulées, articles publiés ou annulés compris)
     expect([...where.status.notIn].sort()).toEqual([
       'article_cancelled', 'article_published', 'cancelled', 'done',
-      'meeting_cancelled', 'meeting_minutes_sent', 'question_decided', 'question_no_conclusion',
+      'meeting_cancelled', 'meeting_minutes_sent', 'question_arbitrated', 'question_decided', 'question_no_conclusion',
     ])
   })
 

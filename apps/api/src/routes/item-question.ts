@@ -9,8 +9,10 @@
  *   identifiants reçus (les votes restent attachés à une option corrigée ou déplacée), crée les nouvelles, retire
  *   les absentes (et leurs votes). Passer en choix unique ne garde que le dernier vote de chacun. Réservé à qui peut
  *   modifier l'élément ; refusé sur une copie de séance verrouillée.
- * - PUT /:id/question/outcome { status, chosenOptionId?, answerText?, note? } : note l'issue (statut réservé
- *   question_*). « Tranchée » exige une option retenue OU une réponse écrite. Hors séance : qui peut modifier
+ * - PUT /:id/question/outcome { status, chosenOptionId?, answerText?, note?, resumeDate? } : note l'issue (statut
+ *   réservé question_*). « Tranchée » (réponse du groupe, 2026-11-21) exige une réponse EN TÊTE des votes ;
+ *   « Arbitrée » (décision d'une autorité) une réponse quelconque OU une réponse écrite. « Reportée » : resumeDate
+ *   facultative (AAAA-MM-JJ) posée comme échéance de la question. Hors séance : qui peut modifier
  *   l'élément. Copie de séance (verrouillée) : l'animateur seul — exception au verrou — et l'issue est reportée sur
  *   la question d'origine s'il peut la modifier (option retrouvée par son libellé, sinon réponse écrite).
  * - PUT /:id/question/vote { optionIds } : remplace les votes du lecteur (vide = retire son vote). Membre pouvant
@@ -22,7 +24,7 @@
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { QUESTION_STATUS } from '@spok/shared';
+import { QUESTION_STATUS, isQuestionAnswered } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
 import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { createAuditLog, serializeItemForAudit } from '../utils/audit.js';
@@ -45,6 +47,7 @@ const outcomeSchema = z.object({
   chosenOptionId: z.string().nullable().optional(),
   answerText: z.string().trim().max(500).nullable().optional(),
   note: z.string().trim().max(300).nullable().optional(),
+  resumeDate: z.string().date().nullable().optional(),
 });
 const voteSchema = z.object({ optionIds: z.array(z.string()).max(30) });
 
@@ -150,16 +153,33 @@ export const itemQuestionWriteRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.forbidden('Réservé à qui peut modifier la question');
     }
 
-    const decided = body.status === QUESTION_STATUS.DECIDED;
+    const decided = isQuestionAnswered(body.status);
     const chosenOptionId = decided ? body.chosenOptionId || null : null;
     const answerText = decided && !chosenOptionId ? body.answerText || null : null;
-    if (decided && !chosenOptionId && !answerText) return reply.badRequest('Une question tranchée demande l\'option retenue ou une réponse écrite');
+    if (decided && !chosenOptionId && !answerText) return reply.badRequest('Une question tranchée ou arbitrée demande la réponse retenue ou une réponse écrite');
     if (chosenOptionId && !(await prisma.questionOption.findFirst({ where: { id: chosenOptionId, itemId: item.id } }))) {
       return reply.badRequest('Option inconnue');
     }
+    // Tranchée = réponse du groupe (2026-11-21) : une réponse en tête des votes, jamais une réponse écrite ;
+    // toute autre décision est un arbitrage (statut Arbitrée)
+    if (body.status === QUESTION_STATUS.DECIDED) {
+      if (!chosenOptionId) return reply.badRequest('Une réponse écrite est un arbitrage : statut Arbitrée');
+      const votes = await prisma.questionVote.findMany({ where: { itemId: item.id }, select: { optionId: true } });
+      const counts = new Map<string, number>();
+      for (const v of votes ?? []) counts.set(v.optionId, (counts.get(v.optionId) ?? 0) + 1);
+      const max = Math.max(0, ...counts.values());
+      if (max === 0 || counts.get(chosenOptionId) !== max) {
+        return reply.badRequest('Tranchée = réponse en tête des votes ; pour retenir une autre réponse, arbitrez');
+      }
+    }
+    // Reportée : date de reprise facultative, posée comme échéance de la question (2026-11-21)
+    const resumeDate = body.status === QUESTION_STATUS.POSTPONED && body.resumeDate ? new Date(body.resumeDate) : null;
 
     const applyOutcome = async (target: any, optionId: string | null, text: string | null) => {
-      const updated = await prisma.item.update({ where: { id: target.id }, data: { status: body.status, updatedById: userId } });
+      const updated = await prisma.item.update({
+        where: { id: target.id },
+        data: { status: body.status, updatedById: userId, ...(resumeDate ? { dueDate: resumeDate } : {}) },
+      });
       await syncQuestionAfterStatus(prisma, target.id, body.status, userId);
       if (!isQuestionOpen(body.status)) {
         await prisma.question.update({ where: { itemId: target.id }, data: { chosenOptionId: optionId, answerText: text, note: body.note || null } });

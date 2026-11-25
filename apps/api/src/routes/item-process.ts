@@ -28,7 +28,7 @@
  */
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { DEFAULT_STATUSES } from '@spok/shared';
+import { DEFAULT_STATUSES, isQuestionAnswered } from '@spok/shared';
 import type { ItemType, ProcessCanvasView, ProcessItemView } from '@spok/shared';
 import { checkSpaceAccess, filterReadableSpaceIds, getEffectiveVisibilities } from '../utils/articleAccess.js';
 import { isLessVisible, type VisibilityInfo } from '../utils/articleVisibility.js';
@@ -97,7 +97,7 @@ export async function resolveProcessItems(prisma: any, rows: Row[], readerId: st
         ? {
             options: (it.questionOptions ?? []).map((o) => ({ id: o.id, label: o.label, refItemId: o.refItemId })),
             chosenOptionId: it.question?.chosenOptionId ?? null,
-            decided: it.status === 'question_decided',
+            decided: isQuestionAnswered(it.status), // Tranchée ou Arbitrée (2026-11-21)
           }
         : null,
     });

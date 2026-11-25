@@ -7,8 +7,10 @@
  * réponse peut être liée à un élément existant — ItemSearchPicker, 2026-11-12 —, dont le titre ouvre la fiche
  * (OptionLabel, sans navigation en séance ; élément non lisible par le lecteur : libellé seul, l'API ne l'envoie pas) ;
  * tant qu'aucun vote n'existe, « Partir d'un modèle » remplace les réponses — questionTemplates.ts, 2026-11-12), 2. Votes (une seule liste,
- * « Retenir » sur chaque ligne pour qui peut trancher), 3. Issue (Reportée, Sans conclusion, autre réponse, précision,
- * Rouvrir). En séance, pas d'étapes : gros boutons de réponse dans l'issue.
+ * pour qui peut décider : « Valider la réponse du groupe » sur la réponse en tête → Tranchée, « Arbitrer » sur chaque
+ * réponse → Arbitrée — décision Thomas 2026-11-21), 3. Conclure (phrase d'explication, Reporter avec date de reprise
+ * facultative, Clore sans conclusion, Arbitrer autrement ; close : bandeau « réponse du groupe / arbitrée par X »,
+ * précision, Rouvrir). En séance, pas d'étapes : gros boutons de réponse dans « Conclure ».
  * Props : spaceId / itemId (la question — en séance, la copie verrouillée), variant ('sheet' | 'live').
  * Droits : ceux calculés par l'API dans QuestionView (canVote, canDecide, canEditOptions) — rien n'est recalculé ici.
  * Les votes ne tranchent jamais : l'option en tête est seulement mise en avant (badge « Unanimité » si tous les votants,
@@ -18,9 +20,12 @@
  * Données : hooks/useQuestion (queryKey ['question', spaceId, itemId]) ; en séance, relu à chaque événement SSE.
  */
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ArrowDown, ArrowUp, Check, Link2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Gavel, Link2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { DEFAULT_STATUSES, QUESTION_STATUS, type QuestionOptionRef, type QuestionOptionView, type QuestionView } from '@spok/shared';
+import {
+  DEFAULT_STATUSES, QUESTION_STATUS, isQuestionAnswered,
+  type QuestionOptionRef, type QuestionOptionView, type QuestionOutcomeInput, type QuestionView,
+} from '@spok/shared';
 import { getTypeIcon } from '../../constants/ui';
 import { ItemSearchPicker, type ItemSearchHit } from '../ItemSearchPicker';
 import { QUESTION_TEMPLATES, type QuestionTemplate } from './questionTemplates';
@@ -78,14 +83,14 @@ export function QuestionPanel({ spaceId, itemId, variant = 'sheet' }: Props) {
         <div className="space-y-1.5">
           {step(s + 1, 'Votes')}
           <Votes question={question} onVote={(ids) => vote.mutate(ids)} pending={vote.isPending || setOutcome.isPending} live={live}
-            onDecide={(id) => setOutcome.mutate({ status: QUESTION_STATUS.DECIDED, chosenOptionId: id })} />
+            onDecide={(id, status) => setOutcome.mutate({ status, chosenOptionId: id })} />
         </div>
       )}
       {question.options.length === 0 && !editOptions && <FieldHelp page="question" field="noOptions" />}
 
       {(question.canDecide || !question.open) && (
         <div className="space-y-1.5">
-          {step(s + (question.options.length > 0 ? 2 : 1), 'Issue')}
+          {step(s + (question.options.length > 0 ? 2 : 1), 'Conclure')}
           <Outcome question={question} live={live} statusLabel={statusLabel} pending={setOutcome.isPending}
             onOutcome={(body) => setOutcome.mutate(body)} />
         </div>
@@ -126,9 +131,10 @@ function OptionLabel({ option, live }: { option: QuestionOptionView; live: boole
 }
 
 function Votes({ question, onVote, onDecide, pending, live }: {
-  question: QuestionView; onVote: (ids: string[]) => void; onDecide: (optionId: string) => void; pending: boolean; live: boolean;
+  question: QuestionView; onVote: (ids: string[]) => void; onDecide: (optionId: string, status: string) => void; pending: boolean; live: boolean;
 }) {
-  // Fiche : « Retenir » sur chaque réponse (une seule liste) ; en séance, gros boutons d'issue dans le bloc Issue
+  // Fiche (2026-11-21) : « Valider la réponse du groupe » sur la réponse en tête des votes (→ Tranchée) et « Arbitrer »
+  // sur chaque réponse (→ Arbitrée, décision d'une autorité) ; en séance, gros boutons dans « Conclure »
   const canPick = !live && question.canDecide && question.open;
   const mine = new Set(question.myOptionIds);
   const toggle = (id: string) => {
@@ -162,11 +168,19 @@ function Votes({ question, onVote, onDecide, pending, live }: {
                   </HelpHint>
                 )}
                 <span className="text-xs tabular-nums text-muted-foreground">{o.voters.length}</span>
-                {canPick && (
+                {canPick && leading && (
                   <HelpHint text={pageHint('question', 'decide')}>
-                    <button type="button" disabled={pending} onClick={() => onDecide(o.id)}
-                      className="rounded-md border border-emerald-400 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30">
-                      Retenir
+                    <button type="button" disabled={pending} onClick={() => onDecide(o.id, QUESTION_STATUS.DECIDED)}
+                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-700">
+                      <Check className="h-3.5 w-3.5" /> Valider la réponse du groupe
+                    </button>
+                  </HelpHint>
+                )}
+                {canPick && (
+                  <HelpHint text={pageHint('question', 'arbitrate')}>
+                    <button type="button" disabled={pending} onClick={() => onDecide(o.id, QUESTION_STATUS.ARBITRATED)}
+                      className="inline-flex items-center gap-1 rounded-md border border-emerald-400 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30">
+                      <Gavel className="h-3.5 w-3.5" /> Arbitrer
                     </button>
                   </HelpHint>
                 )}
@@ -184,11 +198,18 @@ function Votes({ question, onVote, onDecide, pending, live }: {
   );
 }
 
+/**
+ * Étape « Conclure » (2026-11-21, décision Thomas) : question close → bandeau qui dit ce qui a été conclu et par qui
+ * (réponse du groupe, arbitrage, report avec date de reprise, sans conclusion) ; ouverte → phrase d'explication, puis
+ * Reporter (date de reprise facultative), Clore sans conclusion, Arbitrer autrement (réponse écrite). En séance, gros
+ * boutons par réponse : réponse en tête → Tranchée (groupe), autre réponse → Arbitrée.
+ */
 function Outcome({ question, live, statusLabel, pending, onOutcome }: {
   question: QuestionView; live: boolean; statusLabel: (id: string) => string; pending: boolean;
-  onOutcome: (body: { status: string; chosenOptionId?: string | null; answerText?: string | null; note?: string | null }) => void;
+  onOutcome: (body: QuestionOutcomeInput) => void;
 }) {
   const [other, setOther] = useState('');
+  const [resume, setResume] = useState('');
   const [note, setNote] = useState(question.outcome.note ?? '');
   useEffect(() => setNote(question.outcome.note ?? ''), [question.outcome.note]);
   const { outcome } = question;
@@ -200,8 +221,12 @@ function Outcome({ question, live, statusLabel, pending, onOutcome }: {
   return (
     <div data-help-zone="question:issue" className="space-y-2">
       {!question.open && (
-        <div className="text-sm">
-          <span className="font-medium">{statusLabel(status)}</span>
+        <div className={`rounded-md border px-3 py-2 text-sm ${isQuestionAnswered(status) ? 'border-green-300 bg-green-50 dark:bg-green-950/30' : 'border-border bg-white dark:bg-background'}`}>
+          <span className="font-semibold">
+            {status === QUESTION_STATUS.DECIDED ? `✔ ${pageHint('question', 'doneGroup')}`
+              : status === QUESTION_STATUS.ARBITRATED ? `⚖ ${pageHint('question', 'doneArbitrated')?.replace('{who}', outcome.decidedBy?.name ?? '—')}`
+              : statusLabel(status)}
+          </span>
           {chosen && <> : <OptionLabel option={chosen} live={live} /></>}
           {!chosen && outcome.answerText && <> : {outcome.answerText}</>}
           {outcome.note && <span className="text-muted-foreground"> — {outcome.note}</span>}
@@ -215,44 +240,59 @@ function Outcome({ question, live, statusLabel, pending, onOutcome }: {
 
       {question.canDecide && question.open && (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {/* Réponses à retenir : ici en séance seulement — dans la fiche, « Retenir » est sur chaque ligne des votes */}
-            {live && question.options.map((o) => (
-              <HelpHint key={o.id} text={pageHint('question', 'decide')}>
-                <button type="button" disabled={pending}
-                  onClick={() => onOutcome({ status: QUESTION_STATUS.DECIDED, chosenOptionId: o.id })}
-                  className={`rounded-md border-2 border-emerald-400 bg-white font-medium hover:bg-emerald-50 dark:bg-background ${big} ${question.leadingOptionIds.includes(o.id) ? 'ring-2 ring-sky-300' : ''}`}>
-                  {o.label}
-                </button>
-              </HelpHint>
-            ))}
+          <FieldHelp page="question" field="concludeLead" />
+          {/* Séance : gros boutons par réponse — en tête = réponse du groupe (Tranchée), sinon arbitrage */}
+          {live && question.options.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {question.options.map((o) => {
+                const lead = question.leadingOptionIds.includes(o.id);
+                return (
+                  <HelpHint key={o.id} text={pageHint('question', lead ? 'decide' : 'arbitrate')}>
+                    <button type="button" disabled={pending}
+                      onClick={() => onOutcome({ status: lead ? QUESTION_STATUS.DECIDED : QUESTION_STATUS.ARBITRATED, chosenOptionId: o.id })}
+                      className={`rounded-md border-2 bg-white font-medium dark:bg-background ${big} ${lead ? 'border-green-500 hover:bg-green-50' : 'border-emerald-300 hover:bg-emerald-50'}`}>
+                      {lead ? '✔' : '⚖'} {o.label}
+                    </button>
+                  </HelpHint>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
             <HelpHint text={pageHint('question', 'postpone')}>
-              <button type="button" disabled={pending} onClick={() => onOutcome({ status: QUESTION_STATUS.POSTPONED })}
-                className={`rounded-md border-2 border-amber-300 bg-white hover:bg-amber-50 dark:bg-background ${big}`}>
-                {statusLabel(QUESTION_STATUS.POSTPONED)}
+              <button type="button" disabled={pending}
+                onClick={() => onOutcome({ status: QUESTION_STATUS.POSTPONED, resumeDate: resume || null })}
+                className={`rounded-md border-2 border-blue-300 bg-white hover:bg-blue-50 dark:bg-background ${big}`}>
+                Reporter (on y reviendra)
               </button>
             </HelpHint>
+            {!live && (
+              <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                {pageHint('question', 'resumeLabel')}
+                <input type="date" value={resume} onChange={(e) => setResume(e.target.value)} aria-label="Date de reprise"
+                  className="h-8 rounded-md border bg-background px-2 text-sm" />
+              </label>
+            )}
             <HelpHint text={pageHint('question', 'noConclusion')}>
               <button type="button" disabled={pending} onClick={() => onOutcome({ status: QUESTION_STATUS.NO_CONCLUSION })}
-                className={`rounded-md border-2 border-slate-300 bg-white hover:bg-slate-50 dark:bg-background ${big}`}>
-                {statusLabel(QUESTION_STATUS.NO_CONCLUSION)}
+                className={`rounded-md border-2 border-red-300 bg-white hover:bg-red-50 dark:bg-background ${big}`}>
+                Clore sans conclusion
               </button>
             </HelpHint>
           </div>
           <div className="flex gap-2">
             <input value={other} onChange={(e) => setOther(e.target.value)} maxLength={500}
-              onKeyDown={(e) => noSubmit(e, () => other.trim() && onOutcome({ status: QUESTION_STATUS.DECIDED, answerText: other.trim() }))}
-              placeholder={statusLabel(QUESTION_STATUS.DECIDED)} aria-label="Autre réponse"
+              onKeyDown={(e) => noSubmit(e, () => other.trim() && onOutcome({ status: QUESTION_STATUS.ARBITRATED, answerText: other.trim() }))}
+              placeholder="Arbitrer autrement : réponse écrite" aria-label="Arbitrer autrement"
               className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm" />
             <HelpHint text={pageHint('question', 'decideOther')}>
               <button type="button" disabled={pending || !other.trim()}
-                onClick={() => onOutcome({ status: QUESTION_STATUS.DECIDED, answerText: other.trim() })}
-                className="h-8 rounded-md border px-3 text-sm hover:bg-accent disabled:opacity-50">
-                <Check className="h-4 w-4" />
+                onClick={() => onOutcome({ status: QUESTION_STATUS.ARBITRATED, answerText: other.trim() })}
+                className="inline-flex h-8 items-center gap-1 rounded-md border px-3 text-sm hover:bg-accent disabled:opacity-50">
+                <Gavel className="h-4 w-4" /> Arbitrer
               </button>
             </HelpHint>
           </div>
-          <FieldHelp page="question" field="otherAnswer" />
           {question.locked && <p className="text-xs text-muted-foreground">{pageHint('question', 'liveCopy')}</p>}
         </div>
       )}

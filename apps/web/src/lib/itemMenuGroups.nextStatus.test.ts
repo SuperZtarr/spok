@@ -34,8 +34,9 @@ describe('nextStatusForType', () => {
   it('article et question', () => {
     expect(next('ARTICLE', 'article_draft')).toBe('article_to_validate')
     expect(next('ARTICLE', 'article_published')).toBeNull()
-    expect(next('QUESTION', 'question_open')).toBe('question_decided')
-    expect(next('QUESTION', 'question_postponed')).toBe('question_decided')
+    // Question (2026-11-21) : pas de statut suivant — l'issue se conclut dans le bloc Question
+    expect(next('QUESTION', 'question_open')).toBeNull()
+    expect(next('QUESTION', 'question_postponed')).toBeNull()
     expect(next('QUESTION', 'question_decided')).toBeNull()
   })
   it('suit l\'ordre personnalisé d\'une communauté et ignore les statuts masqués', () => {

@@ -16,7 +16,7 @@
  *   clients relisent la question) — décompte en direct.
  * Les votes ne tranchent jamais : aucune fonction ici ne change le statut à partir des votes.
  */
-import { QUESTION_STATUS, type QuestionView } from '@spok/shared';
+import { QUESTION_STATUS, isQuestionAnswered, type QuestionView } from '@spok/shared';
 import { liveHub } from './liveHub.js';
 
 export const QUESTION_OUTCOME_IDS: string[] = Object.values(QUESTION_STATUS);
@@ -35,7 +35,7 @@ export async function syncQuestionAfterStatus(prisma: any, itemId: string, statu
     });
     return;
   }
-  const keepAnswer = status === QUESTION_STATUS.DECIDED;
+  const keepAnswer = isQuestionAnswered(status); // Tranchée ou Arbitrée (2026-11-21)
   await prisma.question.upsert({
     where: { itemId },
     create: { itemId, decidedById: userId, decidedAt: new Date() },

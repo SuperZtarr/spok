@@ -11,8 +11,11 @@
    Réunion (7 statuts, terminée = CR envoyé) et Article (4 statuts) ont aussi leurs statuts réservés (2026-11-19) ;
    statusForType normalise le statut d'un élément selon son type (correspondance par catégorie au changement de type).
    nextStatusForType donne le statut suivant (bouton « Passer à … » du menu contextuel, 2026-11-20).
-   Période sans statut (typeHasStatus, registre des types, 2026-11-20) : aucun statut proposé, enregistré vide,
-   absente des familles du Kanban. */
+   Question (2026-11-21) : 5 issues — Arbitrée ajoutée (isQuestionAnswered = Tranchée ou Arbitrée), ordre et couleurs
+   du sens des tâches ; un référentiel qui avait gardé les anciennes couleurs suit les nouvelles (withDefaultStatuses) ;
+   pas de statut suivant pour une question.
+   Type sans statut (noStatus du registre, typeHasStatus) : aucun statut proposé, enregistré vide, absent des familles
+   du Kanban — aucun type ne l'utilise depuis que la Période a retrouvé les statuts ordinaires (2026-11-25). */
 import type { StatusCategory, StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
 import { ITEM_TYPE_REGISTRY, typeHasStatus } from './typeRegistry.js';
 import { statusCategory } from './statusCategory.js';
@@ -95,13 +98,25 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
     visible: true,
     category: 'cancelled',
   },
-  // Issues d'une question (type QUESTION, 2026-11-08) — réservées à ce type
+  // Issues d'une question (type QUESTION, 2026-11-08) — réservées à ce type. Ordre et couleurs (décision Thomas
+  // 2026-11-21, sens des tâches) : Ouverte jaune (à faire), Reportée bleu (suspendu), Tranchée vert (terminé : réponse
+  // du groupe), Arbitrée émeraude (terminé : décision d'une autorité), Sans conclusion rouge (annulé).
   {
     id: 'question_open',
     label: 'Ouverte',
-    color: 'bg-sky-100 text-sky-800',
-    borderColor: 'border-sky-300 bg-sky-50',
+    color: 'bg-yellow-100 text-yellow-800',
+    borderColor: 'border-yellow-300 bg-yellow-50',
     order: 8,
+    visible: true,
+    category: 'open',
+    types: ['QUESTION'],
+  },
+  {
+    id: 'question_postponed',
+    label: 'Reportée',
+    color: 'bg-blue-100 text-blue-800',
+    borderColor: 'border-blue-300 bg-blue-50',
+    order: 9,
     visible: true,
     category: 'open',
     types: ['QUESTION'],
@@ -109,28 +124,28 @@ export const DEFAULT_STATUSES: StatusConfig[] = [
   {
     id: 'question_decided',
     label: 'Tranchée',
-    color: 'bg-emerald-100 text-emerald-800',
-    borderColor: 'border-emerald-300 bg-emerald-50',
-    order: 9,
+    color: 'bg-green-100 text-green-800',
+    borderColor: 'border-green-300 bg-green-50',
+    order: 10,
     visible: true,
     category: 'done',
     types: ['QUESTION'],
   },
   {
-    id: 'question_postponed',
-    label: 'Reportée',
-    color: 'bg-amber-100 text-amber-800',
-    borderColor: 'border-amber-300 bg-amber-50',
-    order: 10,
+    id: 'question_arbitrated',
+    label: 'Arbitrée',
+    color: 'bg-emerald-100 text-emerald-800',
+    borderColor: 'border-emerald-300 bg-emerald-50',
+    order: 10.5,
     visible: true,
-    category: 'open',
+    category: 'done',
     types: ['QUESTION'],
   },
   {
     id: 'question_no_conclusion',
     label: 'Sans conclusion',
-    color: 'bg-slate-100 text-slate-700',
-    borderColor: 'border-slate-300 bg-slate-50',
+    color: 'bg-red-100 text-red-800',
+    borderColor: 'border-red-300 bg-red-50',
     order: 11,
     visible: true,
     category: 'cancelled',
@@ -191,7 +206,24 @@ export const QUESTION_STATUS = {
   DECIDED: 'question_decided',
   POSTPONED: 'question_postponed',
   NO_CONCLUSION: 'question_no_conclusion',
+  ARBITRATED: 'question_arbitrated',
 } as const;
+
+/**
+ * Question répondue : Tranchée (réponse du groupe : une réponse en tête des votes) ou Arbitrée (décision d'une
+ * autorité, quelle que soit la réponse) — décision Thomas 2026-11-21. Les deux portent une réponse retenue.
+ */
+export function isQuestionAnswered(status: string | null | undefined): boolean {
+  return status === QUESTION_STATUS.DECIDED || status === QUESTION_STATUS.ARBITRATED;
+}
+
+/** Couleur et ordre des issues avant le 2026-11-21 : un référentiel qui les a gardés suit les nouveaux défauts */
+const QUESTION_STATUS_BEFORE_2026_11_21: Record<string, { color: string; order: number }> = {
+  question_open: { color: 'bg-sky-100 text-sky-800', order: 8 },
+  question_decided: { color: 'bg-emerald-100 text-emerald-800', order: 9 },
+  question_postponed: { color: 'bg-amber-100 text-amber-800', order: 10 },
+  question_no_conclusion: { color: 'bg-slate-100 text-slate-700', order: 11 },
+};
 
 /** Statuts réservés livrés par défaut : non supprimables, réservation non modifiable. */
 export const RESERVED_STATUS_IDS: string[] = DEFAULT_STATUSES.filter((s) => s.types?.length).map((s) => s.id);
@@ -244,6 +276,8 @@ export function nextStatusForType<T extends StatusConfig>(
   type: string | null | undefined,
   current: string | null | undefined,
 ): T | null {
+  // Question : pas de « statut suivant » — son issue se conclut dans le bloc Question (réponse à valider ou arbitrer)
+  if (type === 'QUESTION') return null;
   const own = statusesForType(statuses, type)
     .filter((s) => s.visible !== false && s.id !== 'undefined')
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); // listes réduites ({ id, label }) passées par certaines vues
@@ -315,7 +349,11 @@ export function statusesForFamily<T extends StatusConfig>(statuses: T[], family:
 export function withDefaultStatuses(statuses: StatusConfig[]): StatusConfig[] {
   const out = statuses.map((s) => {
     const def = DEFAULT_STATUSES.find((d) => d.id === s.id && d.types?.length);
-    return def ? { ...s, types: def.types, category: def.category } : s;
+    if (!def) return s;
+    // Couleur / ordre jamais personnalisés (encore ceux d'avant le 2026-11-21) : suivent les défauts actuels
+    const old = QUESTION_STATUS_BEFORE_2026_11_21[s.id];
+    const follow = old && s.color === old.color && s.order === old.order;
+    return { ...s, types: def.types, category: def.category, ...(follow ? { color: def.color, borderColor: def.borderColor, order: def.order } : {}) };
   });
   for (const def of DEFAULT_STATUSES) {
     if (def.types?.length && !out.some((s) => s.id === def.id)) out.push({ ...def });
