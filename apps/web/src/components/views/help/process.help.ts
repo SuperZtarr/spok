@@ -25,10 +25,11 @@ const elements: HelpElements = {
   nouveau: {
     title: 'Nouveau process',
     short: 'Crée un élément Process et ouvre sa fiche.',
-    text: 'Crée un élément de type « Process » dans cet espace et ouvre sa fiche pour lui donner un titre ; enregistrez, puis ouvrez son canevas depuis la liste ou par « Ouvrir le process » dans la fiche. Une fiche refermée vide n\'est pas gardée.',
+    text: 'Crée un élément de type « Process » dans cet espace et ouvre sa fiche pour lui donner un titre ; enregistrez, puis ouvrez son canevas depuis la liste ou par « Composer » en haut de la fiche. Une fiche refermée vide n\'est pas gardée.',
     target: '[data-tour="process-new"]',
     noZone: true,
     side: 'bottom',
+    changes: [{ id: 'compose-common', kind: 'evolution', text: 'Process : son canevas s\'ouvre par « Composer » en haut de sa fiche, comme les blocs d\'un article ; le titre du canevas rouvre la fiche.', date: '2026-11-25' }],
   },
   panneau: {
     title: 'Éléments non placés',

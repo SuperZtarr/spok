@@ -6,7 +6,7 @@
    depuis MODE_REGISTRY — jamais recopiées en clair dans une règle.
    Export (2026-11-18) : export-fields-choice (choix des champs, registre EXPORT_FIELD_REGISTRY).
    Types à composants (2026-11-21) : COMPOSED_TYPES / COMPOSED_TYPE_LABELS dérivés du registre des types (groupe deliverables). */
-import { CLOSED_CATEGORIES, STATUS_CATEGORY_OPTIONS, getItemTypeDef, itemTypesWhere, statusIdsIn } from '@spok/shared';
+import { CLOSED_CATEGORIES, ITEM_TYPE_REGISTRY, STATUS_CATEGORY_OPTIONS, getItemTypeDef, itemTypesWhere, statusIdsIn } from '@spok/shared';
 
 /** Types à composants (groupe « Compositions » du registre des types) : valeurs et libellés dérivés, jamais recopiés */
 const COMPOSED_TYPES = itemTypesWhere((t) => t.group === 'deliverables');
@@ -56,6 +56,15 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'apps/api/src/utils/filePreview.ts, apps/api/src/routes/item-contents.ts (upload, DELETE), apps/api/src/utils/itemContentCopy.ts, apps/web/src/lib/itemFace.ts (coverOf, fileExcerptOf), apps/web/src/components/contents/FilePreviewThumb.tsx',
   },
   {
+    id: 'item-default-status',
+    category: 'status',
+    // Statuts d'ouverture lus dans le registre des types (une seule source, garde typeRegistry.guard.test.ts)
+    appliesToValues: [...new Set(ITEM_TYPE_REGISTRY.flatMap((t) => ('defaultStatus' in t && t.defaultStatus ? [t.defaultStatus as string] : [])))],
+    trigger: 'Création d’un élément sans statut, ou changement de type d’un élément sans statut',
+    effect: "Le statut par défaut du type est posé (defaultStatus du registre des types) : Tâche, Projet, Process « À faire » ; Réunion « À organiser » ; Période « Planifié » ; Article « Brouillon » ; Question « Ouverte » ; Élément aucun. Jamais sur un élément existant sans changement de type, ni quand on choisit soi-même « Non défini ». Statut absent du référentiel de la communauté : rien n'est posé (décision Thomas 2026-11-25)",
+    location: 'packages/shared/src/constants/typeRegistry.ts (defaultStatus), packages/shared/src/constants/defaultReferentiels.ts (defaultStatusForType, statusForType), apps/api/src/routes/items.ts (création, PATCH), apps/web/src/components/ItemEditModal.tsx',
+  },
+  {
     id: 'status-reserved-for-type',
     category: 'status',
     appliesToValues: ['question_open', 'question_decided', 'question_arbitrated', 'question_postponed', 'question_no_conclusion',
@@ -86,7 +95,7 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     category: 'type',
     appliesToValues: COMPOSED_TYPES,
     trigger: `Choix d’un type à composants (groupe « Compositions » : ${COMPOSED_TYPE_LABELS}) dans la fiche`,
-    effect: "Le type est enregistré aussitôt, fiche ouverte, pour afficher ses composants (bloc Question, mode Composer, lien « Ouvrir le process ») ; seul le type part, les autres saisies attendent « Enregistrer ». Le statut est alors fixé par l'API (une question repart « Ouverte »). Un brouillon resté vide reste supprimé à la fermeture sans enregistrement : le type ne compte pas (décision Thomas 2026-11-11)",
+    effect: "Le type est enregistré aussitôt, fiche ouverte, pour afficher ses composants (bloc Question, bouton « Composer » d'un article ou d'un process) ; seul le type part, les autres saisies attendent « Enregistrer ». Le statut est alors fixé par l'API (une question repart « Ouverte »). Un brouillon resté vide reste supprimé à la fermeture sans enregistrement : le type ne compte pas (décision Thomas 2026-11-11)",
     location: 'packages/shared/src/constants/typeRegistry.ts (isComposedType), apps/web/src/components/ItemEditModal.tsx',
   },
   {
@@ -136,6 +145,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     trigger: "Fiche d'un élément (Modifier ou Afficher), quel que soit son type sauf Article",
     effect: "Une zone « Contenus » sous la description (et sous le bloc Question) remplace les blocs média propres aux types Lien, Diagramme, Image et Document : « + Ajouter » joint un fichier, une image, un lien ou un schéma, plusieurs de chaque sorte, enregistrés tout de suite (hors « Enregistrer »). Masquée sur un Article (ses blocs l'affichent autrement) ; affichage seul pour un lecteur ou une copie de séance verrouillée ; un élément pas encore enregistré ne reçoit pas de contenu. En mode Afficher, les contenus remplacent le média unique et s'affichent en grand après la description (contenus multiples, lot 2, décision Thomas 2026-11-08)",
     location: 'apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/components/ItemEditModal.tsx (mediaSection), apps/web/src/components/ItemReadView.tsx',
+  },
+  {
+    id: 'item-link-preview',
+    category: 'type',
+    appliesToValues: [],
+    trigger: "Ajout d'un lien, changement de son adresse, ou « Actualiser l'aperçu »",
+    effect: "L'API récupère UNE fois l'image d'aperçu du site (og:image, twitter:image, apple-touch-icon, icon ; ou l'adresse elle-même si c'est une image), la ramène en webp et la range dans R2 (previewUrl du lien) ; le site n'est jamais appelé à l'affichage. En tâche de fond à l'ajout et au changement d'adresse (ancien aperçu effacé), synchrone pour « Actualiser ». Protection SSRF : http/https, ports 80/443, pas d'identifiants, toute adresse résolue privée/locale/réservée refusée (IPv6 et IPv4 mappée compris), connexion épinglée sur l'adresse validée, 3 redirections revalidées, 5 s par requête, page ≤ 1 Mo, image ≤ 5 Mo, png/jpeg/gif/webp/avif vérifiés sur les octets (jamais de SVG). Échec → pas d'aperçu, aucune erreur. Sans R2 : rien.",
+    location: 'apps/api/src/utils/linkPreview.ts, apps/api/src/routes/item-contents.ts, apps/web/src/components/contents/ItemContentsSection.tsx (TilePreview, ↻)',
   },
   {
     id: 'item-contents-contacts',
@@ -397,6 +414,13 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: 'Créer un process ; poser, déplacer ou retirer un élément du canevas ; double-clic sur le vide',
     effect: "Un process est un élément de type PROCESS (2026-11-21) : plusieurs par espace ; la vue Process liste ceux de l'espace, un clic ouvre son canevas (?process=). Places et couloirs rattachés au process (tables process_item_nodes / process_item_lanes), partagés entre membres et jamais recalculés ; les anciens process d'espace ne sont pas repris. On peut poser des éléments de tous les espaces lisibles (panneau = éléments de l'espace du process ; « Ajouter d'un autre espace » = recherche, posé au centre de la vue) ; un élément moins visible que le process demande confirmation. Un élément n'est montré que si la personne qui l'a posé peut encore le lire (sinon case « Élément indisponible », sans titre ni liens) ; le lecteur voit titre et statut sans accès à l'espace source, et ne l'ouvre que s'il lit cet espace (nouvel onglet pour un autre espace). Un élément déplacé d'espace garde sa place. Modifier le canevas : OWNER/MEMBER de l'espace du process, process non verrouillé. Une Question posée s'affiche en losange avec ses réponses en pastilles ; chaque réponse qui renvoie à un élément posé devient une flèche en pointillés étiquetée (réponse retenue en vert), non modifiable sur le canevas. « Retirer du process » enlève l'élément du canevas sans le supprimer ; supprimer l'élément le retire du canevas. Double-clic sur le vide = nouvel élément de l'espace du process posé à cet endroit. Une relation se crée depuis un élément que le lecteur peut ouvrir. Relier deux items crée une vraie relation (visible dans les autres vues). « Réorganiser en processus » (appliqué directement, sans confirmation, pour tous les membres) : une colonne par rang de dépendance « Bloque » / « Permet » (calcul du PERT), items sans lien d'ordre en première colonne (ordre vertical conservé), les suivants à la hauteur moyenne de leurs prédécesseurs pour garder chaque branche sur sa ligne (décalage vers le bas si conflit) — seule disposition automatique. Panneau « Non placés » en arborescence (parent placé → enfant à la racine). Couloirs : « Définir comme couloir » fait d'un item une bande nommée (il cesse d'être un nœud), ajoutée en dernier, vide ; y poser un item ne fait que le ranger visuellement (ni parent ni relation) ; un nœud appartient au couloir sous son centre ; retirer un couloir laisse ses items en place, hors couloir ; un lien vers ou depuis l'item d'un couloir est conservé et rattaché au couloir (sous-processus) ; replier un couloir (préférence locale) le réduit en petite boîte (hauteur et longueur), masque ses items, rattache leurs liens au couloir et masque ses liens internes ; un couloir se déplace librement par son titre (position partagée, ses items suivent), « Réorganiser » le remet dans la pile ; Réorganiser garde chaque item dans son couloir avec des colonnes communes et range les items libres sous les couloirs. VIEWER : lecture seule",
     location: 'apps/web/src/components/views/ProcessView.tsx, ProcessesView.tsx, ProcessNode.tsx, process-utils.ts (layoutAsProcess, buildQuestionEdges), ProcessUnplacedPanel.tsx ; apps/web/src/hooks/useProcessCanvas.ts ; apps/api/src/routes/item-process.ts',
+  },
+  {
+    id: 'compose-button-common',
+    page: 'Fiche d\'un élément (sélecteur Afficher / Modifier / Composer)',
+    trigger: 'Ouvrir la fiche d\'un article ou d\'un process',
+    effect: "Un seul bouton « Composer », à la même place, pour les types qui ont un espace de travail (décision Thomas 2026-11-25) : Article = mode Composer de la fiche (si l'API accorde canEditArticle) ; Process = canevas (la fiche se ferme), si l'on peut modifier l'élément — un lecteur voit « Afficher le process » au même endroit. Grisé tant que l'élément n'est pas enregistré dans ce type (phrase sous la Description) ou qu'une modification attend. Plus de lien « Ouvrir le process » ailleurs dans la fiche",
+    location: 'apps/web/src/lib/composeTargets.ts (registre et règles) ; apps/web/src/components/ItemEditModal.tsx (sélecteur de modes)',
   },
   {
     id: 'space-default-view-by-context',

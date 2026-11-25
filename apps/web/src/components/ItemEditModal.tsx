@@ -105,13 +105,16 @@
  * Brouillon vide (2026-10-28) : un élément tout juste créé par l'utilisateur (isFreshDraft) et vide à l'ouverture,
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
- * Type PROCESS (2026-11-21) : lien « Ouvrir le process » (canevas, processPageUrl) au-dessus de la zone Contenus, une fois
- * enregistré comme Process ; avant, phrase openProcessUnsaved. La fiche se ferme en suivant le lien.
+ * Types à espace de travail (2026-11-25, lib/composeTargets) : un seul bouton « Composer » dans le sélecteur de modes —
+ * Article : mode Composer de la fiche ; Process : canevas (la fiche se ferme), « Afficher le process » pour un lecteur.
+ * Avant enregistrement dans ce type : bouton grisé + phrase openArticleUnsaved / openProcessUnsaved sous la Description.
  * Type QUESTION (2026-11-08) : bloc QuestionPanel (réponses, votes, issue) au-dessus de la zone Contenus et en mode Afficher ;
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
  * Statuts proposés aux autres types : statusesForType (Réunion et Article : leurs statuts réservés, 2026-11-19) ; au
  * changement de type, statusForType (@spok/shared) remplace un statut non permis par celui de même catégorie, sinon
  * par le premier du type (réunion « À organiser ») ou le retire. Type sans statut (typeHasStatus, aucun aujourd'hui) : pas de champ Statut.
+ * Statut par défaut du type (defaultStatusForType, registre — 2026-11-25) prérempli à la création ou au changement de
+ * type d'un élément sans statut, jamais à l'ouverture d'un élément existant.
  * Types à composants (groupe « Compositions » : Article, Question — isComposedType, 2026-11-11) : choisir un de ces types
  * enregistre aussitôt le type seul, fiche ouverte, pour afficher ses composants (règle composed-type-autosave).
  */
@@ -128,7 +131,7 @@ import { buildLiveItemActions } from '../lib/liveItemActions';
 import { useLiveSession } from '../hooks/useLiveSession';
 import { useActiveLiveSessionStore } from '../stores/activeLiveSession';
 import { ConfirmModal } from './ConfirmModal';
-import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, statusForType, statusesForType, typeHasStatus, getInterfaceMode } from '@spok/shared';
+import { DEFAULT_REFERENTIELS, getItemTypeDef, isComposedType, defaultStatusForType, statusForType, statusesForType, typeHasStatus, getInterfaceMode } from '@spok/shared';
 import { statusChangeFields } from '../lib/statusChange';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
@@ -144,7 +147,8 @@ import { printArticle } from './article/printArticle';
 import { useArticle } from '../hooks/useArticle';
 import { useSpace } from '../hooks/useSpaces';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { itemShareUrl, processPageUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { composeButton } from '../lib/composeTargets';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -300,7 +304,12 @@ export function ItemEditModal({
   // Type à composants (Question, Article) : enregistré tout de suite, l'API fixe le statut — la relecture le reporte ici
   useEffect(() => {
     if (isComposedType(type)) return;
-    const next = statusForType(type, status, referentiels?.statuses || DEFAULT_REFERENTIELS.statuses);
+    const list = referentiels?.statuses || DEFAULT_REFERENTIELS.statuses;
+    let next = statusForType(type, status, list);
+    // Sans statut, à la création ou après un changement de type : statut par défaut du type (registre, 2026-11-25) —
+    // jamais à l'ouverture d'un élément existant
+    const typePicked = !itemId || (!!item && type !== item.type);
+    if (typePicked && (!next || next === 'undefined')) next = defaultStatusForType(type, list) ?? next;
     if ((next ?? '') !== (status ?? '')) setStatus(next ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
@@ -1091,6 +1100,8 @@ export function ItemEditModal({
   const articleState = useArticle(savedArticle ? (item?.spaceId ?? spaceId) : undefined, savedArticle ? (itemId ?? undefined) : undefined);
   const canCompose = !!articleState.article?.canEditArticle;
   const composing = displayMode === 'compose' && canCompose;
+  // Bouton « Composer » (Article : mode de la fiche ; Process : canevas) — règles dans lib/composeTargets
+  const composeBtn = composeButton({ formType: type, savedType: item?.type, canEdit, modeAllowed: canCompose, hasChanges });
   const readMode = displayMode === 'read' || (displayMode === 'compose' && !canCompose);
   const formMode = !readMode && !composing;
   const articlePrintRef = useRef<HTMLDivElement>(null);
@@ -1223,21 +1234,11 @@ export function ItemEditModal({
       {type === 'ARTICLE' && (!itemId || item?.type !== 'ARTICLE') && (
         <p className="text-xs text-muted-foreground">{itemHints?.openArticleUnsaved}</p>
       )}
-      {/* Process : son canevas s'ouvre dans la vue Process de son espace — seulement une fois enregistré comme Process */}
-      {type === 'PROCESS' && (itemId && item?.type === 'PROCESS' ? (
-        <HelpHint text={itemHints?.openProcess}>
-          <Link
-            to={processPageUrl(item.spaceId ?? spaceId, itemId)}
-            onClick={onClose}
-            data-tour="item-open-process"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors"
-          >
-            <Workflow className="w-4 h-4" /> Ouvrir le process
-          </Link>
-        </HelpHint>
-      ) : (
+      {/* Process pas encore enregistré comme tel : phrase visible (comme l'Article) ; son canevas s'ouvre ensuite par
+          « Composer » du sélecteur de modes (composeTargets, 2026-11-25) */}
+      {type === 'PROCESS' && (!itemId || item?.type !== 'PROCESS') && (
         <p className="text-xs text-muted-foreground">{itemHints?.openProcessUnsaved}</p>
-      ))}
+      )}
       {/* Question : options, votes, issue (QuestionPanel) — seulement une fois enregistrée comme Question */}
       {type === 'QUESTION' && (itemId && item?.type === 'QUESTION'
         ? <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
@@ -1383,19 +1384,33 @@ export function ItemEditModal({
                     <span>{canEdit ? 'Modifier' : 'Fiche'}</span>
                   </button>
                 </HelpHint>
-                {(canCompose || (type === 'ARTICLE' && !savedArticle && canEdit)) && (
-                  <HelpHint text={itemHints?.[!savedArticle ? 'openArticleUnsaved' : hasChanges ? 'composeModeUnsaved' : 'composeMode']}>
-                    <button
-                      type="button"
-                      aria-pressed={composing}
-                      disabled={!savedArticle || hasChanges}
-                      onClick={() => setDisplayMode('compose')}
-                      data-tour="item-mode-compose"
-                      className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${composing ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      <PenLine className="w-3 h-3" />
-                      <span>Composer</span>
-                    </button>
+                {/* « Composer » commun aux types à espace de travail (lib/composeTargets) : mode de la fiche (Article)
+                    ou page du canevas (Process, la fiche se ferme) — même libellé, même place, mêmes règles */}
+                {composeBtn && (
+                  <HelpHint text={itemHints?.[composeBtn.hint]}>
+                    {composeBtn.target.kind === 'page' && !composeBtn.disabled && itemId ? (
+                      <Link
+                        to={composeBtn.target.url(item.spaceId ?? spaceId, itemId)}
+                        onClick={onClose}
+                        data-tour="item-mode-compose"
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        {composeBtn.reader ? <Workflow className="w-3 h-3" /> : <PenLine className="w-3 h-3" />}
+                        <span>{composeBtn.label}</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-pressed={composing}
+                        disabled={composeBtn.disabled}
+                        onClick={() => setDisplayMode('compose')}
+                        data-tour="item-mode-compose"
+                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${composing ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        <PenLine className="w-3 h-3" />
+                        <span>{composeBtn.label}</span>
+                      </button>
+                    )}
                   </HelpHint>
                 )}
               </div>

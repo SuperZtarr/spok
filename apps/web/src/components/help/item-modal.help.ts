@@ -46,7 +46,7 @@ export const elements = {
   modes: {
     title: 'Modes de la fiche',
     short: 'Afficher, Modifier ou Composer.',
-    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Sur un article que vous pouvez modifier, Composer travaille ses blocs. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Composer ouvre l\'espace de travail de l\'élément, au même endroit pour tous : les blocs d\'un article (dans la fiche), le canevas d\'un process (la fiche se ferme ; « Afficher le process » si vous ne pouvez que le lire). Il est grisé tant que l\'élément n\'est pas enregistré dans ce type ou qu\'une modification attend. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
     target: '[data-tour="item-mode-switch"]',
     noZone: true,
     side: 'bottom',
@@ -158,8 +158,8 @@ export const elements = {
   statut: {
     title: 'Statut',
     short: 'L\'avancement de l\'élément.',
-    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮. Dans le menu ⋮ d\'un élément, « Passer à … » le fait avancer d\'un cran (À faire → Planifié → En cours → À valider → Terminé, ou le parcours propre à une réunion, un article, une question) ; la flèche à côté ouvre la liste de tous les statuts.',
-    changes: [{ id: 'item-menu-next-status', kind: 'new', text: 'Menu ⋮ d\'un élément : « Passer à En cours » (ou au statut suivant) change le statut en un clic ; la flèche à côté ouvre toujours la liste des statuts.', date: '2026-11-20' }],
+    text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). À la création, il est prérempli selon le type : À faire pour une tâche, un projet ou un process, À organiser pour une réunion, Planifié pour une période, Brouillon pour un article, Ouverte pour une question ; un élément de type Élément reste sans statut. Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮. Dans le menu ⋮ d\'un élément, « Passer à … » le fait avancer d\'un cran (À faire → Planifié → En cours → À valider → Terminé, ou le parcours propre à une réunion, un article, une question) ; la flèche à côté ouvre la liste de tous les statuts.',
+    changes: [{ id: 'item-default-status', kind: 'evolution', text: 'Un nouvel élément reçoit le statut de départ de son type : À faire pour une tâche, À organiser pour une réunion, Planifié pour une période, Brouillon pour un article… au lieu de « Non défini ».', date: '2026-11-25' }, { id: 'item-menu-next-status', kind: 'new', text: 'Menu ⋮ d\'un élément : « Passer à En cours » (ou au statut suivant) change le statut en un clic ; la flèche à côté ouvre toujours la liste des statuts.', date: '2026-11-20' }],
     target: '[data-tour="item-status"]',
     noZone: true,
     side: 'left',
@@ -295,8 +295,10 @@ export const help: HelpEntry = {
     historyEmpty: 'Aucun changement enregistré pour cet élément.',
     unsavedLeave:'Quitter sans enregistrer : ferme la fiche et abandonne les modifications en attente. Ce qui était déjà enregistré ne change pas.',
     unsavedSaveAndLeave: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche. Si l\'enregistrement échoue (élément modifié entre-temps par quelqu\'un d\'autre), la fiche reste ouverte.',
-    openProcess: 'Ouvrir le process : affiche son canevas, où l\'on pose des éléments de tous vos espaces, on les range en couloirs et on les relie. La fiche se ferme ; rien n\'est modifié.',
-    openProcessUnsaved: 'Le canevas du process s\'ouvrira une fois l\'élément enregistré avec le type « Process ».',
+    // Bouton « Composer » commun Article / Process (lib/composeTargets, 2026-11-25)
+    openProcess: 'Composer : ouvre le canevas du process, où l\'on pose des éléments de tous vos espaces, on les range en couloirs et on les relie. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
+    openProcessRead: 'Afficher le process : ouvre son canevas en lecture. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
+    openProcessUnsaved: 'Le canevas du process s\'ouvrira par « Composer » une fois l\'élément enregistré avec le type « Process ».',
     openArticleUnsaved:'Enregistrement de l\'article… Le mode Composer (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, tous les contenus (images, fichiers, liens, schémas), la description, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et ses images ; un fichier joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
@@ -309,7 +311,7 @@ export const help: HelpEntry = {
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
     editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
     composeMode: 'Composer : ajouter, réordonner, régler ou retirer les blocs de l\'article (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place.',
-    composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour passer en mode Composer.',
+    composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour utiliser « Composer ».',
     sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
   },
   fields: {
