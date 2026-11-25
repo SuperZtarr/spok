@@ -22,7 +22,8 @@
  * parentId : un parent qui change doit être dans le même espace (utils/itemParent.ts), refus en 400 sinon.
  * tagIds : chaque tag doit être visible depuis l'espace (utils/tagScope.ts, invisibleTagIds), refus en 400 sinon.
  * externalRefs (règle item-external-refs, 2026-11-12) : POST/PATCH les remplacent en bloc (cleanExternalRefs, limites
- * externalRefsError → 400), le détail les renvoie en chaînes « Application : référence », dans l'ordre.
+ * externalRefsError → 400), le détail et la liste (export de données, 2026-11-25) les renvoient en chaînes
+ * « Application : référence », dans l'ordre ; la liste porte aussi createdBy (id, nom) pour la colonne « Créé par ».
  * Audit de PATCH /:id : en plus de serializeItemForAudit, assignedToId/assignedToName et tags (noms, si tagIds envoyé)
  * avant/après (et externalRefs si envoyées), lus par l'historique de la fiche (item-history.ts, 2026-11-12) ; la restauration admin les ignore.
  * Personnes (auteur, assigné, auteurs de contributions) : id et nom seulement, jamais l'e-mail — ces routes sont
@@ -66,7 +67,7 @@ const CONTENTS_ORDER = [{ kind: 'asc' as const }, { position: 'asc' as const }, 
 // Liste : tout sauf le xml des schémas (aperçu d'un fichier inclus : vignettes)
 const CONTENTS_LIST_SELECT = {
   id: true, itemId: true, kind: true, url: true, name: true, mimeType: true, size: true, previewUrl: true, excerpt: true,
-  position: true, createdById: true, createdAt: true, updatedAt: true,
+  value: true, position: true, createdById: true, createdAt: true, updatedAt: true,
 };
 import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
 import { invisibleTagIds } from '../utils/tagScope.js';
@@ -431,6 +432,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         tags: { include: { tag: true } },
         children: { select: { id: true } },
         assignedTo: { select: { id: true, name: true } },
+        // Export de données (bug cmwt3o7tn01ly7icc055vvaiw, 2026-11-25) : colonnes « Créé par » et « Références externes »
+        createdBy: { select: { id: true, name: true } },
+        externalRefs: EXTERNAL_REFS_ORDER,
         // articleBlocks : nombre d'éléments assemblés par un article (poids de sa vignette dans la Loupe, 2026-11-20)
         _count: { select: { children: true, contributions: true, articleBlocks: true } },
         contents: { select: CONTENTS_LIST_SELECT, orderBy: CONTENTS_ORDER },
@@ -491,6 +495,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
           return {
             ...rest,
             tags: item.tags.map((t: any) => t.tag),
+            externalRefs: (item.externalRefs ?? []).map((r: any) => r.value),
             childCount: item._count.children,
             contributionCount: item._count.contributions,
             articleBlockCount: item._count.articleBlocks ?? 0,

@@ -10,8 +10,14 @@ const elements: HelpElements = {
   selection: {
     title: 'Champs exportés',
     short: 'Cochez les champs à mettre en colonnes.',
-    text: 'Cochez les champs à exporter : chacun devient une colonne du fichier. « Tout cocher » reprend tous les champs, « Rétablir par défaut » remet tous les champs dans l\'ordre d\'origine. Il faut au moins un champ coché.',
+    text: 'Cochez les champs à exporter : chacun devient une colonne du fichier. « Tout cocher » reprend tous les champs, « Rétablir par défaut » remet tous les champs dans l\'ordre d\'origine. Il faut au moins un champ coché. Les données sécurisées ne sont jamais exportées. Un champ apparu depuis votre dernier export arrive décoché en bas de la liste.',
     side: 'bottom',
+    changes: [{
+      id: 'export-fields-more',
+      kind: 'evolution',
+      text: 'L\'export propose aussi les références externes, les contenus (images, fichiers, liens, schémas), l\'auteur et l\'identifiant de chaque élément.',
+      date: '2026-11-25',
+    }],
   },
   ordre: {
     title: 'Ordre des colonnes',

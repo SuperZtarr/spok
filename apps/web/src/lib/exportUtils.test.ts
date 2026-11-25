@@ -39,6 +39,22 @@ describe('buildItemRows', () => {
     expect(rows[1]['Tags']).toBe('a, b');
     expect(rows[0]['Description']).toBe('Desc riche');
   });
+
+  it('références externes, créé par, contenus, identifiant', () => {
+    const withExtras = [{
+      ...items[0],
+      externalRefs: ['Jira : PROJ-1', 'CRM : 42'],
+      createdBy: { id: 'u', name: 'Ana' },
+      contents: [{ name: 'plan.pdf', url: 'https://x/plan.pdf' }, { name: '', url: 'https://exemple.fr' }],
+    }] as unknown as Item[];
+    const row = buildItemRows(withExtras, ['externalRefs', 'createdBy', 'contents', 'id'])[0];
+    expect(row).toEqual({
+      'Références externes': 'Jira : PROJ-1 | CRM : 42',
+      'Créé par': 'Ana',
+      'Contenus': 'plan.pdf, https://exemple.fr',
+      'Identifiant': 'p',
+    });
+  });
 });
 
 describe('normalizeExportFields', () => {

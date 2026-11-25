@@ -10,7 +10,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toPng } from 'html-to-image';
 import type { Item, ItemRelation, ExportFieldId } from '@spok/shared';
-import { VIEW_REGISTRY, EXPORT_FIELD_IDS, getExportFieldLabel } from '@spok/shared';
+import { VIEW_REGISTRY, EXPORT_FIELD_IDS, getExportFieldLabel, formatExternalRefs } from '@spok/shared';
 import type { ViewMode } from '../stores/viewMode';
 
 export function sanitizeFilename(name: string): string {
@@ -58,6 +58,10 @@ export const EXPORT_FIELD_VALUES: Record<ExportFieldId, (item: Item, titles: Map
   parent: (item, titles) => item.parentId ? (titles.get(item.parentId) || item.parentId) : '',
   assignee: item => (item as any).assignedTo?.name || item.assignedToName || '',
   tags: item => item.tags?.map(t => t.name).join(', ') || '',
+  externalRefs: item => formatExternalRefs(item.externalRefs ?? []),
+  createdBy: item => item.createdBy?.name || '',
+  contents: item => (item.contents ?? []).map(c => c.name || c.url || c.value || '').filter(Boolean).join(', '),
+  id: item => item.id,
   dueDate: item => formatDate(item.dueDate),
   startDate: item => formatDate(item.startDate),
   endDate: item => formatDate(item.endDate),

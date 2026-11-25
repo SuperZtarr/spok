@@ -24,8 +24,10 @@ export interface Item {
   /** Contenus de l'élément (images, fichiers, liens, schémas), dans l'ordre d'affichage */
   contents?: ItemContent[];
   /** Références externes (règle item-external-refs) : une entrée par application, « Application : réf1 | réf2 » ;
-   *  renvoyées par le détail d'un élément, mises en forme par parseExternalRef (constants/externalRefs.ts) */
+   *  renvoyées par le détail et la liste d'un espace, mises en forme par parseExternalRef (constants/externalRefs.ts) */
   externalRefs?: string[];
+  /** Créateur (id, nom — jamais l'e-mail) : renvoyé par le détail et la liste d'un espace (export, 2026-11-25) */
+  createdBy?: { id: string; name: string };
   status?: string | null;
   priority?: number | null;
   position: number;
