@@ -306,6 +306,7 @@
 - [x] Contenus - aperçu des liens, image du site — 2026-11-25
 - [x] Arborescences - glisser sous un élément — 2026-11-25
 - [x] Fiche - bouton Composer commun à l'article et au process — 2026-11-25
+- [x] Barres de vue - icônes seules quand la place manque — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

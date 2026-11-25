@@ -1,7 +1,8 @@
 /* Bouton replier/déplier tout (arborescences des vues) — seul bouton de ce rôle : ne pas le recopier dans une vue,
    il porte le repère data-tour="collapse-toggle" (tours Arborescence, Carte mentale) et son infobulle HelpHint
    (SPACE_TOOLBAR_HINTS.collapseAll / expandAll).
-   Props : isCollapsed (tout est replié → le bouton propose « Étendre »), onToggle, className (mise en page). */
+   Props : isCollapsed (tout est replié → le bouton propose « Étendre »), onToggle, className (mise en page).
+   Libellé `vh-label` : masqué (icône seule) quand la barre de vue manque de place (règle dans index.css). */
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { HelpHint } from '../../help/HelpHint';
 import { SPACE_TOOLBAR_HINTS } from '../../help/spaceToolbar.hints';
@@ -24,7 +25,7 @@ export function CollapseToggleButton({ isCollapsed, onToggle, className }: Colla
         className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex-shrink-0 ${className ?? ''}`}
       >
         {isCollapsed ? <ChevronsUpDown className="w-3.5 h-3.5" /> : <ChevronsDownUp className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{label}</span>
+        <span className="hidden sm:inline vh-label">{label}</span>
       </button>
     </HelpHint>
   );

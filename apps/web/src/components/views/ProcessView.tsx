@@ -2,6 +2,7 @@
  * ProcessView — canevas d'un élément Process (type PROCESS, 2026-11-21 ; avant : un process unique par espace) : on y
  * pose des éléments de tous les espaces lisibles, puis on les relie par de vraies relations SPOK.
  * - En-tête : « Tous les process » (onBack) ; titre cliquable = fiche de l'élément Process (onOpenProcess, 2026-11-21).
+ * - Barre de vue : data-compact="600" (index.css) — libellés masqués (icônes seules) puis défilement si la place manque.
  * - Données : useProcessCanvas(spaceId, processId) — places, couloirs, relations entre éléments montrés, droit de
  *   modifier (canEditProcess). Un élément devenu illisible pour la personne qui l'a posé est une case « indisponible ».
  * - Panneau gauche (ProcessUnplacedPanel) : éléments de l'espace du process non posés (spaceItems, unplacedItems), à
@@ -396,7 +397,7 @@ function ProcessCanvas({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-devzone="contenu-barre-vue">
+      <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-compact="600" data-devzone="contenu-barre-vue">
         {onBack && (
           <HelpHint text={PH.back}>
             <button
@@ -404,7 +405,7 @@ function ProcessCanvas({
               onClick={onBack}
               className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Tous les process</span>
+              <ArrowLeft className="w-3.5 h-3.5" /> <span className="hidden sm:inline vh-label">Tous les process</span>
             </button>
           </HelpHint>
         )}
@@ -426,7 +427,7 @@ function ProcessCanvas({
               className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
             >
               <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">Réorganiser en processus</span>
+              <span className="hidden sm:inline vh-label">Réorganiser en processus</span>
             </button>
           </HelpHint>
         )}

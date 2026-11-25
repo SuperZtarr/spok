@@ -8,7 +8,7 @@
  * Usage : `const bulk = useBulkUpload(spaceId, 'image')` dans la vue, puis passer `bulk` aux trois.
  * Ne s'affiche que si l'utilisateur peut éditer (la condition reste dans la vue, comme NewItemButton).
  * Aide : infobulle HelpHint dont le texte vient de la fiche de la vue (images/documents.help.ts → hints.bulkUpload),
- * pas de `title` natif.
+ * pas de `title` natif. Libellé `vh-label` : icône seule quand la barre de vue manque de place (index.css).
  */
 import { useRef, useState, type ReactNode, type DragEvent } from 'react';
 import { Upload, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -45,7 +45,7 @@ export function BulkUploadButton({ bulk, kind }: { bulk: BulkUpload; kind: Uploa
           className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium border border-border bg-background hover:bg-muted disabled:opacity-50 transition-colors flex-shrink-0"
         >
           {bulk.running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">{LABELS[kind].button}</span>
+          <span className="hidden sm:inline vh-label">{LABELS[kind].button}</span>
         </button>
       </HelpHint>
       <input

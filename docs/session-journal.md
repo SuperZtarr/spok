@@ -14,6 +14,17 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-25 — MEP : 6 lots (icône d'application, statut par défaut, aperçu des liens, glisser sous un élément, Composer commun, barres de vue compactes). Micro-correction MEP : la garde typeRegistry.guard refusait defaultStatus écrit en dur → typeRegistry.ts ajouté aux sources de statuts, appliesToValues de item-default-status dérivé du registre. 4 annonces datées. Typecheck OK, TNR 3135/3136 puis garde 5/5 et lib 337/337 après correction. Restauration des statuts des périodes en prod toujours en attente (railway login).
+
+- 2026-11-25 — FAIT (accord explicite de Thomas, tunnel `railway connect Postgres --tunnel-only`) : `restore-period-statuses.ts --prod --apply` → 31 périodes ont retrouvé leur statut (22 done, 7 in_progress, 1 todo, 1 scheduled) ; 6 laissées (3 devenues tâches, 2 statut déjà posé, 1 supprimée). Vérifié par un second passage à blanc : 0 à remettre.
+
+- 2026-11-25 — Barres de vue (icônes seules puis défilement) : inscrit PRÊT POUR MEP, NON COMMITÉ.
+- 2026-11-25 — « Composer » commun Article / Process : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-25 — Glisser dans les arborescences : correctif appliqué, inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-25 — MEP : CI rouge sur 1289bf4 (item-contents.ts importait utils/linkPreview.js non commité : début du travail « aperçu des liens » d'une autre session, embarqué avec le lot coordonnées). Corrigé par 9d74fbc puis fd49a04 (bouton « Actualiser l'aperçu » et son rappel d'aide) : aperçu des liens retiré des commits, CI verte, laissé intact dans le dossier. Ce travail reste à inscrire par sa session ; api.ts garde une méthode preview inutilisée.
+
 - 2026-11-25 — MEP : 3 commits du 2026-11-21 poussés (CI verte), puis 10 lots dont coordonnées (enum ItemContentKind + PHONE/EMAIL/ADDRESS, colonne item_contents.value, db push). 5 annonces datées. Typecheck OK, TNR 3107/3109 (item-contents et NewSessionDialog instables sous charge, 30/30 seuls). APRÈS : restore-period-statuses.ts --prod sur accord de Thomas. CLI Railway déconnecté : déploiements non surveillés.
 
 - 2026-11-25 — Coordonnées terminées (zone Contenus, aide, doc) ; inscrites PRÊT POUR MEP, NON COMMITÉ.

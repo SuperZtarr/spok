@@ -2,6 +2,8 @@
  * Vue Carte mentale (React Flow + d3 radial tree).
  * Invariants critiques : savedPositions.current persiste les positions manuelles entre
  * recalculs ; reorganizeRef.current capture le closure courant (pattern obligatoire).
+ * Barre de vue : data-compact="600" (index.css) — icônes seules puis défilement si la place manque ; la légende
+ * s'ouvre en portail pour ne pas être coupée par ce défilement.
  * Positions figées (demande Thomas 2026-11-04) : toute position calculée est enregistrée (freezePositions, localStorage,
  * donc par navigateur) ; replier, déplier ou rouvrir la carte ne fait plus pivoter les branches. Seul « Réorganiser »
  * recalcule toute la carte. Un nœud jamais positionné suit son parent figé (anchorToSaved).
@@ -35,6 +37,7 @@
  */
 import { matchesCriteria, matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useMemo, useCallback, useEffect, useState, useRef, useImperativeHandle, forwardRef, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useCollapsedIds } from '../../lib/useCollapsedIds';
 import { RelationCreateDialog } from '../relations/RelationCreateDialog';
@@ -296,6 +299,9 @@ function MindMapViewInner({
   const [portals, setPortals] = useState<PortalState[]>([]);
   const [portalsLoaded, setPortalsLoaded] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  /* Légende en portail (position fixe sous le bouton) : la barre de vue défile quand la place manque et couperait
+     un panneau positionné dans la barre. */
+  const [legendPos, setLegendPos] = useState<{ top: number; right: number } | null>(null);
 
   const togglePin = useCallback((id: string) => {
     if (pinnedIds.current.has(id)) {
@@ -1470,7 +1476,7 @@ function MindMapViewInner({
   return (
     <div className="flex flex-col h-full">
       {/* ViewHeader */}
-      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-compact="600" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         <CollapseToggleButton
           isCollapsed={collapsedIds.size > 0}
           onToggle={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
@@ -1484,7 +1490,7 @@ function MindMapViewInner({
             className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Réorganiser</span>
+            <span className="hidden sm:inline vh-label">Réorganiser</span>
           </button>
         </HelpHint>
         <HelpHint text={MH.fit}>
@@ -1496,7 +1502,7 @@ function MindMapViewInner({
             className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <Maximize2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tout voir</span>
+            <span className="hidden sm:inline vh-label">Tout voir</span>
           </button>
         </HelpHint>
         <HelpHint text={showRelations ? MH.relationsOn : MH.relationsOff}>
@@ -1509,7 +1515,7 @@ function MindMapViewInner({
             className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${showRelations ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Relations</span>
+            <span className="hidden sm:inline vh-label">Relations</span>
           </button>
         </HelpHint>
         <div className="flex-1" />
@@ -1518,17 +1524,21 @@ function MindMapViewInner({
             <button
               type="button"
               className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              onClick={() => setLegendOpen(v => !v)}
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setLegendPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+                setLegendOpen(v => !v);
+              }}
               data-tour="mindmap-legend"
               aria-label="Légende"
               aria-expanded={legendOpen}
             >
               <ChevronRight className={`w-3.5 h-3.5 transition-transform ${legendOpen ? 'rotate-90' : ''}`} />
-              <span className="hidden sm:inline">Légende</span>
+              <span className="hidden sm:inline vh-label">Légende</span>
             </button>
           </HelpHint>
-          {legendOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50">
+          {legendOpen && legendPos && createPortal(
+            <div className="fixed bg-card border rounded-lg shadow-lg p-3 text-xs min-w-[200px] z-50" style={{ top: legendPos.top, right: legendPos.right }}>
               <div className="space-y-1.5 mb-3 text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Link2 className="w-3 h-3 text-purple-500 flex-shrink-0" />
@@ -1560,7 +1570,8 @@ function MindMapViewInner({
                   </div>
                 ))}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
         <ViewHelpButton viewMode="mindmap" onStartTour={onStartTour} pulse={pulseHelp} />

@@ -62,6 +62,32 @@
   }
 }
 
+/*
+ * Barres de vue (#view-header) — quand la place manque (bug cmwqjclfa006b7icc66426a76, décision Thomas 2026-11-25) :
+ * 1. sous le seuil de la barre (data-compact="600|800|1000|1200|1400", largeur de la BARRE, pas de l'écran) :
+ *    le texte d'information (.vh-info) disparaît dès seuil + 200 px, puis les libellés des boutons (.vh-label)
+ *    sous le seuil → icône seule (nom gardé par aria-label et l'infobulle HelpHint) ;
+ * 2. si ça ne tient toujours pas : la barre défile horizontalement (boutons jamais écrasés ni hors d'atteinte).
+ * Pur CSS (requête de conteneur) : aucune mesure de largeur en JS (règle spok-layout). Conséquence du défilement :
+ * un menu déroulant ouvert depuis la barre doit être en portail (createPortal), sinon il est coupé.
+ * Barre sans data-compact : libellés toujours affichés, défilement seul.
+ */
+#view-header {
+  container: view-header / inline-size;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+#view-header > * {
+  flex-shrink: 0;
+}
+@container view-header (max-width: 1599px) { [data-compact="1400"] .vh-info { display: none; } }
+@container view-header (max-width: 1399px) { [data-compact="1400"] .vh-label { display: none; } [data-compact="1200"] .vh-info { display: none; } }
+@container view-header (max-width: 1199px) { [data-compact="1200"] .vh-label { display: none; } [data-compact="1000"] .vh-info { display: none; } }
+@container view-header (max-width: 999px) { [data-compact="1000"] .vh-label { display: none; } [data-compact="800"] .vh-info { display: none; } }
+@container view-header (max-width: 799px) { [data-compact="800"] .vh-label { display: none; } [data-compact="600"] .vh-info { display: none; } }
+@container view-header (max-width: 599px) { [data-compact="600"] .vh-label { display: none; } }
+
 @keyframes urgent-blink-dark {
   0%, 100% { background-color: transparent; }
   50% { background-color: rgb(127 29 29 / 0.25); } /* red-900/25 */

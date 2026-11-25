@@ -1,6 +1,7 @@
 /* Toolbar de la vue PERT : filtre par type de relation (4 types officiels, source unique
  * constants/relationTypes.ts), zoom, tri rang/alpha, export SVG (sur ViewToolbar).
- * Chaque commande sous HelpHint (textes : pert.help.ts → hints), pas de `title` natif. */
+ * Chaque commande sous HelpHint (textes : pert.help.ts → hints), pas de `title` natif.
+ * Manque de place : data-compact="1000" (index.css) — compteur masqué puis libellés → icônes seules, puis défilement. */
 import { Minus, Plus, Info, ArrowUpDown } from 'lucide-react';
 import { RELATION_TYPE_LIST } from '../../constants/relationTypes';
 import { CollapseToggleButton } from '../ui/CollapseToggleButton';
@@ -49,7 +50,7 @@ function LegendButton() {
           aria-expanded={open}
         >
           <Info className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Légende</span>
+          <span className="hidden sm:inline vh-label">Légende</span>
         </button>
       </HelpHint>
       {open && pos && createPortal(
@@ -132,7 +133,7 @@ export function PertToolbar({
   const filename = buildExportFilename(spaceName, 'pert');
 
   return (
-    <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+    <div id="view-header" data-compact="1000" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
       {onTogglePertRankSort && (
         <HelpHint text={PH.rankSort}>
           <button
@@ -144,7 +145,7 @@ export function PertToolbar({
             className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium transition-colors ${pertRankSort ? 'bg-accent text-foreground font-semibold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
           >
             <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden sm:inline">Par rang</span>
+            <span className="hidden sm:inline vh-label">Par rang</span>
           </button>
         </HelpHint>
       )}
@@ -165,7 +166,7 @@ export function PertToolbar({
                   className={`inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs font-medium transition-colors ${active ? activeClass : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: hex }} />
-                  <span className="hidden sm:inline">{label}</span>
+                  <span className="hidden sm:inline vh-label">{label}</span>
                 </button>
               </HelpHint>
             );
@@ -196,7 +197,7 @@ export function PertToolbar({
       </HelpHint>
       <div className="flex-1" />
       {totalItemCount !== undefined && (
-        <span className="text-xs text-muted-foreground flex-shrink-0">
+        <span className="vh-info text-xs text-muted-foreground flex-shrink-0">
           {filteredItemCount !== undefined && filteredItemCount !== totalItemCount
             ? `${filteredItemCount} / ${totalItemCount} éléments`
             : `${totalItemCount} élément${totalItemCount !== 1 ? 's' : ''}`}

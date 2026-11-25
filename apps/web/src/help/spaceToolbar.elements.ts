@@ -5,6 +5,7 @@
  * Une commande ajoutée à la barre = son élément ici et son repère data-tour (contrôlé par help/coverage.test.ts).
  * Corriger un texte ici le corrige dans toutes les vues.
  * Sélecteur de vues (2026-11-13, SpaceViewSelector) : presentation, vues (favoris du mode), toutesVues (panneau).
+ * exporter porte aussi le rappel « barre de vue étroite : icônes seules puis défilement » (index.css, 2026-11-25).
  */
 import type { HelpElements } from './elements';
 import { modesList } from '../lib/modeTexts';
@@ -99,7 +100,8 @@ export const SPACE_TOOLBAR_ELEMENTS = {
   exporter: {
     title: 'Exporter',
     short: 'Exporter : télécharger le contenu de la vue (formats selon la vue : CSV, Excel, PDF, image…).',
-    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…). Pour CSV, Excel et PDF données, vous choisissez d\'abord les champs exportés et l\'ordre des colonnes ; le choix est gardé pour vous dans cet espace.',
+    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…). Pour CSV, Excel et PDF données, vous choisissez d\'abord les champs exportés et l\'ordre des colonnes ; le choix est gardé pour vous dans cet espace. Quand la fenêtre est étroite, la barre de la vue n\'affiche plus que les icônes (survolez-les pour leur nom), puis défile de gauche à droite : aucun bouton n\'est hors d\'atteinte.',
+    changes: [{ id: 'view-header-compact', kind: 'evolution', text: 'Barres des vues adaptées aux fenêtres étroites : les boutons passent en icônes seules (nom au survol), puis la barre défile ; plus aucun bouton ne sort de l\'écran.', date: '2026-11-25' }],
     target: '[data-tour="view-export"]',
     side: 'bottom',
   },

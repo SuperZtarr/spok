@@ -213,6 +213,18 @@ Deux zones :
 
 - **Ne contient jamais** : Nouveau, Modèle, Types, Statuts, Recherche, Lumière, Ordre, Count, Historique, Paramètres — tout ça est dans `#global-toolbar`
 
+#### Manque de place — règle commune (décision Thomas 2026-11-25, bug `cmwqjclfa006b7icc66426a76`)
+
+Règle CSS unique dans `index.css` (requête de conteneur sur `#view-header`, aucune mesure JS — règle `spok-layout`) :
+1. Libellé de bouton dans `<span className="vh-label">` (bouton avec `aria-label` + `HelpHint`) ; texte d'information
+   (plage de dates, compteur) en `vh-info`.
+2. La barre porte `data-compact="600|800|1000|1200|1400"` = largeur de BARRE sous laquelle les libellés disparaissent
+   (icônes seules) ; les `vh-info` disparaissent dès seuil + 200 px. Seuil choisi selon le contenu de la barre
+   (Gantt 1400, PERT 1000, Carte mentale et Process 600). Barre sans `data-compact` : libellés toujours affichés.
+3. Ensuite la barre défile horizontalement ; les enfants directs ne rétrécissent pas.
+4. Conséquence : tout menu ou panneau ouvert depuis la barre est en portail (`createPortal`, position `fixed`),
+   sinon le défilement le coupe. Ne pas remplacer `vh-label` par `hidden lg:inline` (largeur d'écran ≠ largeur de barre).
+
 ### Style des boutons d'état actif/inactif
 
 - **Inactif (aucun critère)** : `text-muted-foreground hover:bg-accent hover:text-foreground`

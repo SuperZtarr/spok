@@ -1,6 +1,8 @@
 /**
  * TimelineView — Vue Gantt interactive.
  * Affiche les items avec dates sous forme de barres horizontales sur une frise temporelle.
+ * Barre de vue : data-compact="1400" (index.css) — sous ce seuil de largeur de BARRE, la plage de dates et le compteur
+ * (vh-info) disparaissent d'abord, puis les libellés (vh-label) → icônes seules ; ensuite défilement. Disposition stable (25cf263a).
  * Gère : zoom (jour/semaine/mois/trimestre/année), navigation centerDate, DnD repositionnement dates,
  * DnD réordonnancement arborescence panneau gauche (RootDropZone pour remonter un item à la racine),
  * création de relations par glisser-déposer, chemin critique, export, scrollbar de navigation temporelle en bas de vue.
@@ -38,6 +40,7 @@ import { CollapseToggleButton } from '../ui/CollapseToggleButton';
 import { ExportDropdownButton } from '../ui/ExportDropdownButton';
 
 import { type TreeSort, applyTreeSort } from '../../lib/treeSort';
+import { useTreeDropPosition } from '../../lib/useTreeDropPosition';
 import { buildExportFilename, exportCSV, exportExcel, exportDataPDF, exportContainerPNG } from '../../lib/exportUtils';
 import {
   DndContext, DragOverlay, pointerWithin,
@@ -214,8 +217,8 @@ treeSort: treeSortProp,
   // DnD state for left-panel reordering
   const [ganttActiveId, setGanttActiveId] = useState<string | null>(null);
   const [ganttOverId, setGanttOverId] = useState<string | null>(null);
-  const [ganttDropPosition, setGanttDropPosition] = useState<'before' | 'after' | 'nest'>('nest');
-  const ganttPointerYRef = useRef(0);
+  // Position recalculée à chaque mouvement du pointeur (useTreeDropPosition) — pas dans onDragOver
+  const ganttDropPosition = useTreeDropPosition(ganttActiveId, ganttOverId, (id) => `[data-gantt-item-id="${id}"]`);
 
   const ganttSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const preDragCollapsedRef = useRef<Set<string>>(new Set());
@@ -393,16 +396,7 @@ treeSort: treeSortProp,
   }, [collapsedIds]);
 
   const handleGanttDragOver = useCallback((event: DragOverEvent) => {
-    const overId = event.over?.id as string | null;
-    setGanttOverId(overId);
-    if (!overId) { setGanttDropPosition('nest'); return; }
-    const el = document.querySelector(`[data-gantt-item-id="${overId}"]`) as HTMLElement | null;
-    const rect = el?.getBoundingClientRect();
-    if (!rect || rect.height === 0) { setGanttDropPosition('nest'); return; }
-    const ratio = (ganttPointerYRef.current - rect.top) / rect.height;
-    if (ratio < 0.33) setGanttDropPosition('before');
-    else if (ratio > 0.67) setGanttDropPosition('after');
-    else setGanttDropPosition('nest');
+    setGanttOverId((event.over?.id as string | null) ?? null);
   }, []);
 
   const handleGanttDragEnd = useCallback((event: DragEndEvent) => {
@@ -412,7 +406,6 @@ treeSort: treeSortProp,
     const wasCollapsed = preDragCollapsedRef.current.has(activeId);
     setGanttActiveId(null);
     setGanttOverId(null);
-    setGanttDropPosition('nest');
     if (!over || activeId === over.id || !onMove) {
       if (!wasCollapsed) setCollapsedIds(prev => { const s = new Set(prev); s.delete(activeId); return s; });
       return;
@@ -448,17 +441,9 @@ treeSort: treeSortProp,
     const id = ganttActiveId;
     setGanttActiveId(null);
     setGanttOverId(null);
-    setGanttDropPosition('nest');
     if (id && !preDragCollapsedRef.current.has(id)) {
       setCollapsedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
     }
-  }, [ganttActiveId]);
-
-  useEffect(() => {
-    if (!ganttActiveId) return;
-    const handler = (e: PointerEvent) => { ganttPointerYRef.current = e.clientY; };
-    window.addEventListener('pointermove', handler);
-    return () => window.removeEventListener('pointermove', handler);
   }, [ganttActiveId]);
 
   const itemsWithDatesCount = useMemo(() => {
@@ -1124,12 +1109,12 @@ treeSort: treeSortProp,
   return (
     <div className="flex flex-col h-full" ref={viewContainerRef}>
       {/* ViewHeader */}
-      <div id="view-header" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
+      <div id="view-header" data-compact="1400" data-devzone="contenu-barre-vue" className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0">
         {/* Navigation */}
         <HelpHint text={TH.previous}>
           <Button variant="bordered" size="sm" onClick={goToPrevious} aria-label="Précédent" className="gap-1">
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden lg:inline">Précédent</span>
+            <span className="vh-label">Précédent</span>
           </Button>
         </HelpHint>
         <HelpHint text={TH.today}>
@@ -1139,24 +1124,24 @@ treeSort: treeSortProp,
         </HelpHint>
         <HelpHint text={TH.next}>
           <Button variant="bordered" size="sm" onClick={goToNext} aria-label="Suivant" className="gap-1">
-            <span className="hidden lg:inline">Suivant</span>
+            <span className="vh-label">Suivant</span>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </HelpHint>
         {/* Largeur fixe : le libellé varie selon les jours/mois (« mer. »/« sept. ») et ne doit pas décaler la barre */}
-        <div className="text-sm text-muted-foreground hidden sm:block w-[19rem] flex-shrink-0 text-center whitespace-nowrap tabular-nums">
+        <div className="vh-info text-sm text-muted-foreground hidden sm:block w-[19rem] flex-shrink-0 text-center whitespace-nowrap tabular-nums">
           {formatDateFull(visibleStartDate)} - {formatDateFull(addDays(visibleEndDate, -1))}
         </div>
         <div className="h-4 w-px bg-border mx-1" />
         {/* Timeline-specific controls */}
-        <span className="text-xs text-muted-foreground flex-shrink-0">
+        <span className="vh-info text-xs text-muted-foreground flex-shrink-0">
           {itemsWithDatesCount} planifiés
         </span>
         {canEdit && spaceId && (
           <HelpHint text={TH.chronoReorder}>
             <Button variant="bordered" size="sm" onClick={handleChronoReorder} disabled={reordering} aria-label="Réordonner chronologiquement" data-tour="timeline-reorder" className="gap-1">
               <ArrowUpDown className="w-4 h-4" />
-              <span className="hidden lg:inline">Réordonner</span>
+              <span className="vh-label">Réordonner</span>
             </Button>
           </HelpHint>
         )}
@@ -1171,7 +1156,7 @@ treeSort: treeSortProp,
             className="gap-1"
           >
             {compactMode ? <ChevronsUpDown className="w-4 h-4" /> : <ChevronsDownUp className="w-4 h-4" />}
-            <span className="hidden lg:inline">Sans date</span>
+            <span className="vh-label">Sans date</span>
           </Button>
         </HelpHint>
         {parentIds.length > 0 && (
@@ -1191,7 +1176,7 @@ treeSort: treeSortProp,
             className={`gap-1 ${showCriticalPath ? 'bg-red-600 hover:bg-red-700 border-red-600' : ''}`}
           >
             <GitBranch className="w-4 h-4" />
-            <span className="hidden lg:inline">Chemin critique</span>
+            <span className="vh-label">Chemin critique</span>
           </Button>
         </HelpHint>
         <div data-tour="timeline-zoom" className="flex items-center gap-1 border rounded-md">
@@ -1226,7 +1211,7 @@ treeSort: treeSortProp,
           <HelpHint text={TH.fitProject}>
             <Button variant="ghost" size="sm" onClick={fitProject} disabled={!projectFit} aria-label="Tout le projet" data-tour="timeline-fit" className="h-8 px-2 gap-1">
               <Maximize2 className="w-4 h-4" />
-              <span className="hidden lg:inline">Tout le projet</span>
+              <span className="vh-label">Tout le projet</span>
             </Button>
           </HelpHint>
         </div>
