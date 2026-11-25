@@ -58,11 +58,11 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
   {
     id: 'status-reserved-for-type',
     category: 'status',
-    appliesToValues: ['question_open', 'question_decided', 'question_postponed', 'question_no_conclusion',
+    appliesToValues: ['question_open', 'question_decided', 'question_arbitrated', 'question_postponed', 'question_no_conclusion',
       'meeting_to_organize', 'meeting_planned', 'meeting_agenda_sent', 'meeting_held', 'meeting_minutes_sent', 'meeting_postponed', 'meeting_cancelled',
       'article_draft', 'article_to_validate', 'article_published', 'article_cancelled'],
     trigger: 'Choix ou changement du statut, ou du type, d’un élément',
-    effect: "Question (Ouverte, Tranchée, Reportée, Sans conclusion — 2026-11-08), Réunion (À organiser, Planifiée, ODJ envoyé, Réalisée en cours, CR envoyé = terminée, Reportée, Annulée) et Article (Brouillon, À valider, Publié, Annulé — 2026-11-19) ont leurs statuts réservés : ce type n'utilise qu'eux, les autres types jamais. Ils sont livrés partout (ajoutés aux référentiels personnalisés), renommables et recolorables, catégorie fixe, non supprimables. Création : une réunion part « À organiser », un article « Brouillon », une question « Ouverte ». Changement de type : statut de même catégorie parmi ceux du nouveau type, sinon le premier (type à statuts réservés) ou aucun (type ordinaire) ; une question repart toujours « Ouverte ». Période : aucun statut (registre des types, noStatus / typeHasStatus — 2026-11-20) : champ absent de la fiche, statut toujours enregistré vide, absente du Kanban, refusé par le MCP. Éléments d'avant la règle : scripts/migrate-type-statuses.ts (décisions Thomas 2026-11-08 et 2026-11-19)",
+    effect: "Question (Ouverte, Tranchée, Reportée, Sans conclusion — 2026-11-08), Réunion (À organiser, Planifiée, ODJ envoyé, Réalisée en cours, CR envoyé = terminée, Reportée, Annulée) et Article (Brouillon, À valider, Publié, Annulé — 2026-11-19) ont leurs statuts réservés : ce type n'utilise qu'eux, les autres types jamais. Ils sont livrés partout (ajoutés aux référentiels personnalisés), renommables et recolorables, catégorie fixe, non supprimables. Création : une réunion part « À organiser », un article « Brouillon », une question « Ouverte ». Changement de type : statut de même catégorie parmi ceux du nouveau type, sinon le premier (type à statuts réservés) ou aucun (type ordinaire) ; une question repart toujours « Ouverte ». Période : statuts ordinaires, comme une tâche (sans statut du 2026-11-20 au 2026-11-25, statuts d'avant rétablis par scripts/restore-period-statuses.ts ; le mécanisme noStatus / typeHasStatus du registre reste disponible, sans type). Éléments d'avant la règle : scripts/migrate-type-statuses.ts (décisions Thomas 2026-11-08 et 2026-11-19)",
     location: 'packages/shared/src/constants/defaultReferentiels.ts (DEFAULT_STATUSES, statusForType, statusesForType, statusAllowedForType, withDefaultStatuses), apps/api/src/routes/items.ts, apps/web/src/components/ItemEditModal.tsx, apps/api/scripts/migrate-type-statuses.ts',
   },
   {
@@ -78,7 +78,7 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     category: 'type',
     appliesToValues: ['QUESTION'],
     trigger: 'Issue notée sur une question',
-    effect: "« Tranchée » exige une option retenue ou une autre réponse écrite ; une ligne de précision est possible pour toute issue ; qui et quand sont enregistrés ; « Rouvrir » efface l'issue. Hors séance : qui peut modifier la question. Copie de séance : l'animateur seul, et l'issue est reportée sur la question d'origine s'il peut la modifier. Une question Reportée en séance est reprise dans la préparation de la suite, et rouverte quand on la présente de nouveau",
+    effect: "Deux façons de répondre (décision Thomas 2026-11-21) : « Tranchée » = réponse du groupe, seulement une réponse en tête des votes (400 sinon) ; « Arbitrée » = décision d'une autorité (responsable, animateur), n'importe quelle réponse ou une réponse écrite. « Reportée » garde la même question (réponses et votes), avec une date de reprise facultative posée comme échéance. Une question n'a pas de « statut suivant » dans le menu ⋮. Une ligne de précision est possible pour toute issue ; qui et quand sont enregistrés ; « Rouvrir » efface l'issue. Hors séance : qui peut modifier la question. Copie de séance : l'animateur seul, et l'issue est reportée sur la question d'origine s'il peut la modifier. Une question Reportée en séance est reprise dans la préparation de la suite, et rouverte quand on la présente de nouveau",
     location: 'apps/api/src/routes/item-question.ts (PUT …/question/outcome), apps/api/src/utils/question.ts, apps/api/src/utils/sessionCopy.ts, apps/api/src/routes/live-sessions.ts (suite)',
   },
   {
@@ -136,6 +136,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     trigger: "Fiche d'un élément (Modifier ou Afficher), quel que soit son type sauf Article",
     effect: "Une zone « Contenus » sous la description (et sous le bloc Question) remplace les blocs média propres aux types Lien, Diagramme, Image et Document : « + Ajouter » joint un fichier, une image, un lien ou un schéma, plusieurs de chaque sorte, enregistrés tout de suite (hors « Enregistrer »). Masquée sur un Article (ses blocs l'affichent autrement) ; affichage seul pour un lecteur ou une copie de séance verrouillée ; un élément pas encore enregistré ne reçoit pas de contenu. En mode Afficher, les contenus remplacent le média unique et s'affichent en grand après la description (contenus multiples, lot 2, décision Thomas 2026-11-08)",
     location: 'apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/components/ItemEditModal.tsx (mediaSection), apps/web/src/components/ItemReadView.tsx',
+  },
+  {
+    id: 'item-contents-contacts',
+    category: 'type',
+    appliesToValues: [],
+    trigger: "Ajout ou modification d'un téléphone, d'un e-mail ou d'une adresse sur un élément",
+    effect: "Trois sortes de contenus (PHONE, EMAIL, ADDRESS — registre @spok/shared itemContentKinds.ts, source unique des sortes et de leurs libellés) : valeur en clair dans ItemContent.value, libellé facultatif dans name, url vide. Format vérifié par l'API (téléphone : chiffres, espaces, + . - ( ) ; e-mail ; adresse 1–500 caractères). Affichées en lignes compactes cliquables (tel:, mailto:, carte OpenStreetMap). Traitées comme tout contenu : plafond, ordre, déplacement, fusion (doublon = même sorte et même valeur, casse et espaces ignorés), copie, restauration, recherche, export, « Copier la fiche », MCP. Jamais en couverture ni en aperçu. Pour un secret : « Donnée sécurisée ».",
+    location: 'packages/shared/src/constants/itemContentKinds.ts, apps/api/src/routes/item-contents.ts, apps/api/src/utils/contentMerge.ts, apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/lib/itemExport.ts, apps/web/src/lib/itemClipboard.ts',
   },
   {
     id: 'item-contents-move-restore',
@@ -206,9 +214,9 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     id: 'tag-move-to-space',
     category: 'type',
     appliesToValues: [],
-    trigger: 'Administration → Tags : « Déplacer vers un espace » sur un tag',
-    effect: "Le tag (global, de communauté ou d'un autre espace) devient le tag de l'espace choisi : proposé dans cet espace et ses sous-espaces, plus ailleurs ; il garde son nom, sa couleur et ses éléments. Refusé si des éléments qui le portent sont hors de l'espace et de ses sous-espaces (nombre et espaces indiqués), si un autre tag du même nom est déjà proposé dans l'espace (fusionner plutôt), ou s'il y est déjà. Journalisé (entité Tag, UPDATE) (demande Thomas 2026-11-18)",
-    location: 'apps/api/src/routes/admin/tags.ts (POST /:id/move), apps/web/src/pages/admin/MoveTagModal.tsx',
+    trigger: 'Administration → Tags : « Déplacer » sur un tag (vers une communauté ou un espace)',
+    effect: "Le tag (global, de communauté ou d'espace) devient le tag de la destination : communauté → proposé dans tous ses espaces ; espace → proposé dans cet espace et ses sous-espaces ; plus ailleurs. Il garde son nom, sa couleur et ses éléments. Les éléments qui le portent hors de la nouvelle portée reçoivent à la place un tag du même nom visible depuis leur espace (existant, sinon créé dans leur espace, parents d'abord) — aucun tag perdu, bilan affiché avant de valider (décision Thomas 2026-11-18). Refusé si un autre tag du même nom est déjà proposé à la destination (fusionner plutôt), ou s'il y est déjà. Journalisé (entité Tag, UPDATE, copiedItems) (demandes Thomas 2026-11-18 et 2026-11-25)",
+    location: 'apps/api/src/routes/admin/tags.ts (POST /:id/move, GET /:id/move-preview), apps/web/src/pages/admin/MoveTagModal.tsx',
   },
   {
     id: 'type-shows-hours-mode',
@@ -289,7 +297,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'export-fields-choice',
     page: 'Menu Exporter des vues d’espace',
     trigger: 'Export CSV, Excel ou PDF données',
-    effect: "La fenêtre « Champs à exporter » s'ouvre d'abord : champs cochés et ordre des colonnes, pré-remplis avec le dernier choix de l'utilisateur dans cet espace (un seul choix pour les trois formats). Le choix est enregistré au moment de l'export, par utilisateur et par espace (préférences d'adhésion) ; un non-membre repart du défaut, tous les champs dans l'ordre du registre. Au moins un champ. Le PDF raccourcit une description longue ; CSV et Excel la gardent entière. JSON, PNG, SVG et PDF visuels restent complets et directs (élément SPOK cmwlt95x0000hgxbeapfmpoxq, 2026-11-18)",
+    effect: "La fenêtre « Champs à exporter » s'ouvre d'abord : champs cochés et ordre des colonnes, pré-remplis avec le dernier choix de l'utilisateur dans cet espace (un seul choix pour les trois formats). Le choix est enregistré au moment de l'export, par utilisateur et par espace (préférences d'adhésion) ; un non-membre repart du défaut, tous les champs dans l'ordre du registre. Au moins un champ. Le PDF raccourcit une description longue ; CSV et Excel la gardent entière. JSON, PNG, SVG et PDF visuels restent complets et directs (élément SPOK cmwlt95x0000hgxbeapfmpoxq, 2026-11-18). Chaque champ de l'élément est exporté ou exclu volontairement avec sa raison (EXPORT_EXCLUDED_ITEM_FIELDS) ; les données sécurisées ne sont jamais exportées ; un champ ajouté au registre arrive décoché pour qui a déjà un choix mémorisé (bug cmwt3o7tn01ly7icc055vvaiw, 2026-11-25)",
     location: 'packages/shared/src/constants/exportFields.ts (EXPORT_FIELD_REGISTRY), apps/web/src/lib/exportUtils.ts, components/ExportFieldsModal.tsx, hooks/useExportFields.ts, apps/api/src/routes/space-preferences.ts',
   },
   {

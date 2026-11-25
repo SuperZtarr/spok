@@ -982,7 +982,9 @@ export const questionsApi = {
 export type ItemContentInput =
   | { kind: 'LINK'; url: string; name?: string | null }
   | { kind: 'IMAGE'; url: string; name?: string | null }
-  | { kind: 'DIAGRAM'; xml: string; url?: string | null; name?: string | null };
+  | { kind: 'DIAGRAM'; xml: string; url?: string | null; name?: string | null }
+  // Coordonnée (2026-11-25) : valeur en clair, format vérifié par l'API
+  | { kind: 'PHONE' | 'EMAIL' | 'ADDRESS'; value: string; name?: string | null };
 
 export const itemContentsApi = {
   add: (spaceId: string, itemId: string, body: ItemContentInput) =>
@@ -998,6 +1000,9 @@ export const itemContentsApi = {
     fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (spaceId: string, itemId: string, contentId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}`, { method: 'DELETE' }),
+  /** Lien : relance la récupération de l'image du site ; previewFound = une image a été trouvée */
+  refreshPreview: (spaceId: string, itemId: string, contentId: string) =>
+    fetchApi<ItemContent & { previewFound: boolean }>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}/preview`, { method: 'POST' }),
   /** Déplace le contenu vers un autre élément (droits d'écriture sur les deux) */
   move: (spaceId: string, itemId: string, contentId: string, targetItemId: string) =>
     fetchApi<ItemContent>(`/spaces/${spaceId}/items/${itemId}/contents/${contentId}/move`, { method: 'POST', body: JSON.stringify({ targetItemId }) }),
@@ -1922,8 +1927,12 @@ export const adminApi = {
       fetchApi<AdminTag>(`/admin/tags/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => fetchApi<{ success: boolean }>(`/admin/tags/${id}`, { method: 'DELETE' }),
     promote: (id: string) => fetchApi<AdminTag>(`/admin/tags/${id}/promote`, { method: 'POST' }),
-    move: (id: string, spaceId: string) =>
-      fetchApi<AdminTag>(`/admin/tags/${id}/move`, { method: 'POST', body: JSON.stringify({ spaceId }) }),
+    /** Destination : un espace ({ spaceId }) ou une communauté ({ communityId }) — 2026-11-25 */
+    move: (id: string, dest: { spaceId: string } | { communityId: string }) =>
+      fetchApi<AdminTag & { copiedItems: number }>(`/admin/tags/${id}/move`, { method: 'POST', body: JSON.stringify(dest) }),
+    /** Bilan avant déplacement : éléments hors de la nouvelle portée (ils garderont un tag du même nom) */
+    movePreview: (id: string, dest: { spaceId: string } | { communityId: string }) =>
+      fetchApi<{ outsideCount: number; spaces: string[] }>(`/admin/tags/${id}/move-preview?${new URLSearchParams(dest).toString()}`),
     merge: (targetId: string, sourceIds: string[]) =>
       fetchApi<{ tag: AdminTag; itemCount: number; removed: number }>('/admin/tags/merge', {
         method: 'POST', body: JSON.stringify({ targetId, sourceIds }),

@@ -10,7 +10,8 @@
    Aide utilisateur : fiche pages/help/admin-tags.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint),
    phrase d'explication visible sous le titre des doublons (bloc de décision).
    Couleur : TagColorPicker (pastilles, « Aucune » = sans couleur — demande Thomas 2026-11-11, plus d'input type=color).
-   « Déplacer vers un espace » (2026-11-18) : MoveTagModal, le tag devient un tag de l'espace choisi (POST /:id/move). */
+   « Déplacer » (2026-11-18, communautés 2026-11-25) : MoveTagModal, le tag devient un tag de l'espace ou de la
+     communauté choisi ; les éléments hors de la nouvelle portée gardent un tag du même nom (POST /:id/move). */
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tag as TagIcon, RefreshCw, Globe, Trash2, Pencil, Check, X, Merge, Plus, FolderInput } from 'lucide-react';
@@ -150,7 +151,7 @@ export function TagsPage() {
             <PageHelpButton pageKey="admin-tags" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Tags globaux (proposés dans tous les espaces) et tags des communautés ; fusion des doublons
+            Tags globaux, des communautés et des espaces ; déplacement d'une portée à l'autre, fusion des doublons
           </p>
         </div>
         <HelpHint text={pageHint('admin-tags', 'refresh')}>
@@ -286,7 +287,7 @@ export function TagsPage() {
                         </HelpHint>
                       )}
                       <HelpHint text={pageHint('admin-tags', 'move')}>
-                        <Button size="sm" variant="ghost" aria-label="Déplacer vers un espace" onClick={() => setMoving(tag)}>
+                        <Button size="sm" variant="ghost" aria-label="Déplacer vers une communauté ou un espace" onClick={() => setMoving(tag)}>
                           <FolderInput className="w-4 h-4" />
                         </Button>
                       </HelpHint>

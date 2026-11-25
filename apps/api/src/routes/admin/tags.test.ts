@@ -1,6 +1,7 @@
 /* TNR de l'administration des tags (/admin/tags, 2026-11-11) : accès admin, tag global (unicité), rendre global,
    doublons regroupés sans casse, fusion (cible visible depuis tous les éléments, sinon refus ; liens sans double),
-   déplacement vers un espace (2026-11-18 : éléments hors portée → 400, nom déjà visible → 409). */
+   déplacement vers un espace ou une communauté (2026-11-18 / 2026-11-25 : éléments hors portée → tag du même nom dans
+   leur espace, bilan move-preview, nom déjà visible → 409). */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Fastify, { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
@@ -137,15 +138,16 @@ describe('Admin tags routes', () => {
     expect((await inject('POST', '/admin/tags/merge', { targetId: 'g', sourceIds: ['g'] })).statusCode).toBe(400)
   })
 
-  describe('déplacer vers un espace (POST /:id/move)', () => {
+  describe('déplacer (POST /:id/move, GET /:id/move-preview)', () => {
     beforeEach(() => {
       prisma.tag.findUnique.mockResolvedValue(tag('t', 'Personnel', { communityId: 'com-1' }, 2))
       prisma.space.findUnique.mockImplementation(async ({ where, select }: any) =>
         select?.name ? { id: where.id, name: 'Projets' } : { parentId: null, communityId: 'com-1' })
       prisma.space.findMany.mockResolvedValue([]) // pas de sous-espace
+      prisma.community.findUnique.mockImplementation(async ({ where }: any) => ({ id: where.id, name: 'Asso' }))
     })
 
-    it('le tag devient un tag de l\'espace, journalisé', async () => {
+    it('vers un espace : le tag devient un tag de l\'espace, journalisé', async () => {
       prisma.itemTag.findMany.mockResolvedValue([])
       prisma.tag.findFirst.mockResolvedValue(null)
       prisma.tag.update.mockResolvedValue(tag('t', 'Personnel', { spaceId: 'sp' }, 2))
@@ -156,31 +158,74 @@ describe('Admin tags routes', () => {
       expect(prisma.tag.update.mock.calls[0][0].data).toEqual({ spaceId: 'sp', communityId: null })
       expect(prisma.itemTag.findMany.mock.calls[0][0].where).toEqual({ tagId: 't', item: { spaceId: { notIn: ['sp'] } } })
       expect(createAuditLog).toHaveBeenCalledWith(prisma, expect.objectContaining({ action: 'UPDATE', entity: 'Tag', entityId: 't', spaceId: 'sp' }))
+      expect(res.json().copiedItems).toBe(0)
     })
 
-    it('éléments hors de l\'espace et de ses sous-espaces : refus 400 avec leurs espaces', async () => {
-      prisma.itemTag.findMany.mockResolvedValue([{ item: { space: { name: 'Perso' } } }, { item: { space: { name: 'Perso' } } }])
+    it('éléments hors de la nouvelle portée : ils reçoivent un tag du même nom dans leur espace', async () => {
+      const moved = tag('t', 'Personnel', { spaceId: 'sp' }, 2)
+      prisma.tag.update.mockResolvedValue(moved)
+      prisma.itemTag.findMany.mockResolvedValue([
+        { itemId: 'i1', item: { spaceId: 'perso', space: { name: 'Perso' } } },
+        { itemId: 'i2', item: { spaceId: 'perso', space: { name: 'Perso' } } },
+      ])
+      // findFirst : pas de doublon à la destination ; findMany (findTagByName dans Perso) : aucun tag → créé
+      prisma.tag.findFirst.mockResolvedValue(null)
+      prisma.tag.findMany.mockResolvedValue([])
+      prisma.tag.create.mockResolvedValue({ id: 'copie' })
 
       const res = await inject('POST', '/admin/tags/t/move', { spaceId: 'sp' })
 
-      expect(res.statusCode).toBe(400)
-      expect(res.json().message).toContain('2 élément(s)')
-      expect(res.json().message).toContain('Perso')
+      expect(res.statusCode).toBe(200)
+      expect(prisma.tag.create.mock.calls[0][0].data).toEqual({ name: 'Personnel', color: null, spaceId: 'perso' })
+      expect(prisma.itemTag.deleteMany).toHaveBeenCalledWith({ where: { tagId: 't', itemId: { in: ['i1', 'i2'] } } })
+      expect(prisma.itemTag.createMany).toHaveBeenCalledWith({
+        data: [{ itemId: 'i1', tagId: 'copie' }, { itemId: 'i2', tagId: 'copie' }], skipDuplicates: true,
+      })
+      expect(res.json().copiedItems).toBe(2)
+    })
+
+    it('vers une communauté : tag de communauté, éléments hors communauté cherchés', async () => {
+      prisma.tag.findUnique.mockResolvedValue(tag('t', 'Personnel', { spaceId: 'sp' }, 1))
+      prisma.itemTag.findMany.mockResolvedValue([])
+      prisma.tag.findFirst.mockResolvedValue(null)
+      prisma.tag.update.mockResolvedValue(tag('t', 'Personnel', { communityId: 'com-2' }, 1))
+
+      const res = await inject('POST', '/admin/tags/t/move', { communityId: 'com-2' })
+
+      expect(res.statusCode).toBe(200)
+      expect(prisma.tag.update.mock.calls[0][0].data).toEqual({ communityId: 'com-2', spaceId: null })
+      expect(prisma.itemTag.findMany.mock.calls[0][0].where).toEqual({
+        tagId: 't', item: { space: { OR: [{ communityId: null }, { communityId: { not: 'com-2' } }] } },
+      })
+      expect(createAuditLog).toHaveBeenCalledWith(prisma, expect.objectContaining({ entityId: 't', spaceId: null }))
+    })
+
+    it('bilan : nombre d\'éléments hors portée et leurs espaces, sans écriture', async () => {
+      prisma.itemTag.findMany.mockResolvedValue([
+        { itemId: 'i1', item: { spaceId: 'perso', space: { name: 'Perso' } } },
+        { itemId: 'i2', item: { spaceId: 'perso', space: { name: 'Perso' } } },
+      ])
+      const res = await inject('GET', '/admin/tags/t/move-preview?spaceId=sp')
+      expect(res.json()).toEqual({ outsideCount: 2, spaces: ['Perso'] })
       expect(prisma.tag.update).not.toHaveBeenCalled()
     })
 
-    it('tag de même nom déjà visible depuis l\'espace : refus 409', async () => {
+    it('tag de même nom déjà visible depuis la destination : refus 409', async () => {
       prisma.itemTag.findMany.mockResolvedValue([])
       prisma.tag.findFirst.mockResolvedValue({ id: 'g' })
       expect((await inject('POST', '/admin/tags/t/move', { spaceId: 'sp' })).statusCode).toBe(409)
+      expect((await inject('POST', '/admin/tags/t/move', { communityId: 'com-2' })).statusCode).toBe(409)
       expect(prisma.tag.update).not.toHaveBeenCalled()
     })
 
-    it('déjà dans cet espace : 400 ; espace inconnu : 404', async () => {
+    it('déjà en place : 400 ; destination inconnue : 404', async () => {
+      expect((await inject('POST', '/admin/tags/t/move', { communityId: 'com-1' })).statusCode).toBe(400)
       prisma.tag.findUnique.mockResolvedValue(tag('t', 'x', { spaceId: 'sp' }))
       expect((await inject('POST', '/admin/tags/t/move', { spaceId: 'sp' })).statusCode).toBe(400)
       prisma.space.findUnique.mockResolvedValue(null)
       expect((await inject('POST', '/admin/tags/t/move', { spaceId: 'zz' })).statusCode).toBe(404)
+      prisma.community.findUnique.mockResolvedValue(null)
+      expect((await inject('POST', '/admin/tags/t/move', { communityId: 'zz' })).statusCode).toBe(404)
     })
   })
 })
