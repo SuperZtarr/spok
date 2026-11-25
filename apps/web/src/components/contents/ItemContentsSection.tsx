@@ -25,7 +25,6 @@
  * Coordonnées (Téléphone, E-mail, Adresse — 2026-11-25) : lignes compactes (ContactRow) dans les deux modes, saisie
  * ContactForm ; libellés et icônes du registre (@spok/shared, constants/itemContentIcons.ts).
  * Aperçu des liens (2026-11-25) : image du site (previewUrl, rangée par l'API) en haut de la vignette d'un lien ; bouton
- * « Actualiser l'aperçu » (↻) au pied ; fiche relue 6 s après l'ajout d'un lien (aperçu cherché en tâche de fond).
  * « Déplacer vers… » (2026-11-21) : bouton → au pied de chaque vignette, MoveToItemDialog (choix de l'élément cible).
  */
 import { useEffect, useRef, useState } from 'react';
@@ -216,8 +215,6 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
                   first={i === 0} last={i === list.length - 1}
                   onUp={() => move(list, i, -1)} onDown={() => move(list, i, 1)}
                   onRemove={() => setToRemove(c)} onMoveTo={() => setToMove(c)} onOpenImage={() => setLightbox(c)}
-                  onRefreshPreview={() => api.refreshPreview.mutate(c.id)}
-                  refreshing={api.refreshPreview.isPending && api.refreshPreview.variables === c.id}
                   onRename={(name) => api.update.mutate({ id: c.id, name: name || null })}
                   diagram={kind === 'DIAGRAM' ? {
                     save: (xml) => api.update.mutateAsync({ id: c.id, xml }),

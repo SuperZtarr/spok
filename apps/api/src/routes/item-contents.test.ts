@@ -33,9 +33,6 @@ vi.mock('../utils/r2.js', () => ({
   deleteImageFromR2: vi.fn(),
 }))
 
-// Aperçu des liens : jamais de réseau dans les tests (utils/linkPreview.ts a ses propres tests)
-const linkPreview = vi.hoisted(() => ({ storeLinkPreview: vi.fn().mockResolvedValue(null) }))
-vi.mock('../utils/linkPreview.js', () => linkPreview)
 
 const SPACE = 'space-1'
 const USER = 'test-user-id'
@@ -337,50 +334,5 @@ describe('Coordonnées : téléphone, e-mail, adresse (2026-11-25)', () => {
   it('un lien ne porte pas de valeur', async () => {
     prisma.itemContent.findFirst.mockResolvedValue({ id: 'l1', itemId: 'i1', kind: 'LINK', url: 'https://x.test' })
     expect((await app.inject({ method: 'PATCH', url: `${BASE}/l1`, headers: auth(), payload: { value: 'x' } })).statusCode).toBe(400)
-  })
-})
-
-describe('Aperçu des liens (2026-11-25)', () => {
-  let app: FastifyInstance
-  let prisma: MockPrisma
-  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
-  const LINK = { id: 'l1', itemId: 'i1', kind: 'LINK', url: 'https://a.test', previewUrl: 'https://r2.test/items/i1/old.webp' }
-
-  beforeEach(async () => {
-    vi.clearAllMocks()
-    ;({ app, prisma } = await buildItemsTestApp())
-    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm', userId: USER, spaceId: SPACE, role: 'MEMBER', joinedAt: new Date() })
-    prisma.item.findFirst.mockResolvedValue(ITEM)
-    prisma.item.update.mockResolvedValue(ITEM)
-    prisma.itemContent.count.mockResolvedValue(0)
-    prisma.itemContent.aggregate.mockResolvedValue({ _max: { position: null } })
-  })
-
-  it('ajout d\'un lien : aperçu lancé en tâche de fond', async () => {
-    prisma.itemContent.create.mockImplementation(async ({ data }: any) => ({ id: 'l1', ...data }))
-    const res = await app.inject({ method: 'POST', url: BASE, headers: auth(), payload: { kind: 'LINK', url: 'https://a.test' } })
-    expect(res.statusCode).toBe(201)
-    expect(linkPreview.storeLinkPreview).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'l1', url: 'https://a.test' }))
-  })
-
-  it('adresse changée : ancien aperçu vidé et effacé, nouveau cherché', async () => {
-    prisma.itemContent.findFirst.mockResolvedValue(LINK)
-    prisma.itemContent.update.mockImplementation(async ({ data }: any) => ({ ...LINK, ...data }))
-    const res = await app.inject({ method: 'PATCH', url: `${BASE}/l1`, headers: auth(), payload: { url: 'https://b.test' } })
-    expect(res.statusCode).toBe(200)
-    expect(prisma.itemContent.update.mock.calls[0][0].data).toMatchObject({ url: 'https://b.test', previewUrl: null })
-    expect(r2.deleteFileFromR2).toHaveBeenCalledWith('https://r2.test/items/i1/old.webp')
-    expect(linkPreview.storeLinkPreview).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ url: 'https://b.test' }))
-  })
-
-  it('actualiser : synchrone, previewFound ; refusé sur autre chose qu\'un lien', async () => {
-    prisma.itemContent.findFirst.mockResolvedValue(LINK)
-    linkPreview.storeLinkPreview.mockResolvedValueOnce({ previewUrl: 'https://r2.test/items/i1/new.webp', previous: LINK.previewUrl })
-    const ok = await app.inject({ method: 'POST', url: `${BASE}/l1/preview`, headers: auth() })
-    expect(ok.statusCode).toBe(200)
-    expect(ok.json().previewFound).toBe(true)
-    expect(r2.deleteFileFromR2).toHaveBeenCalledWith(LINK.previewUrl)
-    prisma.itemContent.findFirst.mockResolvedValue({ ...LINK, kind: 'FILE' })
-    expect((await app.inject({ method: 'POST', url: `${BASE}/l1/preview`, headers: auth() })).statusCode).toBe(400)
   })
 })
