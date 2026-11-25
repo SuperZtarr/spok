@@ -10,8 +10,8 @@
  * plusieurs (repère kanban:famille) — depuis le 2026-11-20, barre d'onglets pleine largeur sous la barre de la vue,
  * avec le nombre d'éléments de chaque famille (bug « cela dissimule les autres éléments ») —, choix retenu par espace en localStorage. Familles : statusFamilies (@spok/shared),
  * ne pas recalculer ici. Les éléments d'une autre famille restent dans l'espace (ni filtrés ailleurs ni exportés ici).
- * Familles : Éléments, Réunions, Articles, Questions (statuts réservés, 2026-11-19). Périodes : sans statut, absentes
- * du Kanban (typeHasStatus, 2026-11-20). Colonne « Autre statut »
+ * Familles : Éléments, Réunions, Articles, Questions (statuts réservés, 2026-11-19). Un type sans statut (noStatus,
+ * typeHasStatus — aucun aujourd'hui) est absent du Kanban. Colonne « Autre statut »
  * (OTHER_COLUMN) : cartes dont le statut n'est pas une colonne de la famille, seulement si besoin, sans dépôt possible.
  */
 import { useState, useMemo, useCallback, useRef } from 'react';

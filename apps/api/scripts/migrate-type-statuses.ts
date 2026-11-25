@@ -6,7 +6,7 @@
  *   À valider → Réalisée ; Terminé → CR envoyé ; Annulé → Annulée.
  * - Article : vide / Non défini / À faire / Planifié / En cours / En retard → Brouillon ; À valider → À valider ;
  *   Terminé → Publié ; Annulé → Annulé.
- * - Période (2026-11-20) : sans statut — tout statut est vidé.
+ * - Période : plus touchée (le vidage du 2026-11-20 est annulé, 2026-11-25 : scripts/restore-period-statuses.ts).
  * - Statut propre à une communauté (inconnu ici) : statusForType (premier statut du type), signalé dans le détail.
  * Éléments déjà à un statut de leur type : inchangés. Copies de séance verrouillées (lockedAt) : jamais modifiées.
  * N'écrit que le statut (pas de date, pas de journal d'audit : conversion technique).
@@ -58,13 +58,6 @@ async function main() {
     counts[key] = (counts[key] ?? 0) + 1;
     if (apply) await p.item.update({ where: { id: it.id }, data: { status: next } });
   }
-  // Périodes (2026-11-20) : sans statut — le leur est vidé
-  const periods = await p.item.findMany({ where: { type: 'PERIOD', lockedAt: null, status: { not: null } }, select: { id: true, status: true } });
-  for (const it of periods) {
-    const key = `PERIOD ${it.status} → (vide)`;
-    counts[key] = (counts[key] ?? 0) + 1;
-  }
-  if (apply && periods.length) await p.item.updateMany({ where: { id: { in: periods.map((it) => it.id) } }, data: { status: null } });
   console.log('Conversions :', Object.keys(counts).length ? counts : 'aucune');
   console.log(`Bilan : ${items.length} élément(s) examiné(s), ${kept} déjà au bon statut, ${unknown} statut(s) inconnu(s)${apply ? '' : ' — rien écrit (à blanc)'}`);
 }

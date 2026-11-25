@@ -157,7 +157,7 @@ export const elements = {
   },
   statut: {
     title: 'Statut',
-    short: 'L\'avancement de l\'élément (une période n\'en a pas : le champ est absent).',
+    short: 'L\'avancement de l\'élément.',
     text: 'L\'avancement de l\'élément : cliquez sur un statut pour le sélectionner (À faire, En cours, Terminé, À valider…). Il définit sa colonne dans le Kanban. Un statut Terminé ou Annulé remplit la date de fin si elle est vide, tout statut remplit la date de début vide, « Non défini » efface les deux — comme depuis le Kanban ou le menu ⋮. Dans le menu ⋮ d\'un élément, « Passer à … » le fait avancer d\'un cran (À faire → Planifié → En cours → À valider → Terminé, ou le parcours propre à une réunion, un article, une question) ; la flèche à côté ouvre la liste de tous les statuts.',
     changes: [{ id: 'item-menu-next-status', kind: 'new', text: 'Menu ⋮ d\'un élément : « Passer à En cours » (ou au statut suivant) change le statut en un clic ; la flèche à côté ouvre toujours la liste des statuts.', date: '2026-11-20' }],
     target: '[data-tour="item-status"]',

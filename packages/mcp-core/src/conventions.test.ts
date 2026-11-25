@@ -14,8 +14,8 @@ const conv = {
 describe('resolveStatus', () => {
   it('accepte un id exact', () => expect(resolveStatus('todo', conv)).toBe('todo'))
   it('mappe un libellé (casse et espaces ignorés)', () => expect(resolveStatus('  en COURS ', conv)).toBe('in_progress'))
-  it('refuse tout statut pour une période (type sans statut, 2026-11-20)', () => {
-    expect(() => resolveStatus('todo', conv, 'PERIOD')).toThrow(/pas de statut/)
+  it('une période a les statuts ordinaires (2026-11-25)', () => {
+    expect(resolveStatus('todo', conv, 'PERIOD')).toBe('todo')
   })
   it('refuse un statut inconnu en listant les valeurs', () => {
     expect(() => resolveStatus('wip', conv)).toThrow(ConventionError)

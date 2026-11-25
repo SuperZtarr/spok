@@ -40,8 +40,9 @@ function list(values: { id: string; label: string }[]): string {
   return values.map((v) => `${v.id} (${v.label})`).join(', ')
 }
 
-/** Types sans statut — recopie de `noStatus` du registre des types (@spok/shared typeRegistry.ts, Période 2026-11-20) */
-const NO_STATUS_TYPES = ['PERIOD']
+/** Types sans statut — recopie de `noStatus` du registre des types (@spok/shared typeRegistry.ts) ; aucun depuis que
+ * la Période a retrouvé les statuts ordinaires (2026-11-25) */
+const NO_STATUS_TYPES: string[] = []
 
 /** Statuts utilisables pour un type : aucun (Période), ses statuts réservés s'il en a, sinon les statuts sans réservation. */
 export function statusesForType(conv: SpaceConventions, type?: string): SpaceConventions['statuses'] {
