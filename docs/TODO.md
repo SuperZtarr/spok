@@ -291,6 +291,7 @@
 - [x] Questions - conclure, Tranchée ou Arbitrée, Reportée avec reprise — 2026-11-25
 - [x] Admin tags - déplacer vers une communauté, éléments hors portée gardés — 2026-11-25
 - [x] Sidebar - Favoris et Récents transverses — 2026-11-25
+- [x] Mobile - fond blanc de l'écran de démarrage — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
