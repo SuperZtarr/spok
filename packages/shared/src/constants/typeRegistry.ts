@@ -54,18 +54,24 @@ export interface ItemTypeDefinition {
    * 2026-11-25, puis a retrouvé les statuts ordinaires (décision Thomas). Recopié dans mcp-core (NO_STATUS_TYPES).
    */
   noStatus?: boolean;
+  /**
+   * Statut posé à la création d'un élément de ce type sans statut, et au changement de type d'un élément sans statut
+   * (décision Thomas 2026-11-25) — jamais sur un élément existant. Absent (Élément) = aucun (« Non défini »).
+   * Lu par defaultStatusForType (defaultReferentiels.ts) : API, MCP (via l'API) et fiche.
+   */
+  defaultStatus?: string;
 }
 
 export const ITEM_TYPE_REGISTRY = [
   { id: 'UNDEFINED', label: 'Élément',    plural: 'Éléments',      icon: 'Box',                   emoji: '📦', hue: 'slate',   group: 'default',      content: true, display: 'content' },
-  { id: 'PROJECT',   label: 'Projet',     plural: 'Projets',       icon: 'FolderKanban',          emoji: '📁', hue: 'purple',  group: 'activities',   content: false, defaultDuration: 'month', display: 'project' },
-  { id: 'TASK',      label: 'Tâche',      plural: 'Tâches',        icon: 'CheckSquare',           emoji: '✅', hue: 'green',   group: 'activities',   content: false, defaultDuration: 'hour', display: 'task' },
-  { id: 'MEETING',   label: 'Réunion',    plural: 'Réunions',      icon: 'Calendar',              emoji: '📅', hue: 'orange',  group: 'activities',   content: false, defaultDuration: 'hour', timed: true, display: 'meeting' },
-  { id: 'PERIOD',    label: 'Période',    plural: 'Périodes',      icon: 'CalendarRange',         emoji: '🗓️', hue: 'teal',    group: 'activities',   content: false, defaultDuration: 'day', display: 'period' },
-  { id: 'ARTICLE',   label: 'Article',    plural: 'Articles',      icon: 'Newspaper',             emoji: '📰', hue: 'fuchsia', group: 'deliverables', content: true },
-  { id: 'QUESTION',  label: 'Question',   plural: 'Questions',     icon: 'MessageCircleQuestion', emoji: '❓', hue: 'sky',     group: 'deliverables', content: true },
+  { id: 'PROJECT',   label: 'Projet',     plural: 'Projets',       icon: 'FolderKanban',          emoji: '📁', hue: 'purple',  group: 'activities',   content: false, defaultDuration: 'month', display: 'project', defaultStatus: 'todo' },
+  { id: 'TASK',      label: 'Tâche',      plural: 'Tâches',        icon: 'CheckSquare',           emoji: '✅', hue: 'green',   group: 'activities',   content: false, defaultDuration: 'hour', display: 'task', defaultStatus: 'todo' },
+  { id: 'MEETING',   label: 'Réunion',    plural: 'Réunions',      icon: 'Calendar',              emoji: '📅', hue: 'orange',  group: 'activities',   content: false, defaultDuration: 'hour', timed: true, display: 'meeting', defaultStatus: 'meeting_to_organize' },
+  { id: 'PERIOD',    label: 'Période',    plural: 'Périodes',      icon: 'CalendarRange',         emoji: '🗓️', hue: 'teal',    group: 'activities',   content: false, defaultDuration: 'day', display: 'period', defaultStatus: 'scheduled' },
+  { id: 'ARTICLE',   label: 'Article',    plural: 'Articles',      icon: 'Newspaper',             emoji: '📰', hue: 'fuchsia', group: 'deliverables', content: true, defaultStatus: 'article_draft' },
+  { id: 'QUESTION',  label: 'Question',   plural: 'Questions',     icon: 'MessageCircleQuestion', emoji: '❓', hue: 'sky',     group: 'deliverables', content: true, defaultStatus: 'question_open' },
   // Process (2026-11-21) : canevas d'éléments de tous espaces (places, couloirs, liens), comme l'Article ; page dédiée
-  { id: 'PROCESS',   label: 'Process',    plural: 'Process',       icon: 'Workflow',              emoji: '🔀', hue: 'indigo',  group: 'deliverables', content: false },
+  { id: 'PROCESS',   label: 'Process',    plural: 'Process',       icon: 'Workflow',              emoji: '🔀', hue: 'indigo',  group: 'deliverables', content: false, defaultStatus: 'todo' },
 ] as const satisfies readonly ItemTypeDefinition[];
 
 /** Identifiant d'un type d'élément, tiré du registre */

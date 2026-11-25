@@ -71,7 +71,7 @@ const CONTENTS_LIST_SELECT = {
 };
 import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
 import { invisibleTagIds } from '../utils/tagScope.js';
-import { ITEM_TYPES, isItemType, statusAllowedForType, cleanExternalRefs, externalRefsError } from '@spok/shared';
+import { ITEM_TYPES, isItemType, statusAllowedForType, defaultStatusForType, cleanExternalRefs, externalRefsError } from '@spok/shared';
 
 // Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
@@ -537,6 +537,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       // Statut normalisé pour le type (statusForType, @spok/shared) : une réunion démarre « À organiser », un article
       // « Brouillon », une question « Ouverte » ; un statut réservé à un autre type est remplacé (même catégorie) ou retiré
       itemData.status = statusForType(itemData.type, itemData.status);
+      // Sans statut : statut par défaut du type (registre, 2026-11-25 : Tâche « À faire », Période « Planifié »…)
+      if (!itemData.status || itemData.status === 'undefined') {
+        itemData.status = defaultStatusForType(itemData.type, await statusesOfSpace(fastify.prisma, request.params.spaceId)) ?? itemData.status;
+      }
 
       if (itemData.parentId) {
         const violation = await parentViolation(fastify.prisma, itemData.parentId, request.params.spaceId, request.user.userId, request.isAdminMode);
@@ -763,7 +767,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       const finalType = updateData.type ?? existingItem.type;
       if (updateData.type !== undefined || updateData.status !== undefined) {
         const current = updateData.status !== undefined ? updateData.status : existingItem.status;
-        const normalized = statusForType(finalType, current);
+        let normalized = statusForType(finalType, current);
+        // Changement de type d'un élément sans statut : statut par défaut du nouveau type (registre, 2026-11-25) —
+        // jamais quand on choisit soi-même « Non défini » sans changer de type
+        const typeChanged = updateData.type !== undefined && updateData.type !== existingItem.type;
+        if (typeChanged && (!normalized || normalized === 'undefined')) {
+          normalized = defaultStatusForType(finalType, await statusesOfSpace(fastify.prisma, existingItem.spaceId)) ?? normalized;
+        }
         if (normalized !== current) updateData.status = normalized;
       }
 

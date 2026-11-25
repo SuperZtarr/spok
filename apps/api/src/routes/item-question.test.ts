@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { DEFAULT_STATUSES, QUESTION_STATUS, statusAllowedForType, statusesForType, withDefaultStatuses } from '@spok/shared'
+import { DEFAULT_STATUSES, QUESTION_STATUS, defaultStatusForType, statusAllowedForType, statusesForType, withDefaultStatuses } from '@spok/shared'
 import { buildItemsTestApp, getTestToken, MockPrisma } from '../test/helpers.js'
 import { statusForType } from '../utils/question.js'
 
@@ -48,6 +48,13 @@ describe('Statuts réservés', () => {
     expect(statusForType('TASK', 'meeting_minutes_sent')).toBe('done')
     expect(statusForType('MEETING', 'meeting_held')).toBe('meeting_held')
     expect(statusForType('QUESTION', 'meeting_minutes_sent')).toBe(QUESTION_STATUS.OPEN)
+    // Statut par défaut du type (registre, 2026-11-25)
+    expect(defaultStatusForType('TASK')).toBe('todo')
+    expect(defaultStatusForType('MEETING')).toBe('meeting_to_organize')
+    expect(defaultStatusForType('PERIOD')).toBe('scheduled')
+    expect(defaultStatusForType('ARTICLE')).toBe('article_draft')
+    expect(defaultStatusForType('UNDEFINED')).toBeNull()
+    expect(defaultStatusForType('TASK', DEFAULT_STATUSES.filter((s) => s.id !== 'todo'))).toBeNull() // supprimé par la communauté
     // Période (2026-11-25) : statuts ordinaires, comme une tâche
     expect(statusForType('PERIOD', 'in_progress')).toBe('in_progress')
     expect(statusForType('PERIOD', 'meeting_minutes_sent')).toBe('done')

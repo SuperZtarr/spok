@@ -20,7 +20,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const SCANNED = ['apps/web/src', 'apps/api/src', 'packages/mcp-core/src', 'packages/shared/src'];
 const REGISTRY = 'packages/shared/src/constants/typeRegistry.ts';
 // Seuls fichiers où les identifiants des statuts par défaut s'écrivent
-const STATUS_SOURCES = ['packages/shared/src/constants/defaultReferentiels.ts', 'packages/shared/src/constants/statusCategory.ts'];
+// typeRegistry.ts : statut d'ouverture de chaque type (defaultStatus, 2026-11-25), déclaré dans le registre lui-même
+const STATUS_SOURCES = ['packages/shared/src/constants/defaultReferentiels.ts', 'packages/shared/src/constants/statusCategory.ts', 'packages/shared/src/constants/typeRegistry.ts'];
 const STATUS_IDS = ['todo', 'scheduled', 'in_progress', 'late', 'to_validate', 'done', 'cancelled'];
 const STATUS_ALT = STATUS_IDS.join('|');
 

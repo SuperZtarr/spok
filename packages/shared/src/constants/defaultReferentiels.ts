@@ -17,7 +17,7 @@
    Type sans statut (noStatus du registre, typeHasStatus) : aucun statut proposé, enregistré vide, absent des familles
    du Kanban — aucun type ne l'utilise depuis que la Période a retrouvé les statuts ordinaires (2026-11-25). */
 import type { StatusCategory, StatusConfig, TypeLabelConfig, SpaceReferentiels } from '../types/referentiels.js';
-import { ITEM_TYPE_REGISTRY, typeHasStatus } from './typeRegistry.js';
+import { ITEM_TYPE_REGISTRY, getItemTypeDef, typeHasStatus } from './typeRegistry.js';
 import { statusCategory } from './statusCategory.js';
 
 // =============================================================================
@@ -192,12 +192,24 @@ export function statusForType(
   const own = statusesForType(all, type).filter((s) => s.id !== 'undefined').sort((a, b) => a.order - b.order);
   const reserved = all.some((s) => s.types?.includes(type));
   const empty = !status || status === 'undefined' || status === 'none';
-  if (empty) return reserved ? own[0]?.id ?? status : status;
+  if (empty) return reserved ? defaultStatusForType(type, all) ?? own[0]?.id ?? status : status;
   if (statusAllowedForType(status, type, all)) return status;
   const category = all.find((s) => s.id === status)?.category;
   const match = category && !NO_CATEGORY_MAPPING_TYPES.includes(type) ? own.find((s) => s.category === category) : undefined;
   if (match) return match.id;
   return reserved ? own[0]?.id ?? null : null;
+}
+
+/**
+ * Statut par défaut d'un type (defaultStatus du registre, décision Thomas 2026-11-25) : posé à la création d'un élément
+ * sans statut et au changement de type d'un élément sans statut. null si le type n'en a pas (Élément) ou si le statut
+ * n'est pas permis / n'existe plus dans ce référentiel (statut supprimé par la communauté).
+ */
+export function defaultStatusForType(type: string | null | undefined, statuses: StatusConfig[] = DEFAULT_STATUSES): string | null {
+  const def = getItemTypeDef(type)?.defaultStatus;
+  if (!def || !typeHasStatus(type)) return null;
+  const all = withDefaultStatuses(statuses);
+  return all.some((s) => s.id === def) && statusAllowedForType(def, type, all) ? def : null;
 }
 
 /** Identifiants des issues d'une question (statuts réservés au type QUESTION). */
