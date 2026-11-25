@@ -113,8 +113,12 @@ describe('ItemContentsSection', () => {
   })
 
   it('mode Afficher : mêmes vignettes, sans action', () => {
-    render(<ItemContentsRead contents={[c('f1', 'FILE', 0, { name: 'Note.txt', excerpt: 'Début du texte' }), c('m1', 'IMAGE', 0)]} />)
-    expect(screen.getByText('Début du texte')).toBeTruthy()
+    render(<ItemContentsRead contents={[c('f1', 'FILE', 0, { name: 'CV.docx', excerpt: 'Début du texte' }), c('m1', 'IMAGE', 0)]} />)
+    // Sans image de page : icône de l'application (Word) et extension, plus le début du texte (2026-11-25)
+    const tile = screen.getByLabelText('CV.docx — Ouvrir')
+    expect(tile.querySelector('rect[fill="#185ABD"]')).toBeTruthy()
+    expect(tile.textContent).toContain('DOCX')
+    expect(screen.queryByText('Début du texte')).toBeNull()
     expect(screen.getByAltText('m1')).toBeTruthy()
     expect(screen.queryByLabelText('Retirer')).toBeNull()
   })
@@ -152,5 +156,23 @@ describe('coordonnées (2026-11-25)', () => {
     fireEvent.change(input, { target: { value: 'a@b.test' } })
     fireEvent.click(btn)
     await waitFor(() => expect(api.add).toHaveBeenCalledWith('s1', 'i1', { kind: 'EMAIL', value: 'a@b.test', name: null }))
+  })
+})
+
+describe('aperçu des liens (2026-11-25)', () => {
+  it('lien avec image rangée : image affichée ; sans : icône ; adresse non sûre ignorée', () => {
+    const { container } = render(<ItemContentsRead contents={[
+      c('l1', 'LINK', 0, { url: 'https://a.test', previewUrl: 'https://r2.test/items/i1/p.webp' }),
+      c('l2', 'LINK', 1, { url: 'https://b.test', previewUrl: 'javascript:alert(1)' }),
+    ]} />)
+    const imgs = [...container.querySelectorAll('img')].map((i) => i.getAttribute('src'))
+    expect(imgs).toEqual(['https://r2.test/items/i1/p.webp'])
+  })
+
+  it('bouton « Actualiser l\'aperçu » sur un lien en mode Modifier', async () => {
+    ;(api as any).refreshPreview = vi.fn().mockResolvedValue({ id: 'l1', previewFound: false })
+    renderZone({ contents: [c('l1', 'LINK', 0, { url: 'https://a.test' })] })
+    fireEvent.click(screen.getByLabelText("Actualiser l'aperçu"))
+    await waitFor(() => expect((api as any).refreshPreview).toHaveBeenCalledWith('s1', 'i1', 'l1'))
   })
 })

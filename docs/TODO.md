@@ -2,6 +2,12 @@
 
 ## À faire
 
+### Script de lecture en prod réutilisable (2026-11-25)
+- [ ] Un script `prod-read` dans `apps/api/scripts/` : ouvre le tunnel Railway (`railway connect Postgres --tunnel-only`), lance une requête en lecture seule via `prodPrisma()` (URL du `.env` redirigée sur le tunnel, jamais affichée), ferme le tunnel. Message clair si « Unauthorized » (→ `railway login` par Thomas). But : que chaque session l'appelle au lieu de reconstruire la procédure (refaite des dizaines de fois)
+
+### Tableau de bord : comptages côté serveur (2026-11-25)
+- [ ] Répartitions « Par statut » / « Par type » et KPI « en cours » / « à valider » : comptage groupé par le serveur au lieu de télécharger jusqu'à 2000 éléments et compter dans le navigateur. Mesuré en prod le 2026-11-25 : ~6 400 éléments ouverts réels contre 2000 affichés ; en cours 186 / à valider 108 réels contre 91 / 26 affichés
+
 ### Aide de « Absorber les enfants » et « Éclater en sous-items » (relevé lot 5 contenus multiples, 2026-11-11)
 - [ ] Un élément d'aide par action (fiche d'aide de l'élément) et un rappel de leur effet (HelpHint) sur le bouton de la fiche et dans le menu ⋯ : aujourd'hui seul un `title` natif. Fichiers : `ItemEditModal.tsx`, `itemMenuGroups.ts`, `item-modal.help.ts`. À faire après la MEP des lots contenus multiples (fichiers partagés)
 
@@ -295,6 +301,7 @@
 - [x] Tableau de bord - P1 et Assignés à moi manquants — 2026-11-25
 - [x] Gantt - flèches de relation alignées sur les barres — 2026-11-25
 - [x] Fiche - description adaptée à son contenu — 2026-11-25
+- [x] Contenus - icône de l'application sur un fichier sans aperçu — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
