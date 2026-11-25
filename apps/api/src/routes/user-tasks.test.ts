@@ -244,6 +244,19 @@ describe('User Tasks routes', () => {
       expect(where.priority).toEqual({ in: [1, 2] })
     })
 
+    it('tri par priorité décroissante : sans priorité en fin (nulls last)', async () => {
+      prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
+      prisma.item.findMany.mockResolvedValue([])
+      prisma.item.count.mockResolvedValue(0)
+
+      await app.inject({
+        method: 'GET', url: '/user/tasks?sortBy=priority&sortDir=desc',
+        headers: { authorization: `Bearer ${token}` },
+      })
+
+      expect(prisma.item.findMany.mock.calls[0][0].orderBy).toEqual({ priority: { sort: 'desc', nulls: 'last' } })
+    })
+
     it('should support noDueDate filter', async () => {
       prisma.spaceMembership.findMany.mockResolvedValue([{ spaceId: 'space-1' }])
       prisma.item.findMany.mockResolvedValue([])

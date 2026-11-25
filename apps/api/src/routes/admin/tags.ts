@@ -10,8 +10,12 @@
  * - PATCH /:id       : renomme / recolore (nom unique dans la portée du tag : communauté + globaux, ou globaux).
  * - DELETE /:id      : supprime le tag (retiré de tous ses éléments ; irréversible, journalisé).
  * - POST /:id/promote: rend le tag global (refus 409 si un tag global du même nom existe : fusionner plutôt).
- * - POST /:id/move   : { spaceId } — le tag devient un tag de cet espace (2026-11-18) ; refus 400 si des éléments qui
- *                      le portent sont hors de l'espace et de ses sous-espaces, 409 si un tag de même nom y est déjà visible.
+ * - POST /:id/move   : { spaceId } ou { communityId } — le tag devient un tag de cet espace (2026-11-18) ou de cette
+ *                      communauté (2026-11-25, rendu à la communauté ou envoyé vers une autre). Éléments qui le portent
+ *                      hors de la nouvelle portée : ils reçoivent un tag du même nom visible depuis leur espace (existant,
+ *                      sinon créé dans leur espace, parents d'abord — mapTagsToSpace), en transaction (décision Thomas
+ *                      2026-11-18). Refus 409 si un autre tag de même nom est déjà visible depuis la destination.
+ * - GET /:id/move-preview?spaceId=|communityId= : bilan avant déplacement { outsideCount, spaces } (lecture seule).
  * - POST /merge      : { targetId, sourceIds } — les éléments des sources reçoivent la cible (sans double), puis les
  *                      sources sont supprimées, en transaction. Refus 400 si la cible n'est pas visible depuis tous
  *                      les éléments concernés (cible de communauté C et élément hors de C ; cible d'espace E et élément
@@ -21,13 +25,17 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { createAuditLog } from '../../utils/audit.js';
-import { communityScope, findTagByName, GLOBAL_TAG_WHERE, isGlobalTag, spaceTagScope, spaceWithDescendantIds, tagsVisibleWhere } from '../../utils/tagScope.js';
+import { communityScope, findTagByName, GLOBAL_TAG_WHERE, isGlobalTag, mapTagsToSpace, spaceTagScope, spaceWithDescendantIds, tagsVisibleWhere } from '../../utils/tagScope.js';
 
 const colorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const createSchema = z.object({ name: z.string().trim().min(1), color: colorSchema.optional() });
 const updateSchema = z.object({ name: z.string().trim().min(1).optional(), color: colorSchema.nullable().optional() });
 const mergeSchema = z.object({ targetId: z.string().min(1), sourceIds: z.array(z.string().min(1)).min(1) });
-const moveSchema = z.object({ spaceId: z.string().min(1) });
+const moveSchema = z.union([
+  z.object({ spaceId: z.string().min(1) }),
+  z.object({ communityId: z.string().min(1) }),
+]);
+type MoveBody = z.infer<typeof moveSchema>;
 
 export type AdminTagScope = 'global' | 'community' | 'space';
 
@@ -168,46 +176,91 @@ export const adminTagsRoutes: FastifyPluginAsync = async (fastify) => {
     return toAdminTag(updated);
   });
 
-  // Déplacer un tag vers un espace (demande Thomas 2026-11-18) : le tag, quelle que soit sa portée, devient un tag de
-  // l'espace cible (visible dans l'espace et ses sous-espaces). Refus 400 si des éléments qui le portent sont hors de
-  // cette portée (nombre et espaces renvoyés) ; refus 409 si un autre tag de même nom est déjà visible depuis la cible
-  // (global, communauté, espace parent) — fusionner plutôt. Le tag garde son id, son nom, sa couleur et ses éléments.
-  fastify.post<{ Params: { id: string }; Body: z.infer<typeof moveSchema> }>('/:id/move', async (request, reply) => {
-    const { spaceId } = moveSchema.parse(request.body);
-    const tag = await fastify.prisma.tag.findUnique({ where: { id: request.params.id }, include: TAG_INCLUDE });
-    if (!tag) return reply.notFound('Tag not found');
-    const space = await fastify.prisma.space.findUnique({ where: { id: spaceId }, select: { id: true, name: true } });
-    if (!space) return reply.notFound('Espace introuvable');
-    if (tag.spaceId === spaceId) return reply.badRequest('Ce tag appartient déjà à cet espace');
+  // Déplacer un tag (demandes Thomas 2026-11-18 et 2026-11-25) : le tag, quelle que soit sa portée, devient un tag de
+  // l'espace cible (visible dans l'espace et ses sous-espaces) ou de la communauté cible. Les éléments qui le portent
+  // hors de la nouvelle portée reçoivent un tag du même nom visible depuis leur espace (aucun tag perdu). Refus 409 si
+  // un autre tag de même nom est déjà visible depuis la destination — fusionner plutôt. Le tag garde id, nom, couleur.
+  type MoveDest = { kind: 'space' | 'community'; id: string; name: string };
 
-    const inScope = await spaceWithDescendantIds(fastify.prisma, spaceId);
-    const outside = await fastify.prisma.itemTag.findMany({
-      where: { tagId: tag.id, item: { spaceId: { notIn: inScope } } },
-      select: { item: { select: { space: { select: { name: true } } } } },
-    });
-    if (outside.length > 0) {
-      const spaces = [...new Set(outside.map((l) => l.item.space?.name ?? '?'))];
-      return reply.badRequest(
-        `${outside.length} élément(s) portant ce tag sont hors de « ${space.name} » et de ses sous-espaces (${spaces.join(', ')}) : déplacez-les ou retirez-leur le tag d'abord`,
-      );
+  async function resolveDest(body: MoveBody): Promise<MoveDest | null> {
+    const { spaceId, communityId } = body as { spaceId?: string; communityId?: string };
+    if (spaceId) {
+      const s = await fastify.prisma.space.findUnique({ where: { id: spaceId }, select: { id: true, name: true } });
+      return s && { kind: 'space', id: s.id, name: s.name };
     }
+    const c = await fastify.prisma.community.findUnique({ where: { id: communityId! }, select: { id: true, name: true } });
+    return c && { kind: 'community', id: c.id, name: c.name };
+  }
 
+  /** Liens du tag dont l'élément est hors de la portée de la destination */
+  async function outsideLinks(tagId: string, dest: MoveDest) {
+    const item = dest.kind === 'space'
+      ? { spaceId: { notIn: await spaceWithDescendantIds(fastify.prisma, dest.id) } }
+      : { space: { OR: [{ communityId: null }, { communityId: { not: dest.id } }] } };
+    return fastify.prisma.itemTag.findMany({
+      where: { tagId, item },
+      select: { itemId: true, item: { select: { spaceId: true, space: { select: { name: true } } } } },
+    });
+  }
+
+  /** Contrôles communs : tag, destination, déjà en place (400), absente (404) */
+  async function loadMove(id: string, body: MoveBody) {
+    const tag = await fastify.prisma.tag.findUnique({ where: { id }, include: TAG_INCLUDE });
+    if (!tag) return { error: 'notFound' as const, message: 'Tag not found' };
+    const dest = await resolveDest(body);
+    if (!dest) return { error: 'notFound' as const, message: 'Destination introuvable' };
+    const already = dest.kind === 'space' ? tag.spaceId === dest.id : tag.communityId === dest.id;
+    if (already) return { error: 'badRequest' as const, message: `Ce tag appartient déjà à « ${dest.name} »` };
+    return { tag, dest };
+  }
+
+  fastify.get<{ Params: { id: string }; Querystring: Record<string, string> }>('/:id/move-preview', async (request, reply) => {
+    const loaded = await loadMove(request.params.id, moveSchema.parse(request.query));
+    if ('error' in loaded) return reply[loaded.error!](loaded.message);
+    const links = await outsideLinks(loaded.tag.id, loaded.dest);
+    return { outsideCount: links.length, spaces: [...new Set(links.map((l) => l.item.space?.name ?? '?'))] };
+  });
+
+  fastify.post<{ Params: { id: string }; Body: MoveBody }>('/:id/move', async (request, reply) => {
+    const loaded = await loadMove(request.params.id, moveSchema.parse(request.body));
+    if ('error' in loaded) return reply[loaded.error!](loaded.message);
+    const { tag, dest } = loaded;
+
+    const destScope = dest.kind === 'space' ? await spaceTagScope(fastify.prisma, dest.id) : communityScope(dest.id);
     const sameName = await fastify.prisma.tag.findFirst({
-      where: { ...tagsVisibleWhere(await spaceTagScope(fastify.prisma, spaceId)), id: { not: tag.id }, name: { equals: tag.name.trim(), mode: 'insensitive' } },
+      where: { ...tagsVisibleWhere(destScope), id: { not: tag.id }, name: { equals: tag.name.trim(), mode: 'insensitive' } },
       select: { id: true },
     });
-    if (sameName) return reply.conflict(`Un tag « ${tag.name} » est déjà proposé dans « ${space.name} » : fusionnez les deux tags plutôt`);
+    if (sameName) return reply.conflict(`Un tag « ${tag.name} » est déjà proposé dans « ${dest.name} » : fusionnez les deux tags plutôt`);
 
-    const updated = await fastify.prisma.tag.update({
-      where: { id: tag.id },
-      data: { spaceId, communityId: null },
-      include: TAG_INCLUDE,
+    const outside = await outsideLinks(tag.id, dest);
+    const itemsBySpace = new Map<string, string[]>();
+    for (const l of outside) itemsBySpace.set(l.item.spaceId, [...(itemsBySpace.get(l.item.spaceId) ?? []), l.itemId]);
+
+    const updated = await fastify.prisma.$transaction(async (tx) => {
+      const moved = await tx.tag.update({
+        where: { id: tag.id },
+        data: dest.kind === 'space' ? { spaceId: dest.id, communityId: null } : { communityId: dest.id, spaceId: null },
+        include: TAG_INCLUDE,
+      });
+      // Espaces parents d'abord : un tag créé dans un parent sert aussi à ses sous-espaces (pas de doublon)
+      const depth = new Map<string, number>();
+      for (const sid of itemsBySpace.keys()) depth.set(sid, (await spaceTagScope(tx, sid)).spaceIds.length);
+      const ordered = [...itemsBySpace.keys()].sort((a, b) => depth.get(a)! - depth.get(b)!);
+      for (const sid of ordered) {
+        const itemIds = itemsBySpace.get(sid)!;
+        const [toId] = await mapTagsToSpace(tx, [moved], sid);
+        await tx.itemTag.deleteMany({ where: { tagId: tag.id, itemId: { in: itemIds } } });
+        await tx.itemTag.createMany({ data: itemIds.map((itemId) => ({ itemId, tagId: toId })), skipDuplicates: true });
+      }
+      await createAuditLog(tx, {
+        action: 'UPDATE', entity: 'Tag', entityId: tag.id, userId: request.user.userId,
+        spaceId: dest.kind === 'space' ? dest.id : null,
+        changes: { before: toAdminTag(tag), after: { ...toAdminTag(moved), copiedItems: outside.length } },
+      });
+      return tx.tag.findUnique({ where: { id: tag.id }, include: TAG_INCLUDE });
     });
-    await createAuditLog(fastify.prisma, {
-      action: 'UPDATE', entity: 'Tag', entityId: tag.id, userId: request.user.userId, spaceId,
-      changes: { before: toAdminTag(tag), after: toAdminTag(updated) },
-    });
-    return toAdminTag(updated);
+    return { ...toAdminTag(updated), copiedItems: outside.length };
   });
 
   fastify.post<{ Body: z.infer<typeof mergeSchema> }>('/merge', async (request, reply) => {

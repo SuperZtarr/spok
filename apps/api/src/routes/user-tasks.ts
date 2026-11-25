@@ -230,6 +230,10 @@ export const userTasksRoutes: FastifyPluginAsync = async (fastify) => {
       // Tri par nom de l'assigné (colonne Assigné de la page Tâches). `nulls` interdit : User.name est
       // obligatoire ; les non assignés suivent l'ordre par défaut de PostgreSQL (fin en asc, début en desc)
       orderBy = { assignedTo: { name: safeSortDir } };
+    } else if (safeSortBy === 'priority' || safeSortBy === 'dueDate') {
+      // Champs facultatifs : sans valeur toujours en fin (PostgreSQL les met en tête en desc — 2026-11-25, les
+      // éléments sans priorité remplissaient la page du tableau de bord et cachaient les P1)
+      orderBy = { [safeSortBy]: { sort: safeSortDir, nulls: 'last' } };
     } else {
       orderBy = { [safeSortBy]: safeSortDir };
     }
