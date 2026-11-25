@@ -22,6 +22,8 @@
  * son type (TYPE_EMOJI), titre de l'élément, espace, communauté ; l'icône précède le préfixe [DEV].
  * Administration (2026-11-19) : bouton Mode admin/dev visible aussi en responsive ; le menu Administration n'est plus
  * dans le pied de sidebar mais dans la ligne admin du header (GlobalNavBar) — sur mobile, grille de navigation.
+ * Favoris et Récents (2026-11-25) : transverses, jamais filtrés par la communauté courante — un seul bloc
+ * (favoritesAndRecents) rendu en mode global et en mode communauté immersif.
  * Accueil (2026-11-18) : titre « SPOK — » + menuLabel('home') ; l'ancien store dashboardTab (liste recopiée, code mort) est supprimé.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
@@ -756,11 +758,6 @@ export function Layout() {
     useInterfaceModeStore.getState().applyContextMode(derived);
   }, [currentCommunityKey, currentCommunityContext, communityResolving]);
 
-  const communityFavoriteSpaces = useMemo(() => {
-    if (!currentCommunityId) return favoriteSpaces;
-    return favoriteSpaces.filter(s => s.communityId === currentCommunityId);
-  }, [currentCommunityId, favoriteSpaces]);
-
   // Auto-expand active community, collapse all when at root
   useEffect(() => {
     if (currentCommunityId) {
@@ -939,6 +936,73 @@ export function Layout() {
   };
 
   // Sidebar content for anonymous visitors
+  // Favoris + Récents : transverses (toutes communautés), rendus à l'identique en mode global et en mode
+  // communauté immersif — ils étaient filtrés par la communauté courante, Récents absent (bug 2026-11-22).
+  const favoritesAndRecents = (
+    <>
+      {favoriteSpaces.length > 0 && (
+        <div id="sidebar-favorites" data-devzone="sidebar-favoris" className="pt-1.5 pb-1.5 border-b border-border/50">
+          <div className="flex items-center px-2 mb-1">
+            <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
+            <span className="text-base font-bold text-foreground">Favoris</span>
+          </div>
+          {favoriteSpaces.map((space) => (
+            <div key={space.id} className="group flex items-center">
+              <Link
+                to={spaceHref(space, communityContexts)}
+                className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
+                  currentSpaceId === space.id
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-accent/50'
+                }`}
+              >
+                <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
+                <span className="truncate">{space.name}</span>
+              </Link>
+              <button
+                onClick={() => handleToggleFavorite(space.id)}
+                className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                title="Retirer des favoris"
+              >
+                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {user && recentSpaces.length > 0 && (
+        <div id="sidebar-recents" data-devzone="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
+          <div className="flex items-center px-2 mb-1">
+            <Clock className="w-3 h-3 text-muted-foreground/60 mr-1.5 flex-shrink-0" />
+            <span className="text-base font-bold text-foreground">Récents</span>
+          </div>
+          {recentSpaces.map((space) => (
+            <div key={space.id} className="group flex items-center">
+              <Link
+                to={spaceHref(space, communityContexts)}
+                className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
+                  currentSpaceId === space.id
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-accent/50'
+                }`}
+              >
+                <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
+                <span className="truncate">{space.name}</span>
+              </Link>
+              <button
+                onClick={() => handleToggleFavorite(space.id)}
+                className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                title="Ajouter aux favoris"
+              >
+                <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
   const visitorSidebarContent = (
     <>
       <div className="px-1 border-b border-border flex-shrink-0 overflow-hidden">
@@ -1030,41 +1094,8 @@ export function Layout() {
       <nav data-devzone="sidebar-nav" className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden min-h-0">
         {currentCommunity && currentCommunityGroup ? (
           <>
-            {/* Immersive community mode: favorites + space tree only */}
-            {communityFavoriteSpaces.length > 0 && (
-              <div data-devzone="sidebar-favoris" className="pt-1.5 pb-1.5 border-b border-border/50">
-                <div className="flex items-center px-2 mb-1">
-                  <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-foreground">Favoris</span>
-                </div>
-                {communityFavoriteSpaces.map((space) => (
-                  <div key={space.id} className="group flex items-center">
-                    <Link
-                      to={`/spaces/${space.id}`}
-                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
-                        currentSpaceId === space.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent/50'
-                      }`}
-                    >
-                      {space.avatarUrl ? (
-                        <img src={space.avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <FolderKanban className="w-4 h-4 flex-shrink-0" />
-                      )}
-                      <span className="truncate">{space.name}</span>
-                    </Link>
-                    <button
-                      onClick={() => handleToggleFavorite(space.id)}
-                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                      title="Retirer des favoris"
-                    >
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Immersive community mode: favoris + récents (transverses), puis arbre de la communauté */}
+            {favoritesAndRecents}
 
             {/* Community spaces tree */}
             <div data-devzone="sidebar-arbre" className="pt-1.5">
@@ -1131,69 +1162,7 @@ export function Layout() {
         ) : (
           <>
             {/* Global mode: full sidebar */}
-            {/* Favorites */}
-            {favoriteSpaces.length > 0 && (
-              <div id="sidebar-favorites" data-devzone="sidebar-favoris" className="pt-1.5 pb-1.5 border-b border-border/50">
-                <div className="flex items-center px-2 mb-1">
-                  <Star className="w-3 h-3 text-yellow-500 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-foreground">Favoris</span>
-                </div>
-                {favoriteSpaces.map((space) => (
-                  <div key={space.id} className="group flex items-center">
-                    <Link
-                      to={spaceHref(space, communityContexts)}
-                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
-                        currentSpaceId === space.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent/50'
-                      }`}
-                    >
-                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
-                      <span className="truncate">{space.name}</span>
-                    </Link>
-                    <button
-                      onClick={() => handleToggleFavorite(space.id)}
-                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                      title="Retirer des favoris"
-                    >
-                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Recents */}
-            {user && recentSpaces.length > 0 && (
-              <div id="sidebar-recents" data-devzone="sidebar-recents" className="pt-1.5 pb-1.5 border-b border-border/50">
-                <div className="flex items-center px-2 mb-1">
-                  <Clock className="w-3 h-3 text-muted-foreground/60 mr-1.5 flex-shrink-0" />
-                  <span className="text-base font-bold text-foreground">Récents</span>
-                </div>
-                {recentSpaces.map((space) => (
-                  <div key={space.id} className="group flex items-center">
-                    <Link
-                      to={spaceHref(space, communityContexts)}
-                      className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md transition-colors text-sm ${
-                        currentSpaceId === space.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-accent/50'
-                      }`}
-                    >
-                      <SpaceIcon avatarUrl={space.avatarUrl} defaultView={space.defaultView} communityId={space.communityId} />
-                      <span className="truncate">{space.name}</span>
-                    </Link>
-                    <button
-                      onClick={() => handleToggleFavorite(space.id)}
-                      className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                      title="Ajouter aux favoris"
-                    >
-                      <Star className="w-3 h-3 text-muted-foreground hover:text-yellow-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {favoritesAndRecents}
 
             {/* Personal spaces (authenticated only) */}
             {user && mySpaces.length > 0 && (

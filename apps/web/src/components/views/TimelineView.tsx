@@ -12,6 +12,7 @@
  * Barre pointillée (parent sans dates, période dérivée des enfants) : glisser = décaler le groupe via
  * CascadeShiftConfirmModal (anchorWithoutDates, enfants cochés par défaut) — le parent n'est jamais daté.
  * Sa fin : la plus tardive des enfants ; un enfant commencé sans fin compte jusqu'à aujourd'hui (rollupEnd).
+ * Flèches de relation : même position de barre que le dessin (rowBarStyle), barre pointillée et aperçu compris.
  * Barre d'un item sans endDate : se déplace telle qu'affichée (fin = aujourd'hui, cf. moveInitialEnd).
  * Poignées d'étirement : partent de la position affichée et enregistrent ce qu'on voit — la date manquante (fin
  * d'une barre ouverte, début d'une barre sans date) prend sa valeur affichée (displayedBarDates, 2026-11-18).
@@ -1073,6 +1074,15 @@ treeSort: treeSortProp,
 
   const visibleEndDate = addDays(visibleStartDate, visibleDays);
 
+  // Barre d'une ligne telle qu'elle est dessinée : aperçu de glisser, sinon période déduite des enfants (barre pointillée
+  // d'un parent sans dates), sinon dates de l'élément. Seule source pour le dessin des barres ET les flèches de relation
+  // (signalement 2026-11-23 : les flèches visaient aujourd'hui au lieu de la barre pointillée).
+  const rowBarStyle = (item: Item) => {
+    if (dragPreview?.itemId === item.id) return getBarStyle(item, dragPreview.startDate, dragPreview.endDate);
+    const derived = effectiveDates.get(item.id);
+    return derived ? getBarStyle(item, derived.start, derived.end) : getBarStyle(item);
+  };
+
   // Compute dependency arrows between related items
   const dependencyArrows = useMemo(() => {
     if (!relations || relations.length === 0) return [];
@@ -1089,8 +1099,8 @@ treeSort: treeSortProp,
       const fromItem = flatItems[fromIdx];
       const toItem = flatItems[toIdx];
 
-      const fromBar = getBarStyle(fromItem);
-      const toBar = getBarStyle(toItem);
+      const fromBar = rowBarStyle(fromItem);
+      const toBar = rowBarStyle(toItem);
       if (!fromBar || !toBar) continue;
 
       // Arrow: always from end of source bar to start of target bar
@@ -1103,7 +1113,7 @@ treeSort: treeSortProp,
     }
 
     return arrows;
-  }, [relations, flatItems, itemYOffset, visibleStartDate, zoomConfig, dayWidth]);
+  }, [relations, flatItems, itemYOffset, visibleStartDate, visibleDays, zoomConfig, dayWidth, effectiveDates, dragPreview]);
 
   // Determine which header rows to show based on zoom level
   const showYearRow = zoomLevel === 'multiyear';
@@ -1391,11 +1401,7 @@ treeSort: treeSortProp,
               const { item, itemIndex } = row;
               const isPreview = dragPreview?.itemId === item.id;
               const derived = !isPreview ? effectiveDates.get(item.id) : undefined;
-              const barStyle = isPreview
-                ? getBarStyle(item, dragPreview!.startDate, dragPreview!.endDate)
-                : derived
-                  ? getBarStyle(item, derived.start, derived.end)
-                  : getBarStyle(item);
+              const barStyle = rowBarStyle(item);
               const statusColor = getStatusColor(item.status, statuses);
               const hasChildren = item.children.length > 0;
               const isCollapsed = collapsedIds.has(item.id);

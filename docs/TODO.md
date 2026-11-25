@@ -293,6 +293,7 @@
 - [x] Sidebar - Favoris et Récents transverses — 2026-11-25
 - [x] Mobile - fond blanc de l'écran de démarrage — 2026-11-25
 - [x] Tableau de bord - P1 et Assignés à moi manquants — 2026-11-25
+- [x] Gantt - flèches de relation alignées sur les barres — 2026-11-25
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12
