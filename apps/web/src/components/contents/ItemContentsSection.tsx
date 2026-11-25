@@ -28,7 +28,7 @@
  * « Déplacer vers… » (2026-11-21) : bouton → au pied de chaque vignette, MoveToItemDialog (choix de l'élément cible).
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, MoveRight, RefreshCw, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Trash2, MoveRight, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
 import { fileExtension, hostOf } from '../../lib/itemFace';
 import { ITEM_CONTENT_KINDS, ITEM_CONTENT_KIND_DEFS, CONTACT_CONTENT_KINDS, CONTACT_VALUE_MAX, PHONE_PATTERN, contactHref, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection, type ContactContentKind } from '@spok/shared';
 import { ITEM_CONTENT_ICONS } from '../../constants/itemContentIcons';
@@ -348,21 +348,13 @@ interface RowProps {
 }
 
 /** Un contenu : aperçu selon sa sorte + actions (renommer, monter, descendre, retirer) */
-function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRefreshPreview, refreshing, onRename, onOpenImage, diagram }: RowProps) {
+function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRename, onOpenImage, diagram }: RowProps) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name ?? '');
   useEffect(() => { if (!renaming) setName(c.name ?? ''); }, [c.name, renaming]);
 
   const actions = canEdit && (
     <div className="flex items-center gap-0.5 shrink-0">
-      {c.kind === 'LINK' && onRefreshPreview && (
-        <HelpHint text={pageHint('item-contents', 'refreshPreview')}>
-          <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-40" disabled={refreshing}
-            onClick={onRefreshPreview} aria-label="Actualiser l'aperçu">
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </HelpHint>
-      )}
       {c.kind !== 'DIAGRAM' && (
         <HelpHint text={pageHint('item-contents', 'rename')}>
           <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground" onClick={() => setRenaming(true)} aria-label="Renommer">
