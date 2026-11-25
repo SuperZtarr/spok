@@ -26,10 +26,11 @@ const elements: HelpElements = {
   contenus: {
     title: 'Contenus',
     short: 'Ce que porte l\'élément, rangé par sorte.',
-    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Téléphones, E-mails, Adresses, Schémas. Les coordonnées s\'affichent en lignes courtes et cliquables (appeler, écrire, voir sur une carte). Le haut de chaque vignette montre un aperçu ; sous le nom, le poids d\'un fichier ou d\'une image envoyée, le site d\'un lien. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme, la flèche longue → la déplace vers un autre élément et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
+    text: 'Les contenus de l\'élément, en vignettes alignées les unes à côté des autres et regroupées toujours dans le même ordre : Images, Fichiers, Liens, Téléphones, E-mails, Adresses, Schémas. Les coordonnées s\'affichent en lignes courtes et cliquables (appeler, écrire, voir sur une carte). Le haut de chaque vignette montre un aperçu (pour un lien, l\'image d\'aperçu de son site, récupérée une fois et rangée dans SPOK ; ↻ la récupère de nouveau) ; sous le nom, le poids d\'un fichier ou d\'une image envoyée, le site d\'un lien. Cliquez une image pour l\'agrandir, un fichier ou un lien pour l\'ouvrir, un schéma pour le modifier. Au pied de la vignette, les flèches ← → changent sa place parmi ceux de sa sorte, le crayon la renomme, la flèche longue → la déplace vers un autre élément et la corbeille la retire. En mode Afficher, les vignettes sont plus grandes.',
     side: 'top',
     changes: [
       { id: 'item-contents', kind: 'evolution', text: 'Un élément porte maintenant plusieurs contenus (images, fichiers, liens, schémas), quel que soit son type : « + Ajouter » sous la description.', date: '2026-11-11' },
+      { id: 'link-preview', kind: 'new', text: 'Un lien montre maintenant l\'image d\'aperçu de son site, récupérée une fois et rangée dans SPOK ; ↻ au pied de la vignette la récupère de nouveau.', date: '2026-11-25' },
       { id: 'content-contacts', kind: 'new', text: 'Un élément porte maintenant des téléphones, e-mails et adresses : « + Ajouter » › Téléphone, E-mail ou Adresse. Ils sont cliquables (appeler, écrire, voir sur une carte).', date: '2026-11-25' },
       { id: 'content-move', kind: 'new', text: 'Un contenu ou une donnée sécurisée se déplace vers un autre élément : flèche longue → au pied de sa vignette, puis choix de l\'élément.', date: '2026-11-21' },
       { id: 'file-size-100', kind: 'evolution', text: `Les fichiers joints peuvent maintenant peser jusqu'à ${DOCUMENT_MAX_MB} Mo, et le poids de chaque fichier ou image s'affiche sous son nom.`, date: '2026-11-15' },
@@ -45,7 +46,7 @@ const elements: HelpElements = {
   apercu: {
     title: 'Aperçu d\'un fichier',
     short: 'Le début du fichier, pour savoir ce qu\'il contient sans l\'ouvrir.',
-    text: 'À l\'envoi d\'un fichier, SPOK prépare son aperçu : la première page d\'un PDF, la miniature enregistrée dans un fichier Word, Excel ou PowerPoint, et le début du texte d\'un PDF, d\'un document Word ou d\'un fichier texte. L\'aperçu occupe le haut de la vignette du fichier dans la fiche ; il apparaît aussi dans la vue Documents et sur la vignette de l\'élément. Cliquez dessus pour ouvrir le fichier. Les autres formats montrent leur icône et leur extension, et un fichier Word enregistré sans miniature montre seulement son début de texte.',
+    text: 'À l\'envoi d\'un fichier, SPOK prépare son aperçu : la première page d\'un PDF, ou la miniature enregistrée dans un fichier Word, Excel ou PowerPoint. L\'aperçu occupe le haut de la vignette du fichier dans la fiche ; il apparaît aussi dans la vue Documents et sur la vignette de l\'élément. Cliquez dessus pour ouvrir le fichier. Sans aperçu (autres formats, fichier Office enregistré sans miniature), la vignette montre l\'icône de l\'application qui ouvre le fichier — Word, Excel, PowerPoint, PDF… — et son extension. Le début du texte sert seulement de résumé sur la vignette d\'un élément sans description.',
     side: 'right',
     changes: [{ id: 'file-preview', kind: 'new', text: 'Les fichiers joints montrent un aperçu : la première page d\'un PDF, la miniature d\'un document Office ou le début du texte, dans la fiche, la vue Documents et les vignettes.', date: '2026-11-11' }],
   },
@@ -66,6 +67,7 @@ export const help: HelpEntry = {
     addPHONE: 'Ajoute un numéro de téléphone (chiffres, espaces, + . - ( )), avec un libellé facultatif. Cliquable pour appeler.',
     addEMAIL: 'Ajoute une adresse e-mail, avec un libellé facultatif. Cliquable pour écrire.',
     addADDRESS: 'Ajoute une adresse postale (plusieurs lignes possibles), avec un libellé facultatif. Un clic l\'ouvre sur une carte.',
+    refreshPreview: 'Va chercher de nouveau l\'image d\'aperçu du site (celle qu\'affichent les réseaux sociaux) et la range dans SPOK. Si le site n\'en fournit pas ou ne répond pas, rien ne change.',
     addContactConfirm: 'Enregistre la coordonnée tout de suite sur l\'élément. Elle est visible des membres de l\'espace, cherchable et exportée.',
     addDIAGRAM: 'Crée un schéma vide, enregistré tout de suite : cliquez « Modifier » pour le dessiner dans draw.io.',
     addSECRET: `Range un mot de passe ou un code sur l'élément, chiffré et masqué (${ITEM_SECRETS_MAX} au plus). Vous choisissez qui peut l'afficher.`,

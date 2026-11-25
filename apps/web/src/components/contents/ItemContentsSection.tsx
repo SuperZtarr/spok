@@ -12,7 +12,8 @@
  * Mise en forme en vignettes (décision Thomas 2026-11-11), dans les deux modes : chaque sorte est une suite de
  * vignettes alignées à gauche (flex-wrap), grande zone d'aperçu en haut (ContentTile / TilePreview), nom et détail
  * dessous ; en mode Modifier, actions en pied (renommer, ← → dans la sorte, retirer), toujours visibles ; en mode
- * Afficher, vignettes plus grandes. Fichier : 1re page ou début du texte (FilePreviewThumb), sinon icône + extension ;
+ * Afficher, vignettes plus grandes. Fichier : image de la 1re page (FilePreviewThumb), sinon icône de son application
+ * (Word, Excel, PowerPoint, PDF…, getFileIcon) + extension — plus le début du texte (décision Thomas 2026-11-25) ;
  * schéma modifiable : DrawioEditor compact (clic = draw.io plein écran). Détail sous le nom (tileDetail) : poids d'un
  * fichier ou d'une image envoyée (2026-11-15), site d'un lien.
  * Props clés : spaceId, itemId (absent = élément pas encore enregistré), contents (item.contents, détail complet avec
@@ -25,13 +26,15 @@
  * Coordonnées (Téléphone, E-mail, Adresse — 2026-11-25) : lignes compactes (ContactRow) dans les deux modes, saisie
  * ContactForm ; libellés et icônes du registre (@spok/shared, constants/itemContentIcons.ts).
  * Aperçu des liens (2026-11-25) : image du site (previewUrl, rangée par l'API) en haut de la vignette d'un lien ; bouton
+ * « Actualiser l'aperçu » (↻) au pied ; fiche relue 6 s après l'ajout d'un lien (aperçu cherché en tâche de fond).
  * « Déplacer vers… » (2026-11-21) : bouton → au pied de chaque vignette, MoveToItemDialog (choix de l'élément cible).
  */
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, MoveRight, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
+import { Plus, Trash2, MoveRight, RefreshCw, ChevronLeft, ChevronRight, Pencil, ExternalLink, Check, X } from 'lucide-react';
 import { fileExtension, hostOf } from '../../lib/itemFace';
 import { ITEM_CONTENT_KINDS, ITEM_CONTENT_KIND_DEFS, CONTACT_CONTENT_KINDS, CONTACT_VALUE_MAX, PHONE_PATTERN, contactHref, sortItemContents, type ItemContent, type ItemContentKind, type ItemContentSection, type ContactContentKind } from '@spok/shared';
 import { ITEM_CONTENT_ICONS } from '../../constants/itemContentIcons';
+import { getFileIcon } from '../../constants/ui';
 import { useItemContents } from '../../hooks/useItemContents';
 import { useItemSecretList } from '../../hooks/useItemSecrets';
 import { ItemSecretsSection } from './ItemSecretsSection';
@@ -142,7 +145,7 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
               </Button>
             </HelpHint>
             {menuOpen && (
-              <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border bg-popover shadow-md py-1" role="menu">
+              <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border bg-card shadow-md py-1" role="menu">
                 {ADD_ORDER.map((kind) => {
                   const Icon = KIND_ICONS[kind];
                   return (
@@ -215,6 +218,8 @@ export function ItemContentsSection({ spaceId, itemId, contents, canEdit, onTitl
                   first={i === 0} last={i === list.length - 1}
                   onUp={() => move(list, i, -1)} onDown={() => move(list, i, 1)}
                   onRemove={() => setToRemove(c)} onMoveTo={() => setToMove(c)} onOpenImage={() => setLightbox(c)}
+                  onRefreshPreview={() => api.refreshPreview.mutate(c.id)}
+                  refreshing={api.refreshPreview.isPending && api.refreshPreview.variables === c.id}
                   onRename={(name) => api.update.mutate({ id: c.id, name: name || null })}
                   diagram={kind === 'DIAGRAM' ? {
                     save: (xml) => api.update.mutateAsync({ id: c.id, xml }),
@@ -348,13 +353,21 @@ interface RowProps {
 }
 
 /** Un contenu : aperçu selon sa sorte + actions (renommer, monter, descendre, retirer) */
-function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRename, onOpenImage, diagram }: RowProps) {
+function ContentRow({ content: c, canEdit, first, last, onUp, onDown, onRemove, onMoveTo, onRefreshPreview, refreshing, onRename, onOpenImage, diagram }: RowProps) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(c.name ?? '');
   useEffect(() => { if (!renaming) setName(c.name ?? ''); }, [c.name, renaming]);
 
   const actions = canEdit && (
     <div className="flex items-center gap-0.5 shrink-0">
+      {c.kind === 'LINK' && onRefreshPreview && (
+        <HelpHint text={pageHint('item-contents', 'refreshPreview')}>
+          <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-40" disabled={refreshing}
+            onClick={onRefreshPreview} aria-label="Actualiser l'aperçu">
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </HelpHint>
+      )}
       {c.kind !== 'DIAGRAM' && (
         <HelpHint text={pageHint('item-contents', 'rename')}>
           <button type="button" className="p-1 rounded hover:bg-accent text-muted-foreground" onClick={() => setRenaming(true)} aria-label="Renommer">
@@ -415,12 +428,14 @@ function tileDetail(c: ItemContent): string | null {
   return null;
 }
 
-/** Icône de remplacement, grande, centrée dans la zone d'aperçu (avec l'extension d'un fichier) */
-function TileIcon({ kind, label }: { kind: ItemContentKind; label?: string | null }) {
+/** Icône de remplacement, grande, centrée dans la zone d'aperçu (avec l'extension d'un fichier). fileName : fichier
+ *  → icône de son application (Word, Excel, PowerPoint, PDF…, registre getFileIcon de constants/ui), en couleur */
+function TileIcon({ kind, label, fileName }: { kind: ItemContentKind; label?: string | null; fileName?: string | null }) {
+  const AppIcon = fileName ? getFileIcon(fileName) : null;
   const Icon = kind === 'LINK' ? ExternalLink : KIND_ICONS[kind];
   return (
     <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
-      <Icon className="h-10 w-10 opacity-60" />
+      {AppIcon ? <AppIcon className="h-14 w-14" /> : <Icon className="h-10 w-10 opacity-60" />}
       {label && <span className="text-xs font-semibold">{label}</span>}
     </span>
   );
@@ -462,7 +477,7 @@ function TilePreview({ content: c, onOpenImage }: { content: ItemContent; onOpen
   const ext = c.kind === 'FILE' ? fileExtension(c.name) ?? fileExtension(c.url) : null;
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} — Ouvrir`} className="block h-full w-full hover:bg-accent/50 transition-colors">
-      <TileIcon kind={c.kind} label={ext} />
+      <TileIcon kind={c.kind} label={ext} fileName={c.kind === 'FILE' ? c.name || c.url : null} />
     </a>
   );
 }

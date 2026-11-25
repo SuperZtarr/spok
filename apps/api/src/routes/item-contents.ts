@@ -15,6 +15,9 @@
  *                                        CET élément — une adresse saisie ne vise jamais l'objet d'un autre) et n'est
  *                                        plus utilisé par aucun autre contenu ni par la colonne items.url (gardée en
  *                                        sauvegarde depuis le lot 4 : une restauration doit retrouver son fichier).
+ * - POST   /:id/contents/:contentId/preview (2026-11-25) → aperçu d'un LIEN (image du site, utils/linkPreview.ts, protégé
+ *                                        contre les SSRF) récupéré tout de suite ; aussi lancé en tâche de fond à l'ajout
+ *                                        d'un lien et au changement de son adresse (ancien aperçu effacé).
  * - Coordonnées (2026-11-25) : POST { kind: PHONE | EMAIL | ADDRESS, value, name? } ; PATCH { value?, name? } — règles
  *                                        du registre @spok/shared (contactValue) ; valeur en clair dans `value`.
  * - PUT    /:id/contents/order { ids }   → ordre complet des contenus d'UNE sorte (ids de cette sorte, tous).
@@ -39,6 +42,7 @@ import { isR2Configured, isR2Url, isItemStorageUrl, processImage, uploadImageToR
 import { checkSpaceAccess } from './items.js';
 import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { storeFilePreview } from '../utils/filePreview.js';
+import { storeLinkPreview } from '../utils/linkPreview.js';
 import { createAuditLog } from '../utils/audit.js';
 
 type P = { spaceId: string; id: string };
@@ -130,6 +134,13 @@ const touchItem = async (prisma: any, itemId: string, userId: string) => {
   await prisma.item.update({ where: { id: itemId }, data: { updatedAt: new Date(), updatedById: userId } });
 };
 
+/** Aperçu d'un lien en tâche de fond : jamais bloquant, ancienne image effacée si remplacée */
+function previewInBackground(fastify: any, content: { id: string; itemId: string; kind: string; url?: string | null; previewUrl?: string | null }) {
+  void storeLinkPreview(fastify.prisma, content)
+    .then((r) => (r?.previous ? deleteIfUnused(fastify.prisma, r.previous, content.itemId) : undefined))
+    .catch((e: unknown) => fastify.log?.warn?.({ err: e }, 'aperçu de lien impossible'));
+}
+
 const LIMIT_MESSAGE = `Un élément porte au plus ${ITEM_CONTENTS_MAX} contenus`;
 
 export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
@@ -154,6 +165,8 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     });
     await touchItem(fastify.prisma, item.id, request.user.userId);
     await logContentChange(fastify.prisma, request, item.id, { op: 'add', kind: content.kind, name: contentLabel(content) });
+    // Lien : aperçu du site cherché en tâche de fond, après la réponse (utils/linkPreview.ts)
+    if (content.kind === 'LINK') previewInBackground(fastify, content);
     return reply.status(201).send(content);
   });
 
@@ -234,7 +247,14 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.name !== undefined) data.name = body.name;
     if (body.url !== undefined) data.url = body.url;
     if (body.xml !== undefined) data.xml = body.xml;
+    // Lien dont l'adresse change : l'ancien aperçu ne vaut plus, le nouveau est cherché en tâche de fond
+    const linkMoved = content.kind === 'LINK' && body.url !== undefined && body.url !== content.url;
+    if (linkMoved) data.previewUrl = null;
     const updated = await fastify.prisma.itemContent.update({ where: { id: content.id }, data });
+    if (linkMoved) {
+      await deleteIfUnused(fastify.prisma, content.previewUrl, item.id);
+      previewInBackground(fastify, updated);
+    }
     await touchItem(fastify.prisma, item.id, request.user.userId);
     const renamed = body.name !== undefined && (body.name ?? null) !== (content.name ?? null);
     const urlChanged = body.url !== undefined && body.url !== content.url;
@@ -249,6 +269,19 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
     return updated;
+  });
+
+  // Actualiser l'aperçu d'un lien (2026-11-25) : récupération synchrone ; previewFound = une image a été trouvée
+  fastify.post<{ Params: PC }>('/:id/contents/:contentId/preview', async (request, reply) => {
+    const item = await writableItem(fastify, request, reply);
+    if (!item) return reply;
+    const content = await fastify.prisma.itemContent.findFirst({ where: { id: request.params.contentId, itemId: item.id } });
+    if (!content) return reply.notFound('Contenu introuvable');
+    if (content.kind !== 'LINK') return reply.badRequest("Seul un lien a un aperçu de site");
+    const stored = await storeLinkPreview(fastify.prisma, content);
+    if (stored?.previous) await deleteIfUnused(fastify.prisma, stored.previous, item.id);
+    const fresh = await fastify.prisma.itemContent.findFirst({ where: { id: content.id } });
+    return { ...(fresh ?? content), previewFound: !!stored };
   });
 
   // Suppression (fichier effacé du stockage seulement s'il n'est plus utilisé nulle part)

@@ -3,13 +3,16 @@
  * multiples, lot 2). Pas de lecture propre : les contenus arrivent avec l'élément (item.contents, clé
  * ['item', spaceId, itemId]) — détail complet avec le xml des schémas.
  * Mutations : add (lien, image par adresse, schéma), upload (image ou fichier ; previewOf = aperçu PNG d'un schéma),
- * update (nom, adresse, xml), remove, reorder (ordre complet d'une sorte), move (vers un autre élément, 2026-11-21).
+ * refreshPreview (aperçu d'un lien, 2026-11-25), update (nom, adresse, xml), remove, reorder (ordre complet d'une sorte), move (vers un autre élément, 2026-11-21).
  * Après chaque écriture, la fiche ['item', …] et les listes ['items', spaceId] sont relues : updatedAt a changé (sinon
  * faux conflit 409 à l'enregistrement de la fiche) et les vignettes des listes reprennent les contenus.
  * Réservé à ItemContentsSection.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { itemContentsApi, type ItemContentInput } from '../lib/api';
+
+/** Délai avant de relire la fiche après l'ajout d'un lien (aperçu cherché en tâche de fond, 5 s max par requête) */
+export const LINK_PREVIEW_DELAY_MS = 6000;
 
 export function useItemContents(spaceId: string, itemId: string | undefined) {
   const queryClient = useQueryClient();
@@ -20,6 +23,15 @@ export function useItemContents(spaceId: string, itemId: string | undefined) {
 
   const add = useMutation({
     mutationFn: (body: ItemContentInput) => itemContentsApi.add(spaceId, itemId!, body),
+    onSuccess: (_d, body) => {
+      // Lien : l'API cherche l'image du site en tâche de fond — fiche relue un peu plus tard pour l'afficher
+      if (body.kind === 'LINK') setTimeout(() => { void refresh(); }, LINK_PREVIEW_DELAY_MS);
+      return refresh();
+    },
+  });
+  // Actualiser l'aperçu d'un lien (2026-11-25) : récupération synchrone côté API
+  const refreshPreview = useMutation({
+    mutationFn: (contentId: string) => itemContentsApi.refreshPreview(spaceId, itemId!, contentId),
     onSuccess: refresh,
   });
   const upload = useMutation({
@@ -52,5 +64,5 @@ export function useItemContents(spaceId: string, itemId: string | undefined) {
     ]),
   });
 
-  return { add, upload, update, remove, reorder, move };
+  return { add, upload, update, remove, reorder, move, refreshPreview };
 }
