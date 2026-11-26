@@ -12,9 +12,10 @@
  * - planContentMerge : pur, sans base (tests).
  * - loadContentMergePlan : lit les contenus (xml compris) et calcule le plan.
  * - applyContentMergePlan : déplace les contenus retenus (itemId + position) et retire les doublons.
- * Fichiers : un contenu déplacé garde son url (fichier rangé sous items/<ancien id>/) ; le doublon retiré n'efface pas
- * son fichier — comme la suppression d'un élément, rien n'est effacé du stockage ici (pas de risque d'effacer un
- * fichier encore utilisé). Règle de gestion : item-contents-merge (lib/businessRules.ts côté web).
+ * Fichiers : un contenu déplacé garde son url (fichier rangé sous items/<ancien id>/) ; rien n'est effacé ici.
+ * applyContentMergePlan renvoie les adresses des doublons retirés : la route les confie à la corbeille du stockage
+ * (2026-11-26, utils/storageTrash.ts), qui garde tout fichier encore utilisé. Règle de gestion : item-contents-merge
+ * (lib/businessRules.ts côté web).
  * Coordonnées (2026-11-25) : doublon = même sorte + même valeur (casse et espaces ignorés).
  */
 import { ITEM_CONTENTS_MAX, CONTACT_CONTENT_KINDS } from '@spok/shared';
@@ -121,12 +122,21 @@ export async function loadContentMergePlan(prisma: any, keptItemId: string, from
   return planContentMerge(kept, incoming);
 }
 
-/** Applique le plan : contenus retenus rattachés à l'élément gardé, doublons retirés. */
-export async function applyContentMergePlan(prisma: any, keptItemId: string, plan: ContentMergePlan): Promise<void> {
+/**
+ * Applique le plan : contenus retenus rattachés à l'élément gardé, doublons retirés. Renvoie les adresses des doublons
+ * retirés : l'appelant les confie à la corbeille du stockage (utils/storageTrash.ts) APRÈS la réunion — un fichier
+ * encore utilisé (même fichier que le contenu gardé) y échappe.
+ */
+export async function applyContentMergePlan(
+  prisma: any, keptItemId: string, plan: ContentMergePlan,
+): Promise<{ url: string | null; previewUrl: string | null }[]> {
+  let removed: { url: string | null; previewUrl: string | null }[] = [];
   if (plan.duplicateIds.length > 0) {
+    removed = await prisma.itemContent.findMany({ where: { id: { in: plan.duplicateIds } }, select: { url: true, previewUrl: true } });
     await prisma.itemContent.deleteMany({ where: { id: { in: plan.duplicateIds } } });
   }
   for (const m of plan.moves) {
     await prisma.itemContent.update({ where: { id: m.id }, data: { itemId: keptItemId, position: m.position } });
   }
+  return removed ?? [];
 }

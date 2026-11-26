@@ -41,7 +41,7 @@ import { referentielsRoutes } from './referentiels.js';
 import { auditLogsRoutes } from './auditLogs.js';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
-import { runDeletion, deleteSpaceTree } from '../utils/spaceDeletion.js';
+import { runDeletion, deleteSpaceTree, releaseDeletedFiles } from '../utils/spaceDeletion.js';
 import { SPACE_ORDER_BY, compareSpaceOrder, nextSiblingPosition, reorderSiblings } from '../utils/spaceOrder.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { createInvitation as createInvitationHelper } from './invitations.js';
@@ -926,11 +926,13 @@ export const spacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = request.query.deleteChildren === 'true';
-    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID() };
+    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID(), released: [] };
 
     // Tout ou rien (utils/spaceDeletion.ts) : une erreur en cours ne laisse plus de suppression partielle
     await runDeletion(fastify.prisma, (tx) =>
       deleteSpaceTree(tx, space as unknown as { id: string } & Record<string, unknown>, deleteChildren, ctx));
+    // Fichiers des éléments supprimés : corbeille du stockage, après la transaction
+    await releaseDeletedFiles(fastify.prisma, ctx, request.log);
 
     return { success: true };
   });

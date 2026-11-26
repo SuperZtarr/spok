@@ -56,6 +56,9 @@ export const VOLUMETRY_WATCHED_TABLES = [
 /** Taille maximale de toute la base, en Mo */
 export const VOLUMETRY_DATABASE_MAX_MB = 1_000;
 
+/** Volume maximal des fichiers d'éléments stockés (actifs + corbeille, bucket R2), en Mo (2026-11-26) */
+export const VOLUMETRY_STORAGE_MAX_MB = 5_000;
+
 /** Part du seuil à partir de laquelle une table passe « proche du seuil » */
 export const VOLUMETRY_WARNING_RATIO = 0.8;
 

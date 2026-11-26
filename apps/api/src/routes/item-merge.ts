@@ -12,8 +12,12 @@
  * (utils/contentMerge.ts). GET /:id/merge-preview?targetItemId= renvoie le même calcul pour la modale.
  * Références externes (règle item-external-refs, 2026-11-13) : cumulées de la même façon sur l'élément gardé (fusion et
  * absorption), doublons sans casse retirés, refus 400 au-delà de 20 AVANT toute écriture (utils/externalRefsMerge.ts).
+ * Absorption (2026-11-26) : corps optionnel { childIds } = enfants choisis dans la modale « Absorber » ; les enfants
+ * non choisis restent enfants, intacts. Sans corps : tous les enfants directs (MCP, anciens appels).
  * Données sécurisées (2026-11-20) : rattachées à l'élément gardé avant la suppression des éléments réunis, auteur et
  * visibilité inchangés (même espace) — utils/itemSecrets.ts. Pas de plafond appliqué à la fusion.
+ * Fichiers (2026-11-26) : doublons écartés et images d'une description non gardée vont à la corbeille du stockage
+ * s'ils ne servent plus nulle part (utils/storageTrash.ts, motif MERGE).
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -24,6 +28,7 @@ import { canMemberManageItem } from '../utils/itemOwnership.js';
 import { loadContentMergePlan, applyContentMergePlan, ContentMergeError } from '../utils/contentMerge.js';
 import { loadExternalRefsMerge, applyExternalRefsMerge } from '../utils/externalRefsMerge.js';
 import { moveItemSecrets } from '../utils/itemSecrets.js';
+import { itemFileUrls, trashUnusedFiles } from '../utils/storageTrash.js';
 
 const mergeItemSchema = z.object({
   targetItemId: z.string(),
@@ -42,8 +47,10 @@ const mergeItemSchema = z.object({
   }),
 });
 
+// Corps optionnel : childIds = enfants directs choisis dans la modale « Absorber » ; absent = tous les enfants directs.
+// Un id qui n'est pas un enfant direct de l'élément est ignoré.
 const absorbChildrenSchema = z.object({
-  // No body needed — absorbs all direct children
+  childIds: z.array(z.string()).optional(),
 });
 
 export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
@@ -142,7 +149,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Contenus de la source ajoutés à la cible, après les siens dans chaque sorte, doublons retirés
-    await applyContentMergePlan(fastify.prisma, targetItemId, contentPlan);
+    const removedDuplicates = await applyContentMergePlan(fastify.prisma, targetItemId, contentPlan);
     await moveItemSecrets(fastify.prisma, [sourceId], targetItemId);
     await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
@@ -211,6 +218,12 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
       changes: { before: beforeTarget, after: { mergedFrom: sourceId } as Record<string, unknown> },
     });
 
+    // Doublons écartés, images d'une description non gardée : corbeille s'ils ne servent plus (2026-11-26)
+    await trashUnusedFiles(fastify.prisma, [{
+      urls: itemFileUrls([source], removedDuplicates ?? []), reason: 'MERGE', itemId: source.id, itemTitle: source.title,
+      spaceId: source.spaceId,
+    }], request.log);
+
     // Return updated target
     const result = await fastify.prisma.item.findUnique({
       where: { id: targetItemId },
@@ -245,10 +258,14 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /spaces/:spaceId/items/:id/absorb-children
-  // Absorb all direct children into this item
+  // Absorbe les enfants directs choisis (childIds) ou, sans corps, tous les enfants directs ; les autres restent enfants
   fastify.post<{
     Params: { spaceId: string; id: string };
+    Body: z.infer<typeof absorbChildrenSchema> | undefined;
   }>('/:id/absorb-children', async (request, reply) => {
+    const bodyParsed = absorbChildrenSchema.safeParse(request.body ?? {});
+    if (!bodyParsed.success) return reply.badRequest('Invalid childIds');
+    const chosen = bodyParsed.data.childIds ? new Set(bodyParsed.data.childIds) : null;
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') {
@@ -262,15 +279,17 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!parent) return reply.notFound('Item not found');
 
-    const children = await fastify.prisma.item.findMany({
+    const allChildren = await fastify.prisma.item.findMany({
       where: { parentId, spaceId: request.params.spaceId },
       orderBy: { position: 'asc' },
       include: { tags: true, relationsFrom: true, relationsTo: true },
     });
 
-    if (children.length === 0) {
+    if (allChildren.length === 0) {
       return reply.badRequest('No children to absorb');
     }
+    const children = chosen ? allChildren.filter((c) => chosen.has(c.id)) : allChildren;
+    if (children.length === 0) return reply.badRequest('No child selected');
     if (isLocked(parent) || children.some(isLocked)) return reply.forbidden(LOCKED_MESSAGE);
     if (membership.role === 'MEMBER'
       && ![parent, ...children].every(i => canMemberManageItem(i, request.user.userId))) {
@@ -282,7 +301,7 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
     if (contentPlan.tooMany) return reply.badRequest(new ContentMergeError(contentPlan).message);
     const refsPlan = await loadExternalRefsMerge(fastify.prisma, parentId, children.map(c => c.id));
     if (refsPlan.error) return reply.badRequest(refsPlan.error);
-    await applyContentMergePlan(fastify.prisma, parentId, contentPlan);
+    const removedDuplicates = await applyContentMergePlan(fastify.prisma, parentId, contentPlan);
     await moveItemSecrets(fastify.prisma, children.map((c) => c.id), parentId);
     await applyExternalRefsMerge(fastify.prisma, refsPlan);
 
@@ -390,6 +409,12 @@ export const itemMergeRoutes: FastifyPluginAsync = async (fastify) => {
       spaceId: request.params.spaceId,
       changes: { before: beforeParent, after: { absorbedChildren: children.map(c => c.id) } as Record<string, unknown> },
     });
+
+    // Doublons écartés : corbeille s'ils ne servent plus (descriptions reprises par le parent : gardées)
+    await trashUnusedFiles(fastify.prisma, [{
+      urls: itemFileUrls(children, removedDuplicates ?? []), reason: 'MERGE', itemId: parentId, itemTitle: parent.title,
+      spaceId: parent.spaceId,
+    }], request.log);
 
     const result = await fastify.prisma.item.findUnique({
       where: { id: parentId },

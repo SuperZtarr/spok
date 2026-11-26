@@ -5,7 +5,8 @@
  * isPublic des entrées d'audit antérieures est converti en visibility.
  * Alerte d'accumulation : plus ici (2026-11-18), voir utils/volumetryWatch.ts ; purges manuelles en fin de fichier.
  * Restauration d'un élément supprimé (unitaire et par lot, 2026-11-21) : recrée aussi ses contenus et données
- * sécurisées sauvegardés dans « before » (restoreItemContents / restoreItemSecrets). Liste : redactAuditChanges
+ * sécurisées sauvegardés dans « before » (restoreItemContents / restoreItemSecrets), fichiers sortis d'abord de la
+ * corbeille du stockage (restoreDeletedItemFiles, 2026-11-26 ; perdus → lostFiles). Liste : redactAuditChanges
  * (chiffrés jamais renvoyés). */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
@@ -13,7 +14,7 @@ import type { AuditAction, AuditEntity } from '@spok/shared';
 import { assignmentStamp } from '../../utils/assignment.js';
 import { isLocked, LOCKED_MESSAGE } from '../../utils/itemLock.js';
 import { communityRestoreData, restoredCommunityVisibility, spaceRestoreData } from '../../utils/audit.js';
-import { restoreItemContents } from '../../utils/itemContentCopy.js';
+import { restoreItemContents, restoreDeletedItemFiles } from '../../utils/itemContentCopy.js';
 import { restoreItemSecrets, redactAuditChanges } from '../../utils/itemSecrets.js';
 
 const querySchema = z.object({
@@ -343,8 +344,10 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             parentId,
           } as any,
         });
-        // Contenus et données sécurisées sauvegardés à la suppression (2026-11-21)
-        await restoreItemContents(fastify.prisma, restoredItem.id, before.contents);
+        // Contenus et données sécurisées sauvegardés à la suppression (2026-11-21) ; fichiers sortis de la corbeille
+        // du stockage d'abord (2026-11-26)
+        const lostFiles = await restoreDeletedItemFiles(fastify.prisma, before);
+        await restoreItemContents(fastify.prisma, restoredItem.id, before.contents, lostFiles);
         await restoreItemSecrets(fastify.prisma, restoredItem.id, before.secrets);
 
         await fastify.prisma.auditLog.create({
@@ -358,7 +361,10 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
 
-        return { success: true, restored: restoredItem, entity: 'Item' };
+        return {
+          success: true, restored: restoredItem, entity: 'Item', lostFiles: lostFiles.size,
+          ...(lostFiles.size ? { message: `${lostFiles.size} fichier(s) effacé(s) définitivement (délai de la corbeille passé) ne reviennent pas.` } : {}),
+        };
       }
 
       case 'Contribution': {
@@ -651,9 +657,13 @@ export const adminAuditLogsRoutes: FastifyPluginAsync = async (fastify) => {
                 parentId,
               } as any,
             });
-            await restoreItemContents(fastify.prisma, before.id as string, before.contents);
+            const lostFiles = await restoreDeletedItemFiles(fastify.prisma, before);
+            await restoreItemContents(fastify.prisma, before.id as string, before.contents, lostFiles);
             await restoreItemSecrets(fastify.prisma, before.id as string, before.secrets);
-            results.push({ logId: log.id, entity: 'Item', entityId: log.entityId, status: 'restored' });
+            results.push({
+              logId: log.id, entity: 'Item', entityId: log.entityId, status: 'restored',
+              ...(lostFiles.size ? { message: `${lostFiles.size} fichier(s) effacé(s) définitivement` } : {}),
+            });
             break;
           }
 

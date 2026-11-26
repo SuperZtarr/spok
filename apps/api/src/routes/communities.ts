@@ -23,7 +23,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { CommunityRole, CommunityDeletePreview } from '@spok/shared';
 import { validateUpload, COMMUNITY_CONTEXTS } from '@spok/shared';
 import { isR2Configured, processAvatar, processCover, uploadEntityImage, deleteFileFromR2 } from '../utils/r2.js';
-import { runDeletion, deleteCommunityTree } from '../utils/spaceDeletion.js';
+import { runDeletion, deleteCommunityTree, releaseDeletedFiles } from '../utils/spaceDeletion.js';
 import { createNotification, sendInvitationEmail } from '../utils/notifications.js';
 import { wrapEmailTemplate } from '../utils/emailTemplate.js';
 import { createInvitation as createInvitationHelper, autoJoinCommunitySpaces } from './invitations.js';
@@ -486,11 +486,13 @@ export const communitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = request.query.deleteChildren === 'true';
-    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID() };
+    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID(), released: [] };
 
     // Tout ou rien (utils/spaceDeletion.ts) : espaces, sous-espaces, items, membres, communauté
     await runDeletion(fastify.prisma, (tx) =>
       deleteCommunityTree(tx, community as unknown as { id: string } & Record<string, unknown>, deleteChildren, ctx));
+    // Fichiers des éléments supprimés : corbeille du stockage, après la transaction
+    await releaseDeletedFiles(fastify.prisma, ctx, request.log);
 
     return { success: true };
   });

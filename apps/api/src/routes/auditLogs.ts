@@ -2,12 +2,14 @@
  * Réservé à l'admin en mode admin, lecture et restauration (règle space-history-admin-only, décision Thomas 2026-11-06) :
  * ni les membres ni les propriétaires n'y accèdent. L'en-tête X-Admin-Mode ne suffit pas, le rôle global est relu en base.
  * Restauration d'un élément supprimé (2026-11-21) : recrée aussi ses contenus et données sécurisées (« before »).
+ * Ses fichiers sont d'abord sortis de la corbeille du stockage (2026-11-26) ; ceux effacés définitivement sont comptés
+ * dans lostFiles (réponse) et leurs contenus ne sont pas recréés.
  * Liste et détail : redactAuditChanges — chiffrés des données sécurisées jamais renvoyés. */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { AuditAction, AuditEntity } from '@spok/shared';
 import { checkSpaceAccess } from './items.js';
-import { restoreItemContents } from '../utils/itemContentCopy.js';
+import { restoreItemContents, restoreDeletedItemFiles } from '../utils/itemContentCopy.js';
 import { restoreItemSecrets, redactAuditChanges } from '../utils/itemSecrets.js';
 
 const querySchema = z.object({
@@ -332,8 +334,10 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
             parentId,
           } as any,
         });
-        // Contenus et données sécurisées sauvegardés à la suppression (2026-11-21)
-        await restoreItemContents(fastify.prisma, restoredItem.id, before.contents);
+        // Contenus et données sécurisées sauvegardés à la suppression (2026-11-21) ; fichiers sortis de la corbeille
+        // du stockage d'abord (2026-11-26) — un fichier effacé définitivement ne redonne pas de contenu
+        const lostFiles = await restoreDeletedItemFiles(fastify.prisma, before);
+        await restoreItemContents(fastify.prisma, restoredItem.id, before.contents, lostFiles);
         await restoreItemSecrets(fastify.prisma, restoredItem.id, before.secrets);
 
         // Create audit log for the restore action
@@ -354,7 +358,10 @@ export const auditLogsRoutes: FastifyPluginAsync = async (fastify) => {
         return {
           success: true,
           restored: restoredItem,
-          message: 'Item recreated successfully',
+          lostFiles: lostFiles.size,
+          message: lostFiles.size
+            ? `Élément restauré ; ${lostFiles.size} fichier(s) effacé(s) définitivement (délai de la corbeille passé) ne reviennent pas.`
+            : 'Item recreated successfully',
         };
       }
 

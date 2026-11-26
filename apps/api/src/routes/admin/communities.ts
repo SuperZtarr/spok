@@ -8,7 +8,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { CreateCommunityInput, CommunityDeletePreview } from '@spok/shared';
-import { runDeletion, deleteCommunityTree } from '../../utils/spaceDeletion.js';
+import { runDeletion, deleteCommunityTree, releaseDeletedFiles } from '../../utils/spaceDeletion.js';
 
 const createCommunitySchema = z.object({
   name: z.string().min(1),
@@ -288,11 +288,13 @@ export const adminCommunitiesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = (request.query as Record<string, string>).deleteChildren === 'true';
-    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID() };
+    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID(), released: [] };
 
     // Tout ou rien (utils/spaceDeletion.ts) : espaces, sous-espaces, items, membres, communauté
     await runDeletion(fastify.prisma, (tx) =>
       deleteCommunityTree(tx, community as unknown as { id: string } & Record<string, unknown>, deleteChildren, ctx));
+    // Fichiers des éléments supprimés : corbeille du stockage, après la transaction
+    await releaseDeletedFiles(fastify.prisma, ctx, request.log);
 
     return { success: true };
   });

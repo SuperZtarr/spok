@@ -35,6 +35,7 @@ export * from './externalRefs.js';
 export * from './searchCategories.js';
 export * from './exportFields.js';
 export * from './volumetry.js';
+export * from './storageTrash.js';
 export {
   ITEM_TYPE_REGISTRY, DEFAULT_ITEM_TYPE, getItemTypeDef, isItemType, itemTypesWhere, isComposedType, typeHasStatus,
 } from './typeRegistry.js';

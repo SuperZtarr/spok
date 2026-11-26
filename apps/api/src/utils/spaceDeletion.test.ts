@@ -1,6 +1,7 @@
 /*
  * Tests de utils/spaceDeletion.ts : ordre audit → suppression (FK audit_logs.spaceId), audits d'items
- * groupés, détachement sans deleteChildren, sous-espace de communauté non supprimé deux fois.
+ * groupés, détachement sans deleteChildren, sous-espace de communauté non supprimé deux fois ; contenus des éléments
+ * sauvegardés dans l'audit et fichiers relevés pour la corbeille du stockage (2026-11-26).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createMockPrisma, MockPrisma } from '../test/helpers.js'
@@ -59,6 +60,20 @@ describe('deleteSpaceTree', () => {
     expect(rows.map((r: any) => r.entityId)).toEqual(['i1', 'i2'])
     expect(rows[0]).toMatchObject({ action: 'DELETE', entity: 'Item', spaceId: 'root', userId: 'u1', batchId: 'b1' })
     expect(callOrder(db.auditLog.createMany, () => true)).toBeLessThan(callOrder(db.item.deleteMany, () => true))
+  })
+
+  it('contenus sauvegardés dans l\'audit (restauration complète) et fichiers relevés pour la corbeille du stockage', async () => {
+    db.item.findMany.mockResolvedValue([{ id: 'i1', spaceId: 'root', title: 'Photo', url: null, description: null }])
+    db.itemContent.findMany.mockResolvedValue([{ id: 'c1', itemId: 'i1', kind: 'IMAGE', url: 'https://r2.test/items/i1/a.webp', previewUrl: null, position: 0 }])
+    const released: any[] = []
+
+    await deleteSpaceTree(db as any, space('root'), false, { ...ctx, released })
+
+    const row = db.auditLog.createMany.mock.calls[0][0].data[0]
+    expect(row.changes.before.contents).toEqual([expect.objectContaining({ id: 'c1', url: 'https://r2.test/items/i1/a.webp' })])
+    expect(released).toEqual([expect.objectContaining({
+      urls: ['https://r2.test/items/i1/a.webp'], reason: 'SPACE_DELETED', itemId: 'i1', itemTitle: 'Photo', spaceId: 'root',
+    })])
   })
 
   it('sans deleteChildren : espace racine → enfants directs à la racine, seuls les items de l\'espace supprimés', async () => {

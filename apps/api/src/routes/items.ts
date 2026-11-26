@@ -11,9 +11,13 @@
  * liste et dÃ©tail renvoient assignmentReceipt (computeAssignmentReceipts) â€” cf. utils/assignment.ts.
  * Verrou de sÃ©ance (copies lockedAt) : cf. utils/itemLock.ts â€” PATCH (organisation seule), DELETE (OWNER),
  * split refusÃ©, propagation de statut ignore les enfants verrouillÃ©s.
+ * Split (2026-11-26) : corps optionnel { sections } = titres choisis dans la modale « Éclater » ; découpage par
+ * planDescriptionSplit (@spok/shared), les sections non choisies restent dans la description.
  * CommunautÃ© publique = visibility !== 'PRIVATE' uniquement (isPublic dÃ©prÃ©ciÃ©, jamais lu).
  * DELETE (2026-11-21) : l'Ã©tat « before » de l'audit porte aussi contents et secrets (chiffrÃ©s) de chaque Ã©lÃ©ment
  * supprimÃ©, lus AVANT la cascade â€” la restauration les recrÃ©e (utils/itemContentCopy.ts, utils/itemSecrets.ts).
+ * Fichiers (2026-11-26) : après la suppression, ceux que plus rien n'utilise vont à la corbeille du stockage
+ * (utils/storageTrash.ts, 60 jours) ; la restauration les remet en place.
  * MEMBER : modifie/supprime les items qu'il a crÃ©Ã©s OU qui lui sont assignÃ©s (canMemberManageItem, utils/itemOwnership.ts).
  * Dates liÃ©es au statut (PATCH et propagation aux descendants) : utils/statusDates.ts â€” source unique,
  * tous chemins confondus (modale, menu â‹¯, Kanban, Today, MCP) ; ne complÃ¨te que les dates vides.
@@ -59,6 +63,7 @@ import { itemQuestionReadRoutes, itemQuestionWriteRoutes } from './item-question
 import { itemContentRoutes } from './item-contents.js';
 import { itemSecretRoutes } from './item-secrets.js';
 import { snapshotItemContents } from '../utils/itemContentCopy.js';
+import { itemFileUrls, trashUnusedFiles, type ReleasedFiles } from '../utils/storageTrash.js';
 import { snapshotItemSecrets } from '../utils/itemSecrets.js';
 import { itemHistoryRoutes } from './item-history.js';
 
@@ -71,7 +76,7 @@ const CONTENTS_LIST_SELECT = {
 };
 import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
 import { invisibleTagIds } from '../utils/tagScope.js';
-import { ITEM_TYPES, isItemType, statusAllowedForType, defaultStatusForType, cleanExternalRefs, externalRefsError } from '@spok/shared';
+import { ITEM_TYPES, isItemType, statusAllowedForType, defaultStatusForType, cleanExternalRefs, externalRefsError, splitDescriptionSections, planDescriptionSplit } from '@spok/shared';
 
 // Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
@@ -993,7 +998,9 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Split item description by headings into child items
   // Contenus (images, fichiers, liens, schémas) : restent sur l'élément d'origine, enfants sans contenu (règle item-split-keeps-contents)
-  fastify.post<{ Params: { spaceId: string; id: string } }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // Corps optionnel { sections: number[] } (indices des titres choisis dans la modale) ; absent = toutes les sections.
+  // Les sections non choisies restent dans la description, titre compris (planDescriptionSplit, @spok/shared — règle item-split-sections).
+  fastify.post<{ Params: { spaceId: string; id: string }; Body: { sections?: number[] } | undefined }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') return reply.forbidden('Insufficient permissions');
@@ -1005,26 +1012,15 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
     if (!item.description) return reply.badRequest('Item has no description');
 
-    // Parse HTML: split on H2/H3 (seuls niveaux disponibles dans l'Ã©diteur)
-    const html = item.description;
-    const headingRegex = /<h([2-3])[^>]*>([\s\S]*?)<\/h[2-3]>/gi;
-    const matches: { index: number; end: number; title: string }[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = headingRegex.exec(html)) !== null) {
-      const title = match[2].replace(/<[^>]+>/g, '').trim();
-      matches.push({ index: match.index, end: match.index + match[0].length, title });
-    }
-
-    if (matches.length === 0) return reply.badRequest('No H2/H3 headings found in description');
-
-    // Content before first heading stays in parent
-    const preContent = html.slice(0, matches[0].index).trim();
-
-    // Sections: one child per heading
-    const sections = matches.map((m, i) => ({
-      title: m.title,
-      description: html.slice(m.end, i + 1 < matches.length ? matches[i + 1].index : html.length).trim(),
-    }));
+    // Découpage H2/H3 (seuls niveaux disponibles dans l'éditeur) : source unique partagée avec l'aperçu de la modale
+    const bodyParsed = z.object({ sections: z.array(z.number().int().min(0)).optional() }).safeParse(request.body ?? {});
+    if (!bodyParsed.success) return reply.badRequest('Invalid sections');
+    const { sections: allSections } = splitDescriptionSections(item.description);
+    if (allSections.length === 0) return reply.badRequest('No H2/H3 headings found in description');
+    const plan = planDescriptionSplit(item.description, bodyParsed.data.sections);
+    if (plan.children.length === 0) return reply.badRequest('No section selected');
+    const sections = plan.children;
+    const preContent = plan.parentDescription;
 
     // Get max position among existing children
     const siblings = await fastify.prisma.item.findMany({
@@ -1040,8 +1036,8 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         const pos = nextPosition++;
         return fastify.prisma.item.create({
           data: {
-            title: section.title || 'Sans titre',
-            description: section.description || null,
+            title: section.title,
+            description: section.description,
             type: 'UNDEFINED',
             spaceId: item.spaceId,
             parentId: item.id,
@@ -1053,10 +1049,10 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
       })
     );
 
-    // Update parent description (keep only pre-heading content)
+    // Description du parent : texte d'avant le premier titre + sections non choisies
     await fastify.prisma.item.update({
       where: { id: item.id },
-      data: { description: preContent || null },
+      data: { description: preContent },
     });
 
     return { children, preContent };
@@ -1098,6 +1094,7 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const deleteChildren = request.query.deleteChildren === 'true';
     const batchId = crypto.randomUUID();
+    const released: ReleasedFiles[] = [];
 
     if (deleteChildren) {
       // Recursively collect all descendant IDs
@@ -1135,6 +1132,14 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         await fastify.prisma.item.deleteMany({
           where: { id: { in: descendantIds } },
         });
+
+        // Fichiers des descendants : à la corbeille après la suppression (utils/storageTrash.ts, 2026-11-26)
+        for (const descendant of descendants) {
+          released.push({
+            urls: itemFileUrls([descendant], (descContents.get(descendant.id) ?? []) as { url?: string | null; previewUrl?: string | null }[]),
+            reason: 'ITEM_DELETED', itemId: descendant.id, itemTitle: descendant.title, spaceId: descendant.spaceId,
+          });
+        }
 
         // Audit log for EACH descendant individually
         for (const descendant of descendants) {
@@ -1183,6 +1188,13 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
         before: beforeState,
       },
     });
+
+    // Fichiers que plus rien n'utilise : corbeille du stockage (60 jours, restaurables avec l'élément)
+    released.push({
+      urls: itemFileUrls([item], (ownContents.get(item.id) ?? []) as { url?: string | null; previewUrl?: string | null }[]),
+      reason: 'ITEM_DELETED', itemId: item.id, itemTitle: item.title, spaceId: item.spaceId,
+    });
+    await trashUnusedFiles(fastify.prisma, released, request.log);
 
     return { success: true };
   });

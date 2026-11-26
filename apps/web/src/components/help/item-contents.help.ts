@@ -10,9 +10,10 @@
    Données sécurisées (2026-11-20) : élément secrets (zone item-contents:secrets, présente seulement si l'élément en
    porte — étape sautée sinon), rappels secret* vérifiés dans apps/api/src/routes/item-secrets.ts, champs secretValue /
    secretVisibility, annonce item-secrets (sans date).
+   Retrait (2026-11-26) : le fichier part à la corbeille du stockage (délai STORAGE_TRASH_GRACE_DAYS, registre shared).
    L'annonce `item-contents` est sans date : la session MEP la date au déploiement (règles : skill spok-doc). */
 import type { HelpEntry } from '../../help/types';
-import { ITEM_SECRETS_MAX } from '@spok/shared';
+import { ITEM_SECRETS_MAX, STORAGE_TRASH_GRACE_DAYS } from '@spok/shared';
 import { DOCUMENT_MAX_MB } from '../../lib/uploadRules';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -85,7 +86,7 @@ export const help: HelpEntry = {
     moveUp: 'Place ce contenu un cran avant, parmi ceux de sa sorte. L\'ordre est enregistré tout de suite.',
     moveDown: 'Place ce contenu un cran après, parmi ceux de sa sorte. L\'ordre est enregistré tout de suite.',
     removeHint: 'Retirer ce contenu de l\'élément (une confirmation est demandée).',
-    remove: 'Le contenu est retiré de l\'élément tout de suite. Un fichier envoyé est effacé du stockage s\'il n\'est plus utilisé ailleurs. Les autres contenus et l\'élément restent.',
+    remove: `Le contenu est retiré de l'élément tout de suite. Un fichier envoyé qui n'est plus utilisé ailleurs n'est plus accessible à son adresse ; il est gardé ${STORAGE_TRASH_GRACE_DAYS} jours dans la corbeille du stockage, puis effacé. Les autres contenus et l'élément restent.`,
     badges: 'Contenus de l\'élément : nombre d\'images, de fichiers, de liens et de schémas. La miniature montre déjà la première image (sinon le premier schéma, sinon la première page d\'un fichier), elle n\'est pas comptée. Ouvrez la fiche pour les voir.',
   },
   fields: {

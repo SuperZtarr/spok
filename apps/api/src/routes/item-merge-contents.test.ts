@@ -45,7 +45,9 @@ describe('Fusion et absorption — contenus', () => {
       content('s2', 'src', 'LINK', 'https://Doc.fr/'),
       content('t2', 'tgt', 'LINK', 'https://doc.fr'),
     ]
-    prisma.itemContent.findMany.mockImplementation(async ({ where }: any) => contents.filter((x) => where.itemId.in.includes(x.itemId)))
+    prisma.itemContent.findMany.mockImplementation(async ({ where }: any) => where.itemId
+      ? contents.filter((x) => where.itemId.in.includes(x.itemId))
+      : contents.filter((x) => where.id.in.includes(x.id))) // doublons relus avant retrait (corbeille du stockage)
   })
 
   it('fusion : contenus de la source rattachés à la cible après les siens, doublon retiré', async () => {
@@ -88,5 +90,37 @@ describe('Fusion et absorption — contenus', () => {
     const updateOrder = prisma.itemContent.update.mock.invocationCallOrder[0]
     const deleteOrder = prisma.item.delete.mock.invocationCallOrder[0]
     expect(updateOrder).toBeLessThan(deleteOrder)
+  })
+})
+
+describe('Absorption — enfants choisis (modale « Absorber »)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ id: 'm1', userId: 'test-user-id', spaceId: SPACE_ID, role: 'OWNER' })
+    prisma.item.findFirst.mockResolvedValue(item('parent'))
+    prisma.item.findMany.mockResolvedValue([item('c1', { parentId: 'parent', title: 'Un' }), item('c2', { parentId: 'parent', title: 'Deux' })])
+    prisma.itemContent.findMany.mockResolvedValue([])
+  })
+
+  it('n\'absorbe que les enfants choisis, les autres restent enfants', async () => {
+    const res = await app.inject({ method: 'POST', url: `/spaces/${SPACE_ID}/items/parent/absorb-children`, headers: auth(),
+      payload: { childIds: ['c2', 'etranger'] } })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.item.delete).toHaveBeenCalledTimes(1)
+    expect(prisma.item.delete).toHaveBeenCalledWith({ where: { id: 'c2' } })
+    const desc = prisma.item.update.mock.calls.at(-1)[0].data.description
+    expect(desc).toContain('Deux')
+    expect(desc).not.toContain('Un')
+  })
+
+  it('aucun enfant choisi → 400, rien n\'est supprimé', async () => {
+    const res = await app.inject({ method: 'POST', url: `/spaces/${SPACE_ID}/items/parent/absorb-children`, headers: auth(),
+      payload: { childIds: [] } })
+    expect(res.statusCode).toBe(400)
+    expect(prisma.item.delete).not.toHaveBeenCalled()
   })
 })

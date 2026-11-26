@@ -11,10 +11,11 @@
  *                                        excerpt (début du texte), absents si le format ne s'y prête pas ; jamais
  *                                        bloquant (aperçu des fichiers, 2026-11-11).
  * - PATCH  /:id/contents/:contentId      { name?, url? (LINK/IMAGE), xml? (DIAGRAM) }.
- * - DELETE /:id/contents/:contentId      → le fichier R2 (et son aperçu) n'est effacé que s'il est rangé sous items/<id>/ (fichier de
- *                                        CET élément — une adresse saisie ne vise jamais l'objet d'un autre) et n'est
- *                                        plus utilisé par aucun autre contenu ni par la colonne items.url (gardée en
- *                                        sauvegarde depuis le lot 4 : une restauration doit retrouver son fichier).
+ * - DELETE /:id/contents/:contentId      → le fichier stocké (et son aperçu) part à la corbeille du stockage
+ *                                        (utils/storageTrash.ts, 2026-11-26 : adresse coupée, effacé après 60 jours)
+ *                                        s'il n'est plus utilisé nulle part (contenu, items.url, description,
+ *                                        contribution), quel que soit son dossier (fichier déplacé ou hérité d'une fusion
+ *                                        compris). Seules les clés items/… sont concernées : jamais avatar ni couverture.
  * - POST   /:id/contents/:contentId/preview (2026-11-25) → aperçu d'un LIEN (image du site, utils/linkPreview.ts, protégé
  *                                        contre les SSRF) récupéré tout de suite ; aussi lancé en tâche de fond à l'ajout
  *                                        d'un lien et au changement de son adresse (ancien aperçu effacé).
@@ -44,6 +45,7 @@ import { isLocked, LOCKED_MESSAGE } from '../utils/itemLock.js';
 import { storeFilePreview } from '../utils/filePreview.js';
 import { storeLinkPreview } from '../utils/linkPreview.js';
 import { createAuditLog } from '../utils/audit.js';
+import { trashUnusedFiles } from '../utils/storageTrash.js';
 
 type P = { spaceId: string; id: string };
 type PC = P & { contentId: string };
@@ -95,8 +97,10 @@ async function writableItem(fastify: any, request: any, reply: any) {
   return item;
 }
 
-/** Efface un fichier du stockage s'il est rangé sous items/<itemId>/ et n'est plus utilisé nulle part
- *  (adresse ou aperçu d'un contenu — une duplication partage les deux —, ou ancienne colonne items.url). */
+/** Aperçu technique remplacé (PNG d'un schéma redessiné, image d'aperçu d'un lien) : effacé tout de suite, sans
+ *  corbeille, s'il est rangé sous items/<itemId>/ et n'est plus utilisé nulle part (adresse ou aperçu d'un contenu —
+ *  une duplication partage les deux —, ou ancienne colonne items.url). Les fichiers de l'utilisateur passent par
+ *  utils/storageTrash.ts. */
 async function deleteIfUnused(prisma: any, url: string | null | undefined, itemId: string) {
   // Seulement un fichier rangé sous le dossier de CET élément : une adresse saisie ne doit jamais permettre
   // d'effacer l'objet d'un autre élément, d'un avatar ou d'une couverture
@@ -284,17 +288,18 @@ export const itemContentRoutes: FastifyPluginAsync = async (fastify) => {
     return { ...(fresh ?? content), previewFound: !!stored };
   });
 
-  // Suppression (fichier effacé du stockage seulement s'il n'est plus utilisé nulle part)
+  // Suppression (fichier mis à la corbeille du stockage seulement s'il n'est plus utilisé nulle part)
   fastify.delete<{ Params: PC }>('/:id/contents/:contentId', async (request, reply) => {
     const item = await writableItem(fastify, request, reply);
     if (!item) return reply;
     const content = await fastify.prisma.itemContent.findFirst({ where: { id: request.params.contentId, itemId: item.id } });
     if (!content) return reply.notFound('Contenu introuvable');
     await fastify.prisma.itemContent.delete({ where: { id: content.id } });
-    // Ancien champ resynchronisé AVANT le contrôle d'usage : sinon Item.url garderait le fichier « utilisé »
     await touchItem(fastify.prisma, item.id, request.user.userId);
-    await deleteIfUnused(fastify.prisma, content.url, item.id);
-    await deleteIfUnused(fastify.prisma, content.previewUrl, item.id);
+    // Fichier et aperçu : à la corbeille s'ils ne servent plus nulle part, quel que soit leur dossier (2026-11-26)
+    await trashUnusedFiles(fastify.prisma, [{
+      urls: [content.url, content.previewUrl], reason: 'CONTENT_REMOVED', itemId: item.id, itemTitle: item.title, spaceId: item.spaceId,
+    }], request.log);
     await logContentChange(fastify.prisma, request, item.id, { op: 'remove', kind: content.kind, name: contentLabel(content) });
     return reply.status(204).send();
   });

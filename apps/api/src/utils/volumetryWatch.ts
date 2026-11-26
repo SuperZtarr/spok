@@ -5,16 +5,22 @@
    - startVolumetryWatch(prisma, log) : lancée au démarrage de l'API (index.ts), mesure 1 min après puis toutes les
      VOLUMETRY_WATCH_INTERVAL_HOURS heures ; pour chaque seuil dépassé, notifie (AUDIT_ALERT) les admins qui n'ont pas
      déjà une alerte non lue pour la même table (metadata.table). Jamais de purge : elle reste manuelle.
+   Stockage de fichiers (2026-11-26) : à chaque passage, la corbeille du stockage efface les fichiers dont le délai de
+   grâce est passé (seule suppression automatique, décidée par Thomas : utils/storageTrash.ts), puis le volume du bucket
+   (actifs + corbeille) est mesuré et alerte au-delà de VOLUMETRY_STORAGE_MAX_MB (metadata.table = STORAGE_KEY).
    Seuils : registre @spok/shared constants/volumetry.ts, jamais recopiés ici. Les noms de tables injectés dans le SQL
    viennent du registre (constantes) ou de pg_stat_user_tables, jamais d'une saisie. */
 import type { PrismaClient } from '@spok/database';
 import {
   VOLUMETRY_WATCHED_TABLES, VOLUMETRY_DATABASE_MAX_MB, VOLUMETRY_WATCH_INTERVAL_HOURS, findWatchedTable,
-  volumetryLevel, type VolumetryLevel, type VolumetryEntry, type VolumetryReport,
+  volumetryLevel, type VolumetryLevel, type VolumetryEntry, type VolumetryReport, type StorageReport,
 } from '@spok/shared';
+import { purgeExpiredTrash, measureStorage } from './storageTrash.js';
 
 /** Pseudo-table de la base entière, dans le rapport et dans metadata.table des alertes */
 export const DATABASE_KEY = '__database__';
+/** Pseudo-table du stockage de fichiers (bucket), dans metadata.table des alertes */
+export const STORAGE_KEY = '__storage__';
 
 export interface VolumetryRaw {
   tables: Array<{ table: string; rows: number; sizeBytes: number }>;
@@ -95,6 +101,7 @@ export function alertsToSend(
   report: VolumetryReport,
   adminIds: string[],
   unreadByTable: Record<string, Set<string>>,
+  storage?: StorageReport,
 ): VolumetryAlert[] {
   const exceeded: Array<{ table: string; title: string; message: string }> = report.tables
     .filter((t) => t.level === 'exceeded')
@@ -110,13 +117,23 @@ export function alertsToSend(
       message: `La base pèse ${report.database.sizeMB} Mo (seuil : ${report.database.maxMB} Mo).`,
     });
   }
+  if (storage?.level === 'exceeded') {
+    exceeded.push({
+      table: STORAGE_KEY,
+      title: 'Volumétrie : stockage de fichiers',
+      message: `Les fichiers des éléments pèsent ${Math.round((storage.active.sizeMB + storage.trash.sizeMB) * 100) / 100} Mo, corbeille comprise (seuil : ${storage.maxMB} Mo).`,
+    });
+  }
   return exceeded.flatMap((e) =>
     adminIds.filter((id) => !unreadByTable[e.table]?.has(id)).map((userId) => ({ ...e, userId })),
   );
 }
 
-export async function runVolumetryWatch(prisma: PrismaClient): Promise<number> {
+export async function runVolumetryWatch(prisma: PrismaClient, log?: { warn?: (o: unknown, msg: string) => void }): Promise<number> {
+  // Corbeille du stockage : fichiers dont le délai de grâce est passé effacés définitivement (2026-11-26)
+  await purgeExpiredTrash(prisma, log).catch((err) => log?.warn?.(err, 'Purge de la corbeille du stockage en échec'));
   const report = await measureVolumetry(prisma);
+  const storage = await measureStorage().catch(() => undefined);
   const admins = await prisma.user.findMany({ where: { globalRole: 'ADMIN' }, select: { id: true } });
   const unread = await prisma.notification.findMany({
     where: { type: 'AUDIT_ALERT', read: false },
@@ -128,7 +145,7 @@ export async function runVolumetryWatch(prisma: PrismaClient): Promise<number> {
     if (!table) continue;
     (unreadByTable[table] ??= new Set()).add(n.userId);
   }
-  const alerts = alertsToSend(report, admins.map((a) => a.id), unreadByTable);
+  const alerts = alertsToSend(report, admins.map((a) => a.id), unreadByTable, storage);
   if (alerts.length) {
     await prisma.notification.createMany({
       data: alerts.map((a) => ({
@@ -145,8 +162,8 @@ export async function runVolumetryWatch(prisma: PrismaClient): Promise<number> {
 }
 
 /** Surveillance périodique ; minuteurs non bloquants (unref) pour ne pas retenir l'arrêt du processus. */
-export function startVolumetryWatch(prisma: PrismaClient, log: { error: (o: unknown, msg: string) => void }) {
-  const tick = () => { runVolumetryWatch(prisma).catch((err) => log.error(err, 'Surveillance de la volumétrie en échec')); };
+export function startVolumetryWatch(prisma: PrismaClient, log: { error: (o: unknown, msg: string) => void; warn?: (o: unknown, msg: string) => void }) {
+  const tick = () => { runVolumetryWatch(prisma, log).catch((err) => log.error(err, 'Surveillance de la volumétrie en échec')); };
   const first = setTimeout(tick, 60_000);
   const every = setInterval(tick, VOLUMETRY_WATCH_INTERVAL_HOURS * 3600_000);
   first.unref();

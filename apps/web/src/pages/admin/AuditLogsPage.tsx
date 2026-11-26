@@ -2,7 +2,8 @@
    Aide utilisateur : fiche pages/help/admin-audit.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint)
    sur Restaurer / Restaurer le batch / Purger (irréversible).
    Filtres : entité Tag et action Fusion (gestion des tags dans /admin/tags, 2026-11-11 — journal seulement, pas de
-   restauration d'un tag). */
+   restauration d'un tag).
+   Restauration d'un élément (2026-11-26) : fichiers perdus (corbeille du stockage échue) signalés par une alerte. */
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2, ChevronDown, ChevronRight, Loader2, Database, Filter, Copy, Check } from 'lucide-react';
@@ -103,8 +104,10 @@ export function AuditLogsPage() {
 
   const restoreMutation = useMutation({
     mutationFn: (id: string) => adminApi.auditLogs.restore(id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
+      // Fichiers effacés définitivement (délai de la corbeille du stockage passé) : le dire, l'élément revient sans eux
+      if (data?.lostFiles) alert(data.message ?? `${data.lostFiles} fichier(s) effacé(s) définitivement ne reviennent pas.`);
     },
   });
 

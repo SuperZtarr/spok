@@ -3,7 +3,7 @@
    communauté — 2026-10-29). */
 import { FastifyPluginAsync } from 'fastify';
 import type { SpaceDeletePreview } from '@spok/shared';
-import { runDeletion, deleteSpaceTree } from '../../utils/spaceDeletion.js';
+import { runDeletion, deleteSpaceTree, releaseDeletedFiles } from '../../utils/spaceDeletion.js';
 
 interface ListSpacesQuery {
   page?: number;
@@ -336,11 +336,13 @@ export const adminSpacesRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const deleteChildren = (request.query as Record<string, string>).deleteChildren === 'true';
-    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID() };
+    const ctx = { userId: request.user.userId, batchId: crypto.randomUUID(), released: [] };
 
     // Tout ou rien (utils/spaceDeletion.ts)
     await runDeletion(fastify.prisma, (tx) =>
       deleteSpaceTree(tx, space as unknown as { id: string } & Record<string, unknown>, deleteChildren, ctx));
+    // Fichiers des éléments supprimés : corbeille du stockage, après la transaction
+    await releaseDeletedFiles(fastify.prisma, ctx, request.log);
 
     return { success: true };
   });

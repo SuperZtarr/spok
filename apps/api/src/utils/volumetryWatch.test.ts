@@ -1,7 +1,7 @@
 /* Volumétrie (utils/volumetryWatch.ts, 2026-11-18) : rapport (niveaux, tri, tables hors registre) et alertes (une par
    seuil dépassé et par admin, pas de deuxième alerte tant que la première n'est pas lue). Fonctions pures, sans base. */
 import { describe, it, expect } from 'vitest';
-import { buildVolumetryReport, alertsToSend, DATABASE_KEY } from './volumetryWatch.js';
+import { buildVolumetryReport, alertsToSend, DATABASE_KEY, STORAGE_KEY } from './volumetryWatch.js';
 
 const MB = 1024 * 1024;
 
@@ -46,5 +46,16 @@ describe('buildVolumetryReport', () => {
       [DATABASE_KEY, 'a1'],
       [DATABASE_KEY, 'a2'],
     ]);
+  });
+
+  it('stockage de fichiers au-delà du seuil : une alerte par admin sans alerte non lue (2026-11-26)', () => {
+    const storage = {
+      measuredAt: '', active: { count: 10, sizeMB: 4000 }, trash: { count: 2, sizeMB: 2000 },
+      maxMB: 5000, level: 'exceeded' as const, graceDays: 60,
+    };
+    const alerts = alertsToSend(report, ['a1', 'a2'], { audit_logs: new Set(['a1', 'a2']), [DATABASE_KEY]: new Set(['a1', 'a2']), [STORAGE_KEY]: new Set(['a1']) }, storage);
+    expect(alerts.map((a) => [a.table, a.userId])).toEqual([[STORAGE_KEY, 'a2']]);
+    expect(alerts[0].message).toContain('6000 Mo');
+    expect(alertsToSend(report, ['a1'], { audit_logs: new Set(['a1']), [DATABASE_KEY]: new Set(['a1']) }, { ...storage, level: 'ok' })).toEqual([]);
   });
 });

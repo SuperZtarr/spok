@@ -4,6 +4,7 @@
  * validateUpload, ordre par sorte, suppression qui garde un fichier encore utilisé) et renvoi avec l'élément
  * (détail complet, liste sans xml), aperçu PNG d'un schéma (previewOf, lot 2), aperçu d'un fichier (extrait, effacé
  * avec le fichier — 2026-11-11). Stockage R2 simulé (utils/r2.js) ; rôles pilotés par spaceMembership.findUnique.
+ * Retrait (2026-11-26) : fichier et aperçu confiés à la corbeille du stockage (utils/storageTrash.js simulé).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
@@ -32,6 +33,10 @@ vi.mock('../utils/r2.js', () => ({
   deleteFileFromR2: r2.deleteFileFromR2,
   deleteImageFromR2: vi.fn(),
 }))
+
+// Corbeille du stockage (2026-11-26) : ses règles ont leurs propres tests (utils/storageTrash.test.ts)
+const storage = vi.hoisted(() => ({ trashUnusedFiles: vi.fn().mockResolvedValue(0) }))
+vi.mock('../utils/storageTrash.js', () => storage)
 
 // Aperçu des liens : jamais de réseau dans les tests (utils/linkPreview.ts a ses propres tests)
 const linkPreview = vi.hoisted(() => ({ storeLinkPreview: vi.fn().mockResolvedValue(null) }))
@@ -128,15 +133,16 @@ describe('Routes contenus', () => {
     expect(prisma.itemContent.create).toHaveBeenLastCalledWith({ data: expect.objectContaining({ excerpt: null, previewUrl: null }) })
   })
 
-  it('suppression d\'un fichier : son aperçu est effacé aussi', async () => {
+  it('suppression d\'un fichier : fichier et aperçu confiés à la corbeille du stockage, jamais effacés directement', async () => {
     prisma.itemContent.findFirst.mockResolvedValue({
       id: 'c1', itemId: 'i1', kind: 'FILE', url: 'https://r2.test/items/i1/a.pdf', previewUrl: 'https://r2.test/items/i1/p.webp',
     })
-    prisma.item.count.mockResolvedValue(0)
-    await app.inject({ method: 'DELETE', url: `${BASE}/c1`, headers: auth() })
-    expect(r2.deleteFileFromR2).toHaveBeenCalledWith('https://r2.test/items/i1/a.pdf')
-    expect(r2.deleteFileFromR2).toHaveBeenCalledWith('https://r2.test/items/i1/p.webp')
-    expect(prisma.itemContent.count).toHaveBeenCalledWith({ where: { OR: [{ url: 'https://r2.test/items/i1/p.webp' }, { previewUrl: 'https://r2.test/items/i1/p.webp' }] } })
+    const res = await app.inject({ method: 'DELETE', url: `${BASE}/c1`, headers: auth() })
+    expect(res.statusCode).toBe(204)
+    expect(storage.trashUnusedFiles).toHaveBeenCalledWith(expect.anything(), [expect.objectContaining({
+      urls: ['https://r2.test/items/i1/a.pdf', 'https://r2.test/items/i1/p.webp'], reason: 'CONTENT_REMOVED', itemId: 'i1',
+    })], expect.anything())
+    expect(r2.deleteFileFromR2).not.toHaveBeenCalled()
   })
 
   it('aperçu d\'un schéma (previewOf) : remplace l\'url du schéma sans créer de contenu', async () => {
@@ -172,18 +178,14 @@ describe('Routes contenus', () => {
     expect(prisma.itemContent.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { name: 'Nouveau nom' } })
   })
 
-  it('suppression : garde le fichier encore utilisé par Item.url, l\'efface sinon', async () => {
+  it('suppression : le contenu est retiré AVANT de confier son fichier à la corbeille (sinon il compterait comme utilisé)', async () => {
     const content = { id: 'c1', itemId: 'i1', kind: 'IMAGE', url: 'https://r2.test/items/i1/a.webp' }
     prisma.itemContent.findFirst.mockResolvedValue(content)
-    prisma.item.count.mockResolvedValue(1)
-    const kept = await app.inject({ method: 'DELETE', url: `${BASE}/c1`, headers: auth() })
-    expect(kept.statusCode).toBe(204)
+    const res = await app.inject({ method: 'DELETE', url: `${BASE}/c1`, headers: auth() })
+    expect(res.statusCode).toBe(204)
     expect(prisma.itemContent.delete).toHaveBeenCalledWith({ where: { id: 'c1' } })
-    expect(r2.deleteFileFromR2).not.toHaveBeenCalled()
-
-    prisma.item.count.mockResolvedValue(0)
-    await app.inject({ method: 'DELETE', url: `${BASE}/c1`, headers: auth() })
-    expect(r2.deleteFileFromR2).toHaveBeenCalledWith(content.url)
+    expect(prisma.itemContent.delete.mock.invocationCallOrder[0])
+      .toBeLessThan(storage.trashUnusedFiles.mock.invocationCallOrder[0])
   })
 
   it('suppression : n\'efface jamais un objet du stockage hors du dossier de l\'élément (adresse saisie)', async () => {

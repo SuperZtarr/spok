@@ -11,15 +11,29 @@
  * - Audits des items en un seul createMany (une transaction longue risque le délai d'expiration).
  * - Sans cascade, les sous-espaces directs remontent d'un niveau : rattachés au parent de l'espace
  *   supprimé (racine s'il n'en a pas), communauté inchangée (décision Thomas 2026-10-16).
+ * - Éléments supprimés (2026-11-26) : leurs contenus et données sécurisées sont sauvegardés dans l'audit (restauration
+ *   complète, comme la suppression d'un élément seul) ; leurs fichiers sont relevés dans ctx.released et la route les
+ *   confie à la corbeille du stockage APRÈS la transaction (releaseDeletedFiles, utils/storageTrash.ts).
  */
 import type { PrismaClient, Prisma } from '@spok/database';
 import { createAuditLog, createAuditLogs, serializeItemForAudit, serializeSpaceForAudit, serializeCommunityForAudit } from './audit.js';
+import { snapshotItemContents } from './itemContentCopy.js';
+import { snapshotItemSecrets } from './itemSecrets.js';
+import { itemFileUrls, trashUnusedFiles, type ReleasedFiles } from './storageTrash.js';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
 interface DeletionContext {
   userId: string;
   batchId: string;
+  /** Rempli pendant la suppression : fichiers des éléments supprimés, à confier à la corbeille du stockage APRÈS la
+   *  transaction (releaseDeletedFiles) — le stockage n'est pas transactionnel. */
+  released?: ReleasedFiles[];
+}
+
+/** Après la transaction : fichiers des éléments supprimés à la corbeille du stockage (ne lève jamais). */
+export async function releaseDeletedFiles(prisma: PrismaClient, ctx: DeletionContext, log?: { warn?: (o: unknown, msg: string) => void }) {
+  if (ctx.released?.length) await trashUnusedFiles(prisma, ctx.released, log);
 }
 
 /** Délai des transactions de suppression (défaut Prisma : 5 s, trop court pour un gros espace). */
@@ -49,6 +63,9 @@ async function deleteItemsOfSpaces(db: Db, spaceIds: string[], ctx: DeletionCont
   const itemIds = items.map((i) => i.id);
   await db.contribution.deleteMany({ where: { itemId: { in: itemIds } } });
   await db.itemRelation.deleteMany({ where: { OR: [{ fromItemId: { in: itemIds } }, { toItemId: { in: itemIds } }] } });
+  // Contenus et données sécurisées sauvegardés dans l'audit avant la cascade, comme pour un élément seul (2026-11-26) :
+  // un élément restauré après la suppression de son espace revient complet
+  const [contents, secrets] = await Promise.all([snapshotItemContents(db, itemIds), snapshotItemSecrets(db, itemIds)]);
   await createAuditLogs(db, items.map((item) => ({
     action: 'DELETE' as const,
     entity: 'Item' as const,
@@ -56,9 +73,19 @@ async function deleteItemsOfSpaces(db: Db, spaceIds: string[], ctx: DeletionCont
     userId: ctx.userId,
     spaceId: item.spaceId,
     batchId: ctx.batchId,
-    changes: { before: serializeItemForAudit(item as unknown as Record<string, unknown>) },
+    changes: {
+      before: {
+        ...serializeItemForAudit(item as unknown as Record<string, unknown>),
+        contents: contents.get(item.id) ?? [],
+        secrets: secrets.get(item.id) ?? [],
+      },
+    },
   })));
   await db.item.deleteMany({ where: { spaceId: { in: spaceIds } } });
+  ctx.released?.push(...items.map((item) => ({
+    urls: itemFileUrls([item], (contents.get(item.id) ?? []) as { url?: string | null; previewUrl?: string | null }[]),
+    reason: 'SPACE_DELETED' as const, itemId: item.id, itemTitle: item.title, spaceId: item.spaceId,
+  })));
 }
 
 /** Membres, audit puis suppression d'un espace (ses items doivent déjà être supprimés). */

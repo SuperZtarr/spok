@@ -309,6 +309,7 @@
 - [x] Barres de vue - icônes seules quand la place manque — 2026-11-25
 - [x] Éclater et absorber - choix partie par partie — 2026-11-26
 - [x] Articles - composition à la souris sur la page — 2026-11-26
+- [x] Corbeille du stockage pour les fichiers des éléments — 2026-11-26
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

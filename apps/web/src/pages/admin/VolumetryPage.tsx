@@ -2,7 +2,9 @@
    croissance (7 / 30 jours) de chaque table, taille de la base, niveau face aux seuils du registre @spok/shared
    volumetry.ts (tables dépassées en tête). Lecture seule : le lien « Purger » mène à la page qui purge à la main ; SPOK
    n'efface jamais rien de lui-même. Les admins sont notifiés par la surveillance de l'API (utils/volumetryWatch.ts).
-   Aide utilisateur : fiche pages/help/admin-volumetry.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint). */
+   Aide utilisateur : fiche pages/help/admin-volumetry.help.ts — « ? » (PageHelpButton), rappels fonctionnels (pageHint).
+   Rubrique « Stockage de fichiers » (2026-11-26) : VolumetryStorageSection (volume du bucket, corbeille, orphelins) —
+   seule partie de la page qui agit (effacer, mettre à la corbeille). */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Database, RefreshCw } from 'lucide-react';
@@ -12,6 +14,7 @@ import { Button } from '../../components/ui/Button';
 import { PageHelpButton } from '../../help/PageHelpButton';
 import { HelpHint } from '../../help/HelpHint';
 import { pageHint } from '../../help/pageHint';
+import { VolumetryStorageSection } from './VolumetryStorageSection';
 
 const LEVEL_CLASS: Record<VolumetryLevel, string> = {
   exceeded: 'bg-red-500/15 text-red-600',
@@ -113,6 +116,8 @@ export function VolumetryPage() {
           </div>
         </>
       )}
+
+      <VolumetryStorageSection />
     </div>
   );
 }

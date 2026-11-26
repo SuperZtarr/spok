@@ -14,6 +14,14 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-26 — MEP : 3 lots (éclater / absorber partie par partie, composition des articles sur la page, corbeille du stockage avec table storage_trash créée par le db push du démarrage). 3 annonces datées. Typecheck OK, TNR 3178/3178. APRÈS, sur accord de Thomas : migrate-article-layout.ts --prod ; orphelins anciens à la corbeille (Volumétrie) ; restore-period-statuses.ts --prod toujours en attente.
+
+- 2026-11-26 — Corbeille du stockage (60 jours, restauration, rubrique Stockage de Volumétrie, contenus sauvegardés à la suppression d'espace) : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-26 — Articles : composition à la souris sur la page, inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-26 — Éclater / Absorber : fenêtre de choix partie par partie, inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-25 — MEP : 6 lots (icône d'application, statut par défaut, aperçu des liens, glisser sous un élément, Composer commun, barres de vue compactes). Micro-correction MEP : la garde typeRegistry.guard refusait defaultStatus écrit en dur → typeRegistry.ts ajouté aux sources de statuts, appliesToValues de item-default-status dérivé du registre. 4 annonces datées. Typecheck OK, TNR 3135/3136 puis garde 5/5 et lib 337/337 après correction. Restauration des statuts des périodes en prod toujours en attente (railway login).
 
 - 2026-11-25 — FAIT (accord explicite de Thomas, tunnel `railway connect Postgres --tunnel-only`) : `restore-period-statuses.ts --prod --apply` → 31 périodes ont retrouvé leur statut (22 done, 7 in_progress, 1 todo, 1 scheduled) ; 6 laissées (3 devenues tâches, 2 statut déjà posé, 1 supprimée). Vérifié par un second passage à blanc : 0 à remettre.

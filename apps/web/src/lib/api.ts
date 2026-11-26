@@ -87,8 +87,7 @@ import type {
   ArticleBrowseSpace,
   ArticleBrowseItem,
   ArticleBlockView,
-  ArticleBlockWidth,
-  ArticleBlockAlign,
+  ArticleLayoutEntry,
   QuestionView,
   QuestionOptionsInput,
   QuestionOutcomeInput,
@@ -1064,11 +1063,9 @@ export const articlesApi = {
       body: JSON.stringify(position === undefined ? {} : { position }),
     }),
 
-  updateBlock: (spaceId: string, articleId: string, blockId: string, body: { width?: ArticleBlockWidth; align?: ArticleBlockAlign; beside?: boolean }) =>
-    fetchApi<ArticleBlockView>(`/spaces/${spaceId}/items/${articleId}/article/blocks/${blockId}`, { method: 'PATCH', body: JSON.stringify(body) }),
-
-  reorder: (spaceId: string, articleId: string, blockIds: string[]) =>
-    fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article/order`, { method: 'PUT', body: JSON.stringify({ blockIds }) }),
+  // Disposition complète (ordre, lignes, largeurs) : tous les blocs, une fois chacun (2026-11-26)
+  setLayout: (spaceId: string, articleId: string, blocks: ArticleLayoutEntry[]) =>
+    fetchApi<ArticleView>(`/spaces/${spaceId}/items/${articleId}/article/layout`, { method: 'PUT', body: JSON.stringify({ blocks }) }),
 
   removeBlock: (spaceId: string, articleId: string, blockId: string) =>
     fetchApi<void>(`/spaces/${spaceId}/items/${articleId}/article/blocks/${blockId}`, { method: 'DELETE' }),
@@ -1308,14 +1305,18 @@ export const itemsApi = {
       `/spaces/${spaceId}/items/${itemId}/merge-preview?targetItemId=${encodeURIComponent(targetItemId)}`,
     ),
 
-  absorbChildren: (spaceId: string, itemId: string) =>
+  // childIds : enfants directs choisis dans la modale (ItemPartsPickModal) ; absent = tous
+  absorbChildren: (spaceId: string, itemId: string, childIds?: string[]) =>
     fetchApi<Item>(`/spaces/${spaceId}/items/${itemId}/absorb-children`, {
       method: 'POST',
+      body: JSON.stringify(childIds ? { childIds } : {}),
     }),
 
-  splitByHeadings: (spaceId: string, itemId: string) =>
-    fetchApi<{ children: Item[]; preContent: string }>(`/spaces/${spaceId}/items/${itemId}/split`, {
+  // sections : indices des titres choisis dans la modale (ItemPartsPickModal) ; absent = toutes
+  splitByHeadings: (spaceId: string, itemId: string, sections?: number[]) =>
+    fetchApi<{ children: Item[]; preContent: string | null }>(`/spaces/${spaceId}/items/${itemId}/split`, {
       method: 'POST',
+      body: JSON.stringify(sections ? { sections } : {}),
     }),
 
   // Contributions
@@ -1996,7 +1997,7 @@ export const adminApi = {
       }>('/admin/audit-logs/stats'),
 
     restore: (id: string, fieldsToRestore?: string[]) =>
-      fetchApi<{ success: boolean; restored: unknown; entity: string; restoredFields?: string[] }>(`/admin/audit-logs/${id}/restore`, {
+      fetchApi<{ success: boolean; restored: unknown; entity: string; restoredFields?: string[]; lostFiles?: number; message?: string }>(`/admin/audit-logs/${id}/restore`, {
         method: 'POST',
         body: JSON.stringify(fieldsToRestore ? { fieldsToRestore } : {}),
       }),
@@ -2265,6 +2266,14 @@ export const adminPerfApi = {
 /** Volumétrie des données (2026-11-18) : taille, lignes, croissance et niveau de chaque table (lecture seule) */
 export const adminVolumetryApi = {
   get: () => fetchApi<import('@spok/shared').VolumetryReport>('/admin/volumetry'),
+  // Stockage de fichiers et corbeille du stockage (2026-11-26, apps/api/src/routes/admin/volumetry.ts)
+  storage: () => fetchApi<import('@spok/shared').StorageReport>('/admin/volumetry/storage'),
+  trash: () => fetchApi<import('@spok/shared').StorageTrashEntry[]>('/admin/volumetry/storage/trash'),
+  purgeTrash: (ids: string[]) =>
+    fetchApi<{ purged: number }>('/admin/volumetry/storage/trash/purge', { method: 'POST', body: JSON.stringify({ ids }) }),
+  orphans: () => fetchApi<import('@spok/shared').StorageOrphan[]>('/admin/volumetry/storage/orphans'),
+  trashOrphans: (keys: string[]) =>
+    fetchApi<{ trashed: number }>('/admin/volumetry/storage/orphans/trash', { method: 'POST', body: JSON.stringify({ keys }) }),
 };
 
 export function isConflictError(error: unknown): error is ApiError & { details: { code: 'CONFLICT_DETECTED'; conflicts: Array<{ field: string; label: string; serverValue: unknown; clientValue: unknown }>; serverUpdatedAt: string } } {

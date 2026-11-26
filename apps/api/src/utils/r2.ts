@@ -10,11 +10,20 @@
  * local-uploads.ts), URL publique « /api/local-uploads/<clé> » (proxy Vite /api → API). Mêmes clés que sur R2.
  * Jamais actif en production : sans R2, la prod refuse les uploads comme avant.
  * Les variables d'environnement sont lues à chaque appel (testable, pas figé au chargement du module).
+ *
+ * Corbeille (2026-11-26, règles dans utils/storageTrash.ts) — primitives de stockage seulement, sans contrôle d'usage :
+ * moveToTrash(key) déplace l'objet sous trash/<code aléatoire>/<clé> (l'adresse d'origine cesse de répondre ; le code
+ * aléatoire empêche de deviner l'adresse dans la corbeille, le bucket étant public), restoreFromTrash le remet à sa clé,
+ * deleteStorageKey efface, storageObjectExists teste, listStorageObjects(prefix) liste (clé, taille, date).
+ * storageKeyFromUrl / storageUrlForKey : passage adresse publique ⇄ clé du stockage actif.
  */
-import { S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand, HeadObjectCommand, ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import sharp from 'sharp';
-import { mkdir, writeFile, unlink, copyFile } from 'node:fs/promises';
+import { mkdir, writeFile, unlink, copyFile, rename, stat, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const env = () => process.env;
@@ -184,4 +193,115 @@ export async function copyR2Object(url: string, newItemId: string): Promise<stri
     }));
   }
   return `${publicBase()}/${newKey}`;
+}
+
+/* ---------- Corbeille et inventaire (2026-11-26) ---------- */
+
+/** Clé d'une adresse du stockage actif, ou null si l'adresse n'en vient pas. */
+export function storageKeyFromUrl(url: string | null | undefined): string | null {
+  return url ? keyFromUrl(url) : null;
+}
+
+/** Adresse publique d'une clé du stockage actif. */
+export function storageUrlForKey(key: string): string {
+  return `${publicBase()}/${key}`;
+}
+
+/** Préfixe des fichiers d'éléments ; seul périmètre de la corbeille (jamais avatars ni couvertures). */
+export const ITEM_FILES_PREFIX = 'items/';
+export const TRASH_PREFIX = 'trash/';
+
+/** Clé d'un fichier d'élément, sans remontée de dossier. */
+export function isItemFileKey(key: string | null | undefined): key is string {
+  return !!key && key.startsWith(ITEM_FILES_PREFIX) && !key.includes('..');
+}
+
+/** Taille d'un objet, ou null s'il n'existe pas. */
+async function objectSize(key: string): Promise<number | null> {
+  if (isLocalStorageMode()) {
+    const full = localPathForKey(key);
+    if (!full) return null;
+    return stat(full).then((s) => s.size, () => null);
+  }
+  try {
+    const head = await getS3Client().send(new HeadObjectCommand({ Bucket: env().R2_BUCKET_NAME, Key: key }));
+    return head.ContentLength ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+export async function storageObjectExists(key: string): Promise<boolean> {
+  return (await objectSize(key)) !== null;
+}
+
+/** Déplace un objet de `from` vers `to` (copie puis effacement ; renommage en local). */
+async function moveObject(from: string, to: string): Promise<void> {
+  if (isLocalStorageMode()) {
+    const src = localPathForKey(from);
+    const dest = localPathForKey(to);
+    if (!src || !dest) throw new Error('Clé de stockage invalide');
+    await mkdir(path.dirname(dest), { recursive: true });
+    await rename(src, dest);
+    return;
+  }
+  await getS3Client().send(new CopyObjectCommand({
+    Bucket: env().R2_BUCKET_NAME, CopySource: `${env().R2_BUCKET_NAME}/${from}`, Key: to,
+  }));
+  await deleteObject(from);
+}
+
+/** Met un objet à la corbeille ; null s'il n'existe pas (déjà effacé ou jamais stocké). */
+export async function moveToTrash(key: string): Promise<{ trashKey: string; size: number } | null> {
+  const size = await objectSize(key);
+  if (size === null) return null;
+  const trashKey = `${TRASH_PREFIX}${randomUUID()}/${key}`;
+  await moveObject(key, trashKey);
+  return { trashKey, size };
+}
+
+/** Remet un objet de la corbeille à sa clé d'origine. */
+export async function restoreFromTrash(trashKey: string, key: string): Promise<void> {
+  await moveObject(trashKey, key);
+}
+
+/** Efface un objet par sa clé (sans contrôle : réservé à utils/storageTrash.ts). */
+export async function deleteStorageKey(key: string): Promise<void> {
+  await deleteObject(key);
+}
+
+export interface StoredObject { key: string; size: number; lastModified: Date | null }
+
+/** Liste tous les objets sous un préfixe (pagination R2 ; parcours du dossier en local). */
+export async function listStorageObjects(prefix: string): Promise<StoredObject[]> {
+  if (isLocalStorageMode()) {
+    const root = localPathForKey(prefix.replace(/\/$/, '') + '/x');
+    if (!root) return [];
+    const out: StoredObject[] = [];
+    const walk = async (dir: string) => {
+      const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) await walk(full);
+        else {
+          const s = await stat(full);
+          out.push({ key: path.relative(LOCAL_UPLOADS_DIR, full).split(path.sep).join('/'), size: s.size, lastModified: s.mtime });
+        }
+      }
+    };
+    await walk(path.dirname(root));
+    return out;
+  }
+  const out: StoredObject[] = [];
+  let token: string | undefined;
+  do {
+    const page = await getS3Client().send(new ListObjectsV2Command({
+      Bucket: env().R2_BUCKET_NAME, Prefix: prefix, ContinuationToken: token,
+    }));
+    for (const o of page.Contents ?? []) {
+      if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, lastModified: o.LastModified ?? null });
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+  return out;
 }

@@ -10,6 +10,7 @@
  * Coordonnées (value, 2026-11-25) : recopiées, sauvegardées et restaurées comme le reste.
  */
 import { isR2Configured, isR2Url, copyR2Object } from './r2.js';
+import { itemFileUrls, restoreTrashedFiles } from './storageTrash.js';
 
 export async function copyItemContents(
   prisma: any, fromItemId: string, toItemId: string, opts: { userId: string; copyFiles: boolean },
@@ -34,7 +35,9 @@ export async function copyItemContents(
  * Sauvegarde des contenus dans l'audit d'une suppression (2026-11-21, bug cmwqmg75f00co7icccb0lgguw) : la suppression
  * d'un élément est définitive (cascade sur item_contents) et sa restauration repart de l'état « before » de l'audit.
  * snapshotItemContents lit les contenus de plusieurs éléments (par élément) ; restoreItemContents les recrée avec leur
- * id (fichiers du stockage jamais effacés à la suppression : les adresses restent valides). Auteur disparu → null.
+ * id. Auteur disparu → null. Fichiers (2026-11-26) : à la suppression, ils partent à la corbeille du stockage
+ * (utils/storageTrash.ts, 60 jours) ; restoreDeletedItemFiles les remet à leur adresse d'origine avant la recréation,
+ * et un fichier effacé définitivement n'est pas recréé (contenu mort).
  */
 const CONTENT_BACKUP_KEYS = ['id', 'kind', 'url', 'name', 'mimeType', 'size', 'xml', 'previewUrl', 'excerpt', 'value', 'position', 'createdById', 'createdAt'] as const;
 
@@ -49,16 +52,33 @@ export async function snapshotItemContents(prisma: any, itemIds: string[]): Prom
   return byItem;
 }
 
-export async function restoreItemContents(prisma: any, itemId: string, backups: unknown): Promise<number> {
+/**
+ * Fichiers d'un élément supprimé (état « before » de l'audit : contenus, ancienne colonne url, images de la description)
+ * remis en place depuis la corbeille du stockage (2026-11-26). Renvoie les adresses perdues (effacées définitivement),
+ * à passer à restoreItemContents pour ne pas recréer de contenu mort. À appeler AVANT restoreItemContents.
+ */
+export async function restoreDeletedItemFiles(prisma: any, before: Record<string, unknown>): Promise<Set<string>> {
+  const contents = Array.isArray(before.contents) ? before.contents as { url?: string | null; previewUrl?: string | null }[] : [];
+  const item = { url: (before.url as string | null) ?? null, description: (before.description as string | null) ?? null };
+  return restoreTrashedFiles(prisma, itemFileUrls([item], contents));
+}
+
+/**
+ * Recrée les contenus sauvegardés. `lost` (restoreDeletedItemFiles) : image ou fichier dont le fichier est perdu → non
+ * recréé ; aperçu perdu → contenu recréé sans aperçu (schéma, fichier, lien).
+ */
+export async function restoreItemContents(prisma: any, itemId: string, backups: unknown, lost: Set<string> = new Set()): Promise<number> {
   if (!Array.isArray(backups) || backups.length === 0) return 0;
   const authors = [...new Set(backups.map((b: any) => b?.createdById).filter((v): v is string => typeof v === 'string'))];
   const existing = new Set<string>(authors.length
     ? (await prisma.user.findMany({ where: { id: { in: authors } }, select: { id: true } })).map((u: any) => u.id) : []);
   const data = backups
     .filter((b: any) => b && typeof b.id === 'string' && typeof b.kind === 'string')
+    .filter((b: any) => !((b.kind === 'IMAGE' || b.kind === 'FILE') && b.url && lost.has(b.url)))
     .map((b: any) => ({
-      id: b.id, itemId, kind: b.kind, url: b.url ?? null, name: b.name ?? null, mimeType: b.mimeType ?? null,
-      size: b.size ?? null, xml: b.xml ?? null, previewUrl: b.previewUrl ?? null, excerpt: b.excerpt ?? null, value: b.value ?? null,
+      id: b.id, itemId, kind: b.kind, url: b.url && lost.has(b.url) ? null : b.url ?? null, name: b.name ?? null, mimeType: b.mimeType ?? null,
+      size: b.size ?? null, xml: b.xml ?? null, previewUrl: b.previewUrl && lost.has(b.previewUrl) ? null : b.previewUrl ?? null,
+      excerpt: b.excerpt ?? null, value: b.value ?? null,
       position: typeof b.position === 'number' ? b.position : 0,
       createdById: existing.has(b.createdById) ? b.createdById : null,
     }));

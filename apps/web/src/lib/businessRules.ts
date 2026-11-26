@@ -1,12 +1,13 @@
 /* Registre des règles de gestion implicites (type/statut/priorité), consulté par RuleHint (UI dev) et par Claude comme documentation vivante.
    Règles de statut : appliesToValues dérivés des catégories (statusIdsIn), jamais une liste de statuts recopiée.
    Lot 5 contenus multiples : item-contents-merge, item-split-keeps-contents, copy-sheet-all-contents.
+   Corbeille du stockage (2026-11-26) : storage-trash.
    Une règle ne s'attache (appliesToValues) qu'aux valeurs dont parle son texte : RuleHint l'affiche sur chacune.
    Modes d'interface (2026-11-13) : listes de modes, favoris, vues d'ouverture et catégories générées par lib/modeTexts
    depuis MODE_REGISTRY — jamais recopiées en clair dans une règle.
    Export (2026-11-18) : export-fields-choice (choix des champs, registre EXPORT_FIELD_REGISTRY).
    Types à composants (2026-11-21) : COMPOSED_TYPES / COMPOSED_TYPE_LABELS dérivés du registre des types (groupe deliverables). */
-import { CLOSED_CATEGORIES, ITEM_TYPE_REGISTRY, STATUS_CATEGORY_OPTIONS, getItemTypeDef, itemTypesWhere, statusIdsIn } from '@spok/shared';
+import { CLOSED_CATEGORIES, ITEM_TYPE_REGISTRY, STATUS_CATEGORY_OPTIONS, getItemTypeDef, itemTypesWhere, statusIdsIn, STORAGE_TRASH_GRACE_DAYS } from '@spok/shared';
 
 /** Types à composants (groupe « Compositions » du registre des types) : valeurs et libellés dérivés, jamais recopiés */
 const COMPOSED_TYPES = itemTypesWhere((t) => t.group === 'deliverables');
@@ -44,8 +45,16 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     category: 'type',
     appliesToValues: [],
     trigger: 'Retrait d’un contenu image ou fichier',
-    effect: "Le fichier stocké n'est effacé que s'il n'est plus utilisé par aucun autre contenu ni par la colonne url d'un élément, gardée en sauvegarde depuis l'abandon du champ (lot 4) : les contenus recopiés depuis l'existant partagent le fichier d'origine",
-    location: 'apps/api/src/routes/item-contents.ts (DELETE …/contents/:contentId), apps/api/scripts/backfill-item-contents.ts',
+    effect: "Le fichier stocké ne part à la corbeille du stockage (règle storage-trash) que s'il n'est plus utilisé par aucun autre contenu, par la colonne url d'un élément (gardée en sauvegarde depuis le lot 4), par une description ni par une contribution : les contenus recopiés depuis l'existant ou dupliqués partagent le fichier d'origine",
+    location: 'apps/api/src/routes/item-contents.ts (DELETE …/contents/:contentId), apps/api/src/utils/storageTrash.ts, apps/api/scripts/backfill-item-contents.ts',
+  },
+  {
+    id: 'storage-trash',
+    category: 'type',
+    appliesToValues: [],
+    trigger: "Suppression d'un élément ou d'un espace, fusion ou absorption (doublons écartés, description non gardée), retrait d'un contenu",
+    effect: `Chaque fichier d'élément (clé items/…) que plus rien n'utilise est déplacé dans la corbeille du stockage : son adresse publique cesse aussitôt de répondre, il est gardé ${STORAGE_TRASH_GRACE_DAYS} jours puis effacé par la surveillance de l'API. La restauration d'un élément depuis l'historique le remet à son adresse ; au-delà du délai, le contenu n'est pas recréé et la restauration le signale. Les aperçus techniques régénérés (schéma redessiné, aperçu de lien actualisé) sont effacés tout de suite. Les admins voient la corbeille et les orphelins dans Volumétrie`,
+    location: 'apps/api/src/utils/storageTrash.ts, apps/api/src/utils/r2.ts, apps/api/src/routes/admin/volumetry.ts, apps/web/src/pages/admin/VolumetryStorageSection.tsx',
   },
   {
     id: 'item-contents-file-preview',
@@ -419,7 +428,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'compose-button-common',
     page: 'Fiche d\'un élément (sélecteur Afficher / Modifier / Composer)',
     trigger: 'Ouvrir la fiche d\'un article ou d\'un process',
-    effect: "Un seul bouton « Composer », à la même place, pour les types qui ont un espace de travail (décision Thomas 2026-11-25) : Article = mode Composer de la fiche (si l'API accorde canEditArticle) ; Process = canevas (la fiche se ferme), si l'on peut modifier l'élément — un lecteur voit « Afficher le process » au même endroit. Grisé tant que l'élément n'est pas enregistré dans ce type (phrase sous la Description) ou qu'une modification attend. Plus de lien « Ouvrir le process » ailleurs dans la fiche",
+    effect: "Un seul bouton « Composer », à la même place, pour les types qui ont un espace de travail (décision Thomas 2026-11-25) : Article = sa page en composition (2026-11-26) ; Process = canevas ; la fiche se ferme ; pour qui peut modifier l'élément — un lecteur voit « Lire l'article » / « Afficher le process » au même endroit. Grisé tant que l'élément n'est pas enregistré dans ce type (phrase sous la Description) ou qu'une modification attend. Plus de lien « Ouvrir le process » ailleurs dans la fiche",
     location: 'apps/web/src/lib/composeTargets.ts (registre et règles) ; apps/web/src/components/ItemEditModal.tsx (sélecteur de modes)',
   },
   {
@@ -480,24 +489,24 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'article-columns-beside',
-    page: 'Article (lecture, fiche « Afficher », impression ; réglage en mode Composer)',
-    trigger: 'Bloc réglé « À côté » (sauf le premier)',
-    effect: "Le bloc se place à droite du bloc précédent ; des blocs « à côté » consécutifs forment une rangée de colonnes de même largeur, 3 au plus (un 4e ouvre une nouvelle rangée). Dans une rangée, la largeur et la position gauche/droite du bloc ne s'appliquent pas ; la rangée prend le décalage de hiérarchie de son premier bloc. Sous 640 px, les colonnes s'empilent",
-    location: 'apps/web/src/components/article/articleLayout.ts (groupRows), ArticleFlow.tsx, ArticleEditor.tsx ; champ article_blocks.beside',
+    page: 'Article (lecture, fiche « Afficher », impression ; composition sur la page)',
+    trigger: 'Bloc glissé sur le bord gauche ou droit d\'un autre, ou bord tiré (composition à la souris, 2026-11-26)',
+    effect: "L'article est une suite de lignes : un bloc déposé sur le bord d'un autre rejoint sa ligne, 3 blocs au plus (sinon le dépôt est refusé) ; une ligne qui gagne ou perd un bloc repart à parts égales, un bloc resté seul reprend la pleine largeur. Largeur d'un bloc seul : 1/3, 1/2, 2/3, 3/4 ou pleine, centré ; dans une ligne, part réglée en tirant le trait entre deux blocs (par pas de 5 %, 20 % au moins). Plus d'image flottante à gauche / droite : les anciennes deviennent une ligne image 40 % + texte (scripts/migrate-article-layout.ts). La ligne prend le décalage de hiérarchie de son premier bloc. Sous 640 px, tout s'empile en pleine largeur",
+    location: '@spok/shared utils/articleLayout.ts ; apps/web/src/components/article/articleLayout.ts (applyDrop, resizePair, snapSingleWidth), ArticleFlow.tsx, ArticleComposer.tsx ; apps/api/src/routes/item-article.ts (PUT …/layout, DELETE) ; champs article_blocks.beside, width',
   },
   {
     id: 'article-screens',
     page: 'Article : fiche et page de lecture',
     trigger: "Ouverture d'un article : vue Articles, menu ⋮, sélecteur de la fiche, adresse",
-    effect: "La page (/spaces/:spaceId/articles/:itemId) sert à lire, imprimer et partager, en lecture seule ; on y arrive par un clic sur l'article dans toute vue d'espace (seule exception à « un clic ouvre la fiche » ; le menu ⋮ garde « Afficher » et « Ouvrir » vers la fiche), par « Lire l'article » du menu ⋮ ou par un lien, et son retour ramène à la vue d'origine. La fiche sert à consulter sans quitter la vue (Afficher), à changer les champs (Modifier) et à travailler les blocs (Composer, seulement pour qui peut modifier l'article et sans modification en attente ; ?mode=composition sans ce droit retombe sur Afficher)",
+    effect: "La page (/spaces/:spaceId/articles/:itemId) sert à lire, imprimer et partager, et à composer (sélecteur Lire | Composer, seulement pour qui peut modifier l'article ; ?mode=composition sans ce droit montre la lecture — 2026-11-26) ; on y arrive par un clic sur l'article dans toute vue d'espace (seule exception à « un clic ouvre la fiche » ; le menu ⋮ garde « Afficher » et « Ouvrir » vers la fiche), par « Lire l'article » du menu ⋮, par « Composer » de la fiche ou par un lien, et son retour ramène à la vue d'origine. La fiche sert à consulter sans quitter la vue (Afficher) et à changer les champs (Modifier) ; un ancien lien de fiche ?mode=composition rouvre la fiche en lecture",
     location: 'apps/web/src/pages/SpacePage.tsx (openItemFromView), apps/web/src/pages/ArticlePage.tsx, apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/views/ArticlesView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/lib/itemOpenMode.ts',
   },
   {
     id: 'article-blocks-references',
     page: 'Article (/spaces/:spaceId/articles/:itemId)',
-    trigger: 'Composition d\'un article (mode Composer)',
+    trigger: 'Composition d\'un article (page, Composer)',
     effect: "Un bloc est une référence vers un élément existant, qui reste à sa place : le corriger le corrige dans tous les articles qui le citent ; retirer le bloc ne supprime jamais l'élément. Un élément figure au plus une fois par article ; un article ne peut pas contenir d'article. « Texte » crée une nouvelle note dans l'espace de l'article. Seul qui peut modifier l'article (propriétaire de l'espace, ou membre auteur / assigné) compose ; on ne référence que ce qu'on peut lire soi-même (hors mode admin)",
-    location: 'apps/api/src/routes/item-article.ts, apps/web/src/components/article/ArticleEditor.tsx',
+    location: 'apps/api/src/routes/item-article.ts, apps/web/src/components/article/ArticleComposer.tsx',
   },
   {
     id: 'article-reader-sees-blocks',
@@ -508,10 +517,10 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'article-less-visible-warning',
-    page: 'Article (mode Composer)',
+    page: 'Article (composition sur la page)',
     trigger: 'Ajout d\'un élément moins visible que l\'article',
     effect: "Avertissement à confirmer (pas d'interdiction) quand l'élément atteint moins de lecteurs que l'article : espace privé autre que celui de l'article, ou communauté réservée à ses membres différente, ou portée plus faible (privé < membres de la communauté < public)",
-    location: 'apps/api/src/utils/articleVisibility.ts (isLessVisible), apps/web/src/components/article/ArticleEditor.tsx',
+    location: 'apps/api/src/utils/articleVisibility.ts (isLessVisible), apps/web/src/components/article/ArticleComposer.tsx',
   },
   {
     id: 'article-block-display-by-contents',
@@ -522,17 +531,17 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'article-picker-relevance',
-    page: 'Article (mode Composer, sélecteur « Élément »)',
+    page: 'Article (composition, « Sélection multiple… » du panneau)',
     trigger: 'Parcours et recherche des éléments à ajouter',
     effect: "Ne propose que des éléments lisibles hors mode admin (comme l'ajout), sans articles. Espaces de la portée « Cette communauté » (défaut) ou « Partout », avec leur nombre d'éléments ; l'espace de l'article est choisi à l'ouverture et ses éléments s'affichent en arbre (500 au plus, recherche pour les autres) ; filtre par type = liste à plat. Recherche dans l'espace choisi (ou partout) : titre qui commence par le texte, puis qui le contient, puis texte visible (le HTML ne compte pas) ; à égalité, espace de l'article, même communauté, puis récence ; 30 résultats. Éléments déjà présents affichés grisés « déjà ajouté », non cochables. Sélection multiple gardée d'un espace à l'autre, ajoutée dans l'ordre de l'arbre",
     location: 'apps/api/src/routes/item-article.ts (browse/spaces, browse/items, candidates), apps/api/src/utils/articleCandidates.ts, apps/web/src/components/article/ArticleBrowser.tsx, articleBrowserTree.ts',
   },
   {
     id: 'article-batch-insert',
-    page: 'Article (mode Composer)',
+    page: 'Article (composition sur la page)',
     trigger: 'Ajout de plusieurs éléments cochés, d\'éléments avec leurs enfants / ce qui en découle, ou d\'un processus',
     effect: "Un seul élément sans option : ajout direct. Sinon : plusieurs blocs d'un coup, un par élément, photo au moment de l'ajout (rien ne suit ensuite). Éléments cochés dans l'ordre de l'arbre, chacun suivi au choix de sa descendance (chaque enfant après son parent) puis de la chaîne des relations sortantes Entraîne / Bloque / Permet (pas Lié à), sans doublon. Processus (onglet du sélecteur) : couloir par couloir (élément du couloir puis membres de gauche à droite), puis éléments hors couloir ; ou un seul couloir. Sautés et comptés : articles, éléments déjà présents, éléments illisibles hors mode admin. Un élément coché illisible refuse tout l'ajout (403) ; un élément illisible atteint est sauté, et on ne suit ni ses enfants ni ses relations. 100 éléments au plus, 1 000 parcourus au plus (éléments déjà présents compris) ; confirmation avec le compte, avertissement « moins visible » une fois pour le lot",
-    location: 'apps/api/src/routes/item-article.ts (batch), apps/api/src/utils/articleBatch.ts, apps/web/src/components/article/ArticleEditor.tsx, ArticleBatchConfirm.tsx, ArticleBrowser.tsx',
+    location: 'apps/api/src/routes/item-article.ts (batch), apps/api/src/utils/articleBatch.ts, apps/web/src/components/article/ArticleComposer.tsx, ArticleBatchConfirm.tsx, ArticleBrowser.tsx',
   },
   {
     id: 'merge-targets-allowed-only',
@@ -561,6 +570,20 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: '« Éclater en sous-items » (une Note enfant par titre de niveau 2 ou 3 de la description)',
     effect: "Les contenus (images, fichiers, liens, schémas) restent tous sur l'élément d'origine : ils ne font pas partie du texte découpé. Les Notes enfants naissent sans contenu (décision Thomas 2026-11-11)",
     location: 'apps/api/src/routes/items.ts (POST /:id/split)',
+  },
+  {
+    id: 'item-split-sections',
+    page: 'Toutes les vues (menu contextuel) + modale item — modale ItemPartsPickModal',
+    trigger: '« Éclater en sous-éléments » puis choix des sections cochées (demande Thomas 2026-11-26)',
+    effect: "Une ligne par titre de niveau 2 ou 3, toutes cochées à l'ouverture. Chaque section cochée devient un sous-élément ; les sections décochées restent dans la description, titre compris, à leur place, après le texte d'avant le premier titre. Aucune section cochée : bouton désactivé (API : 400). Sans liste envoyée (MCP, anciens appels) : toutes les sections. Découpage unique partagé par l'aperçu et l'API",
+    location: 'packages/shared/src/utils/descriptionSections.ts, apps/api/src/routes/items.ts (POST /:id/split, corps { sections }), apps/web/src/components/ItemPartsPickModal.tsx, apps/web/src/pages/useSpaceActions.ts (pendingParts)',
+  },
+  {
+    id: 'absorb-children-selected',
+    page: 'Toutes les vues (menu contextuel) + modale item — modale ItemPartsPickModal',
+    trigger: '« Absorber les enfants » puis choix des sous-éléments cochés (demande Thomas 2026-11-26)',
+    effect: "Une ligne par sous-élément direct, tous cochés à l'ouverture. Seuls les cochés sont fondus dans l'élément (titre + texte ajoutés à la description, contributions, tags, relations, contenus, références, données sécurisées repris, leurs propres enfants remontés) puis supprimés ; les décochés restent enfants, intacts. Un id qui n'est pas un enfant direct est ignoré ; aucun coché : 400. Sans liste envoyée : tous les enfants directs",
+    location: 'apps/api/src/routes/item-merge.ts (POST /:id/absorb-children, corps { childIds }), apps/web/src/components/ItemPartsPickModal.tsx, apps/web/src/pages/useSpaceActions.ts (pendingParts)',
   },
   {
     id: 'copy-sheet-all-contents',

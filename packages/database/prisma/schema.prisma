@@ -559,6 +559,28 @@ model ItemContent {
   @@map("item_contents")
 }
 
+// Corbeille du stockage (décision Thomas 2026-11-26) : un fichier d'élément (clé items/…) que plus rien n'utilise est
+// déplacé dans le bucket sous trashKey (trash/<code aléatoire>/<clé d'origine>) — son adresse publique cesse de répondre —
+// et gardé STORAGE_TRASH_GRACE_DAYS jours (@spok/shared storageTrash.ts) : la restauration d'un élément depuis
+// l'historique le remet à sa clé d'origine. Passé purgeAfter, la surveillance de l'API l'efface (utils/storageTrash.ts).
+// Sans clé étrangère : l'élément d'origine n'existe plus en général. reason = registre STORAGE_TRASH_REASONS.
+model StorageTrash {
+  id         String   @id @default(cuid())
+  key        String
+  trashKey   String   @unique
+  size       Int?
+  reason     String
+  itemId     String?
+  itemTitle  String?
+  spaceId    String?
+  trashedAt  DateTime @default(now())
+  purgeAfter DateTime
+
+  @@index([key])
+  @@index([purgeAfter])
+  @@map("storage_trash")
+}
+
 // Références externes d'un élément (règle item-external-refs, 2026-11-12) : une ligne par entrée, texte libre
 // « Application : réf1 | réf2 » (nom avant « : », références séparées par « | ») ; mise en forme à l'affichage
 // (shared/externalRefs.ts). Remplacées en bloc par POST/PATCH d'un élément (comme les tags), cherchées par la recherche.

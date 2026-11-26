@@ -1,6 +1,7 @@
 /* Aide utilisateur de la page d'administration « Audit » (/admin/audit-logs, AuditLogsPage), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le
    « ? » (PageHelpButton), le tour et le mode Aide. Rappels fonctionnels (hints, via pageHint) décrivant l'effet réel côté API : à revérifier à chaque évolution des routes
-   /admin. Registre help/pageHelp.ts. */
+   /admin. Registre help/pageHelp.ts. Restauration et corbeille du stockage (2026-11-26) : délai du registre shared. */
+import { STORAGE_TRASH_GRACE_DAYS } from '@spok/shared';
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
 
@@ -31,7 +32,7 @@ export const help: HelpEntry = {
     ...derived.hints,
     purge: 'Purger : supprime définitivement les entrées plus anciennes que le nombre de jours indiqué. Irréversible — elles ne pourront plus servir à restaurer.',
     purgeOverflow: 'Purger l\'excédent : garde les entrées les plus récentes jusqu\'au seuil et supprime définitivement les autres. Irréversible.',
-    restore: 'Restaurer : recrée l\'élément, l\'espace ou la communauté supprimé à partir de cette entrée.',
+    restore: `Restaurer : recrée l'élément, l'espace ou la communauté supprimé à partir de cette entrée. Un élément revient avec ses contenus ; ses fichiers sont sortis de la corbeille du stockage s'ils y sont encore (${STORAGE_TRASH_GRACE_DAYS} jours après la suppression), sinon ils sont perdus et ne reviennent pas.`,
     restoreUpdate: 'Restaurer : choisir les champs à remettre à leur valeur d\'avant cette modification.',
     restoreBatch: 'Restaurer le batch : recrée toutes les suppressions de cette opération (ex. un espace et ses éléments), communautés puis espaces puis éléments.',
   },
