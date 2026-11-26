@@ -26,10 +26,10 @@
  * quel que soit le type, masquée sur un Article — images, fichiers, liens, schémas, plusieurs par sorte, écrits tout
  * de suite (hooks/useItemContents), hors « Enregistrer ». Le formulaire n'envoie ni url ni content.xml (plus de champ
  * url depuis le lot 4 : un média est toujours un contenu).
- * Mode Composer d'un article (décision Thomas 2026-11-06) : troisième choix du sélecteur, si article.canEditArticle.
- * Grisé si la fiche n'est pas enregistrée en ARTICLE (hint openArticleUnsaved, aussi affiché en phrase visible dans le
- * formulaire, et seul pour un élément en création) ou a des modifications non enregistrées. Sans droit, un
- * ?mode=composition retombe sur Afficher.
+ * Composer un article (2026-11-26, avant : mode Composer de la fiche) : « Composer » du sélecteur ouvre la page de
+ * l'article en composition (composeTargets). Grisé si la fiche n'est pas enregistrée en ARTICLE (hint
+ * openArticleUnsaved, aussi affiché en phrase visible dans le formulaire) ou a des modifications non enregistrées.
+ * Un ancien lien ?mode=composition rouvre la fiche en lecture.
  * Modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
  * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
@@ -106,7 +106,8 @@
  * refermé sans enregistrement (closeWithoutSaving) alors qu'il est toujours vide (isItemEmpty), est supprimé —
  * lib/emptyNewItem.ts, règle empty-new-item-discarded. Ne jamais brancher une fermeture après enregistrement dessus.
  * Types à espace de travail (2026-11-25, lib/composeTargets) : un seul bouton « Composer » dans le sélecteur de modes —
- * Article : mode Composer de la fiche ; Process : canevas (la fiche se ferme), « Afficher le process » pour un lecteur.
+ * Article : sa page en composition ; Process : canevas — la fiche se ferme ; un lecteur voit « Lire l'article » /
+ * « Afficher le process ».
  * Avant enregistrement dans ce type : bouton grisé + phrase openArticleUnsaved / openProcessUnsaved sous la Description.
  * Type QUESTION (2026-11-08) : bloc QuestionPanel (réponses, votes, issue) au-dessus de la zone Contenus et en mode Afficher ;
  * Statut (2026-11-11) = QuestionStatusField, ses 4 statuts réservés appliqués tout de suite (issue), hors « Enregistrer ».
@@ -142,12 +143,10 @@ import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { QuestionPanel } from './question/QuestionPanel';
 import { QuestionStatusField } from './question/QuestionStatusField';
-import { ArticleEditor } from './article/ArticleEditor';
 import { printArticle } from './article/printArticle';
-import { useArticle } from '../hooks/useArticle';
 import { useSpace } from '../hooks/useSpaces';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { articleReturnState, itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { composeButton } from '../lib/composeTargets';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
@@ -1095,15 +1094,10 @@ export function ItemEditModal({
     return path;
   }, [item, allItems]);
 
-  // Article enregistré : ses blocs et le droit de les composer. Composer sans ce droit retombe sur Afficher.
-  const savedArticle = item?.type === 'ARTICLE';
-  const articleState = useArticle(savedArticle ? (item?.spaceId ?? spaceId) : undefined, savedArticle ? (itemId ?? undefined) : undefined);
-  const canCompose = !!articleState.article?.canEditArticle;
-  const composing = displayMode === 'compose' && canCompose;
-  // Bouton « Composer » (Article : mode de la fiche ; Process : canevas) — règles dans lib/composeTargets
-  const composeBtn = composeButton({ formType: type, savedType: item?.type, canEdit, modeAllowed: canCompose, hasChanges });
-  const readMode = displayMode === 'read' || (displayMode === 'compose' && !canCompose);
-  const formMode = !readMode && !composing;
+  // Bouton « Composer » (Article : sa page en composition ; Process : canevas) — règles dans lib/composeTargets
+  const composeBtn = composeButton({ formType: type, savedType: item?.type, canEdit, modeAllowed: false, hasChanges });
+  const readMode = displayMode === 'read';
+  const formMode = !readMode;
   const articlePrintRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
@@ -1384,28 +1378,27 @@ export function ItemEditModal({
                     <span>{canEdit ? 'Modifier' : 'Fiche'}</span>
                   </button>
                 </HelpHint>
-                {/* « Composer » commun aux types à espace de travail (lib/composeTargets) : mode de la fiche (Article)
-                    ou page du canevas (Process, la fiche se ferme) — même libellé, même place, mêmes règles */}
+                {/* « Composer » commun aux types à espace de travail (lib/composeTargets) : page de l'article en
+                    composition ou canevas du Process (la fiche se ferme) — même libellé, même place, mêmes règles */}
                 {composeBtn && (
                   <HelpHint text={itemHints?.[composeBtn.hint]}>
                     {composeBtn.target.kind === 'page' && !composeBtn.disabled && itemId ? (
                       <Link
                         to={composeBtn.target.url(item.spaceId ?? spaceId, itemId)}
+                        state={articleReturnState(window.location)}
                         onClick={onClose}
                         data-tour="item-mode-compose"
                         className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors text-muted-foreground hover:text-foreground"
                       >
-                        {composeBtn.reader ? <Workflow className="w-3 h-3" /> : <PenLine className="w-3 h-3" />}
+                        {composeBtn.reader ? (item?.type === 'ARTICLE' ? <BookOpen className="w-3 h-3" /> : <Workflow className="w-3 h-3" />) : <PenLine className="w-3 h-3" />}
                         <span>{composeBtn.label}</span>
                       </Link>
                     ) : (
                       <button
                         type="button"
-                        aria-pressed={composing}
-                        disabled={composeBtn.disabled}
-                        onClick={() => setDisplayMode('compose')}
+                        disabled
                         data-tour="item-mode-compose"
-                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${composing ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground"
                       >
                         <PenLine className="w-3 h-3" />
                         <span>{composeBtn.label}</span>
@@ -1458,22 +1451,6 @@ export function ItemEditModal({
                     <ReactionBar spaceId={spaceId} itemId={item.id} summary={(item as any).reactionSummary || []} readOnly={!user} />
                   )}
                 />
-              </div>
-              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
-                <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
-                {footerActions}
-              </div>
-            </>
-          )}
-
-          {/* Mode Composer d'un article : titre et chapeau en rappel, puis ses blocs. Pied réduit à Fermer. */}
-          {composing && item && articleState.article && (
-            <>
-              <div className="flex-1 overflow-y-auto pr-1" data-devzone="item-composer">
-                {item.description && (
-                  <div className="prose dark:prose-invert max-w-none mt-2 mb-4 text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />
-                )}
-                <ArticleEditor spaceId={item.spaceId ?? spaceId} articleId={item.id} article={articleState.article} state={articleState} />
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>

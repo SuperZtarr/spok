@@ -1,7 +1,7 @@
-/* TNR de l'accès aux articles : adresse du mode Composer (itemOpenMode) et action « Lire l'article » du menu ⋮
-   (itemMenuGroups) — présente seulement sur un article, vers sa page, avec retour à la vue d'origine. */
+/* TNR de l'accès aux articles : adresse de la composition sur la page (itemOpenMode, 2026-11-26) et action « Lire
+   l'article » du menu ⋮ (itemMenuGroups) — présente seulement sur un article, vers sa page, avec retour à la vue d'origine. */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { articlePageUrl, articleReturnState, itemUrl, parseItemMode } from './itemOpenMode';
+import { articleComposeUrl, articlePageUrl, articleReturnState, isArticleComposing, parseItemMode } from './itemOpenMode';
 import { buildItemMenuGroups } from './itemMenuGroups';
 import { appNavigate } from './appNavigate';
 
@@ -11,10 +11,14 @@ const actionsOf = (item?: { type?: string; spaceId?: string | null }) =>
   buildItemMenuGroups('a1', { onOpen: vi.fn() }, { item }).flatMap((g) => g.actions);
 
 describe('adresses d\'un article', () => {
-  it('le mode Composer fait l\'aller-retour par l\'adresse', () => {
-    const url = itemUrl('s1', 'a1', 'compose');
-    expect(url).toBe('/spaces/s1/content?item=a1&mode=composition');
-    expect(parseItemMode('composition')).toBe('compose');
+  it('la composition se fait sur la page de l\'article, par l\'adresse', () => {
+    expect(articleComposeUrl('s1', 'a1')).toBe('/spaces/s1/articles/a1?mode=composition');
+    expect(isArticleComposing('composition')).toBe(true);
+    expect(isArticleComposing(null)).toBe(false);
+  });
+
+  it('ancien lien de fiche en composition : rouvre la fiche en lecture', () => {
+    expect(parseItemMode('composition')).toBe('read');
   });
 
   it('page de lecture et retour à la vue d\'origine', () => {

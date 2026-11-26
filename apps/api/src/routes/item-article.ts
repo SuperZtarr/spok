@@ -12,8 +12,10 @@
  * exigent de pouvoir modifier l'article (même règle que canEditArticle, article non verrouillé) :
  * POST …/article/blocks (référence ; 400 si ARTICLE, 403 si élément illisible hors mode admin, 409
  * DUPLICATE_REFERENCE, 409 LESS_VISIBLE sans confirmLessVisible), POST …/article/texts (nouvelle NOTE + bloc),
- * PATCH …/article/blocks/:blockId (width/align/beside — beside : à droite du bloc précédent), PUT …/article/order (tous les blocs), DELETE …/article/blocks/:blockId
- * (retire la référence, ne supprime jamais l'élément).
+ * PUT …/article/layout (disposition complète, 2026-11-26 : tous les blocs une fois, dans l'ordre, avec beside et width
+ * — remplace PATCH …/blocks/:blockId et PUT …/order), DELETE …/article/blocks/:blockId (retire la référence, ne
+ * supprime jamais l'élément ; sa ligne se resserre : layoutAfterRemoval). Largeur : nombre (utils/articleLayout.ts de
+ * @spok/shared), stocké en texte dans article_blocks.width ; align n'est plus lu ni écrit.
  * Sélecteur à parcourir (même droit, espaces lisibles hors mode admin, portée pickerSpaces community | all | space) :
  * GET …/article/browse/spaces?scope= → ArticleBrowseSpace[] (nombre d'éléments, éléments Process non vides ; titre d'un
  * couloir seulement si le demandeur lit l'espace de son élément, sinon « Élément indisponible ») ;
@@ -38,9 +40,9 @@
  */
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { DEFAULT_STATUSES } from '@spok/shared';
+import { ARTICLE_WIDTH_MAX, ARTICLE_WIDTH_MIN, DEFAULT_STATUSES, layoutAfterRemoval, parseArticleBlockWidth } from '@spok/shared';
 import type {
-  ArticleBatchPreview, ArticleBatchSource, ArticleBlockAlign, ArticleBlockView, ArticleBlockWidth, ArticleCandidate,
+  ArticleBatchPreview, ArticleBatchSource, ArticleBlockView, ArticleCandidate,
   ArticleBrowseItem, ArticleBrowseSpace, ArticleView, ItemContentKind, ItemType, StatusConfig,
 } from '@spok/shared';
 import { orderChain, orderCluster, orderDescendants, orderProcess } from '../utils/articleBatch.js';
@@ -75,7 +77,7 @@ export async function statusesBySpace(prisma: any, spaceIds: string[]): Promise<
     return [s.id, Array.isArray(statuses) && statuses.length ? statuses : DEFAULT_STATUSES];
   }));
 }
-type BlockRow = { id: string; position: number; width: string; align: string; beside?: boolean; addedById: string | null; item: RefItem };
+type BlockRow = { id: string; position: number; width: string; beside?: boolean; addedById: string | null; item: RefItem };
 
 export const REF_ITEM_SELECT = {
   id: true, type: true, title: true, description: true, spaceId: true,
@@ -114,7 +116,7 @@ export async function resolveBlocks(prisma: any, rows: BlockRow[], readerId: str
 
   return rows.map((r) => {
     // depth : calculée sur l'article entier par loadArticleView (0 pour un bloc résolu seul)
-    const base = { id: r.id, position: r.position, width: r.width as ArticleBlockWidth, align: r.align as ArticleBlockAlign, depth: 0, beside: !!r.beside };
+    const base = { id: r.id, position: r.position, width: parseArticleBlockWidth(r.width), depth: 0, beside: !!r.beside };
     const available = !!r.addedById && !!adderReadable.get(r.addedById)?.has(r.item.spaceId);
     if (!available) return { ...base, available: false, item: null };
     const canOpen = readerReadable.has(r.item.spaceId);
@@ -179,16 +181,19 @@ export const itemArticleReadRoutes: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-const WIDTHS = ['full', 'wide', 'medium'] as const;
-const ALIGNS = ['center', 'left', 'right'] as const;
 const addBlockSchema = z.object({
   itemId: z.string().min(1),
   position: z.number().int().min(0).optional(),
   confirmLessVisible: z.boolean().optional(),
 });
 const addTextSchema = z.object({ position: z.number().int().min(0).optional() });
-const updateBlockSchema = z.object({ width: z.enum(WIDTHS).optional(), align: z.enum(ALIGNS).optional(), beside: z.boolean().optional() });
-const orderSchema = z.object({ blockIds: z.array(z.string().min(1)) });
+const layoutSchema = z.object({
+  blocks: z.array(z.object({
+    id: z.string().min(1),
+    beside: z.boolean(),
+    width: z.number().int().min(ARTICLE_WIDTH_MIN).max(ARTICLE_WIDTH_MAX),
+  })),
+});
 
 type Params = { spaceId: string; id: string };
 
@@ -586,30 +591,21 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(view);
   });
 
-  fastify.patch<{ Params: Params & { blockId: string } }>('/:id/article/blocks/:blockId', async (request, reply) => {
+  // Disposition complète (composition à la souris) : ordre, lignes (beside) et largeurs, en une transaction
+  fastify.put<{ Params: Params }>('/:id/article/layout', async (request, reply) => {
     const ctx = await requireArticleEditor(fastify, request, reply);
     if (!ctx) return reply;
-    const data = updateBlockSchema.parse(request.body);
-    const block = await fastify.prisma.articleBlock.findFirst({ where: { id: request.params.blockId, articleId: ctx.article.id } });
-    if (!block) return reply.notFound('Block not found');
-    const row = await fastify.prisma.articleBlock.update({
-      where: { id: block.id }, data, include: { item: { select: REF_ITEM_SELECT } },
-    });
-    const [view] = await resolveBlocks(fastify.prisma, [row], ctx.userId, request.isAdminMode);
-    return view;
-  });
-
-  fastify.put<{ Params: Params }>('/:id/article/order', async (request, reply) => {
-    const ctx = await requireArticleEditor(fastify, request, reply);
-    if (!ctx) return reply;
-    const { blockIds } = orderSchema.parse(request.body);
+    const { blocks } = layoutSchema.parse(request.body);
     const current = await fastify.prisma.articleBlock.findMany({ where: { articleId: ctx.article.id }, select: { id: true } });
     const ids = new Set(current.map((b: { id: string }) => b.id));
-    if (blockIds.length !== ids.size || new Set(blockIds).size !== ids.size || blockIds.some((b) => !ids.has(b))) {
-      return reply.badRequest('blockIds must list every block of the article exactly once');
+    const sent = blocks.map((b) => b.id);
+    if (sent.length !== ids.size || new Set(sent).size !== ids.size || sent.some((b) => !ids.has(b))) {
+      return reply.badRequest('blocks must list every block of the article exactly once');
     }
     await fastify.prisma.$transaction(async (tx: any) => {
-      for (const [position, id] of blockIds.entries()) await tx.articleBlock.update({ where: { id }, data: { position } });
+      for (const [position, b] of blocks.entries()) {
+        await tx.articleBlock.update({ where: { id: b.id }, data: { position, beside: position > 0 && b.beside, width: String(b.width) } });
+      }
     });
     return loadArticleView(fastify.prisma, request.params.spaceId, ctx.article.id, ctx.userId, request.isAdminMode);
   });
@@ -619,7 +615,23 @@ export const itemArticleWriteRoutes: FastifyPluginAsync = async (fastify) => {
     if (!ctx) return reply;
     const block = await fastify.prisma.articleBlock.findFirst({ where: { id: request.params.blockId, articleId: ctx.article.id } });
     if (!block) return reply.notFound('Block not found');
-    await fastify.prisma.articleBlock.delete({ where: { id: block.id } });
+    await fastify.prisma.$transaction(async (tx: any) => {
+      // Sa ligne se resserre : le suivant prend sa place en tête, une ligne réduite à un bloc reprend la pleine largeur
+      const rows: { id: string; beside: boolean; width: string }[] = await tx.articleBlock.findMany({
+        where: { articleId: ctx.article.id }, orderBy: { position: 'asc' }, select: { id: true, beside: true, width: true },
+      });
+      const before = new Map(rows.map((r) => [r.id, { beside: !!r.beside, width: parseArticleBlockWidth(r.width) }]));
+      const after = layoutAfterRemoval(rows.map((r) => ({ id: r.id, beside: !!r.beside, width: parseArticleBlockWidth(r.width) })), block.id);
+      await tx.articleBlock.delete({ where: { id: block.id } });
+      for (const [position, b] of after.entries()) {
+        const old = before.get(b.id);
+        if (old && old.beside === b.beside && old.width === b.width) {
+          await tx.articleBlock.update({ where: { id: b.id }, data: { position } });
+        } else {
+          await tx.articleBlock.update({ where: { id: b.id }, data: { position, beside: b.beside, width: String(b.width) } });
+        }
+      }
+    });
     return reply.status(204).send();
   });
 };

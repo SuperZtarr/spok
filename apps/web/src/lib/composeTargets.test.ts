@@ -13,7 +13,10 @@ describe('composeButton', () => {
       expect(b?.disabled).toBe(false);
     }
     expect(composeButton({ ...base, formType: 'PROCESS', savedType: 'PROCESS' })?.target.kind).toBe('page');
-    expect(composeButton({ ...base, formType: 'ARTICLE', savedType: 'ARTICLE' })?.target.kind).toBe('mode');
+    // Article : sa page en composition (2026-11-26), comme le canevas d'un Process
+    const article = composeButton({ ...base, formType: 'ARTICLE', savedType: 'ARTICLE' });
+    expect(article?.target.kind).toBe('page');
+    expect(article?.target.kind === 'page' && article.target.url('s1', 'a1')).toBe('/spaces/s1/articles/a1?mode=composition');
   });
 
   it('pas encore enregistré dans ce type : grisé, phrase propre au type ; rien pour un lecteur', () => {
@@ -28,9 +31,9 @@ describe('composeButton', () => {
     }
   });
 
-  it('lecteur : « Afficher le process » au même endroit ; pas de bouton sur un article', () => {
+  it('lecteur : « Afficher le process » ou « Lire l\'article » au même endroit', () => {
     expect(composeButton({ ...base, canEdit: false, modeAllowed: false, formType: 'PROCESS', savedType: 'PROCESS' })).toMatchObject({ label: 'Afficher le process', reader: true, disabled: false });
-    expect(composeButton({ ...base, canEdit: false, modeAllowed: false, formType: 'ARTICLE', savedType: 'ARTICLE' })).toBeNull();
+    expect(composeButton({ ...base, canEdit: false, modeAllowed: false, formType: 'ARTICLE', savedType: 'ARTICLE' })).toMatchObject({ label: 'Lire l\'article', reader: true, hint: 'openArticleRead' });
   });
 
   it('type sans espace de travail : pas de bouton', () => {

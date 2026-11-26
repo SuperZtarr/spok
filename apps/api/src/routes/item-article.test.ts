@@ -179,19 +179,53 @@ describe('Article — composition', () => {
     expect(prisma.articleBlock.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ itemId: 'txt' }) }))
   })
 
-  it('reorder requires all blocks', async () => {
+  const layout = (blocks: unknown[]) => app.inject({ method: 'PUT', url: url('/layout'), headers: auth(), payload: { blocks } })
+
+  it('layout requires all blocks', async () => {
     prisma.articleBlock.findMany.mockResolvedValue([{ id: 'b1' }, { id: 'b2' }])
-    const res = await app.inject({ method: 'PUT', url: url('/order'), headers: auth(), payload: { blockIds: ['b2'] } })
+    const res = await layout([{ id: 'b2', beside: false, width: 100 }])
     expect(res.statusCode).toBe(400)
     expect(prisma.articleBlock.update).not.toHaveBeenCalled()
   })
 
+  it('layout writes order, rows and widths (first block never beside)', async () => {
+    prisma.articleBlock.findMany
+      .mockResolvedValueOnce([{ id: 'b1' }, { id: 'b2' }])
+      .mockResolvedValue([{ ...block('b2', 0, note), width: '40' }, { ...block('b1', 1, ref('n2', SPACE, 'B')), width: '60', beside: true }])
+    const res = await layout([{ id: 'b2', beside: true, width: 40 }, { id: 'b1', beside: true, width: 60 }])
+    expect(res.statusCode).toBe(200)
+    expect(prisma.articleBlock.update).toHaveBeenCalledWith({ where: { id: 'b2' }, data: { position: 0, beside: false, width: '40' } })
+    expect(prisma.articleBlock.update).toHaveBeenCalledWith({ where: { id: 'b1' }, data: { position: 1, beside: true, width: '60' } })
+  })
+
+  it('layout refuses a width out of bounds', async () => {
+    prisma.articleBlock.findMany.mockResolvedValue([{ id: 'b1' }])
+    expect((await layout([{ id: 'b1', beside: false, width: 5 }])).statusCode).toBe(400)
+  })
+
+  it('reads legacy widths as numbers', async () => {
+    prisma.articleBlock.findMany.mockResolvedValue([{ ...block('b1', 0, note), width: 'medium' }, { ...block('b2', 1, ref('n2', SPACE, 'B')), width: '40' }])
+    const res = await app.inject({ method: 'GET', url: url(''), headers: auth() })
+    expect(res.json().blocks.map((b: any) => b.width)).toEqual([67, 40])
+  })
+
   it('delete keeps the referenced item', async () => {
     prisma.articleBlock.findFirst.mockResolvedValue({ id: 'b1', articleId: 'art', itemId: 'n1' })
+    prisma.articleBlock.findMany.mockResolvedValue([{ id: 'b1', beside: false, width: 'full' }])
     const res = await app.inject({ method: 'DELETE', url: url('/blocks/b1'), headers: auth() })
     expect(res.statusCode).toBe(204)
     expect(prisma.articleBlock.delete).toHaveBeenCalledWith({ where: { id: 'b1' } })
     expect(prisma.item.delete).not.toHaveBeenCalled()
+  })
+
+  it('delete closes the row: the next block leads it and takes the full width', async () => {
+    prisma.articleBlock.findFirst.mockResolvedValue({ id: 'b1', articleId: 'art', itemId: 'n1' })
+    prisma.articleBlock.findMany.mockResolvedValue([
+      { id: 'b1', beside: false, width: '40' }, { id: 'b2', beside: true, width: '60' }, { id: 'b3', beside: false, width: '75' },
+    ])
+    expect((await app.inject({ method: 'DELETE', url: url('/blocks/b1'), headers: auth() })).statusCode).toBe(204)
+    expect(prisma.articleBlock.update).toHaveBeenCalledWith({ where: { id: 'b2' }, data: { position: 0, beside: false, width: '100' } })
+    expect(prisma.articleBlock.update).toHaveBeenCalledWith({ where: { id: 'b3' }, data: { position: 1 } })
   })
 })
 

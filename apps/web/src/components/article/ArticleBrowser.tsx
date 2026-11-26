@@ -1,5 +1,6 @@
 /*
- * Sélecteur à parcourir d'un article (« Élément » de la barre d'insertion, mode Composer — décision Thomas 2026-10-24) :
+ * Sélecteur à parcourir d'un article (« Sélection multiple… » du panneau de composition, ArticleComposer, ajout à la
+ * fin — décision Thomas 2026-10-24 ; la barre d'insertion « Élément » a disparu le 2026-11-26) :
  * - colonne gauche : espaces lisibles de la portée (Cette communauté / Partout), avec leur nombre d'éléments ; l'espace
  *   de l'article est choisi à l'ouverture (articlesApi.browseSpaces) ;
  * - onglet « Éléments » : arbre des éléments de l'espace choisi (articlesApi.browseItems, 500 max, articles exclus),

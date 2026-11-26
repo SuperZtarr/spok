@@ -1,8 +1,8 @@
-/* Mode d'ouverture de la modale item : « Afficher » (lecture, ItemReadView), « Modifier » / « Fiche » (ItemEditModal) ou,
- * pour un article que l'on peut modifier, « Composer » (ses blocs, ArticleEditor dans la fiche).
+/* Mode d'ouverture de la modale item : « Afficher » (lecture, ItemReadView) ou « Modifier » / « Fiche » (ItemEditModal).
  * - Menu des items : « Afficher » → 'read', « Ouvrir » → 'edit' (itemMenuGroups.ts)
- * - Adresse : ?item=<id>&mode=lecture rouvre l'item en lecture (lien partageable), &mode=composition en Composer
- *   (lien « Composer » de la page d'un article) ; sans mode = défaut
+ * - Adresse : ?item=<id>&mode=lecture rouvre l'item en lecture (lien partageable) ; sans mode = défaut. L'ancien
+ *   &mode=composition (mode Composer de la fiche, supprimé le 2026-11-26) rouvre en lecture.
+ * - Composer un article se fait sur sa page : articleComposeUrl (?mode=composition), isArticleComposing.
  * - Défaut (aucun mode demandé, ex. clic simple dans une vue) : 'edit' si l'espace est modifiable par l'utilisateur,
  *   'read' sinon (visiteur anonyme ou membre en lecture seule) — règle businessRules « item-open-mode-default ».
  * articlePageUrl : adresse de la page de lecture d'un article ; on y va avec { state: { from } } pour que son
@@ -12,7 +12,7 @@
  * /items/:itemId (ItemLinkPage) retrouve l'espace puis redirige vers itemUrl — règle item-share-link.
  * Ne pas lire `mode` ailleurs qu'ici : parseItemMode / itemUrl sont la seule source du format d'URL. */
 
-export type ItemOpenMode = 'read' | 'edit' | 'compose';
+export type ItemOpenMode = 'read' | 'edit';
 
 export const ITEM_MODE_PARAM = 'mode';
 const READ_VALUE = 'lecture';
@@ -22,7 +22,7 @@ const COMPOSE_VALUE = 'composition';
 export function parseItemMode(value: string | null | undefined): ItemOpenMode | undefined {
   if (value === READ_VALUE) return 'read';
   if (value === 'edition') return 'edit';
-  if (value === COMPOSE_VALUE) return 'compose';
+  if (value === COMPOSE_VALUE) return 'read';
   return undefined;
 }
 
@@ -30,7 +30,6 @@ export function parseItemMode(value: string | null | undefined): ItemOpenMode | 
 export function itemUrl(spaceId: string, itemId: string, mode?: ItemOpenMode): string {
   const base = `/spaces/${spaceId}/content?item=${itemId}`;
   if (mode === 'read') return `${base}&${ITEM_MODE_PARAM}=${READ_VALUE}`;
-  if (mode === 'compose') return `${base}&${ITEM_MODE_PARAM}=${COMPOSE_VALUE}`;
   return base;
 }
 
@@ -47,6 +46,16 @@ export function resolveItemMode(requested: ItemOpenMode | undefined, canEditSpac
 /** Adresse de la page de lecture d'un article. */
 export function articlePageUrl(spaceId: string, articleId: string): string {
   return `/spaces/${spaceId}/articles/${articleId}`;
+}
+
+/** Page d'un article ouverte en composition (bouton « Composer » de la fiche et de la page, 2026-11-26). */
+export function articleComposeUrl(spaceId: string, articleId: string): string {
+  return `${articlePageUrl(spaceId, articleId)}?${ITEM_MODE_PARAM}=${COMPOSE_VALUE}`;
+}
+
+/** La page d'un article est-elle demandée en composition ? (paramètre de son adresse) */
+export function isArticleComposing(value: string | null | undefined): boolean {
+  return value === COMPOSE_VALUE;
 }
 
 /** Canevas d'un élément Process (2026-11-21) : vue Process de son espace, process ouvert par ?process=. */

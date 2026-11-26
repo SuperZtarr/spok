@@ -16,8 +16,10 @@
    Élément brouillon + hints.draftExplain / draftChangedSince / draftResume / draftDiscard : bandeau ItemDraftBanner (lib/itemDraft.ts) ; annonce item-draft-local sans date.
    Élément historique + hints.historyToggle / historyEmpty : section Historique (ItemHistorySection) ; annonce item-history-members sans date.
    hints.contributionVote / contributionVotePending : vote gardé par chaque contribution (ContributionVoteBadge) ; annonce contribution-vote-kept sans date.
-   Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans ItemEditModal — sauf
-   insertion, déjà expliqué par les infobulles de la barre d'insertion répétée entre les blocs) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête.
+   Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans
+   ItemEditModal) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête. La composition d'un article (panneau, gestes)
+   est sur sa page depuis le 2026-11-26 : son aide est dans pages/help/article.help.ts ; ici seulement composeMode /
+   openArticleUnsaved / openArticleRead (bouton « Composer » de la fiche).
    Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer.
    Élément statut : bouton « Passer à … » du menu ⋮ (pas de fiche propre au menu) ; annonce item-menu-next-status sans date (2026-11-20). */
 import type { HelpEntry } from '../../help/types';
@@ -46,29 +48,11 @@ export const elements = {
   modes: {
     title: 'Modes de la fiche',
     short: 'Afficher, Modifier ou Composer.',
-    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Composer ouvre l\'espace de travail de l\'élément, au même endroit pour tous : les blocs d\'un article (dans la fiche), le canevas d\'un process (la fiche se ferme ; « Afficher le process » si vous ne pouvez que le lire). Il est grisé tant que l\'élément n\'est pas enregistré dans ce type ou qu\'une modification attend. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Composer ouvre l\'espace de travail de l\'élément, au même endroit pour tous, et la fiche se ferme : la page d\'un article, où l\'on place ses blocs à la souris, ou le canevas d\'un process (« Lire l\'article » ou « Afficher le process » si vous ne pouvez que le lire). Il est grisé tant que l\'élément n\'est pas enregistré dans ce type ou qu\'une modification attend. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
     target: '[data-tour="item-mode-switch"]',
     noZone: true,
     side: 'bottom',
     changes: [{ id: 'item-section-help', kind: 'evolution', text: 'Chaque section de la fiche a son propre « ? », qui explique cette seule section. Le « ? » en haut à droite garde le tutoriel et le mode Aide.', date: '2026-11-11' }],
-  },
-  insertion: {
-    title: 'Insérer un bloc',
-    short: 'Ajoutez un élément ou du texte à l\'article.',
-    text: 'En mode Composer : « Élément » ouvre le sélecteur (parcourir les espaces, cocher un ou plusieurs éléments, ou prendre un processus) ; « Texte » crée une note. Un ajout groupé est confirmé avec le nombre d\'éléments.',
-    target: '[data-tour="article-insert"]',
-    noZone: true,
-    side: 'top',
-  },
-  // Panneau « À ajouter » du Composer (ElementTray dans ArticleEditor, même modèle que le Process — 2026-11-21)
-  panneauArticle: {
-    title: 'Éléments à ajouter',
-    short: 'Les éléments de l\'espace pas encore dans l\'article.',
-    text: 'En mode Composer, le panneau « À ajouter » liste les éléments de l\'espace de l\'article qui n\'y sont pas encore, en arbre (chevrons pour replier) ; la recherche donne une liste à plat. Glissez une ligne sur une barre entre deux blocs pour l\'y insérer, ou cliquez « + » pour l\'ajouter à la fin. « Ajouter d\'un autre espace » cherche dans vos autres espaces ; « Sélection multiple… » ouvre le sélecteur à cocher (plusieurs éléments, enfants, suites, processus). Le panneau se replie pour laisser la place aux blocs.',
-    target: '[data-tour="article-tray"]',
-    noZone: true,
-    side: 'right',
-    changes: [{ id: 'article-tray', kind: 'evolution', text: 'Article : en mode Composer, un panneau liste les éléments de l\'espace à ajouter ; glissez-les entre deux blocs, comme dans un process.', date: '2026-11-21' }],
   },
   // Présent dans tous les modes ; fiche réduite, les étapes Type → Relations n'apparaissent qu'une fois dépliée (Tags : toujours)
   champs: {
@@ -279,8 +263,8 @@ export const help: HelpEntry = {
     actionDuplicate: 'Dupliquer vers un espace : choisissez l\'espace où créer une copie. L\'original ne change pas.',
     actionMove: 'Déplacer vers un espace : choisissez l\'espace où l\'élément est déplacé.',
     actionConvert: 'Convertir en espace : propose de transformer l\'élément en espace ; une confirmation est demandée.',
-    actionAbsorb: 'Absorber les enfants : verse le contenu des enfants dans cet élément puis les supprime, tout de suite, sans confirmation.',
-    actionSplit: 'Éclater en sous-éléments : crée un sous-élément par titre de la description, tout de suite, sans confirmation.',
+    actionAbsorb: 'Absorber les enfants : ouvre une fenêtre où vous cochez les sous-éléments à verser dans cet élément ; les cochés sont ensuite supprimés, les autres restent.',
+    actionSplit: 'Éclater en sous-éléments : ouvre une fenêtre où vous cochez les sections de la description (une par titre) qui deviennent des sous-éléments ; les autres restent dans la description.',
     actionMerge: 'Fusionner avec… : choisissez l\'élément à réunir avec celui-ci ; une confirmation est demandée.',
     actionSaveTemplate: 'Enregistrer comme modèle : garde l\'élément et ses enfants (titres et types) comme modèle réutilisable.',
     actionInsertTemplate: 'Ajouter une structure : crée sous cet élément les enfants d\'un modèle choisi.',
@@ -299,7 +283,8 @@ export const help: HelpEntry = {
     openProcess: 'Composer : ouvre le canevas du process, où l\'on pose des éléments de tous vos espaces, on les range en couloirs et on les relie. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
     openProcessRead: 'Afficher le process : ouvre son canevas en lecture. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
     openProcessUnsaved: 'Le canevas du process s\'ouvrira par « Composer » une fois l\'élément enregistré avec le type « Process ».',
-    openArticleUnsaved:'Enregistrement de l\'article… Le mode Composer (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
+    openArticleUnsaved:'Enregistrement de l\'article… « Composer » (choix et mise en page des blocs, sur la page de l\'article) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
+    openArticleRead: 'Lire l\'article : ouvre sa page de lecture. La fiche se ferme.',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, tous les contenus (images, fichiers, liens, schémas), la description, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et ses images ; un fichier joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     copyThumbnail: 'Copier la vignette : met dans le presse-papier une image PNG de l\'élément (type, statut, titre, image ou début de la description, espace, dates, assigné), à coller dans Teams, Slack, un mail ou PowerPoint. L\'image reflète la version enregistrée. Rien n\'est modifié dans SPOK.',
@@ -310,7 +295,7 @@ export const help: HelpEntry = {
     readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (images et schémas en grand, puis fichiers et liens). Rien ne peut y être modifié.',
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
     editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
-    composeMode: 'Composer : ajouter, réordonner, régler ou retirer les blocs de l\'article (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place.',
+    composeMode: 'Composer : ouvre la page de l\'article en composition, où vous ajoutez, placez, dimensionnez et retirez ses blocs à la souris (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place. La fiche se ferme.',
     composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour utiliser « Composer ».',
     sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
   },

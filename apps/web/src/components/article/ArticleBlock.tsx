@@ -2,11 +2,13 @@
  * Rendu d'un bloc d'article (ArticleBlockView) en lecture, selon les CONTENUS de l'élément référencé (contenus
  * multiples, lot 3a, décision Thomas 2026-11-08, règle article-block-display-by-contents ; remplace le rendu par type
  * du 2026-10-24) — contenu d'abord, jamais de champ vide ni de bloc vide. Disposition (blockLayout) :
- * - 'figure' (que des images / schémas, texte court) → images + légende (titre en gras, texte dessous avec sa mise en forme) ;
- * - 'links' (que des liens) → une carte par lien (icône du site + titre + adresse), description dessous ;
+ * Le titre de l'élément est toujours le même intertitre, au-dessus du contenu (décision Thomas 2026-11-26) :
+ * - 'figure' (que des images / schémas, texte court) → intertitre, images, texte en légende dessous ;
+ * - 'links' (que des liens) → intertitre, une carte par lien (icône du site + nom du lien ou adresse), description dessous ;
  * - 'section' (le reste, dont un élément d'images avec un vrai texte) → intertitre + ligne d'infos selon le type
  *   (blockMetaLine : Réunion, Tâche, Projet, Période) + texte mis en page, puis Fichiers (« 📎 nom »), Liens (cartes).
- * Images (BlockImages, imageArrangement — 2026-11-18) : hauteur toujours limitée, jamais coupées (object-contain) ;
+ * Images (BlockImages, imageArrangement — 2026-11-18) : hauteur toujours limitée, jamais coupées (object-contain),
+ * chacune avec le nom du contenu en légende dessous s'il en a un (2026-11-26) ;
  * une image à côté du texte (40 %, à droite ; au-dessus sous 640 px ou dans une colonne), deux et plus en galerie
  * (2 ou 3 par rangée). Clic → image en grand (Lightbox de ItemContentsSection).
  * Jamais : tags, assigné, contributions, relations, enfants.
@@ -15,7 +17,8 @@
  * et intertitre plus petit (depthIndentClasses / depthTitleClasses de articleLayout.ts).
  * HTML toujours nettoyé (sanitizeHtml, règle user-html-sanitized) : un lecteur anonyme peut lire ici le contenu
  * d'un espace privé. Lien vers la fiche d'origine (intertitre) seulement si item.canOpen.
- * inRow : bloc dans une rangée de colonnes (ArticleFlow) — ni largeur, ni position, ni décalage : la colonne décide.
+ * Largeur, ligne et décalage de hiérarchie : décidés par ArticleFlow (2026-11-26), le bloc ne rend que son contenu.
+ * inRow : bloc dans une ligne de plusieurs — l'image d'un élément illustré passe au-dessus du texte (colonne étroite).
  * Props : block ; children (optionnel) = contenu de remplacement du texte, fourni par l'éditeur (note modifiable sur
  * place) — l'intertitre reste affiché au-dessus. L'impression (printArticle) copie ce rendu tel quel.
  */
@@ -27,7 +30,7 @@ import { sanitizeHtml, safeHref } from '../../lib/sanitizeHtml';
 import { fileNameFromUrl } from '../../lib/itemClipboard';
 import { pageHint } from '../../help/pageHint';
 import { Lightbox } from '../contents/ItemContentsSection';
-import { blockClasses, depthIndentClasses, depthTitleClasses } from './articleLayout';
+import { depthTitleClasses } from './articleLayout';
 import { blockContents, blockLayout, blockMetaLine, imageArrangement, isPicture, siteIconUrl } from './articleBlockContent';
 
 type BlockItem = NonNullable<ArticleBlockView['item']>;
@@ -47,7 +50,7 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
   const item = block.item;
   if (!block.available || !item) {
     return (
-      <div className={inRow ? 'min-w-0' : `w-full my-4 ${depthIndentClasses(block.depth)}`} data-tour="article-block" data-help-zone="article:bloc">
+      <div className="min-w-0" data-tour="article-block" data-help-zone="article:bloc">
         <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
           <Lock className="w-4 h-4 flex-shrink-0" />
           {pageHint('article', 'unavailable')}
@@ -56,7 +59,7 @@ export function ArticleBlock({ block, children, inRow = false }: { block: Articl
     );
   }
   return (
-    <div className={inRow ? 'min-w-0' : `${blockClasses(block, blockLayout(item) === 'figure')} ${depthIndentClasses(block.depth)} my-4`} data-tour="article-block" data-help-zone="article:bloc">
+    <div className="min-w-0" data-tour="article-block" data-help-zone="article:bloc">
       {renderBody(item, block.depth, children, inRow)}
     </div>
   );
@@ -82,11 +85,15 @@ function BlockImages({ images, title, beside }: { images: ArticleBlockContent[];
   const [open, setOpen] = useState<ArticleBlockContent | null>(null);
   const arrangement = imageArrangement(images.length, beside);
   if (arrangement === 'none') return null;
+  // Le nom du contenu (s'il en a un) s'affiche sous l'image, en légende (décision Thomas 2026-11-26)
   const picture = (c: ArticleBlockContent, cls: string) => (
-    <button key={c.id} type="button" onClick={() => setOpen(c)} aria-label={`Agrandir ${c.name || title}`}
-      className="block w-full rounded-md border border-border bg-muted/30 overflow-hidden cursor-zoom-in">
-      <img src={safeHref(c.url)} alt={c.name || title} className={`mx-auto object-contain ${cls}`} />
-    </button>
+    <div key={c.id} className="min-w-0">
+      <button type="button" onClick={() => setOpen(c)} aria-label={`Agrandir ${c.name || title}`}
+        className="block w-full rounded-md border border-border bg-muted/30 overflow-hidden cursor-zoom-in">
+        <img src={safeHref(c.url)} alt={c.name || title} className={`mx-auto object-contain ${cls}`} />
+      </button>
+      {c.name?.trim() && <span className="block mt-1 text-xs text-muted-foreground text-center break-words">{c.name.trim()}</span>}
+    </div>
   );
   return (
     <>
@@ -130,15 +137,17 @@ function renderBody(item: BlockItem, depth: number, children: ReactNode | undefi
   const contents = blockContents(item);
   const images = contents.filter(isPicture);
   const layout = blockLayout(item);
+  // Titre de l'élément : toujours le même intertitre, au-dessus du contenu, quelle que soit la disposition (2026-11-26)
+  const heading = <h3 className={`font-semibold mb-1 ${depthTitleClasses(depth)}`}>{title}</h3>;
 
   if (layout === 'figure') {
     return (
       <figure>
+        {heading}
         <BlockImages images={images} title={item.title} beside={false} />
-        <figcaption className="mt-1 text-sm text-muted-foreground text-center">
-          <strong className="font-semibold">{title}</strong>
-          {hasContent(item.description) && <div className="[&_p]:my-0" dangerouslySetInnerHTML={html(item.description)} />}
-        </figcaption>
+        {hasContent(item.description) && (
+          <figcaption className="mt-1 text-sm text-muted-foreground text-center [&_p]:my-0" dangerouslySetInnerHTML={html(item.description)} />
+        )}
       </figure>
     );
   }
@@ -146,9 +155,10 @@ function renderBody(item: BlockItem, depth: number, children: ReactNode | undefi
   if (layout === 'links') {
     return (
       <>
+        {heading}
         <div className="space-y-2">
           {contents.map((c) => (
-            <LinkCard key={c.id} url={c.url!} label={contents.length > 1 ? (c.name?.trim() || item.title) : item.title} />
+            <LinkCard key={c.id} url={c.url!} label={c.name?.trim() || c.url!} />
           ))}
         </div>
         {text && <div className="mt-2">{text}</div>}
@@ -161,7 +171,7 @@ function renderBody(item: BlockItem, depth: number, children: ReactNode | undefi
   const beside = !!text && !inRow && imageArrangement(images.length, true) === 'beside';
   return (
     <section className="flow-root">
-      <h3 className={`font-semibold mb-1 ${depthTitleClasses(depth)}`}>{title}</h3>
+      {heading}
       {meta && <p className="text-xs text-muted-foreground mb-2">{meta}</p>}
       {beside && <BlockImages images={images} title={item.title} beside />}
       {text}

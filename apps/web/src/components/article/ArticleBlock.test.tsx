@@ -37,13 +37,22 @@ describe('ArticleBlock', () => {
     expect(screen.queryByText('Ancien')).toBeNull();
   });
 
-  it('que des images : figure, légende = titre + description, quel que soit le type', () => {
+  it('que des images : intertitre au-dessus comme partout, texte en légende, quel que soit le type', () => {
     const { container } = show(block(item({ type: 'UNDEFINED', title: 'Carte', description: '<p>Vue du nord</p>',
       contents: [content('IMAGE', 'https://r2/c.webp'), content('IMAGE', 'https://r2/d.webp')] })));
+    expect(screen.getByRole('heading', { name: 'Carte' })).toBeTruthy();
     const caption = container.querySelector('figcaption')!;
-    expect(caption.textContent).toContain('Carte');
+    expect(caption.textContent).not.toContain('Carte');
     expect(caption.textContent).toContain('Vue du nord');
+    expect(container.innerHTML.indexOf('Carte')).toBeLessThan(container.innerHTML.indexOf('c.webp'));
     expect(container.querySelectorAll('figure img')).toHaveLength(2);
+  });
+
+  it('nom d\'une image affiché sous elle, en légende', () => {
+    const { container } = show(block(item({ title: 'Chantier', contents: [content('IMAGE', 'https://r2/e.webp', 'Façade nord')] })));
+    const caption = screen.getByText('Façade nord');
+    const img = container.querySelector('img[src="https://r2/e.webp"]')!;
+    expect(img.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('schéma sans aperçu ignoré ; adresse non sûre ignorée', () => {

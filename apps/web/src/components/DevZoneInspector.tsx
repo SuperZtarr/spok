@@ -75,7 +75,6 @@ const ZONE_COLORS: Record<string, string> = {
   'item-lecture-contenu': '#0369a1',
   'item-resume': '#57534e',
   'item-medias': '#b45309',
-  'item-composer': '#be123c',
 };
 
 /** Couleur du cadre d'une modale survolée hors de toute zone */

@@ -1,7 +1,7 @@
 /*
  * Vue Articles : les éléments de type ARTICLE de l'espace (et de ses espaces enfants liés) en cartes, titre et chapeau
  * (décision Thomas 2026-11-06 : un accès direct à la lecture). Un clic ouvre la page de lecture (ArticlePage), avec
- * retour à cette vue ; le menu ⋮ donne la fiche et ses actions. La composition se fait dans le mode Composer de la fiche.
+ * retour à cette vue ; le menu ⋮ donne la fiche et ses actions. La composition se fait sur la page de l'article (Lire | Composer, 2026-11-26).
  * Props : items (déjà filtrés par SpacePage : type, statut, texte), portalGroups, callbacks du menu ⋮ comme les autres vues.
  * Aide : components/views/help/articles.help.ts.
  */

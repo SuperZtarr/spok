@@ -3,23 +3,25 @@
  * « Composer » du sélecteur de modes de la fiche (Afficher / Modifier / Composer). Un seul libellé, un seul
  * emplacement, les mêmes règles pour tous ces types (signalement cmwqikw4h00427icc43c4crb3, décision Thomas
  * 2026-11-25) :
- * - ARTICLE : mode Composer de la fiche (blocs), si l'API accorde canEditArticle ;
+ * - ARTICLE : page de l'article en composition (articleComposeUrl, 2026-11-26 — avant : mode Composer de la fiche),
+ *   si l'on peut modifier l'élément ; un lecteur voit « Lire l'article » au même endroit ;
  * - PROCESS : page du canevas (processPageUrl), si l'on peut modifier l'élément ; un lecteur voit « Afficher le
  *   process » au même endroit (canevas en lecture seule).
+ * Le genre 'mode' (espace de travail dans la fiche) n'a plus d'usage ; il reste prévu par le type.
  * composeButton calcule l'état du bouton (visible, libellé, grisé, rappel d'aide) ; les textes des rappels sont dans
  * components/help/item-modal.help.ts (hints, clés ComposeHint). Ajouter un type = une entrée ici + ses rappels.
  * Ne pas réintroduire de lien ou bouton propre à un type ailleurs dans la fiche.
  */
-import { processPageUrl } from './itemOpenMode';
+import { articleComposeUrl, processPageUrl } from './itemOpenMode';
 
-export type ComposeHint = 'composeMode' | 'composeModeUnsaved' | 'openArticleUnsaved' | 'openProcess' | 'openProcessUnsaved' | 'openProcessRead';
+export type ComposeHint = 'composeMode' | 'composeModeUnsaved' | 'openArticleUnsaved' | 'openArticleRead' | 'openProcess' | 'openProcessUnsaved' | 'openProcessRead';
 
 export type ComposeTarget =
   | { kind: 'mode'; hint: ComposeHint; unsavedHint: ComposeHint }
   | { kind: 'page'; url: (spaceId: string, itemId: string) => string; hint: ComposeHint; unsavedHint: ComposeHint; readerLabel: string; readerHint: ComposeHint };
 
 export const COMPOSE_TARGETS: Record<string, ComposeTarget> = {
-  ARTICLE: { kind: 'mode', hint: 'composeMode', unsavedHint: 'openArticleUnsaved' },
+  ARTICLE: { kind: 'page', url: articleComposeUrl, hint: 'composeMode', unsavedHint: 'openArticleUnsaved', readerLabel: "Lire l'article", readerHint: 'openArticleRead' },
   PROCESS: { kind: 'page', url: processPageUrl, hint: 'openProcess', unsavedHint: 'openProcessUnsaved', readerLabel: 'Afficher le process', readerHint: 'openProcessRead' },
 };
 

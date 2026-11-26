@@ -6,6 +6,8 @@
  * par l'API dans les référentiels de l'espace d'origine (le lecteur peut ne pas y avoir accès) ; dates en ISO.
  * contents (contenus multiples, lot 3a, 2026-11-08) : contenus de l'élément sans xml, dans l'ordre d'affichage
  * (Images, Fichiers, Liens, Schémas) — le bloc se rend selon eux ; url d'un schéma = son aperçu.
+ * Disposition (2026-11-26) : width numérique + beside, règles dans utils/articleLayout.ts ; plus de position
+ * gauche / droite (align) dans la vue.
  */
 import type { ItemType } from './item.js';
 import type { ItemContent } from './itemContent.js';
@@ -17,14 +19,11 @@ export type ArticleBlockContent = Pick<ItemContent, 'id' | 'kind'> & {
   mimeType: string | null;
 };
 
-export type ArticleBlockWidth = 'full' | 'wide' | 'medium';
-export type ArticleBlockAlign = 'center' | 'left' | 'right';
-
 export type ArticleBlockView = {
   id: string;
   position: number;
-  width: ArticleBlockWidth;
-  align: ArticleBlockAlign;
+  /** Bloc seul sur sa ligne : % de la largeur de l'article ; dans une ligne : part de la ligne (utils/articleLayout.ts) */
+  width: number;
   available: boolean;
   /** Niveau dans la hiérarchie de l'article (0 à 3) : ancêtres de l'élément présents dans l'article (2026-10-30) */
   depth: number;

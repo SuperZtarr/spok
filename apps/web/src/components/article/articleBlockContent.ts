@@ -16,7 +16,7 @@
  *   Le rendu suit les contenus, plus le type (règle article-block-display-by-contents).
  * - imageArrangement(count, besideText) : disposition des images d'un bloc selon leur nombre (2026-11-18) — 'none',
  *   'single' (une image seule, hauteur limitée), 'beside' (une image à côté du texte), 'gallery' (2 et plus, en grille).
- * Utilisé par ArticleBlock (lecture, Composer, impression) et ArticleEditor (habillage proposé si 'figure').
+ * Utilisé par ArticleBlock (lecture, composition, impression).
  */
 import type { ArticleBlockContent, ArticleBlockView } from '@spok/shared';
 import { getItemTypeDef } from '@spok/shared';

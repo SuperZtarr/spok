@@ -2,8 +2,8 @@
  * ElementTray — panneau latéral d'éléments « à poser » : arborescence parent/enfant (chevrons pour replier ; un élément
  * dont le parent n'est pas dans la liste remonte à la racine), recherche (résultats à plat, sans accents ni casse),
  * compteur, repli du panneau, lignes glissables (HTML5 drag & drop : type MIME dragType = id de l'élément ; le dépôt
- * est géré par l'appelant). Partagé par la vue Process (« Non placés », ProcessUnplacedPanel) et le mode Composer
- * d'un article (« À ajouter », ArticleEditor) — demande Thomas 2026-11-21 : même modèle de sélection.
+ * est géré par l'appelant). Partagé par la vue Process (« Non placés », ProcessUnplacedPanel) et la composition
+ * d'un article (« À ajouter », ArticleComposer) — demande Thomas 2026-11-21 : même modèle de sélection.
  * Props clés : items (déjà filtrés par l'appelant), canEdit (sinon rien n'est glissable ni proposé), labels (textes,
  * jamais en dur ici : ils viennent des fiches d'aide), headerExtra (actions sous la recherche, dont
  * TrayElsewhereButton « Ajouter d'un autre espace »), rowAction (bouton au survol d'une ligne), className (taille et bordure du panneau).
