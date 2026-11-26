@@ -15,8 +15,10 @@
  * Ligne « Statut » (2026-11-20) : « Passer à <statut suivant> » (nextStatusForType, @spok/shared — jamais recalculé ici),
  * même onUpdateStatus que le sous-menu ; la flèche de la ligne ouvre le sous-menu (splitSubmenu). Statut final (aucun
  * suivant) → « Modifier le statut », sous-menu seul. Les vues passent { item, currentStatusId } pour que le bouton sache où aller.
+ * « Absorber » / « Éclater » (2026-11-26) : ouvrent la modale de choix partie par partie (ItemPartsPickModal), rien n'est
+ * fait sans confirmation ; hasHeadings dérive de hasDescriptionHeadings (@spok/shared).
  */
-import { nextStatusForType, statusesForType, type StatusConfig } from '@spok/shared';
+import { hasDescriptionHeadings, nextStatusForType, statusesForType, type StatusConfig } from '@spok/shared';
 import { ArrowRight, Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
 import { articlePageUrl, articleReturnState, type ItemOpenMode } from './itemOpenMode';
 import { appNavigate } from './appNavigate';
@@ -41,7 +43,8 @@ export async function markItemUnread(itemId: string): Promise<void> {
 /** Rappel fonctionnel du bouton « Passer à … » (affiché en bas du menu au survol) */
 export const NEXT_STATUS_HINT = "Passe l'élément au statut suivant de son parcours (mêmes règles de dates que la fiche). La flèche à droite ouvre la liste pour choisir un autre statut.";
 
-export const hasHeadings =(desc?: string | null) => !!desc && /<h[2-3][^>]*>/i.test(desc);
+/** Condition d'affichage de « Éclater » : même détection des titres que l'API (descriptionSections, @spok/shared). */
+export const hasHeadings = hasDescriptionHeadings;
 
 /**
  * L'item a-t-il des enfants ? (`childCount` fourni par la liste API, ou `children` des vues en arbre).

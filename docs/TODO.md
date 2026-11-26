@@ -307,6 +307,7 @@
 - [x] Arborescences - glisser sous un élément — 2026-11-25
 - [x] Fiche - bouton Composer commun à l'article et au process — 2026-11-25
 - [x] Barres de vue - icônes seules quand la place manque — 2026-11-25
+- [x] Éclater et absorber - choix partie par partie — 2026-11-26
 - [x] Nouveautés - /news en vignettes pleine largeur — 2026-11-12
 - [x] Nouveautés - publication depuis /admin/news — 2026-11-12
 - [x] Question - modèles de réponse — 2026-11-12

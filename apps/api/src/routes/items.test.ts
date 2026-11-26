@@ -1356,3 +1356,41 @@ describe('MEMBER assigné non auteur', () => {
     expect(ko.statusCode).toBe(403)
   })
 })
+
+describe('split par titres — sections choisies (modale « Éclater »)', () => {
+  let app: FastifyInstance
+  let prisma: MockPrisma
+  const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
+  const source = { id: 'src', spaceId: 'space-1', status: null, lockedAt: null, createdById: 'test-user-id',
+    description: '<p>Intro</p><h2>A</h2><p>a</p><h2>B</h2><p>b</p>' }
+
+  beforeEach(async () => {
+    ({ app, prisma } = await buildItemsTestApp())
+    prisma.spaceMembership.findUnique.mockResolvedValue({ userId: 'test-user-id', spaceId: 'space-1', role: 'MEMBER' })
+    prisma.item.findFirst.mockResolvedValue(source)
+    prisma.item.findMany.mockResolvedValue([])
+    prisma.item.create.mockImplementation(async ({ data }: any) => ({ id: 'new', ...data }))
+    prisma.item.update.mockResolvedValue(source)
+  })
+
+  it('ne crée que les sections choisies, les autres restent dans la description', async () => {
+    const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(), payload: { sections: [1] } })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.item.create).toHaveBeenCalledTimes(1)
+    expect(prisma.item.create.mock.calls[0][0].data.title).toBe('B')
+    expect(prisma.item.update.mock.calls[0][0].data.description).toBe('<p>Intro</p><h2>A</h2><p>a</p>')
+  })
+
+  it('sans corps : toutes les sections (appels MCP et anciens)', async () => {
+    const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth() })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.item.create).toHaveBeenCalledTimes(2)
+    expect(prisma.item.update.mock.calls[0][0].data.description).toBe('<p>Intro</p>')
+  })
+
+  it('aucune section choisie → 400', async () => {
+    const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(), payload: { sections: [] } })
+    expect(res.statusCode).toBe(400)
+    expect(prisma.item.create).not.toHaveBeenCalled()
+  })
+})

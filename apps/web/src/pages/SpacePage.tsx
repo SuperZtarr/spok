@@ -9,6 +9,7 @@
  * éléments de l'espace courant pour le panneau, onCreateNote (double-clic = élément vide + fiche), onOpenItem (fiche ici,
  * nouvel onglet pour un élément d'un autre espace). Le paramètre tombe quand on quitte la vue Process.
  * Clic sur un élément Process dans une autre vue : son canevas (processPageUrl).
+ * Éclater / Absorber (2026-11-26) : ItemPartsPickModal, ouverte par actions.pendingParts, choix partie par partie.
  * Vues plein cadre (canevas, Gantt, PERT, Process…) : listées dans les 3 conteneurs (h-full / overflow-hidden) —
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
  * Sauvegarde en continu l'URL courante (espace + item ouvert) dans spok_last_location
@@ -115,6 +116,7 @@ import { RecentChangesView } from '../components/views/RecentChangesView';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { StatusPropagationModal } from '../components/StatusPropagationModal';
 import { ConvertToSpaceModal } from '../components/ConvertToSpaceModal';
+import { ItemPartsPickModal } from '../components/ItemPartsPickModal';
 import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
@@ -1818,6 +1820,20 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
         allItems={allItems}
         spaceId={spaceId!}
         canManageItem={canEditItem}
+      />
+
+      {/* Éclater / Absorber : choix des sections ou des sous-éléments, un par un */}
+      <ItemPartsPickModal
+        mode={actions.pendingParts?.mode ?? null}
+        itemId={actions.pendingParts?.id ?? null}
+        itemSpaceId={allItems.find(i => i.id === actions.pendingParts?.id)?.spaceId || spaceId!}
+        itemTitle={allItems.find(i => i.id === actions.pendingParts?.id)?.title}
+        childItems={actions.pendingParts?.mode === 'absorb'
+          ? allItems.filter(i => i.parentId === actions.pendingParts!.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+          : []}
+        onClose={() => actions.setPendingParts(null)}
+        onConfirm={actions.confirmParts}
+        isPending={actions.partsPending}
       />
 
       {/* Cross-space move confirmation modal */}
