@@ -16,6 +16,7 @@
  */
 import type {
   SearchCategory,
+  DescriptionSplitRequest,
   ItemContent,
   ItemSecretSummary,
   ItemSecretRevealed,
@@ -1313,11 +1314,12 @@ export const itemsApi = {
       body: JSON.stringify(childIds ? { childIds } : {}),
     }),
 
-  // sections : indices des titres choisis dans la modale (ItemPartsPickModal) ; absent = toutes
-  splitByHeadings: (spaceId: string, itemId: string, sections?: number[]) =>
+  // choice : H2, H3 et destinations de contenus choisis dans la modale (ItemPartsPickModal) ; absent = tous les H2,
+  // H3 embarqués, contenus laissés sur l'élément
+  splitByHeadings: (spaceId: string, itemId: string, choice?: DescriptionSplitRequest) =>
     fetchApi<{ children: Item[]; preContent: string | null }>(`/spaces/${spaceId}/items/${itemId}/split`, {
       method: 'POST',
-      body: JSON.stringify(sections ? { sections } : {}),
+      body: JSON.stringify(choice ?? {}),
     }),
 
   // Contributions

@@ -1,18 +1,23 @@
 /*
- * Modale de choix, une ligne par partie, avant « Éclater en sous-éléments » ou « Absorber les enfants »
+ * Modale de choix, partie par partie, avant « Éclater en sous-éléments » ou « Absorber les enfants »
  * (demande Thomas 2026-11-26 : confirmer partie par partie au lieu d'une exécution immédiate).
- * - mode 'split' : une ligne par titre de niveau 2 ou 3 de la description, lue par splitDescriptionSections (@spok/shared,
- *   même découpage que l'API) ; les sections non cochées restent dans la description.
+ * - mode 'split' (premier niveau H2, demande Thomas 2026-11-27) : sections lues par splitDescriptionSections
+ *   (@spok/shared, même découpage que l'API).
+ *   · une ligne par H2, cochée à l'ouverture : cochée = sous-élément, décochée = reste dans la description ;
+ *   · sous chaque H2, ses H3 en retrait, décochés à l'ouverture : coché = sous-élément de son H2, décoché = reste dans la
+ *     description du H2 ; case grisée si le H2 est décoché ;
+ *   · bloc Contenus (si l'élément en a) : une destination par contenu, « Reste sur l'élément » par défaut ou l'un des
+ *     sous-éléments cochés ; une destination devenue décochée revient à « Reste ». Données sécurisées : jamais listées.
  * - mode 'absorb' : une ligne par enfant direct (childItems, déjà triés) ; les enfants non cochés restent enfants.
- * Tout est coché à l'ouverture ; le bouton de confirmation est désactivé si rien n'est coché.
- * Props : mode, itemId + itemSpaceId (fiche relue pour la description), itemTitle, childItems (absorb),
- * onConfirm(indices de sections | ids d'enfants), isPending. L'appel API reste dans useSpaceActions.
- * Aide : fiche components/help/item-parts-pick.help.ts (« ? », zones liste / tout, rappels pageHint).
+ * Le bouton de confirmation est désactivé si rien n'est coché.
+ * Props : mode, itemId + itemSpaceId (fiche relue pour la description et les contenus), itemTitle, childItems (absorb),
+ * onConfirm(DescriptionSplitRequest | ids d'enfants), isPending. L'appel API reste dans useSpaceActions.
+ * Aide : fiche components/help/item-parts-pick.help.ts (« ? », zones liste / tout / sous-titres / contenus, rappels pageHint).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { Item } from '@spok/shared';
-import { splitDescriptionSections } from '@spok/shared';
+import type { DescriptionSplitRequest, Item } from '@spok/shared';
+import { splitDescriptionSections, sortItemContents, itemContentKindDef } from '@spok/shared';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { itemsApi } from '../lib/api';
@@ -30,15 +35,9 @@ interface ItemPartsPickModalProps {
   /** Enfants directs de l'élément, dans l'ordre (mode absorb). */
   childItems: Item[];
   onClose: () => void;
-  /** split : indices des sections cochées ; absorb : ids des enfants cochés. */
-  onConfirm: (selection: number[] | string[]) => void;
+  /** split : H2 / H3 cochés et destination des contenus ; absorb : ids des enfants cochés. */
+  onConfirm: (selection: DescriptionSplitRequest | string[]) => void;
   isPending?: boolean;
-}
-
-interface PartRow {
-  key: string;
-  title: string;
-  preview: string;
 }
 
 /** Début du texte d'une partie, sans balises, pour reconnaître la section ou l'enfant. */
@@ -46,6 +45,9 @@ function textPreview(html?: string | null): string {
   const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   return text.length > 120 ? `${text.slice(0, 120)}…` : text;
 }
+
+/** Clé d'un sous-élément : « i » pour un H2, « i.j » pour un H3 ; '' = reste sur l'élément (contenus). */
+const subKey = (i: number, j: number) => `${i}.${j}`;
 
 export function ItemPartsPickModal({
   mode, itemId, itemSpaceId, itemTitle, childItems, onClose, onConfirm, isPending,
@@ -61,36 +63,73 @@ export function ItemPartsPickModal({
     staleTime: 0,
   });
 
-  const rows: PartRow[] = useMemo(() => {
-    if (isSplit) {
-      return splitDescriptionSections(item?.description).sections.map((s, i) => ({
-        key: String(i), title: s.title || 'Sans titre', preview: textPreview(s.body),
-      }));
-    }
-    return childItems.map((c) => ({ key: c.id, title: c.title || 'Sans titre', preview: textPreview(c.description) }));
-  }, [isSplit, item?.description, childItems]);
+  // ── Éclater : H2, H3, contenus ──
+  const sections = useMemo(() => splitDescriptionSections(item?.description).sections, [item?.description]);
+  const contents = useMemo(() => sortItemContents(item?.contents ?? []), [item?.contents]);
+  const [h2, setH2] = useState<Set<number>>(new Set());
+  const [h3, setH3] = useState<Set<string>>(new Set());
+  const [targets, setTargets] = useState<Record<string, string>>({});
+  const splitKey = `${item?.id}|${item?.description}`;
+  // Ouverture ou fiche relue : tous les H2, aucun H3, contenus laissés sur l'élément
+  useEffect(() => {
+    setH2(new Set(sections.map((_, i) => i)));
+    setH3(new Set());
+    setTargets({});
+  }, [splitKey, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const rowKeys = rows.map((r) => r.key).join('|');
-  // Tout coché à l'ouverture et quand la liste change (fiche relue)
-  useEffect(() => { setChecked(new Set(rows.map((r) => r.key))); }, [rowKeys, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const toggle = (key: string) => setChecked((prev) => {
-    const next = new Set(prev);
-    if (next.has(key)) next.delete(key); else next.add(key);
+  const toggleIn = <T,>(set: Set<T>, value: T) => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value); else next.add(value);
     return next;
-  });
-  const allChecked = rows.length > 0 && checked.size === rows.length;
+  };
+  /** H3 réellement éclatés : cochés ET dont le H2 l'est. */
+  const activeH3 = useMemo(
+    () => sections.flatMap((s, i) => (h2.has(i) ? s.subsections.map((_, j) => subKey(i, j)).filter((k) => h3.has(k)) : [])),
+    [sections, h2, h3],
+  );
+  /** Destinations proposées aux contenus : sous-éléments qui seront créés, dans l'ordre. */
+  const destinations = useMemo(() => sections.flatMap((s, i) => (!h2.has(i) ? [] : [
+    { key: String(i), label: s.title || 'Sans titre' },
+    ...s.subsections.map((sub, j) => ({ key: subKey(i, j), label: `— ${sub.title || 'Sans titre'}` }))
+      .filter((d) => h3.has(d.key)),
+  ])), [sections, h2, h3]);
+  const destinationKeys = new Set(destinations.map((d) => d.key));
+  const effectiveTarget = (contentId: string) => (destinationKeys.has(targets[contentId] ?? '') ? targets[contentId] : '');
+  const allH3Keys = sections.flatMap((s, i) => (h2.has(i) ? s.subsections.map((_, j) => subKey(i, j)) : []));
+  const allH3Checked = allH3Keys.length > 0 && allH3Keys.every((k) => h3.has(k));
 
-  const confirm = () => {
-    const keys = rows.filter((r) => checked.has(r.key)).map((r) => r.key);
-    onConfirm(isSplit ? keys.map(Number) : keys);
+  const confirmSplit = () => {
+    const movedContents = contents.flatMap((c) => {
+      const target = effectiveTarget(c.id);
+      if (!target) return [];
+      const [section, subsection] = target.split('.').map(Number);
+      return [{ contentId: c.id, section, ...(subsection === undefined ? {} : { subsection }) }];
+    });
+    onConfirm({
+      sections: [...h2].sort((a, b) => a - b),
+      subsections: activeH3.map((k) => k.split('.').map(Number) as [number, number]),
+      contents: movedContents,
+    });
   };
 
-  const count = rows.filter((r) => checked.has(r.key)).length;
+  // ── Absorber : enfants directs ──
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const childKeys = childItems.map((c) => c.id).join('|');
+  useEffect(() => { setChecked(new Set(childItems.map((c) => c.id))); }, [childKeys, isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  const allChildrenChecked = childItems.length > 0 && checked.size === childItems.length;
+
+  // ── Pied commun ──
+  const count = isSplit ? h2.size + activeH3.length : childItems.filter((c) => checked.has(c.id)).length;
+  const movedCount = isSplit ? contents.filter((c) => effectiveTarget(c.id)).length : 0;
   const confirmLabel = isSplit
-    ? `Éclater ${count} section${count > 1 ? 's' : ''}`
+    ? `Éclater : ${count} sous-élément${count > 1 ? 's' : ''}${movedCount > 0 ? `, ${movedCount} contenu${movedCount > 1 ? 's' : ''} déplacé${movedCount > 1 ? 's' : ''}` : ''}`
     : `Absorber ${count} sous-élément${count > 1 ? 's' : ''}`;
+  const rowCount = isSplit ? sections.length : childItems.length;
+  const allChecked = isSplit ? sections.length > 0 && h2.size === sections.length : allChildrenChecked;
+  const toggleAll = () => {
+    if (isSplit) setH2(allChecked ? new Set() : new Set(sections.map((_, i) => i)));
+    else setChecked(allChecked ? new Set() : new Set(childItems.map((c) => c.id)));
+  };
 
   return (
     <Modal
@@ -106,12 +145,25 @@ export function ItemPartsPickModal({
           {pageHint('item-parts-pick', isSplit ? 'introSplit' : 'introAbsorb')}
         </p>
 
-        <div className="flex justify-end" data-help-zone="item-parts-pick:tout">
+        <div className="flex justify-end gap-4">
+          {isSplit && allH3Keys.length > 0 && (
+            <HelpHint text={pageHint('item-parts-pick', 'subsectionsSplit')}>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline"
+                data-help-zone="item-parts-pick:sous-titres"
+                onClick={() => setH3(allH3Checked ? new Set() : new Set(allH3Keys))}
+              >
+                {allH3Checked ? 'Garder les sous-titres dans le texte' : 'Éclater tous les sous-titres'}
+              </button>
+            </HelpHint>
+          )}
           <button
             type="button"
             className="text-xs text-primary hover:underline disabled:opacity-50"
-            disabled={rows.length === 0}
-            onClick={() => setChecked(allChecked ? new Set() : new Set(rows.map((r) => r.key)))}
+            data-help-zone="item-parts-pick:tout"
+            disabled={rowCount === 0}
+            onClick={toggleAll}
           >
             {allChecked ? 'Tout décocher' : 'Tout cocher'}
           </button>
@@ -120,30 +172,87 @@ export function ItemPartsPickModal({
         <div className="max-h-[400px] overflow-y-auto border rounded-md divide-y" data-help-zone="item-parts-pick:liste">
           {isSplit && isLoading ? (
             <p className="p-3 text-sm text-muted-foreground">Chargement…</p>
-          ) : rows.length === 0 ? (
+          ) : rowCount === 0 ? (
             <p className="p-3 text-sm text-muted-foreground">
               {pageHint('item-parts-pick', isSplit ? 'emptySplit' : 'emptyAbsorb')}
             </p>
-          ) : rows.map((r) => (
-            <label key={r.key} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={checked.has(r.key)}
-                onChange={() => toggle(r.key)}
-              />
+          ) : isSplit ? sections.map((s, i) => (
+            <div key={i}>
+              <label className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50">
+                <input type="checkbox" className="mt-1" checked={h2.has(i)} onChange={() => setH2((prev) => toggleIn(prev, i))} />
+                <span className="min-w-0">
+                  <span className="block font-medium truncate">{s.title || 'Sans titre'}</span>
+                  {textPreview(s.intro) && <span className="block text-xs text-muted-foreground line-clamp-2">{textPreview(s.intro)}</span>}
+                </span>
+              </label>
+              {s.subsections.map((sub, j) => {
+                const key = subKey(i, j);
+                const disabled = !h2.has(i);
+                return (
+                  <label
+                    key={key}
+                    className={`flex items-start gap-3 py-2 pr-3 pl-10 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      disabled={disabled}
+                      checked={!disabled && h3.has(key)}
+                      onChange={() => setH3((prev) => toggleIn(prev, key))}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm truncate">{sub.title || 'Sans titre'}</span>
+                      {textPreview(sub.body) && <span className="block text-xs text-muted-foreground line-clamp-1">{textPreview(sub.body)}</span>}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )) : childItems.map((c) => (
+            <label key={c.id} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50">
+              <input type="checkbox" className="mt-1" checked={checked.has(c.id)} onChange={() => setChecked((prev) => toggleIn(prev, c.id))} />
               <span className="min-w-0">
-                <span className="block font-medium truncate">{r.title}</span>
-                {r.preview && <span className="block text-xs text-muted-foreground line-clamp-2">{r.preview}</span>}
+                <span className="block font-medium truncate">{c.title || 'Sans titre'}</span>
+                {textPreview(c.description) && <span className="block text-xs text-muted-foreground line-clamp-2">{textPreview(c.description)}</span>}
               </span>
             </label>
           ))}
         </div>
 
+        {isSplit && contents.length > 0 && (
+          <div className="space-y-2" data-help-zone="item-parts-pick:contenus">
+            <p className="text-sm font-medium">Contenus</p>
+            <p className="text-xs text-muted-foreground">{pageHint('item-parts-pick', 'contentsSplit')}</p>
+            <div className="max-h-[200px] overflow-y-auto border rounded-md divide-y">
+              {contents.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 p-2">
+                  <span className="min-w-0 flex-1 text-sm truncate">
+                    <span className="text-muted-foreground">{itemContentKindDef(c.kind)?.singular ?? c.kind} · </span>
+                    {c.name || c.url || c.value || 'Sans nom'}
+                  </span>
+                  <select
+                    className="text-sm border rounded-md px-2 py-1 bg-background max-w-[45%]"
+                    value={effectiveTarget(c.id)}
+                    onChange={(e) => setTargets((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                  >
+                    <option value="">Reste sur l'élément</option>
+                    {destinations.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="bordered" onClick={onClose}>Annuler</Button>
           <HelpHint text={pageHint('item-parts-pick', isSplit ? 'confirmSplit' : 'confirmAbsorb')}>
-            <Button onClick={confirm} disabled={count === 0 || !!isPending}>{confirmLabel}</Button>
+            <Button
+              onClick={isSplit ? confirmSplit : () => onConfirm(childItems.filter((c) => checked.has(c.id)).map((c) => c.id))}
+              disabled={count === 0 || !!isPending}
+            >
+              {confirmLabel}
+            </Button>
           </HelpHint>
         </div>
       </div>

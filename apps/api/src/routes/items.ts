@@ -11,8 +11,9 @@
  * liste et dÃ©tail renvoient assignmentReceipt (computeAssignmentReceipts) â€” cf. utils/assignment.ts.
  * Verrou de sÃ©ance (copies lockedAt) : cf. utils/itemLock.ts â€” PATCH (organisation seule), DELETE (OWNER),
  * split refusÃ©, propagation de statut ignore les enfants verrouillÃ©s.
- * Split (2026-11-26) : corps optionnel { sections } = titres choisis dans la modale « Éclater » ; découpage par
- * planDescriptionSplit (@spok/shared), les sections non choisies restent dans la description.
+ * Split (2026-11-26, H2 + H3 + contenus 2026-11-27) : corps optionnel { sections, subsections, contents } = H2, H3 et
+ * destinations de contenus choisis dans la modale « Éclater » ; découpage par planDescriptionSplit (@spok/shared), les
+ * H2 non choisis restent dans la description, les H3 choisis deviennent sous-éléments de leur H2.
  * CommunautÃ© publique = visibility !== 'PRIVATE' uniquement (isPublic dÃ©prÃ©ciÃ©, jamais lu).
  * DELETE (2026-11-21) : l'Ã©tat « before » de l'audit porte aussi contents et secrets (chiffrÃ©s) de chaque Ã©lÃ©ment
  * supprimÃ©, lus AVANT la cascade â€” la restauration les recrÃ©e (utils/itemContentCopy.ts, utils/itemSecrets.ts).
@@ -76,7 +77,7 @@ const CONTENTS_LIST_SELECT = {
 };
 import { statusForType, syncQuestionAfterStatus } from '../utils/question.js';
 import { invisibleTagIds } from '../utils/tagScope.js';
-import { ITEM_TYPES, isItemType, statusAllowedForType, defaultStatusForType, cleanExternalRefs, externalRefsError, splitDescriptionSections, planDescriptionSplit } from '@spok/shared';
+import { ITEM_TYPES, isItemType, statusAllowedForType, defaultStatusForType, cleanExternalRefs, externalRefsError, splitDescriptionSections, planDescriptionSplit, ITEM_CONTENTS_MAX } from '@spok/shared';
 
 // Â« Pas de statut Â» = null, jamais chaÃ®ne vide (le filtre status=none cherche null) â€” le web envoie '' Ã  la crÃ©ation.
 const statusField = z.string().nullable().optional().transform((v) => (v === '' ? null : v));
@@ -996,11 +997,12 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // Split item description by headings into child items
-  // Contenus (images, fichiers, liens, schémas) : restent sur l'élément d'origine, enfants sans contenu (règle item-split-keeps-contents)
-  // Corps optionnel { sections: number[] } (indices des titres choisis dans la modale) ; absent = toutes les sections.
-  // Les sections non choisies restent dans la description, titre compris (planDescriptionSplit, @spok/shared — règle item-split-sections).
-  fastify.post<{ Params: { spaceId: string; id: string }; Body: { sections?: number[] } | undefined }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  // Split item description by headings into child items (premier niveau H2, demande Thomas 2026-11-27)
+  // Corps optionnel : sections (indices des H2 choisis ; absent = tous), subsections ([h2, h3] devenant sous-éléments
+  // de leur H2 ; absent = aucun, les H3 restent dans la description du H2), contents ({ contentId, section, subsection? } :
+  // contenu déplacé vers ce sous-élément ; absent = tous restent sur l'élément d'origine — règle item-split-keeps-contents).
+  // Les H2 non choisis restent dans la description, titre compris (planDescriptionSplit, @spok/shared — règle item-split-sections).
+  fastify.post<{ Params: { spaceId: string; id: string }; Body: unknown }>('/:id/split', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const membership = await checkSpaceAccess(fastify.prisma, request.user.userId, request.params.spaceId, request.isAdminMode);
     if (!membership) return reply.notFound('Space not found');
     if (membership.role !== 'OWNER' && membership.role !== 'MEMBER') return reply.forbidden('Insufficient permissions');
@@ -1012,15 +1014,34 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     if (isLocked(item)) return reply.forbidden(LOCKED_MESSAGE);
     if (!item.description) return reply.badRequest('Item has no description');
 
-    // Découpage H2/H3 (seuls niveaux disponibles dans l'éditeur) : source unique partagée avec l'aperçu de la modale
-    const bodyParsed = z.object({ sections: z.array(z.number().int().min(0)).optional() }).safeParse(request.body ?? {});
+    // Découpage H2 (+ H3 choisis) : source unique partagée avec l'aperçu de la modale
+    const index = z.number().int().min(0);
+    const bodyParsed = z.object({
+      sections: z.array(index).optional(),
+      subsections: z.array(z.tuple([index, index])).optional(),
+      contents: z.array(z.object({ contentId: z.string().min(1).max(64), section: index, subsection: index.optional() })).max(ITEM_CONTENTS_MAX).optional(),
+    }).safeParse(request.body ?? {});
     if (!bodyParsed.success) return reply.badRequest('Invalid sections');
     const { sections: allSections } = splitDescriptionSections(item.description);
-    if (allSections.length === 0) return reply.badRequest('No H2/H3 headings found in description');
-    const plan = planDescriptionSplit(item.description, bodyParsed.data.sections);
+    if (allSections.length === 0) return reply.badRequest('No H2 headings found in description');
+    const plan = planDescriptionSplit(item.description, {
+      sections: bodyParsed.data.sections,
+      subsections: bodyParsed.data.subsections as [number, number][] | undefined,
+    });
     if (plan.children.length === 0) return reply.badRequest('No section selected');
-    const sections = plan.children;
     const preContent = plan.parentDescription;
+
+    // Contenus à déplacer : chacun doit appartenir à l'élément et viser un sous-élément créé (vérifié avant toute écriture)
+    const keyOf = (section: number, subsection?: number) => (subsection === undefined ? `${section}` : `${section}.${subsection}`);
+    const plannedKeys = new Set(plan.children.flatMap((c) => [keyOf(c.section), ...c.children.map((g) => keyOf(g.section, g.subsection))]));
+    const moves = bodyParsed.data.contents ?? [];
+    const moveIds = [...new Set(moves.map((m) => m.contentId))];
+    if (moveIds.length !== moves.length) return reply.badRequest('Contenu cité deux fois');
+    if (moves.some((m) => !plannedKeys.has(keyOf(m.section, m.subsection)))) return reply.badRequest('Destination de contenu invalide');
+    const movedContents = moveIds.length > 0
+      ? await fastify.prisma.itemContent.findMany({ where: { id: { in: moveIds }, itemId: item.id } })
+      : [];
+    if (movedContents.length !== moveIds.length) return reply.badRequest('Contenu introuvable sur cet élément');
 
     // Get max position among existing children
     const siblings = await fastify.prisma.item.findMany({
@@ -1030,26 +1051,56 @@ export const itemsRoutes: FastifyPluginAsync = async (fastify) => {
     });
     let nextPosition = siblings.length > 0 ? (siblings[0].position ?? 0) + 1 : 0;
 
-    // Create children
-    const children = await Promise.all(
-      sections.map((section) => {
-        const pos = nextPosition++;
-        return fastify.prisma.item.create({
-          data: {
-            title: section.title,
-            description: section.description,
-            type: 'UNDEFINED',
-            spaceId: item.spaceId,
-            parentId: item.id,
-            position: pos,
-            status: item.status,
-            createdById: request.user.userId,
-          } as any,
-        });
-      })
-    );
+    const createChild = (child: { title: string; description: string | null }, parentId: string, position: number) =>
+      fastify.prisma.item.create({
+        data: {
+          title: child.title,
+          description: child.description,
+          type: 'UNDEFINED',
+          spaceId: item.spaceId,
+          parentId,
+          position,
+          status: item.status,
+          createdById: request.user.userId,
+        } as any,
+      });
 
-    // Description du parent : texte d'avant le premier titre + sections non choisies
+    // Création dans l'ordre : chaque H2, puis ses H3 choisis sous lui
+    const children: any[] = [];
+    const createdIds = new Map<string, string>();
+    for (const child of plan.children) {
+      const created = await createChild(child, item.id, nextPosition++);
+      children.push(created);
+      createdIds.set(keyOf(child.section), created.id);
+      let subPosition = 0;
+      for (const sub of child.children) {
+        const createdSub = await createChild(sub, created.id, subPosition++);
+        children.push(createdSub);
+        createdIds.set(keyOf(sub.section, sub.subsection), createdSub.id);
+      }
+    }
+
+    // Déplacement des contenus choisis (comme POST /contents/:id/move : rien n'est recopié, journal sur les deux éléments)
+    const positions = new Map<string, number>();
+    for (const move of moves) {
+      const content = movedContents.find((c: any) => c.id === move.contentId)!;
+      const targetId = createdIds.get(keyOf(move.section, move.subsection))!;
+      const posKey = `${targetId}:${content.kind}`;
+      const position = positions.get(posKey) ?? 0;
+      positions.set(posKey, position + 1);
+      await fastify.prisma.itemContent.update({ where: { id: content.id }, data: { itemId: targetId, position } });
+      const name = content.name || content.url || content.value || null;
+      await createAuditLog(fastify.prisma, {
+        action: 'UPDATE', entity: 'Item', entityId: item.id, userId: request.user.userId, spaceId: item.spaceId,
+        changes: { after: { contentChange: { op: 'remove', kind: content.kind, name, movedToId: targetId } } },
+      });
+      await createAuditLog(fastify.prisma, {
+        action: 'UPDATE', entity: 'Item', entityId: targetId, userId: request.user.userId, spaceId: item.spaceId,
+        changes: { after: { contentChange: { op: 'add', kind: content.kind, name, movedFromId: item.id } } },
+      });
+    }
+
+    // Description du parent : texte d'avant le premier H2 + H2 non choisis
     await fastify.prisma.item.update({
       where: { id: item.id },
       data: { description: preContent },

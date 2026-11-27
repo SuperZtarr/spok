@@ -1362,15 +1362,49 @@ describe('split par titres — sections choisies (modale « Éclater »)', () =>
   let prisma: MockPrisma
   const auth = () => ({ authorization: `Bearer ${getTestToken(app)}` })
   const source = { id: 'src', spaceId: 'space-1', status: null, lockedAt: null, createdById: 'test-user-id',
-    description: '<p>Intro</p><h2>A</h2><p>a</p><h2>B</h2><p>b</p>' }
+    description: '<p>Intro</p><h2>A</h2><p>a</p><h2>B</h2><p>b</p><h3>B1</h3><p>b1</p>' }
 
   beforeEach(async () => {
     ({ app, prisma } = await buildItemsTestApp())
     prisma.spaceMembership.findUnique.mockResolvedValue({ userId: 'test-user-id', spaceId: 'space-1', role: 'MEMBER' })
     prisma.item.findFirst.mockResolvedValue(source)
     prisma.item.findMany.mockResolvedValue([])
-    prisma.item.create.mockImplementation(async ({ data }: any) => ({ id: 'new', ...data }))
+    let n = 0
+    prisma.item.create.mockImplementation(async ({ data }: any) => ({ id: `new-${n++}`, ...data }))
     prisma.item.update.mockResolvedValue(source)
+  })
+
+  it('H3 choisi : créé sous le sous-élément de son H2, retiré de sa description', async () => {
+    const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(),
+      payload: { sections: [1], subsections: [[1, 0]] } })
+    expect(res.statusCode).toBe(200)
+    const created = prisma.item.create.mock.calls.map((c: any[]) => c[0].data)
+    expect(created.map((d: any) => [d.title, d.parentId, d.description])).toEqual([
+      ['B', 'src', '<p>b</p>'],
+      ['B1', 'new-0', '<p>b1</p>'],
+    ])
+  })
+
+  it('contenu choisi : déplacé vers le sous-élément visé, journalisé', async () => {
+    prisma.itemContent.findMany.mockResolvedValue([{ id: 'c1', itemId: 'src', kind: 'LINK', name: 'Lien' }])
+    const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(),
+      payload: { sections: [0, 1], subsections: [[1, 0]], contents: [{ contentId: 'c1', section: 1, subsection: 0 }] } })
+    expect(res.statusCode).toBe(200)
+    expect(prisma.itemContent.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { itemId: 'new-2', position: 0 } })
+    const { createAuditLog } = await import('../utils/audit.js')
+    const moves = (createAuditLog as any).mock.calls.map((c: any[]) => c[1].changes?.after?.contentChange).filter(Boolean)
+    expect(moves).toContainEqual({ op: 'add', kind: 'LINK', name: 'Lien', movedFromId: 'src' })
+  })
+
+  it('contenu d\'un autre élément ou destination non créée → 400, rien n\'est créé', async () => {
+    prisma.itemContent.findMany.mockResolvedValue([])
+    const foreign = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(),
+      payload: { contents: [{ contentId: 'autre', section: 0 }] } })
+    expect(foreign.statusCode).toBe(400)
+    const notPlanned = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth(),
+      payload: { sections: [0], contents: [{ contentId: 'c1', section: 1 }] } })
+    expect(notPlanned.statusCode).toBe(400)
+    expect(prisma.item.create).not.toHaveBeenCalled()
   })
 
   it('ne crée que les sections choisies, les autres restent dans la description', async () => {
@@ -1381,10 +1415,12 @@ describe('split par titres — sections choisies (modale « Éclater »)', () =>
     expect(prisma.item.update.mock.calls[0][0].data.description).toBe('<p>Intro</p><h2>A</h2><p>a</p>')
   })
 
-  it('sans corps : toutes les sections (appels MCP et anciens)', async () => {
+  it('sans corps : tous les H2, H3 embarqués, contenus laissés (appels MCP et anciens)', async () => {
     const res = await app.inject({ method: 'POST', url: '/spaces/space-1/items/src/split', headers: auth() })
     expect(res.statusCode).toBe(200)
     expect(prisma.item.create).toHaveBeenCalledTimes(2)
+    expect(prisma.item.create.mock.calls[1][0].data.description).toBe('<p>b</p><h3>B1</h3><p>b1</p>')
+    expect(prisma.itemContent.update).not.toHaveBeenCalled()
     expect(prisma.item.update.mock.calls[0][0].data.description).toBe('<p>Intro</p>')
   })
 
