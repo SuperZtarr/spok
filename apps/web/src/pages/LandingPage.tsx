@@ -1,5 +1,5 @@
 /* Page d'accueil publique (/) pour visiteur non connecté : présentation + communautés publiques.
-   Vues présentées par catégorie, dans l'ordre de SPACE_VIEW_SECTIONS (partagé, 5 catégories depuis 2026-11-13). */
+   Vues présentées par catégorie, dans l'ordre de SPACE_VIEW_SECTIONS (partagé, catégories revues le 2026-11-27). */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {

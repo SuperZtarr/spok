@@ -1,7 +1,7 @@
 /*
  * Hook : items de menu (MENU_REGISTRY + overrides AppConfig via GET /menu-items), filtrés par
  * niveau d'accès (public/user/admin) et groupés en sections. Source unique du menu et des vues.
- * spaceViewSections : catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 5 catégories depuis 2026-11-13).
+ * spaceViewSections : catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, catégories revues le 2026-11-27).
  */
 import { useQuery } from '@tanstack/react-query';
 import { menuApi } from '../lib/api';

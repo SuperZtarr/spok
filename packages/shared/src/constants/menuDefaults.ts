@@ -6,18 +6,18 @@
    news (2026-11-11) : accès direct à « Toutes les nouveautés » depuis le bandeau, après Plan du site.
    admin-tags (2026-11-11) : tags globaux et doublons de tags (/admin/tags, icône Tag).
    admin-news (2026-11-12) : publication des nouveautés (/admin/news, icône Sparkles déjà déclarée pour news).
-   Vues d'espace en 5 catégories (2026-11-13) : SPACE_VIEW_SECTIONS ci-dessous, seule liste des catégories.
+   Vues d'espace en 5 catégories (2026-11-13 ; 2026-11-27 : « Par type » ajoutée, « Suivi » supprimée) : SPACE_VIEW_SECTIONS ci-dessous, seule liste des catégories.
    Carte des espaces (global-mindmap) en icône Share2, comme la vue d'espace (2026-11-13). */
 import type { MenuItemConfig } from '../types/menuItem.js';
 import { VIEW_REGISTRY, type ViewCategoryId } from './viewRegistry.js';
 
 /** Catégories des vues d'espace, dans l'ordre d'affichage (réorganisation 2026-11-13) : seule liste des catégories.
  *  GlobalNavBar, Layout, useMenuItems, ViewsConfigPage, LandingPage et SpaceToolbar la lisent — ne jamais la recopier.
- *  sectionOrder 2 à 6 : entre « personal » (1) et « misc » (7). */
+ *  sectionOrder 2 à 6 : entre « personal » (1) et « misc » (7) ; « Par type » (2026-11-27) en 2.5, après Contenus. */
 export const SPACE_VIEW_SECTIONS: { id: ViewCategoryId; label: string; sectionOrder: number }[] = [
   { id: 'content',     label: 'Contenus',      sectionOrder: 2 },
+  { id: 'bytype',      label: 'Par type',      sectionOrder: 2.5 },
   { id: 'organize',    label: 'Organisation',  sectionOrder: 3 },
-  { id: 'tracking',    label: 'Suivi',         sectionOrder: 4 },
   { id: 'planning',    label: 'Planification', sectionOrder: 5 },
   { id: 'exploration', label: 'Exploration',   sectionOrder: 6 },
 ];

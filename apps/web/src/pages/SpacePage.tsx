@@ -9,6 +9,8 @@
  * éléments de l'espace courant pour le panneau, onCreateNote (double-clic = élément vide + fiche), onOpenItem (fiche ici,
  * nouvel onglet pour un élément d'un autre espace). Le paramètre tombe quand on quitte la vue Process.
  * Clic sur un élément Process dans une autre vue : son canevas (processPageUrl).
+ * Tableau croisé (2026-11-27) : filtre de données, plus de mise en évidence — il reçoit itemsData (types / statuts
+ * filtrés par l'API) passé par filterBySearch, et ses comptes portent sur la sélection.
  * Éclater / Absorber (2026-11-26) : ItemPartsPickModal, ouverte par actions.pendingParts, choix partie par partie.
  * Vues plein cadre (canevas, Gantt, PERT, Process…) : listées dans les 3 conteneurs (h-full / overflow-hidden) —
  * une vue graphique absente de ces listes prend la hauteur de son contenu.
@@ -306,7 +308,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
   // View mode categorization
   const isTreeView = viewMode === 'mindmap' || viewMode === 'tree' || viewMode === 'timeline' || viewMode === 'text' || viewMode === 'pert' || viewMode === 'process';
   const isFlatView = viewMode === 'kanban' || viewMode === 'tags' || viewMode === 'types' || viewMode === 'list' || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'burndown' || viewMode === 'cfd' || viewMode === 'chord' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe' ||viewMode === 'members' || viewMode === 'priority' || viewMode === 'images' || viewMode === 'links' || viewMode === 'documents' || viewMode === 'articles' || viewMode === 'todo';
-  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'crossTable' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe';
+  const isHighlightMode = isTreeView || viewMode === 'planning' || viewMode === 'calendar' || viewMode === 'graph' || viewMode === 'sunburst' || viewMode === 'relations' || viewMode === 'bubble' || viewMode === 'radialTree' || viewMode === 'treemap' || viewMode === 'heatmap' || viewMode === 'ego' || viewMode === 'loupe';
   const activeTypeFilter = filter.length > 0 ? filter : undefined;
   const activeStatusFilter = statusFilter.length > 0 ? statusFilter : undefined;
 
@@ -1321,7 +1323,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
             </div>
           ) : viewMode === 'crossTable' ? (
               <CrossTableView
-              items={filterBySearch(allItemsData?.data)}
+              items={filterBySearch(itemsData?.data)}
               currentSpaceId={spaceId}
               portalGroups={portalGroups}
               onEdit={openItemFromView}

@@ -13,8 +13,7 @@
  * menu ⋯ (ItemActionMenu : nouveau sous-espace, paramètres, déplacer, supprimer) ; « + » (nouvel espace) sur
  * l'en-tête de communauté, global et immersif. Droits et modales centralisés dans Layout (SidebarSpaceActionsContext) :
  * les modales sont rendues HORS de l'<aside> (Modal n'a pas de portail, la sidebar a un transform).
- * Indicateur process (2026-10-28, éléments Process depuis le 2026-11-21) : icône Workflow après le nom d'un espace dont
- * processCount > 0 (GET /spaces) ; la liste est rafraîchie à la création d'un process (vue Process), jamais par polling.
+ * Indicateur process (icône après le nom d'un espace) : retiré le 2026-11-27, Process étant un type d'élément.
  * Grille de navigation mobile : sections hors catégories de vues d'espace (SPACE_VIEW_SECTION_IDS partagé, 2026-11-13).
  * Référentiels (2026-11-13) : icônes via getNavIcon (constants/viewIcons, plus de NAV_ICONS local) ; boutons de mode
  * dérivés de MODE_REGISTRY (@spok/shared), infobulles générées (lib/modeTexts).
@@ -36,7 +35,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   FolderKanban, User, Menu, X, ChevronRight, ChevronLeft, ChevronDown, Settings, Building2,
   HelpCircle, Clock, Star, Plus, ArrowLeft,
-  LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown, Workflow,
+  LogOut, RotateCcw, FolderInput, Trash2, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { ItemActionMenu, type ItemActionGroup } from './ui/ItemActionMenu';
 import { TYPE_EMOJI } from '../constants/ui';
@@ -63,8 +62,6 @@ import { DevZoneInspector } from './DevZoneInspector';
 import { HelpModeOverlay } from '../help/HelpModeOverlay';
 import { TouchHelpCard } from '../help/TouchHelpCard';
 import { NewFeatureOverlay } from '../help/NewFeatureOverlay';
-import { HelpHint } from '../help/HelpHint';
-import { SIDEBAR_HINTS } from '../help/shellZones';
 import { NotificationBell } from './NotificationBell';
 import { LiveSessionsButton } from './live/LiveSessionsButton';
 import { GlobalNavBar } from './GlobalNavBar';
@@ -370,12 +367,6 @@ function SpaceTreeItem({
         >
           <SpaceIcon avatarUrl={node.avatarUrl} defaultView={node.defaultView} communityId={node.communityId} />
           <span className="truncate">{node.name}</span>
-          {/* Indicateur : l'espace contient des éléments Process */}
-          {!!node.processCount && (
-            <HelpHint text={SIDEBAR_HINTS.process(node.processCount)} className="inline-flex flex-shrink-0">
-              <Workflow className="w-3 h-3 text-muted-foreground" aria-label="Contient un process" />
-            </HelpHint>
-          )}
         </Link>
         {onToggleFavorite && (
           <button

@@ -43,7 +43,7 @@ export function contextModeSentence(): string {
   return `${withContext.join(', ')}${fallback ? `, sinon ${fallback.label}` : ''}`;
 }
 
-/** Catégories de vues : « Contenus, Organisation, Suivi, Planification, Exploration » */
+/** Catégories de vues, dans l'ordre de SPACE_VIEW_SECTIONS : « Contenus, Par type, Organisation, … » */
 export function viewCategoriesList(): string {
   return SPACE_VIEW_SECTIONS.map((s) => s.label).join(', ');
 }

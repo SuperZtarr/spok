@@ -4,7 +4,7 @@
  * - Favoris du mode d'interface (lib/viewFavorites, MODE_FAVORITE_VIEWS) en boutons directs, précédés du nom du mode ;
  *   l'infobulle dit qu'on change de mode dans l'en-tête.
  * - Vue affichée hors favoris : bouton temporaire en fin de ligne (bord pointillé), pour toujours voir où l'on est.
- * - « Toutes les vues » : un seul panneau (portail fixed, sinon rogné par le défilement de la barre), les 5 catégories
+ * - « Toutes les vues » : un seul panneau (portail fixed, sinon rogné par le défilement de la barre), les catégories
  *   en colonnes (une colonne sur mobile), chaque vue avec son icône, son nom, sa description (VIEW_HELP.short), étoile
  *   si favori, repère « ouverture » si vue d'ouverture de l'espace. Champ de recherche (focus à l'ouverture, Entrée
  *   ouvre la première vue trouvée, Échap ferme). Vue réservée aux écrans larges (MOBILE_HIDDEN_VIEWS) : grisée sous
@@ -12,7 +12,7 @@
  * Props : viewMode / onSetMode (vue active), spaceViews (vues accessibles, useMenuItems), defaultView (vue
  * d'ouverture), spaceId (lien Présentation). Le rôle ne retire aucune vue (décision 2026-11-06).
  * Textes d'aide : help/spaceToolbar.elements.ts (vues, toutesVues, presentation) et SPACE_TOOLBAR_HINTS — jamais en dur.
- * Bouton Process en violet (demande Thomas 2026-10-29), conservé.
+ * Bouton Process : plus de couleur propre (violet retiré le 2026-11-27), rangé dans la catégorie « Par type ».
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -27,8 +27,6 @@ import { SPACE_TOOLBAR_HINTS as H } from '../help/spaceToolbar.hints';
 import { VIEW_HELP } from '../components/views/help';
 import { favoriteViews, matchesViewQuery, viewsByCategory } from '../lib/viewFavorites';
 
-const PROCESS_VIEW_IDLE = 'bg-violet-100 text-violet-800 hover:bg-violet-200';
-const PROCESS_VIEW_ACTIVE = 'bg-violet-600 text-white shadow-sm';
 const PANEL_MAX_WIDTH = 980;
 
 const viewShort = (viewMode: string | null | undefined): string | undefined =>
@@ -105,9 +103,7 @@ export function SpaceViewSelector({ viewMode, onSetMode, spaceViews, defaultView
     const isDefault = !!defaultView && v.viewMode === defaultView;
     const short = viewShort(v.viewMode);
     const mobileHidden = !!v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode);
-    const tone = v.viewMode === 'process'
-      ? (isActive ? PROCESS_VIEW_ACTIVE : PROCESS_VIEW_IDLE)
-      : isActive
+    const tone = isActive
       ? 'bg-primary text-primary-foreground shadow-sm'
       : 'text-muted-foreground hover:text-foreground hover:bg-accent';
     const hint = `${v.label}${isDefault ? ` (${H.defaultView})` : ''}${short ? ` : ${short}` : ''}${outside ? ` — ${H.outsideFavorites}` : ''}`;
@@ -211,7 +207,7 @@ export function SpaceViewSelector({ viewMode, onSetMode, spaceViews, defaultView
                     const mobileHidden = !!v.viewMode && MOBILE_HIDDEN_VIEWS.has(v.viewMode);
                     const body = (
                       <>
-                        <Icon className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${v.viewMode === 'process' ? 'text-violet-600' : ''}`} />
+                        <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                         <span className="flex-1 min-w-0">
                           <span className="flex items-center gap-1">
                             <span className="truncate">{v.label}</span>

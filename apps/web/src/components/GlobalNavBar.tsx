@@ -23,7 +23,7 @@ import { SPACE_VIEW_SECTION_IDS, type MenuItemConfig } from '@spok/shared';
 
 const getIcon = getNavIcon;
 
-/** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici (liste partagée, 5 catégories depuis 2026-11-13) */
+/** Sections qui ont leurs propres vues dans la SpaceToolbar — exclues ici (liste partagée, catégories revues le 2026-11-27) */
 const SPACE_SECTIONS = SPACE_VIEW_SECTION_IDS;
 /** Clés gérées ailleurs : profil (modale header), déconnexion (row 1 du header) */
 const EXCLUDED_KEYS = new Set(['profile', 'logout']);

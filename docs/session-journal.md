@@ -10,6 +10,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-27 — MEP : vues « Par type », catégories de vues réalignées sur la carte de Thomas, favoris des modes, tableau croisé public en filtre de données, indicateur process retiré. Annonces datées. Typecheck OK, TNR 3212/3212.
+- 2026-11-27 — Vues « Par type » + retrait icône process sidebar + Process sans violet : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-27 — MEP : groupes personnels de communautés (2 tables ajoutées par le db push du démarrage, sans perte). Annonce community-groups-new datée. Typecheck OK, TNR 3212/3212.
 - 2026-11-27 — Groupes personnels de communautés (filtre sidebar + page Communautés, modale de gestion) : inscrit PRÊT POUR MEP, NON COMMITÉ. Spec SPOK créée en to_validate (Modales & Overlays, Modèle de données, enfants de Sidebar et CommunitiesListPage).
 

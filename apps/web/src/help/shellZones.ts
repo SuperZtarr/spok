@@ -11,13 +11,8 @@ import { modesList } from '../lib/modeTexts';
 
 const elementZone = ({ title, text }: HelpElement): HelpZone => ({ title, text });
 
-/** Infobulles de la barre latérale (lues par HelpHint dans Layout.tsx). */
-export const SIDEBAR_HINTS = {
-  process: (count: number) => `Cet espace contient ${count} process — vue Process de l'espace.`,
-};
-
 export const SHELL_ZONES: Record<string, HelpZone> = {
-  sidebar: { title: 'Barre latérale', text: 'Vos espaces et vos communautés. Cliquez sur un espace pour y entrer. Une petite icône après son nom signale qu\'il contient un process.' },
+  sidebar: { title: 'Barre latérale', text: 'Vos espaces et vos communautés. Cliquez sur un espace pour y entrer.' },
   'sidebar-logo': { title: 'Logo', text: 'Ramène à l\'accueil.' },
   'sidebar-guide': { title: 'Guide de démarrage', text: 'Relance la visite guidée des bases de SPOK.' },
   'sidebar-nav': { title: 'Navigation', text: 'Vos accès aux espaces : favoris, récents, vos espaces, vos communautés.' },

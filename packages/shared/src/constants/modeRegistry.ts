@@ -11,6 +11,9 @@
  * « Tous » (communauté neutre, hors communauté). Un test API vérifie que les contextes = l'enum Prisma ; un test
  * shared vérifie que favoris, vue d'ouverture et pages masquées existent (modeRegistry.test.ts).
  * Ajouter un mode : une entrée ici (+ la valeur dans l'enum Prisma si c'est un contexte de communauté).
+ * Favoris (2026-11-27) : repris des tags de mode posés par Thomas sur la carte modèle (espace local « les menus et
+ * vues ») ; le tag « Tous » = la vue est favorite dans tous les modes (Récents, Liste). Ordre = ordre du registre des
+ * vues (catégorie puis rang). Documentation s'ouvre désormais sur l'Arborescence (Carte mentale non taguée Documentation).
  */
 
 export interface InterfaceModeDefinition {
@@ -40,7 +43,7 @@ export const MODE_REGISTRY = [
   {
     id: 'forum', label: 'Forum', context: 'FORUM',
     description: 'Sujets et discussions',
-    favorites: ['recent', 'thread', 'articles', 'calendar', 'images', 'links'], // ordre décidé par Thomas 2026-11-13
+    favorites: ['thread', 'text', 'recent', 'list', 'articles', 'images', 'links', 'calendar'],
     openingView: 'recent',
     globalExcluded: ['global-graph', 'global-sunburst', 'global-links', 'global-mindmap', ...PERSONAL_PAGES],
     itemModalCollapsed: true,
@@ -48,7 +51,7 @@ export const MODE_REGISTRY = [
   {
     id: 'loisirs', label: 'Loisirs', context: 'JDR',
     description: 'Jeux, passions et activités ludiques',
-    favorites: ['recent', 'thread', 'articles', 'images', 'documents', 'links','loupe'],
+    favorites: ['thread', 'recent', 'list', 'articles', 'images', 'documents', 'mindmap', 'loupe'],
     openingView: 'loupe',
     globalExcluded: [ ...PERSONAL_PAGES ],
     itemModalCollapsed: true,
@@ -56,7 +59,7 @@ export const MODE_REGISTRY = [
   {
     id: 'projet', label: 'Projet', context: 'PROJECT',
     description: 'Sous-projets et pilotage',
-    favorites: ['todo', 'kanban', 'timeline', 'pert', 'calendar', 'planning', 'priority', 'process', 'mindmap', 'loupe'],
+    favorites: ['recent', 'list', 'process', 'mindmap', 'pert', 'members', 'todo', 'kanban', 'priority', 'timeline', 'calendar', 'planning', 'cfd', 'heatmap', 'burndown'],
     openingView: 'timeline',
     globalExcluded: ['global-sunburst', 'global-mindmap', 'global-graph', 'global-links'],
     itemModalCollapsed: false,
@@ -64,15 +67,15 @@ export const MODE_REGISTRY = [
   {
     id: 'documentation', label: 'Documentation', context: 'DOCUMENTATION',
     description: 'Wiki, procédures, savoir partagé',
-    favorites: ['tree', 'text', 'articles','images', 'documents', 'links', 'tags','types', 'mindmap', 'loupe'],
-    openingView: 'mindmap',
+    favorites: ['text', 'recent', 'list', 'tree', 'articles', 'process', 'images', 'documents', 'links', 'types', 'tags'],
+    openingView: 'tree',
     globalExcluded: [...PERSONAL_PAGES],
     itemModalCollapsed: false,
   },
   {
     id: 'exploration', label: 'Exploration', context: 'EXPLORATION',
     description: 'Veille et sources reliées',
-    favorites: ['links', 'tags','types', 'graph', 'loupe', 'mindmap', 'images'],
+    favorites: ['recent', 'list', 'images', 'documents', 'types', 'mindmap', 'tags', 'graph', 'sunburst', 'relations', 'bubble', 'radialTree', 'treemap', 'chord', 'ego', 'loupe'],
     openingView: 'mindmap',
     globalExcluded: [ ...PERSONAL_PAGES],
     itemModalCollapsed: false,
@@ -80,7 +83,7 @@ export const MODE_REGISTRY = [
   {
     id: 'tous', label: 'Tous', contextLabel: 'Neutre', context: null,
     description: 'Usage général',
-    favorites: ['list', 'tree', 'types', 'kanban', 'mindmap', 'loupe'],
+    favorites: ['recent', 'list'],
     openingView: 'list',
     globalExcluded: [],
     itemModalCollapsed: false,

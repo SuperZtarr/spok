@@ -15,7 +15,8 @@ const elements: HelpElements = {
   case: {
     title: 'Une cellule',
     short: 'Cliquez pour déplier ses éléments.',
-    text: 'Le nombre d\'éléments à ce croisement. Cliquez pour déplier leur liste, puis sur un élément pour ouvrir sa fiche.',
+    text: 'Le nombre d\'éléments à ce croisement. Cliquez pour déplier leur liste, puis sur un élément pour ouvrir sa fiche. Les filtres de la barre (types, statuts, tags, texte) restreignent les éléments comptés : le tableau et ses totaux ne portent que sur la sélection.',
+    changes: [{ id: 'crosstable-data-filter', kind: 'evolution', text: 'Le Tableau croisé suit les filtres : types, statuts, tags et texte restreignent les éléments comptés, au lieu de seulement colorer les cases. La vue est aussi proposée à tous, plus seulement en mode admin.', date: '2026-11-27' }],
     target: '[data-tour="crosstable-cell"]',
     side: 'bottom',
   },

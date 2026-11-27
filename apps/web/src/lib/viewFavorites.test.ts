@@ -27,16 +27,17 @@ describe('favoriteViews', () => {
 })
 
 describe('viewsByCategory', () => {
-  it('range toutes les vues, favoris compris, dans les 5 catégories et leur ordre', () => {
+  it('range toutes les vues, favoris compris, dans les catégories et leur ordre', () => {
     const groups = viewsByCategory(all)
     expect(groups.map((g) => g.id)).toEqual(SPACE_VIEW_SECTIONS.map((s) => s.id))
     expect(groups.flatMap((g) => g.views).length).toBe(all.length)
-    expect(ids(groups[0].views)).toEqual(['thread', 'text', 'articles', 'recent', 'images', 'links', 'documents'])
+    expect(ids(groups[0].views)).toEqual(['thread', 'text', 'recent', 'list', 'tree'])
+    expect(ids(groups[1].views)).toEqual(['articles', 'process', 'images', 'documents', 'links', 'types'])
   })
 
   it('omet une catégorie sans vue accessible', () => {
-    const groups = viewsByCategory([{ viewMode: 'list' }, { viewMode: 'mindmap' }])
-    expect(groups.map((g) => g.id)).toEqual(['organize', 'exploration'])
+    const groups = viewsByCategory([{ viewMode: 'list' }, { viewMode: 'loupe' }])
+    expect(groups.map((g) => g.id)).toEqual(['content', 'exploration'])
   })
 })
 

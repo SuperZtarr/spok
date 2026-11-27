@@ -4,11 +4,16 @@
  * Ordre de déclaration = ordre des étapes du tutoriel, celui de l'écran. `target` = repère existant de la commande.
  * Une commande ajoutée à la barre = son élément ici et son repère data-tour (contrôlé par help/coverage.test.ts).
  * Corriger un texte ici le corrige dans toutes les vues.
- * Sélecteur de vues (2026-11-13, SpaceViewSelector) : presentation, vues (favoris du mode), toutesVues (panneau).
+ * Sélecteur de vues (2026-11-13, SpaceViewSelector) : presentation, vues (favoris du mode), toutesVues (panneau) ;
+ * catégories et vues « Par type » de toutesVues générées depuis SPACE_VIEW_SECTIONS / VIEW_REGISTRY (2026-11-27).
  * exporter porte aussi le rappel « barre de vue étroite : icônes seules puis défilement » (index.css, 2026-11-25).
  */
 import type { HelpElements } from './elements';
-import { modesList } from '../lib/modeTexts';
+import { modesList, viewCategoriesList } from '../lib/modeTexts';
+import { SPACE_VIEW_SECTIONS, VIEW_REGISTRY } from '@spok/shared';
+
+/** Vues de la catégorie « Par type », dérivées du registre (jamais énumérées à la main) */
+const byTypeViews = VIEW_REGISTRY.filter((v) => v.category === 'bytype').map((v) => v.label).join(', ');
 
 export const SPACE_TOOLBAR_ELEMENTS = {
   presentation: {
@@ -22,14 +27,15 @@ export const SPACE_TOOLBAR_ELEMENTS = {
     title: 'Vues favorites',
     short: 'Les vues mises en avant pour le mode affiché devant (' + modesList() + ').',
     text: 'Les vues favorites du mode d\'interface, en accès direct ; le nom du mode est affiché devant. On change de mode avec les boutons de l\'en-tête : seuls les favoris changent, aucune vue n\'est retirée. Une vue ouverte depuis « Toutes les vues » s\'ajoute en bout de ligne, en pointillé, le temps de son affichage. La vue choisie vous suit d\'un espace à l\'autre dans la même communauté ; en arrivant d\'une autre communauté, l\'espace s\'ouvre sur sa vue d\'ouverture (point bleu). Le contenu reste le même, seule la présentation change.',
-    changes: [{ id: 'toolbar-views-favorites-2026-11', kind: 'evolution', text: 'Vues réorganisées : les favoris de votre mode en accès direct, et toutes les vues rangées en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration) dans « Toutes les vues », avec ce que fait chacune. « Todo » s\'appelle désormais « À faire ».', date: '2026-11-13' }, { id: 'space-view-kept-in-community', kind: 'evolution', text: 'Votre vue vous suit : en passant d\'un espace à l\'autre dans la même communauté, la vue affichée est conservée. La vue d\'ouverture de l\'espace (point bleu) s\'applique en arrivant d\'une autre communauté.', date: '2026-11-13' }],
+    changes: [{ id: 'mode-favorites-2026-11-27', kind: 'evolution', text: 'Favoris des modes revus : Récents et Liste sont proposés dans tous les modes, et chaque mode met en avant les vues de son usage. En Documentation, un espace s\'ouvre sur l\'Arborescence.', date: '2026-11-27' }, { id: 'toolbar-views-favorites-2026-11', kind: 'evolution', text: 'Vues réorganisées : les favoris de votre mode en accès direct, et toutes les vues rangées en 5 catégories (Contenus, Organisation, Suivi, Planification, Exploration) dans « Toutes les vues », avec ce que fait chacune. « Todo » s\'appelle désormais « À faire ».', date: '2026-11-13' }, { id: 'space-view-kept-in-community', kind: 'evolution', text: 'Votre vue vous suit : en passant d\'un espace à l\'autre dans la même communauté, la vue affichée est conservée. La vue d\'ouverture de l\'espace (point bleu) s\'applique en arrivant d\'une autre communauté.', date: '2026-11-13' }],
     target: '[data-tour="toolbar-views"]',
     side: 'bottom',
   },
   toutesVues: {
     title: 'Toutes les vues',
-    short: 'Toutes les vues de l\'espace, rangées en 5 catégories, avec ce que fait chacune.',
-    text: 'Ouvre le panneau de toutes les vues, en 5 catégories : Contenus (lire, échanger, médias), Organisation (classer), Suivi (avancement), Planification (dates, enchaînements), Exploration (relations). Chaque vue dit à quoi elle sert ; l\'étoile marque les favoris du mode, « ouverture » la vue d\'ouverture de l\'espace. Tapez pour chercher une vue, Entrée ouvre la première trouvée, Échap ferme. Sur un petit écran, les vues qui demandent plus de place sont grisées.',
+    short: `Toutes les vues de l'espace, rangées en ${SPACE_VIEW_SECTIONS.length} catégories, avec ce que fait chacune.`,
+    text: `Ouvre le panneau de toutes les vues, en ${SPACE_VIEW_SECTIONS.length} catégories : ${viewCategoriesList()}. « Par type » regroupe les vues qui montrent une seule sorte d'élément ou de contenu, ou les rangent par type (${byTypeViews}).` + ' Chaque vue dit à quoi elle sert ; l\'étoile marque les favoris du mode, « ouverture » la vue d\'ouverture de l\'espace. Tapez pour chercher une vue, Entrée ouvre la première trouvée, Échap ferme. Sur un petit écran, les vues qui demandent plus de place sont grisées.',
+    changes: [{ id: 'views-by-type-2026-11-27', kind: 'evolution', text: `« Toutes les vues » réorganisé : nouvelle catégorie « Par type » (${byTypeViews}), et vues redistribuées — Liste et Arborescence dans Contenus, Carte mentale, PERT et Tags dans Organisation, À faire, Kanban et Priorités dans Planification ; la catégorie Suivi disparaît.`, date: '2026-11-27' }],
     target: '[data-tour="toolbar-all-views"]',
     side: 'bottom',
   },
