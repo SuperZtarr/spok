@@ -106,8 +106,9 @@ export const SPACE_TOOLBAR_ELEMENTS = {
   exporter: {
     title: 'Exporter',
     short: 'Exporter : télécharger le contenu de la vue (formats selon la vue : CSV, Excel, PDF, image…).',
-    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…). Pour CSV, Excel et PDF données, vous choisissez d\'abord les champs exportés et l\'ordre des colonnes ; le choix est gardé pour vous dans cet espace. Quand la fenêtre est étroite, la barre de la vue n\'affiche plus que les icônes (survolez-les pour leur nom), puis défile de gauche à droite : aucun bouton n\'est hors d\'atteinte.',
-    changes: [{ id: 'view-header-compact', kind: 'evolution', text: 'Barres des vues adaptées aux fenêtres étroites : les boutons passent en icônes seules (nom au survol), puis la barre défile ; plus aucun bouton ne sort de l\'écran.', date: '2026-11-25' }],
+    text: 'Télécharge le contenu de la vue ; les formats proposés dépendent de la vue (CSV, Excel, PDF, image…). Pour CSV, Excel et PDF données, vous choisissez d\'abord les champs exportés et l\'ordre des colonnes ; le choix est gardé pour vous dans cet espace. « Données brutes » (JSON ou XML) télécharge tout l\'espace et ses sous-espaces que vous pouvez lire — éléments, hiérarchie, relations, tags, contenus, contributions, sans les données sécurisées — dans un fichier qui se réimporte dans SPOK (gestion de la communauté → Importer des données) ou se lit par un autre outil. Quand la fenêtre est étroite, la barre de la vue n\'affiche plus que les icônes (survolez-les pour leur nom), puis défile de gauche à droite : aucun bouton n\'est hors d\'atteinte.',
+    changes: [{ id: 'view-header-compact', kind: 'evolution', text: 'Barres des vues adaptées aux fenêtres étroites : les boutons passent en icônes seules (nom au survol), puis la barre défile ; plus aucun bouton ne sort de l\'écran.', date: '2026-11-25' },
+      { id: 'raw-data-export', kind: 'new', text: 'Export « Données brutes » en JSON ou XML : tout l\'espace et ses sous-espaces dans un fichier réimportable (gestion de la communauté → Importer des données). Il remplace l\'ancien export JSON.', date: '2026-11-27' }],
     target: '[data-tour="view-export"]',
     side: 'bottom',
   },

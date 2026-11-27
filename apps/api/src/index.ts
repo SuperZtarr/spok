@@ -12,6 +12,7 @@
  * /admin/tags : tags globaux et doublons de tags (routes/admin/tags.ts).
  * /items/:id/location : espace d'un élément pour son lien court (routes/item-location.ts, règle item-share-link).
  * /community-groups : groupes personnels de communautés, filtre de la sidebar (routes/community-groups.ts).
+ * /spaces/:id/raw-export et /spaces/raw-import : export brut réimportable JSON/XML (routes/raw-export.ts).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -79,6 +80,7 @@ import { itemTemplatesRoutes } from './routes/item-templates.js';
 import { activityRoutes } from './routes/activity.js';
 import { urlMetaRoutes } from './routes/url-meta.js';
 import { spacePreferencesRoutes } from './routes/space-preferences.js';
+import { rawExportRoutes } from './routes/raw-export.js';
 import { liveSessionsRoutes } from './routes/live-sessions.js';
 
 const envToLogger = {
@@ -320,6 +322,7 @@ async function buildApp() {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(spacesRoutes, { prefix: '/spaces' });
   await app.register(spacePreferencesRoutes, { prefix: '/spaces' });
+  await app.register(rawExportRoutes, { prefix: '/spaces' });
   await app.register(communitiesRoutes, { prefix: '/communities' });
   await app.register(communityGroupsRoutes, { prefix: '/community-groups' });
   await app.register(invitationsRoutes, { prefix: '/invitations' });

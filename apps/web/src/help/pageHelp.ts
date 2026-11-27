@@ -32,6 +32,7 @@ import { help as communityGroupsHelp } from '../components/help/community-groups
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
 import { help as itemPartsPickHelp } from '../components/help/item-parts-pick.help';
 import { help as exportFieldsHelp } from '../components/help/export-fields.help';
+import { help as rawImportHelp } from '../components/help/raw-import.help';
 import { help as articleHelp } from '../pages/help/article.help';
 import { help as sitemapHelp } from '../pages/help/sitemap.help';
 import { help as globalGraphHelp } from '../pages/help/global-graph.help';
@@ -79,6 +80,7 @@ export const PAGE_HELP = {
   'merge-item': mergeItemHelp,
   'item-parts-pick': itemPartsPickHelp,
   'export-fields': exportFieldsHelp,
+  'raw-import': rawImportHelp,
   'move-to-space': moveToSpaceHelp,
   'duplicate-to-space': duplicateToSpaceHelp,
   'community-groups': communityGroupsHelp,

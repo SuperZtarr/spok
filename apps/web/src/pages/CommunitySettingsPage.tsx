@@ -8,16 +8,18 @@
    Contexte : donne le mode d'interface par défaut de la communauté (Layout) ; options, libellés et descriptions
    dérivés du registre des modes (MODE_REGISTRY, via lib/modeTexts.contextOptions, 2026-11-13).
    Onglet Espaces : « Créer un espace » ouvre CreateSpaceModal (formulaire unique, avec espace parent) sans quitter la page.
+   « Importer des données » (2026-11-27) ouvre RawImportModal : recrée un espace exporté en « Données brutes » (JSON, XML).
    Glisser-déposer d'une ligne sur une autre (2026-10-16) : quart haut = avant, quart bas = après (ordre manuel commun,
    PUT /spaces/reorder, change aussi de parent si besoin), milieu = ranger dedans ; bandeau du haut = racine.
    Clic sur une ligne d'espace = SES PARAMÈTRES (/spaces/:id/settings), pas sa vue (demande Thomas 2026-10-29). */
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User } from 'lucide-react';
+import { ArrowLeft, Building2, FolderKanban, FolderOpen, Plus, Trash2, Loader2, Save, Camera, ImageIcon, Tag as TagIcon, Pencil, X, GripVertical, ChevronRight, Mail, Send, ChevronDown, RotateCw, AlertTriangle, ArrowRightLeft, Search, Users, FileText, User, Upload } from 'lucide-react';
 import { HelpButton } from '../help/HelpButton';
 import { PAGE_HELP } from '../help/pageHelp';
 import { FieldHelp } from '../help/FieldHelp';
+import { HelpHint } from '../help/HelpHint';
 import { usePageTourPulse } from '../hooks/useOnboarding';
 import { ImageUploadZone } from '../components/ui/ImageUploadZone';
 import { CoverPositionEditor } from '../components/ui/CoverPositionEditor';
@@ -27,6 +29,7 @@ import { useGoBack } from '../hooks/useGoBack';
 import { communitiesApi, spacesApi } from '../lib/api';
 import { SpaceDeleteConfirmModal } from '../components/SpaceDeleteConfirmModal';
 import { CreateSpaceModal } from '../components/CreateSpaceModal';
+import { RawImportModal } from '../components/RawImportModal';
 import { useReorderSpaces } from '../hooks/useSpaces';
 import { placeRelative, siblingOrder } from '../lib/spaceReorder';
 import type { SpaceWithRole } from '@spok/shared';
@@ -221,6 +224,7 @@ export function CommunitySettingsPage() {
   const [showAddSpace, setShowAddSpace] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
   const [showCreateSpace, setShowCreateSpace] = useState(false);
+  const [showRawImport, setShowRawImport] = useState(false);
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceToDelete, setSpaceToDelete] = useState<SpaceWithRole | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'images' | 'referentiels' | 'tags' | 'spaces' | 'members' | 'emails' | 'apercu' | 'danger'>('general');
@@ -893,6 +897,12 @@ export function CommunitySettingsPage() {
                     <Plus className="w-4 h-4 mr-1" />
                     Créer un espace
                   </Button>
+                  <HelpHint text={PAGE_HELP['community-settings'].hints?.importData}>
+                    <Button size="sm" variant="bordered" data-tour="community-import-data" onClick={() => { setShowRawImport(true); setShowAddSpace(false); setShowCreateSpace(false); }}>
+                      <Upload className="w-4 h-4 mr-1" />
+                      Importer des données
+                    </Button>
+                  </HelpHint>
                   {availableSpaces.length > 0 && (
                     <Button size="sm" variant="bordered" onClick={() => { setShowAddSpace(!showAddSpace); setShowCreateSpace(false); }}>
                       Rattacher un espace existant
@@ -904,6 +914,9 @@ export function CommunitySettingsPage() {
 
             {communityId && (
               <CreateSpaceModal isOpen={showCreateSpace} onClose={() => setShowCreateSpace(false)} communityId={communityId} openAfterCreate={false} />
+            )}
+            {communityId && (
+              <RawImportModal isOpen={showRawImport} onClose={() => setShowRawImport(false)} communityId={communityId} />
             )}
 
             {/* Add space form */}

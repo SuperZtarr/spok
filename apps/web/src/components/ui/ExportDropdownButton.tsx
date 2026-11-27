@@ -3,7 +3,9 @@
    (étape commune des tours de vues) — pas de `title` natif. Libellé `vh-label` : icône seule quand la barre de vue
    manque de place (règle dans index.css), le nom reste dans aria-label.
    Export de données en tableau (CSV, Excel, PDF données) : option `fieldsExport` au lieu de `onClick` — ouvre la fenêtre
-   « Champs à exporter » (ExportFieldsModal), puis lance `run(fields)` avec les champs choisis (mémorisés par espace). */
+   « Champs à exporter » (ExportFieldsModal), puis lance `run(fields)` avec les champs choisis (mémorisés par espace).
+   Groupe titré (`title`, ex. « Données brutes ») : petit intitulé au-dessus de ses options, explication au survol (`hint`).
+   Échec d'un export : message affiché à côté du bouton (role="alert"), effacé au prochain export. */
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download } from 'lucide-react';
@@ -21,6 +23,10 @@ export interface ExportOption {
 }
 
 export interface ExportOptionGroup {
+  /** Intitulé du groupe (facultatif) */
+  title?: string;
+  /** Explication du groupe au survol de son intitulé (texte de la fiche d'aide) */
+  hint?: string;
   options: ExportOption[];
 }
 
@@ -32,6 +38,7 @@ interface ExportDropdownButtonProps {
 export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonProps) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -54,7 +61,10 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
 
   const run = async (action: () => void | Promise<void>) => {
     setExporting(true);
-    try { await action(); } finally { setExporting(false); }
+    setError(null);
+    try { await action(); } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "L'export a échoué");
+    } finally { setExporting(false); }
   };
   const handleOption = (opt: ExportOption) => {
     setOpen(false);
@@ -82,6 +92,7 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
           <span className="vh-label">{exporting ? 'Export…' : 'Exporter'}</span>
         </button>
       </HelpHint>
+      {error && <span role="alert" className="text-xs text-destructive ml-1">{error}</span>}
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
@@ -91,6 +102,11 @@ export function ExportDropdownButton({ groups, disabled }: ExportDropdownButtonP
           {groups.map((group, gi) => (
             <div key={gi}>
               {gi > 0 && <div className="h-px bg-border mx-2 my-1" />}
+              {group.title && (
+                <HelpHint text={group.hint}>
+                  <div className="px-3 pt-1 pb-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.title}</div>
+                </HelpHint>
+              )}
               {group.options.map((opt, oi) => (
                 <button
                   key={oi}

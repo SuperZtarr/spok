@@ -10,6 +10,11 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-27 — MEP : 2 lots (éclater par titres H2, H3 et contenus au choix ; export et import des données brutes JSON / XML, fast-xml-parser en dépendance directe). Annonces datées. Typecheck OK, TNR 3247/3247.
+- 2026-11-27 — Données brutes (export JSON/XML d'un espace et ses sous-espaces, import depuis les paramètres de la communauté) : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
+- 2026-11-27 — Éclater : H2 en premier niveau, H3 et contenus au choix dans la fenêtre : inscrit PRÊT POUR MEP, NON COMMITÉ.
+
 - 2026-11-27 — MEP : vues « Par type », catégories de vues réalignées sur la carte de Thomas, favoris des modes, tableau croisé public en filtre de données, indicateur process retiré. Annonces datées. Typecheck OK, TNR 3212/3212.
 - 2026-11-27 — Vues « Par type » + retrait icône process sidebar + Process sans violet : inscrit PRÊT POUR MEP, NON COMMITÉ.
 

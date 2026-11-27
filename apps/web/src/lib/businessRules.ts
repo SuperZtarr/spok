@@ -575,16 +575,16 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'item-split-keeps-contents',
     page: 'Toutes les vues (menu contextuel) + modale item',
-    trigger: '« Éclater en sous-items » (une Note enfant par titre de niveau 2 ou 3 de la description)',
-    effect: "Les contenus (images, fichiers, liens, schémas) restent tous sur l'élément d'origine : ils ne font pas partie du texte découpé. Les Notes enfants naissent sans contenu (décision Thomas 2026-11-11)",
-    location: 'apps/api/src/routes/items.ts (POST /:id/split)',
+    trigger: '« Éclater en sous-éléments » (un sous-élément par titre de niveau 2 coché, et par niveau 3 coché)',
+    effect: "Les contenus (images, fichiers, liens, schémas, coordonnées) restent par défaut sur l'élément d'origine (décision Thomas 2026-11-11). Depuis la fenêtre de choix (demande Thomas 2026-11-27), chacun peut être déplacé — pas copié — vers l'un des sous-éléments créés ; une destination non créée (titre décoché) revient à « reste ». Les données sécurisées restent toujours sur l'élément. Contenu d'un autre élément ou destination non créée : API 400, rien n'est créé. Journal : retrait sur l'élément, ajout sur le sous-élément, comme un déplacement de contenu",
+    location: 'apps/api/src/routes/items.ts (POST /:id/split, corps { contents }), apps/web/src/components/ItemPartsPickModal.tsx',
   },
   {
     id: 'item-split-sections',
     page: 'Toutes les vues (menu contextuel) + modale item — modale ItemPartsPickModal',
-    trigger: '« Éclater en sous-éléments » puis choix des sections cochées (demande Thomas 2026-11-26)',
-    effect: "Une ligne par titre de niveau 2 ou 3, toutes cochées à l'ouverture. Chaque section cochée devient un sous-élément ; les sections décochées restent dans la description, titre compris, à leur place, après le texte d'avant le premier titre. Aucune section cochée : bouton désactivé (API : 400). Sans liste envoyée (MCP, anciens appels) : toutes les sections. Découpage unique partagé par l'aperçu et l'API",
-    location: 'packages/shared/src/utils/descriptionSections.ts, apps/api/src/routes/items.ts (POST /:id/split, corps { sections }), apps/web/src/components/ItemPartsPickModal.tsx, apps/web/src/pages/useSpaceActions.ts (pendingParts)',
+    trigger: '« Éclater en sous-éléments » puis choix des titres cochés (demande Thomas 2026-11-26, premier niveau H2 2026-11-27)',
+    effect: "Action proposée seulement si la description a au moins un titre de niveau 2. Une ligne par titre de niveau 2, cochée à l'ouverture : cochée = sous-élément (son texte, titres de niveau 3 compris) ; décochée = la section reste dans la description, titre compris, à sa place, après le texte d'avant le premier niveau 2 (niveaux 3 éventuels compris). Sous chaque niveau 2, ses niveaux 3, décochés à l'ouverture : coché = sous-élément du sous-élément de sa section, retiré de son texte ; case grisée et ignorée si le niveau 2 est décoché. Aucun niveau 2 coché : bouton désactivé (API : 400). Sans choix envoyé (MCP, anciens appels) : tous les niveaux 2, niveaux 3 gardés dans le texte. Découpage unique partagé par l'aperçu et l'API",
+    location: 'packages/shared/src/utils/descriptionSections.ts, apps/api/src/routes/items.ts (POST /:id/split, corps { sections, subsections }), apps/web/src/components/ItemPartsPickModal.tsx, apps/web/src/pages/useSpaceActions.ts (pendingParts)',
   },
   {
     id: 'absorb-children-selected',
@@ -935,5 +935,19 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     trigger: 'Un admin masque une annonce, change sa date de publication ou la programme, puis enregistre',
     effect: "Les textes des annonces restent ceux du code ; l'admin règle seulement leur publication, pour tous. Masquée : retirée de l'accueil, des zones allumées, du tutoriel et de /news. Date réglée : remplace celle de la mise en production ; une date future programme l'annonce, absente jusqu'à ce jour. Ce que chaque compte a déjà noté reste noté. Sans réglage lisible, les annonces du code s'affichent telles quelles (décision Thomas 2026-11-12)",
     location: 'apps/api/src/routes/admin/news.ts (AppConfig news_overrides), apps/web/src/help/announcements.ts (applyOverrides), apps/web/src/stores/helpAnnouncements.ts, apps/web/src/pages/admin/NewsAdminPage.tsx, apps/web/src/hooks/useOnboarding.ts',
+  },
+  {
+    id: 'raw-export-scope',
+    page: 'Menu Exporter d\'un espace, groupe « Données brutes » (JSON, XML)',
+    trigger: 'Un utilisateur qui peut lire l\'espace télécharge ses données brutes (GET /spaces/:id/raw-export)',
+    effect: "Le fichier contient l'espace et ceux de ses sous-espaces qu'il peut lire (un sous-espace illisible est sauté avec sa descendance), quels que soient les filtres de la vue. Toute référence vers un élément hors du fichier (relation, bloc d'article, place de process, renvoi d'une réponse) en est retirée. Jamais : données sécurisées, votes, réactions, historique, membres. Les e-mails des personnes ne sont écrits que pour un propriétaire (de l'espace, de la communauté, ou mode admin) — sans eux, l'import ne reconnaît pas les personnes (décision Thomas 2026-11-27)",
+    location: 'apps/api/src/utils/rawExport.ts (buildRawExport, readableSpaceTree), apps/api/src/routes/raw-export.ts, packages/shared/src/constants/rawExport.ts',
+  },
+  {
+    id: 'raw-import-copy',
+    page: 'Paramètres de la communauté, onglet Espaces → Importer des données (RawImportModal)',
+    trigger: 'Un membre de la communauté (ou qui peut écrire dans l\'espace parent choisi) importe un fichier « Données brutes » (POST /spaces/raw-import)',
+    effect: "L'import crée toujours une COPIE, en une transaction (tout ou rien) : nouveaux identifiants, rien d'existant n'est modifié. L'importateur devient propriétaire de chaque espace créé. Personnes reconnues par e-mail, parmi les membres de la destination seulement (communauté, sinon espace parent : un fichier fabriqué ne peut ni attribuer des données à un autre compte ni sonder les e-mails) ; sinon auteur et contributions passent à l'importateur, un assigné devient un assigné en saisie libre (son nom), un décideur de question est retiré. Tags rapprochés par nom parmi ceux visibles à la destination, sinon créés sur l'espace racine importé. Type inconnu → Élément. Les fichiers du stockage actif (contenus, images des descriptions et contributions) sont recopiés : supprimer la copie ne touche jamais l'original. Un aperçu (rien d'écrit) précède toujours l'import (décision Thomas 2026-11-27)",
+    location: 'apps/api/src/utils/rawExport.ts (importRawDocument), apps/api/src/routes/raw-export.ts, apps/web/src/components/RawImportModal.tsx',
   },
 ];

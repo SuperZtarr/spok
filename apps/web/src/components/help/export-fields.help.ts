@@ -49,7 +49,7 @@ export const help: HelpEntry = {
   ...derived,
   hints: {
     ...derived.hints,
-    remembered: 'Votre choix est gardé pour vous dans cet espace (si vous en êtes membre) et vaut pour CSV, Excel et PDF données. L\'export JSON reste complet.',
+    remembered: 'Votre choix est gardé pour vous dans cet espace (si vous en êtes membre) et vaut pour CSV, Excel et PDF données. Les « Données brutes » (JSON, XML) restent complètes.',
     reset: 'Coche tous les champs et les remet dans l\'ordre d\'origine.',
     noneChecked: 'Cochez au moins un champ pour exporter.',
     confirm: 'Télécharge le fichier avec les champs cochés, dans l\'ordre de la liste, et retient ce choix pour cet espace.',

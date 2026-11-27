@@ -3,6 +3,7 @@
    statusCategory : sens d'une catégorie de statut (StatusManager, 2026-11-08), annonce status-category sur l'onglet Référentiels.
    Statuts réservés à un type (Réunion, Article, Question — 2026-11-19) : annonce type-reserved-statuses, champ
    reservedStatus, hints.reservedBadge = badge de StatusManager ({type} = libellé du type).
+   hints.importData : bouton « Importer des données » de l'onglet Espaces (RawImportModal, 2026-11-27).
    Registre help/pageHelp.ts. */
 import type { HelpEntry } from '../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../help/elements';
@@ -29,7 +30,8 @@ const elements: HelpElements = {
   espaces: {
     title: 'Espaces',
     short: 'Les espaces et leur hiérarchie.',
-    text: 'Liste des espaces de la communauté. Glissez une ligne sur le haut ou le bas d\'une autre pour changer l\'ordre, sur son milieu pour la ranger dedans. Créez de nouveaux espaces.',
+    text: 'Liste des espaces de la communauté. Glissez une ligne sur le haut ou le bas d\'une autre pour changer l\'ordre, sur son milieu pour la ranger dedans. Créez de nouveaux espaces, ou importez-en un depuis un fichier « Données brutes » (JSON ou XML) exporté d\'un espace, ici ou dans une autre instance de SPOK.',
+    changes: [{ id: 'raw-data-import', kind: 'new', text: 'Importer des données : un espace exporté en « Données brutes » (JSON ou XML), avec ses sous-espaces, se recrée dans la communauté, en copie, sans rien écraser. Aperçu avant l\'import.', date: '2026-11-27' }],
     target: '[data-tour="community-tab-spaces"]',
     noZone: true,
     side: 'bottom',
@@ -94,6 +96,7 @@ export const help: HelpEntry = {
   hints: {
     ...derived.hints,
     reservedBadge: 'Réservé aux {type}',
+    importData: 'Importer des données : recrée ici un espace exporté en « Données brutes » (JSON ou XML), avec ses sous-espaces. Aperçu avant tout ; l\'import crée une copie, rien d\'existant n\'est modifié.',
   },
   fields: {
     spacesOpenSettings: 'Cliquer un espace ouvre ses paramètres (pas l\'espace lui-même) — pour y entrer, passez par la barre latérale ou la page de la communauté.',

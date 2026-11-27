@@ -49,7 +49,7 @@ export const EXPORT_EXCLUDED_ITEM_FIELDS: Readonly<Record<string, string>> = {
   children: 'Déduits de la colonne Parent',
   relationsFrom: 'Exportées à part (feuille / page Relations)',
   relationsTo: 'Exportées à part (feuille / page Relations)',
-  contributions: 'Fil de discussion : export JSON seulement',
+  contributions: 'Fil de discussion : export « Données brutes » (JSON, XML) seulement',
   reactions: 'Réactions personnelles',
   bookmarkedBy: 'Favoris personnels',
   views: 'Lectures personnelles',

@@ -3,14 +3,17 @@
  * (PERT via canvas + inlining des styles). Utilisées par ExportDropdownButton dans chaque vue.
  * Champs exportés (CSV, Excel, PDF données) : choisis par l'utilisateur (ExportFieldsModal, mémorisés par espace via
  * useExportFields), colonnes dans l'ordre reçu ; liste des champs = registre shared EXPORT_FIELD_REGISTRY, valeurs =
- * EXPORT_FIELD_VALUES ci-dessous. Sans `fields`, tout le registre dans son ordre. Le JSON reste complet (export technique).
+ * EXPORT_FIELD_VALUES ci-dessous. Sans `fields`, tout le registre dans son ordre.
+ * Données brutes (JSON, XML réimportables, 2026-11-27) : exportRawData — fichier produit par l'API (lib/rawExportApi.ts),
+ * remplace l'ancien export JSON à plat (pas plus utile qu'un CSV).
  */
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toPng } from 'html-to-image';
-import type { Item, ItemRelation, ExportFieldId } from '@spok/shared';
-import { VIEW_REGISTRY, EXPORT_FIELD_IDS, getExportFieldLabel, formatExternalRefs } from '@spok/shared';
+import type { Item, ItemRelation, ExportFieldId, RawExportFileFormat } from '@spok/shared';
+import { VIEW_REGISTRY, EXPORT_FIELD_IDS, getExportFieldLabel, formatExternalRefs, RAW_EXPORT_FILE_FORMATS } from '@spok/shared';
+import { fetchRawExport } from './rawExportApi';
 import type { ViewMode } from '../stores/viewMode';
 
 export function sanitizeFilename(name: string): string {
@@ -104,23 +107,12 @@ export function exportCSV(items: Item[], filename: string, fields: readonly Expo
   downloadFile('﻿' + csv, `${filename}.csv`, 'text/csv;charset=utf-8');
 }
 
-export function exportJSON(items: Item[], filename: string, spaceName: string) {
-  const data = {
-    space: spaceName,
-    exportedAt: new Date().toISOString(),
-    items: items.map(item => ({
-      id: item.id, type: item.type, title: item.title,
-      description: item.description || null,
-      status: item.status || null, priority: item.priority ?? null,
-      parentId: item.parentId || null, assignedToId: item.assignedToId || null,
-      tags: item.tags?.map(t => t.name) || [],
-      dueDate: item.dueDate || null, startDate: item.startDate || null, endDate: item.endDate || null,
-      createdAt: item.createdAt, updatedAt: item.updatedAt,
-      relationsFrom: (item as any).relationsFrom || [],
-      contributions: (item as any).contributions || [],
-    })),
-  };
-  downloadFile(JSON.stringify(data, null, 2), `${filename}.json`, 'application/json');
+/** Export « Données brutes » (JSON ou XML réimportable) : fichier produit par l'API (espace + sous-espaces lisibles). */
+export async function exportRawData(spaceId: string, spaceName: string, format: RawExportFileFormat) {
+  const def = RAW_EXPORT_FILE_FORMATS.find(f => f.id === format)!;
+  const content = await fetchRawExport(spaceId, format);
+  const date = new Date().toISOString().slice(0, 10);
+  downloadFile(content, `${sanitizeFilename(`${spaceName} - données brutes ${date}`)}.${def.extension}`, `${def.mimeType};charset=utf-8`);
 }
 
 export function exportExcel(items: Item[], filename: string, fields: readonly ExportFieldId[] = EXPORT_FIELD_IDS) {
