@@ -9,7 +9,8 @@
  * handleMove : un dépôt refusé par l'API (parent d'un autre espace, cycle) est signalé par window.alert (pas de toast dans l'app).
  * handleAbsorbChildren : même signalement d'un refus (plafond de contenus du parent dépassé, lot 5 contenus multiples).
  * handleAbsorbChildren / handleSplitDescription (2026-11-26) : n'agissent plus tout de suite, ils ouvrent la modale de choix
- * (pendingParts → ItemPartsPickModal dans SpacePage) ; confirmParts(selection) envoie les enfants / sections cochés.
+ * (pendingParts → ItemPartsPickModal dans SpacePage) ; confirmParts(selection) envoie les enfants cochés, ou pour
+ * Éclater les H2 / H3 cochés et la destination des contenus (DescriptionSplitRequest, @spok/shared).
  * statuses : statuts de la communauté (référentiels). handleInlineUpdate (Kanban, menu ⋯, listes) applique au changement de
  * statut les mêmes règles de dates que la fiche via lib/statusChange.ts (« Non défini » efface début et fin) ; annuler la
  * propagation rétablit statut et dates d'avant.
@@ -23,7 +24,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { Item, ItemType, StatusConfig, Tag } from '@spok/shared';
+import type { DescriptionSplitRequest, Item, ItemType, StatusConfig, Tag } from '@spok/shared';
 import { itemsApi } from '../lib/api';
 import { statusChangeFields } from '../lib/statusChange';
 import { itemUrl, type ItemOpenMode } from '../lib/itemOpenMode';
@@ -548,8 +549,8 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
   }, []);
 
   const splitMutation = useMutation({
-    mutationFn: ({ id, itemSpaceId, sections }: { id: string; itemSpaceId: string; sections?: number[] }) =>
-      itemsApi.splitByHeadings(itemSpaceId, id, sections),
+    mutationFn: ({ id, itemSpaceId, choice }: { id: string; itemSpaceId: string; choice?: DescriptionSplitRequest }) =>
+      itemsApi.splitByHeadings(itemSpaceId, id, choice),
     onSuccess: (_, { id, itemSpaceId }) => {
       setPendingParts(null);
       queryClient.invalidateQueries({ queryKey: ['items', spaceId] });
@@ -562,12 +563,12 @@ export function useSpaceActions({ spaceId, allItems, communityId, communitySpace
     setPendingParts({ mode: 'split', id });
   }, []);
 
-  // Confirmation de la modale de choix : indices de sections (split) ou ids d'enfants (absorb)
-  const confirmParts = useCallback((selection: number[] | string[]) => {
+  // Confirmation de la modale de choix : H2 / H3 / contenus (split) ou ids d'enfants (absorb)
+  const confirmParts = useCallback((selection: DescriptionSplitRequest | string[]) => {
     if (!pendingParts) return;
     const itemSpaceId = resolveItemSpaceId(pendingParts.id);
     if (pendingParts.mode === 'split') {
-      splitMutation.mutate({ id: pendingParts.id, itemSpaceId, sections: selection as number[] });
+      splitMutation.mutate({ id: pendingParts.id, itemSpaceId, choice: selection as DescriptionSplitRequest });
     } else {
       absorbChildrenMutation.mutate({ id: pendingParts.id, itemSpaceId, childIds: selection as string[] });
     }
