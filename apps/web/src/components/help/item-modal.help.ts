@@ -1,11 +1,11 @@
 /* Aide utilisateur de la fiche d'un élément (ItemEditModal), écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le « ? »
    (HelpButton), le tour (usePageTourPulse) et le mode Aide : `elements` est exporté, shellZones.ts en dérive les zones item-* correspondantes (posées
    en data-devzone, d'où noZone ici). Registre help/pageHelp.ts.
-   hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Afficher).
+   hints.copySheet / copySheetDone : infobulle HelpHint du bouton « Copier la fiche » (pied de la modale et mode Lire).
    hints.copyThumbnail / copyThumbnailDone / copyThumbnailDownloaded / copyThumbnailError : bouton « Copier la vignette » (mêmes endroits).
    Lot 5 contenus multiples : copySheet et annonce copy-sheet-all-contents (élément actions) — tous les contenus copiés.
-   hints.readMode / readModeUnsaved / editMode / sheetMode / composeMode / composeModeUnsaved : sélecteur Afficher / Modifier / Composer (data-tour item-mode-switch) ;
-   hints.print : Imprimer du mode Afficher.
+   hints.readMode / readModeUnsaved / editMode / composeMode / composeModeUnsaved : sélecteur Lire / Modifier / Composer (ItemModeSwitch, data-tour item-mode-switch) ;
+   hints.print : Imprimer du mode Lire.
    hints.unsavedLeave / unsavedSaveAndLeave : boutons de la confirmation de fermeture (useUnsavedGuard) ; annonce unsaved-save-and-leave sans date.
    Lot 4 (panneau compact) : texte de l'élément dates, hints.datesSummary, annonce item-panel-compact (élément dates, sans date) ; fields lus en rappel au survol des libellés.
    Lot 3 (deux colonnes) : textes champs et historique, hints.actionCopyId / copyIdDone, annonce item-two-columns (élément champs, sans date).
@@ -19,7 +19,7 @@
    Aide par section (2026-11-12) : chaque élément est aussi lu par le « ? » de sa section (help/ElementHelp, posé dans
    ItemEditModal) ; hints.sectionHelp = phrase du « ? » compact de l'en-tête. La composition d'un article (panneau, gestes)
    est sur sa page depuis le 2026-11-26 : son aide est dans pages/help/article.help.ts ; ici seulement composeMode /
-   openArticleUnsaved / openArticleRead (bouton « Composer » de la fiche).
+   openArticleUnsaved (bouton « Composer » de la fiche). Vocabulaire unique (2026-11-26) : annonce item-modes-common-sheet sans date.
    Annonce item-section-help sans date : la session MEP la date. Annonce `item-types-simplified` (lot 4 contenus multiples) sans date : la session MEP la date. La clé `contentTypes` de l'élément est lue par ItemEditModal : ne pas la renommer.
    Élément statut : bouton « Passer à … » du menu ⋮ (pas de fiche propre au menu) ; annonce item-menu-next-status sans date (2026-11-20). */
 import type { HelpEntry } from '../../help/types';
@@ -47,12 +47,15 @@ export const elements = {
   },
   modes: {
     title: 'Modes de la fiche',
-    short: 'Afficher, Modifier ou Composer.',
-    text: 'Afficher présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer. Modifier (ou Fiche si vous n\'avez pas le droit de modifier) revient à la fiche complète. Composer ouvre l\'espace de travail de l\'élément, au même endroit pour tous, et la fiche se ferme : la page d\'un article, où l\'on place ses blocs à la souris, ou le canevas d\'un process (« Lire l\'article » ou « Afficher le process » si vous ne pouvez que le lire). Il est grisé tant que l\'élément n\'est pas enregistré dans ce type ou qu\'une modification attend. Le menu ⋮ des vues propose directement « Afficher » ou « Ouvrir ».',
+    short: 'Lire, Modifier ou Composer.',
+    text: 'Les trois affichages d\'un élément, avec les mêmes mots partout (fiche, page d\'un article, canevas d\'un process, menu ⋮). Lire présente l\'élément comme un document : description mise en forme, contenus (images, schémas) en grand, prête à copier ou imprimer ; pour un article, Lire montre ses blocs ; pour un process, son canevas en consultation (sans grille). Modifier revient à la fiche complète, avec tous ses champs. Composer ouvre, dans la fiche en plein écran, l\'atelier d\'un article (placer ses blocs à la souris) ou d\'un process (poser et relier des éléments) : la vue et sa barre restent derrière ; il est grisé tant que l\'élément n\'est pas enregistré dans ce type ou qu\'une modification attend. Sans droit de modifier, seul Lire est proposé.',
     target: '[data-tour="item-mode-switch"]',
     noZone: true,
     side: 'bottom',
-    changes: [{ id: 'item-section-help', kind: 'evolution', text: 'Chaque section de la fiche a son propre « ? », qui explique cette seule section. Le « ? » en haut à droite garde le tutoriel et le mode Aide.', date: '2026-11-11' }],
+    changes: [
+      { id: 'item-section-help', kind: 'evolution', text: 'Chaque section de la fiche a son propre « ? », qui explique cette seule section. Le « ? » en haut à droite garde le tutoriel et le mode Aide.', date: '2026-11-11' },
+      { id: 'item-modes-common-sheet', kind: 'evolution', text: 'Un seul vocabulaire partout : Lire, Modifier, Composer — dans la fiche, sur la page d\'un article, sur le canevas d\'un process et dans les menus. « Afficher », « Ouvrir » et « Fiche » disparaissent.', date: '2026-11-27' },
+    ],
   },
   // Présent dans tous les modes ; fiche réduite, les étapes Type → Relations n'apparaissent qu'une fois dépliée (Tags : toujours)
   champs: {
@@ -168,7 +171,7 @@ export const elements = {
   tags: {
     title: 'Tags',
     short: 'Les étiquettes de l\'élément.',
-    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Afficher. Sont proposés en trois colonnes, une par portée : Globaux (communs à tout SPOK), Communauté, et Espace — d\'abord « Cet espace », puis une section par espace parent. Cliquez un tag pour l\'ajouter, ou tapez pour filtrer les trois colonnes (flèches haut et bas, puis Entrée). Une colonne vide affiche « Aucun tag ». Un tag créé en tapant appartient à l\'espace de l\'élément : il est proposé dans cet espace et tous ses sous-espaces, pas ailleurs.',
+    text: 'Classez avec des tags, pour retrouver et filtrer l\'élément (ex. « bug » pour une anomalie, « config » pour une configuration). Toujours visibles, fiche réduite ou complète, et en couleur en mode Lire. Sont proposés en trois colonnes, une par portée : Globaux (communs à tout SPOK), Communauté, et Espace — d\'abord « Cet espace », puis une section par espace parent. Cliquez un tag pour l\'ajouter, ou tapez pour filtrer les trois colonnes (flèches haut et bas, puis Entrée). Une colonne vide affiche « Aucun tag ». Un tag créé en tapant appartient à l\'espace de l\'élément : il est proposé dans cet espace et tous ses sous-espaces, pas ailleurs.',
     changes: [
       { id: 'item-tags-always-visible', kind: 'evolution', text: 'Les tags sont toujours visibles dans la fiche, même réduite, et en couleur en mode Afficher. Un tag créé dans un espace de communauté est partagé par tous ses espaces.', date: '2026-11-11' },
       { id: 'item-tags-space-scope', kind: 'evolution', text: 'Tags d\'espace de retour : un tag créé depuis la fiche appartient à l\'espace et à ses sous-espaces. Le sélecteur range les tags par portée : globaux, communauté, espace.', date: '2026-11-12' },
@@ -181,7 +184,7 @@ export const elements = {
   references: {
     title: 'Références externes',
     short: 'Les identifiants de l\'élément dans d\'autres outils.',
-    text: 'Notez où l\'élément existe ailleurs, sur une ligne : « Appli1 : Réf1 | appli2 : réf2 » — le nom de l\'outil, deux-points, la référence, et une barre verticale entre deux références (ex. « Jira : PROJ-12 | Salesforce : 0000575747 »). Enregistrées avec « Enregistrer », affichées avec le nom de l\'outil en gras, reprises dans le mode Afficher et « Copier la fiche », et retrouvées par la recherche (une partie suffit).',
+    text: 'Notez où l\'élément existe ailleurs, sur une ligne : « Appli1 : Réf1 | appli2 : réf2 » — le nom de l\'outil, deux-points, la référence, et une barre verticale entre deux références (ex. « Jira : PROJ-12 | Salesforce : 0000575747 »). Enregistrées avec « Enregistrer », affichées avec le nom de l\'outil en gras, reprises dans le mode Lire et « Copier la fiche », et retrouvées par la recherche (une partie suffit).',
     target: '[data-tour="item-external-refs"]',
     noZone: true,
     side: 'left',
@@ -280,11 +283,9 @@ export const help: HelpEntry = {
     unsavedLeave:'Quitter sans enregistrer : ferme la fiche et abandonne les modifications en attente. Ce qui était déjà enregistré ne change pas.',
     unsavedSaveAndLeave: 'Enregistrer et quitter : enregistre les modifications puis ferme la fiche. Si l\'enregistrement échoue (élément modifié entre-temps par quelqu\'un d\'autre), la fiche reste ouverte.',
     // Bouton « Composer » commun Article / Process (lib/composeTargets, 2026-11-25)
-    openProcess: 'Composer : ouvre le canevas du process, où l\'on pose des éléments de tous vos espaces, on les range en couloirs et on les relie. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
-    openProcessRead: 'Afficher le process : ouvre son canevas en lecture. La fiche se ferme ; son titre, dans l\'en-tête du canevas, la rouvre.',
+    openProcess: 'Composer : le canevas du process devient modifiable, ici dans la fiche : on y pose des éléments de tous vos espaces, on les range en couloirs et on les relie.',
     openProcessUnsaved: 'Le canevas du process s\'ouvrira par « Composer » une fois l\'élément enregistré avec le type « Process ».',
-    openArticleUnsaved:'Enregistrement de l\'article… « Composer » (choix et mise en page des blocs, sur la page de l\'article) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
-    openArticleRead: 'Lire l\'article : ouvre sa page de lecture. La fiche se ferme.',
+    openArticleUnsaved:'Enregistrement de l\'article… « Composer » (choix et mise en page des blocs) s\'active dès qu\'il est enregistré avec le type « Article », sans modification en attente.',
     copySheet: 'Copier la fiche : met dans le presse-papier le titre, les champs renseignés, tous les contenus (images, fichiers, liens, schémas), la description, les enfants, relations et contributions. Collée dans Word, un mail ou Notion, elle garde sa mise en forme et ses images ; un fichier joint devient un lien vers le fichier. Dans un éditeur de texte simple, c\'est la version Markdown (adresses des images). Rien n\'est modifié dans SPOK.',
     copySheetDone: 'Fiche copiée',
     copyThumbnail: 'Copier la vignette : met dans le presse-papier une image PNG de l\'élément (type, statut, titre, image ou début de la description, espace, dates, assigné), à coller dans Teams, Slack, un mail ou PowerPoint. L\'image reflète la version enregistrée. Rien n\'est modifié dans SPOK.',
@@ -292,12 +293,11 @@ export const help: HelpEntry = {
     copyThumbnailDownloaded: 'Le navigateur a refusé la copie : image téléchargée.',
     copyThumbnailError: 'Vignette impossible à créer. Réessayez.',
     print: 'Imprimer : ouvre la fiche dans une fenêtre d\'impression (ou d\'enregistrement en PDF). Rien n\'est modifié dans SPOK.',
-    readMode: 'Afficher : l\'élément en lecture, mis en page comme un document (images et schémas en grand, puis fichiers et liens). Rien ne peut y être modifié.',
+    readMode: 'Lire : l\'élément mis en page comme un document (images et schémas en grand, puis fichiers et liens). Rien ne peut y être modifié.',
     readModeUnsaved: 'Enregistrez d\'abord vos modifications : la lecture montre la version enregistrée.',
     editMode: 'Modifier : la fiche complète, avec tous les champs modifiables.',
-    composeMode: 'Composer : ouvre la page de l\'article en composition, où vous ajoutez, placez, dimensionnez et retirez ses blocs à la souris (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place. La fiche se ferme.',
+    composeMode: 'Composer : ici dans la fiche, ajoutez, placez, dimensionnez et retirez les blocs de l\'article à la souris (éléments existants mis bout à bout). Les éléments eux-mêmes restent à leur place.',
     composeModeUnsaved: 'Enregistrez d\'abord vos modifications pour utiliser « Composer ».',
-    sheetMode: 'Fiche : tous les champs de l\'élément, en lecture seule (vous n\'avez pas le droit de le modifier).',
   },
   fields: {
     startEnd: 'Début et fin : la période pendant laquelle l\'élément a lieu (barre du Gantt, calendrier).',

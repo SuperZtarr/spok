@@ -18,11 +18,17 @@ describe('buildSheetActionGroups', () => {
     expect(groups[3].actions[0].variant).toBe('danger')
   })
 
-  it('sans droit : partage et épingle seulement', () => {
+  it('sans droit : partage, épingle et « non lu » (marque personnelle, comme le menu contextuel)', () => {
     expect(ids(buildSheetActionGroups(all(), { canEdit: false, isBookmarked: true }))).toEqual([
       ['print', 'exportPdf', 'copySheet', 'copyThumbnail', 'copyId'],
-      ['bookmark'],
+      ['bookmark', 'markUnread'],
     ])
+  })
+
+  it('libellés du registre commun (vocabulaire unique)', () => {
+    const flat = buildSheetActionGroups(all(), { canEdit: true, isBookmarked: false }).flatMap((g) => g.actions)
+    expect(flat.find((a) => a.id === 'splitDescription')?.label).toBe('Éclater en sous-éléments')
+    expect(flat.find((a) => a.id === 'duplicate')?.label).toBe('Dupliquer vers un espace')
   })
 
   it('gestionnaire absent : entrée retirée (visiteur sans épingle, vue sans fusion)', () => {

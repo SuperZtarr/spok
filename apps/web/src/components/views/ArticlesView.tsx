@@ -1,7 +1,8 @@
 /*
  * Vue Articles : les éléments de type ARTICLE de l'espace (et de ses espaces enfants liés) en cartes, titre et chapeau
- * (décision Thomas 2026-11-06 : un accès direct à la lecture). Un clic ouvre la page de lecture (ArticlePage), avec
- * retour à cette vue ; le menu ⋮ donne la fiche et ses actions. La composition se fait sur la page de l'article (Lire | Composer, 2026-11-26).
+ * (décision Thomas 2026-11-06 : un accès direct à la lecture). Un clic ouvre la fiche de l'article en « Lire » (ses
+ * blocs), la vue restant derrière ; « Composer » de la fiche ou du menu ⋮ ouvre la composition dans la fiche (2026-11-26).
+ * Sans onOpen fourni : la page de lecture (ArticlePage), avec retour à cette vue.
  * Props : items (déjà filtrés par SpacePage : type, statut, texte), portalGroups, callbacks du menu ⋮ comme les autres vues.
  * Aide : components/views/help/articles.help.ts.
  */
@@ -40,8 +41,9 @@ export function ArticlesView({ items, canEdit = true, canEditItem, portalGroups,
     [portalGroups],
   );
 
+  // Clic : la fiche de l'article en « Lire » (la vue reste derrière, 2026-11-26) ; à défaut, sa page de lecture
   const open = (article: Item, spaceId: string) =>
-    navigate(articlePageUrl(spaceId, article.id), { state: articleReturnState(location) });
+    callbacks.onOpen ? callbacks.onOpen(article.id, 'read') : navigate(articlePageUrl(spaceId, article.id), { state: articleReturnState(location) });
 
   const card = (article: Item, spaceId: string, withMenu: boolean) => {
     const chapeau = htmlToText(article.description);

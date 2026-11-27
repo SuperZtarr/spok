@@ -58,4 +58,5 @@ export const SHELL_ZONES: Record<string, HelpZone> = {
   'item-lecture-contenu': { title: 'Contenu', text: 'Description, éléments enfants (cliquables), relations et contributions, en lecture seule — le même contenu que celui copié par « Copier la fiche ».' },
   'item-resume': { title: 'Résumé des champs', text: 'Les champs renseignés mais masqués dans la fiche réduite. Cliquez pour afficher tous les champs.' },
   'item-medias': { title: 'Contenus', text: 'Les images, fichiers, liens et schémas de l\'élément, plusieurs de chaque sorte, quel que soit son type : « + Ajouter » en joint un nouveau.' },
+  'item-composer': { title: 'Composer', text: 'L\'atelier de l\'élément, dans la fiche en plein écran : la composition à la souris d\'un article (panneau à gauche, blocs à glisser et à dimensionner) ou le canevas modifiable d\'un process. Les éléments eux-mêmes restent à leur place.' },
 };

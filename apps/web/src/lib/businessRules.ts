@@ -151,8 +151,8 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     id: 'item-contents-zone',
     category: 'type',
     appliesToValues: [],
-    trigger: "Fiche d'un élément (Modifier ou Afficher), quel que soit son type sauf Article",
-    effect: "Une zone « Contenus » sous la description (et sous le bloc Question) remplace les blocs média propres aux types Lien, Diagramme, Image et Document : « + Ajouter » joint un fichier, une image, un lien ou un schéma, plusieurs de chaque sorte, enregistrés tout de suite (hors « Enregistrer »). Masquée sur un Article (ses blocs l'affichent autrement) ; affichage seul pour un lecteur ou une copie de séance verrouillée ; un élément pas encore enregistré ne reçoit pas de contenu. En mode Afficher, les contenus remplacent le média unique et s'affichent en grand après la description (contenus multiples, lot 2, décision Thomas 2026-11-08)",
+    trigger: "Fiche d'un élément (Modifier ou Lire), quel que soit son type sauf Article",
+    effect: "Une zone « Contenus » sous la description (et sous le bloc Question) remplace les blocs média propres aux types Lien, Diagramme, Image et Document : « + Ajouter » joint un fichier, une image, un lien ou un schéma, plusieurs de chaque sorte, enregistrés tout de suite (hors « Enregistrer »). Masquée sur un Article (ses blocs l'affichent autrement) ; affichage seul pour un lecteur ou une copie de séance verrouillée ; un élément pas encore enregistré ne reçoit pas de contenu. En mode Lire, les contenus remplacent le média unique et s'affichent en grand après la description (contenus multiples, lot 2, décision Thomas 2026-11-08)",
     location: 'apps/web/src/components/contents/ItemContentsSection.tsx, apps/web/src/components/ItemEditModal.tsx (mediaSection), apps/web/src/components/ItemReadView.tsx',
   },
   {
@@ -426,9 +426,9 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'compose-button-common',
-    page: 'Fiche d\'un élément (sélecteur Afficher / Modifier / Composer)',
+    page: 'Fiche d\'un élément, page d\'un article, canevas d\'un process (sélecteur Lire / Modifier / Composer)',
     trigger: 'Ouvrir la fiche d\'un article ou d\'un process',
-    effect: "Un seul bouton « Composer », à la même place, pour les types qui ont un espace de travail (décision Thomas 2026-11-25) : Article = sa page en composition (2026-11-26) ; Process = canevas ; la fiche se ferme ; pour qui peut modifier l'élément — un lecteur voit « Lire l'article » / « Afficher le process » au même endroit. Grisé tant que l'élément n'est pas enregistré dans ce type (phrase sous la Description) ou qu'une modification attend. Plus de lien « Ouvrir le process » ailleurs dans la fiche",
+    effect: "Un seul bouton « Composer », à la même place, pour les types qui ont un espace de travail (décision Thomas 2026-11-25) : Article = composition à la souris ; Process = canevas modifiable ; dans la fiche en plein écran, pour qui peut modifier l'élément (2026-11-26). Sur la page d'un article et le canevas de la vue Process, le même sélecteur ; « Modifier » y ouvre la fiche (plus de titre cliquable). Grisé tant que l'élément n'est pas enregistré dans ce type (phrase sous la Description) ou qu'une modification attend. Plus de lien « Ouvrir le process » ailleurs dans la fiche",
     location: 'apps/web/src/lib/composeTargets.ts (registre et règles) ; apps/web/src/components/ItemEditModal.tsx (sélecteur de modes)',
   },
   {
@@ -489,7 +489,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'article-columns-beside',
-    page: 'Article (lecture, fiche « Afficher », impression ; composition sur la page)',
+    page: 'Article (lecture, fiche en Lire, impression ; composition sur la page)',
     trigger: 'Bloc glissé sur le bord gauche ou droit d\'un autre, ou bord tiré (composition à la souris, 2026-11-26)',
     effect: "L'article est une suite de lignes : un bloc déposé sur le bord d'un autre rejoint sa ligne, 3 blocs au plus (sinon le dépôt est refusé) ; une ligne qui gagne ou perd un bloc repart à parts égales, un bloc resté seul reprend la pleine largeur. Largeur d'un bloc seul : 1/3, 1/2, 2/3, 3/4 ou pleine, centré ; dans une ligne, part réglée en tirant le trait entre deux blocs (par pas de 5 %, 20 % au moins). Plus d'image flottante à gauche / droite : les anciennes deviennent une ligne image 40 % + texte (scripts/migrate-article-layout.ts). La ligne prend le décalage de hiérarchie de son premier bloc. Sous 640 px, tout s'empile en pleine largeur",
     location: '@spok/shared utils/articleLayout.ts ; apps/web/src/components/article/articleLayout.ts (applyDrop, resizePair, snapSingleWidth), ArticleFlow.tsx, ArticleComposer.tsx ; apps/api/src/routes/item-article.ts (PUT …/layout, DELETE) ; champs article_blocks.beside, width',
@@ -498,7 +498,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'article-screens',
     page: 'Article : fiche et page de lecture',
     trigger: "Ouverture d'un article : vue Articles, menu ⋮, sélecteur de la fiche, adresse",
-    effect: "La page (/spaces/:spaceId/articles/:itemId) sert à lire, imprimer et partager, et à composer (sélecteur Lire | Composer, seulement pour qui peut modifier l'article ; ?mode=composition sans ce droit montre la lecture — 2026-11-26) ; on y arrive par un clic sur l'article dans toute vue d'espace (seule exception à « un clic ouvre la fiche » ; le menu ⋮ garde « Afficher » et « Ouvrir » vers la fiche), par « Lire l'article » du menu ⋮, par « Composer » de la fiche ou par un lien, et son retour ramène à la vue d'origine. La fiche sert à consulter sans quitter la vue (Afficher) et à changer les champs (Modifier) ; un ancien lien de fiche ?mode=composition rouvre la fiche en lecture",
+    effect: "La page (/spaces/:spaceId/articles/:itemId) sert à lire, imprimer et partager, et à composer (sélecteur Lire | Modifier | Composer — Modifier et Composer seulement pour qui peut modifier l'article ; ?mode=composition sans ce droit montre la lecture — 2026-11-26) ; on y arrive par un clic sur l'article dans toute vue d'espace (seule exception à « un clic ouvre la fiche » ; le menu ⋮ garde « Lire », « Modifier » et « Composer »), par « Lire » du menu ⋮ du menu ⋮, par « Composer » de la fiche ou par un lien, et son retour ramène à la vue d'origine. Sa fiche s'ouvre par « Modifier » (menu ⋮, sélecteur de la page) pour changer ses champs ; un ancien lien de fiche ?mode=composition rouvre la fiche en lecture",
     location: 'apps/web/src/pages/SpacePage.tsx (openItemFromView), apps/web/src/pages/ArticlePage.tsx, apps/web/src/components/ItemEditModal.tsx, apps/web/src/components/views/ArticlesView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/lib/itemOpenMode.ts',
   },
   {
@@ -587,7 +587,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'copy-sheet-all-contents',
-    page: "Fiche d'un élément (ItemEditModal, mode Afficher) — « Copier la fiche »",
+    page: "Fiche d'un élément (ItemEditModal, mode Lire) — « Copier la fiche »",
     trigger: 'Copie de la fiche dans le presse-papier',
     effect: "Tous les contenus à l'adresse sûre sont copiés, avant la description, rangés Images, Fichiers, Liens, Schémas : images et schémas intégrés (PNG si possible), fichiers en liens nommés, liens tels quels ; une image de la description déjà présente dans les contenus n'est pas répétée. La vignette copiée garde un seul visuel (lot 5 contenus multiples)",
     location: 'apps/web/src/lib/itemClipboard.ts (buildContents, itemSheetToClipboardHtml)',
@@ -629,7 +629,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   },
   {
     id: 'item-thumbnail-copy',
-    page: "Modale d'un élément (Afficher et Modifier)",
+    page: "Modale d'un élément (Lire et Modifier)",
     trigger: 'Clic sur « Copier la vignette »',
     effect: "Une image PNG de 600 px (double résolution, toujours en thème clair) part dans le presse-papier : type, statut, priorité, titre, miniature de la vignette commune (première image, sinon premier schéma — règle item-vignette-format), sinon début de la description, puis premier fichier ou site du premier lien, nombre des autres contenus écrit en toutes lettres (« 2 fichiers »), espace, échéance ou dates, assigné. Elle reflète la version enregistrée. Image illisible : la vignette montre la description. Presse-papier refusé : le PNG est téléchargé, avec un message. Rien n'est modifié dans SPOK",
     location: 'apps/web/src/lib/itemThumbnail.ts, apps/web/src/components/ItemThumbnailCard.tsx, apps/web/src/components/ItemEditModal.tsx',
@@ -658,9 +658,9 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
   {
     id: 'item-open-mode-default',
     page: "Modale d'un élément (toutes les pages qui l'ouvrent)",
-    trigger: "Ouverture d'un élément : menu ⋮ « Afficher » / « Ouvrir », clic dans une vue, adresse ?item=…[&mode=lecture]",
-    effect: "« Afficher » (ou &mode=lecture dans l'adresse) ouvre la vue lecture ; « Ouvrir » ouvre la fiche. Sans mode demandé (clic simple, lien sans mode) : fiche si l'espace est modifiable par l'utilisateur, lecture sinon (visiteur anonyme, membre en lecture seule). Le sélecteur Afficher / Modifier (Fiche sans droit d'édition) bascule à tout moment ; vers Afficher il est bloqué tant que la fiche a des modifications non enregistrées (la lecture montre la version enregistrée). Le mode est conservé en naviguant d'élément en élément dans la modale, remis au défaut à la fermeture. La vue lecture affiche exactement la fiche copiée par « Copier la fiche »",
-    location: 'apps/web/src/lib/itemOpenMode.ts, apps/web/src/components/ItemEditModal.tsx (readMode), apps/web/src/components/ItemReadView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/pages/SpacePage.tsx',
+    trigger: "Ouverture d'un élément : menu ⋮ « Lire » / « Modifier » / « Composer », clic dans une vue, adresse ?item=…[&mode=lecture]",
+    effect: "Vocabulaire unique (décision Thomas 2026-11-26, registre constants/itemActions.ts) : Lire = la restitution (fiche en document ; blocs d'un article ; canevas d'un process en consultation, sans grille), Modifier = la fiche et ses champs, Composer = l'atelier d'un article ou d'un process — mêmes mots, même sélecteur (ItemModeSwitch) dans la fiche, sur la page d'un article et sur le canevas d'un process, et dans les deux menus (⋮ et « Actions »). Sans droit de modifier : seulement Lire (plus de « Fiche » en lecture seule). Tout se passe dans la fiche, la vue et sa barre restant derrière (décision Thomas 2026-11-26) : Composer ouvre l'atelier d'un article ou d'un process dans la fiche en plein écran. Sans mode demandé (clic simple, lien sans mode) : fiche si l'espace est modifiable par l'utilisateur, lecture sinon ; un article ou un process s'ouvre en Lire. La page d'un article (liens partagés, impression) et la vue Process (liste « Tous les process ») restent accessibles. Vers Lire, le sélecteur est bloqué tant que la fiche a des modifications non enregistrées (la lecture montre la version enregistrée). Le mode est conservé en naviguant d'élément en élément dans la modale, remis au défaut à la fermeture. La lecture affiche exactement la fiche copiée par « Copier la fiche »",
+    location: 'apps/web/src/constants/itemActions.ts (registre), apps/web/src/components/ui/ItemModeSwitch.tsx, apps/web/src/lib/itemOpenMode.ts, apps/web/src/lib/composeTargets.ts, apps/web/src/components/ItemEditModal.tsx (readMode), apps/web/src/components/ItemReadView.tsx, apps/web/src/lib/itemMenuGroups.ts, apps/web/src/components/itemSheetActions.ts, apps/web/src/pages/ArticlePage.tsx, apps/web/src/components/views/ProcessView.tsx, apps/web/src/pages/SpacePage.tsx',
   },
   {
     id: 'interface-mode-context-override',
@@ -834,7 +834,7 @@ export const PAGE_BUSINESS_RULES: PageBusinessRule[] = [
     id: 'item-external-refs',
     page: "Fiche d'un élément (ItemEditModal), champ Références externes",
     trigger: "Saisie de la ligne « Appli1 : Réf1 | appli2 : réf2 » puis « Enregistrer »",
-    effect: "La ligne est découpée sur « | » en entrées (une par outil) ; dans chaque entrée, le texte avant le premier « : » est le nom de l'outil (facultatif). Espaces normalisés, entrées vides et doublons (sans casse) retirés, au plus 20 entrées de 200 caractères (au-delà : refus). La liste remplace l'ancienne en bloc. Affichage : nom de l'outil en gras, « | » entre les entrées ; repris dans le mode Afficher, « Copier la fiche », le résumé de la fiche réduite et l'historique ; la recherche trouve l'élément par une partie d'une référence. Copie de séance verrouillée : non modifiable (décision Thomas 2026-11-12). Duplication : chaque copie reprend les références de l'original. Fusion et « Absorber les enfants » : l'élément gardé conserve les siennes et reçoit celles de la source / des enfants à la suite, sans doublon ; au-delà de 20 entrées, refus (400) avant toute écriture. MCP : create_item / update_item acceptent externalRefs (remplace toute la liste), get_item les affiche (2026-11-13). Copie de séance (sessionCopy) : références non reprises",
+    effect: "La ligne est découpée sur « | » en entrées (une par outil) ; dans chaque entrée, le texte avant le premier « : » est le nom de l'outil (facultatif). Espaces normalisés, entrées vides et doublons (sans casse) retirés, au plus 20 entrées de 200 caractères (au-delà : refus). La liste remplace l'ancienne en bloc. Affichage : nom de l'outil en gras, « | » entre les entrées ; repris dans le mode Lire, « Copier la fiche », le résumé de la fiche réduite et l'historique ; la recherche trouve l'élément par une partie d'une référence. Copie de séance verrouillée : non modifiable (décision Thomas 2026-11-12). Duplication : chaque copie reprend les références de l'original. Fusion et « Absorber les enfants » : l'élément gardé conserve les siennes et reçoit celles de la source / des enfants à la suite, sans doublon ; au-delà de 20 entrées, refus (400) avant toute écriture. MCP : create_item / update_item acceptent externalRefs (remplace toute la liste), get_item les affiche (2026-11-13). Copie de séance (sessionCopy) : références non reprises",
     location: 'packages/shared/src/constants/externalRefs.ts, apps/api/src/routes/items.ts (externalRefsInput), apps/api/src/routes/search.ts, apps/api/src/routes/item-bulk.ts (bulk-duplicate), apps/api/src/routes/item-merge.ts + apps/api/src/utils/externalRefsMerge.ts (merge, absorb-children), packages/mcp-core/src/tools.ts, apps/web/src/components/ExternalRefsField.tsx, apps/web/src/components/ItemEditModal.tsx (externalRefsText)',
   },
   {

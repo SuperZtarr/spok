@@ -8,11 +8,10 @@
  * Copier l'identifiant (2026-11-13, lot 3) : gardé ici ; depuis le 2026-11-18 l'identifiant est aussi affiché dans le pied,
  * avec « Copier le lien » (ItemEditModal, règle item-share-link).
  * Fonction pure : l'appelant fournit les droits, les gestionnaires et les textes ; un gestionnaire absent retire l'entrée.
+ * Libellés et icônes : registre constants/itemActions.ts, le même que le menu contextuel (vocabulaire unique, 2026-11-26).
+ * « Marquer comme non lu » : pour tout utilisateur connecté (marque personnelle), comme dans le menu contextuel.
  */
-import {
-  Printer, FileDown, ClipboardCopy, Image as ImageIcon, Hash, Bookmark, EyeOff, Copy, FolderInput, FolderPlus,
-  ArrowDownToLine, Scissors, Merge, LayoutTemplate, ListTree, Trash2,
-} from 'lucide-react';
+import { itemAction, type ItemActionId } from '../constants/itemActions';
 import type { ItemAction, ItemActionGroup } from './ui/ItemActionMenu';
 
 export interface SheetActionHandlers {
@@ -47,33 +46,34 @@ export interface SheetActionOptions {
 
 export function buildSheetActionGroups(h: SheetActionHandlers, o: SheetActionOptions): ItemActionGroup[] {
   const hint = (id: string) => o.hints?.[id];
-  const entry = (id: string, label: string, icon: ItemAction['icon'], onClick: (() => void) | undefined, extra: Partial<ItemAction> = {}): ItemAction[] =>
-    onClick ? [{ id, label, icon, onClick, hint: hint(id), ...extra }] : [];
+  // Libellé et icône : registre ITEM_ACTIONS (id du registre = id de l'entrée, sauf épingle / désépingle)
+  const entry = (id: ItemActionId, onClick: (() => void) | undefined, extra: Partial<ItemAction> = {}, registryId: ItemActionId = id): ItemAction[] =>
+    onClick ? [itemAction(registryId, onClick, { id, hint: hint(id), ...extra })] : [];
 
   const share: ItemAction[] = [
-    ...entry('print', 'Imprimer', Printer, h.print),
-    ...entry('exportPdf', 'Exporter en PDF', FileDown, h.exportPdf),
-    ...entry('copySheet', 'Copier la fiche', ClipboardCopy, h.copySheet),
-    ...entry('copyThumbnail', 'Copier la vignette', ImageIcon, h.copyThumbnail, { disabled: o.thumbnailBusy }),
-    ...entry('copyId', 'Copier l\'identifiant', Hash, h.copyId),
+    ...entry('print', h.print),
+    ...entry('exportPdf', h.exportPdf),
+    ...entry('copySheet', h.copySheet),
+    ...entry('copyThumbnail', h.copyThumbnail, { disabled: o.thumbnailBusy }),
+    ...entry('copyId', h.copyId),
   ];
   const organise: ItemAction[] = [
-    ...entry('bookmark', o.isBookmarked ? 'Retirer des épingles' : 'Épingler', Bookmark, h.toggleBookmark),
+    ...entry('bookmark', h.toggleBookmark, {}, o.isBookmarked ? 'unbookmark' : 'bookmark'),
+    ...entry('markUnread', h.markUnread),
     ...(o.canEdit ? [
-      ...entry('markUnread', 'Marquer comme non lu', EyeOff, h.markUnread),
-      ...entry('duplicate', 'Dupliquer vers un espace', Copy, h.duplicate),
-      ...entry('move', 'Déplacer vers un espace', FolderInput, h.move),
-      ...entry('convertToSpace', 'Convertir en espace', FolderPlus, h.convertToSpace),
+      ...entry('duplicate', h.duplicate),
+      ...entry('move', h.move),
+      ...entry('convertToSpace', h.convertToSpace),
     ] : []),
   ];
   const structure: ItemAction[] = o.canEdit ? [
-    ...entry('absorbChildren', 'Absorber les enfants', ArrowDownToLine, h.absorbChildren),
-    ...entry('splitDescription', 'Éclater en sous-éléments', Scissors, h.splitDescription),
-    ...entry('merge', 'Fusionner avec…', Merge, h.merge),
-    ...entry('saveAsTemplate', 'Enregistrer comme modèle', LayoutTemplate, h.saveAsTemplate),
-    ...entry('insertTemplate', 'Ajouter une structure', ListTree, h.insertTemplate),
+    ...entry('absorbChildren', h.absorbChildren),
+    ...entry('splitDescription', h.splitDescription),
+    ...entry('merge', h.merge),
+    ...entry('saveAsTemplate', h.saveAsTemplate),
+    ...entry('insertTemplate', h.insertTemplate),
   ] : [];
-  const danger: ItemAction[] = o.canEdit ? entry('delete', 'Supprimer', Trash2, h.delete, { variant: 'danger' }) : [];
+  const danger: ItemAction[] = o.canEdit ? entry('delete', h.delete, { variant: 'danger' }) : [];
 
   return [
     { label: 'Partager', actions: share },

@@ -33,7 +33,7 @@ import { ArticleFlow, type BlockPlace } from './ArticleFlow';
 import { ArticleBrowser } from './ArticleBrowser';
 import { ArticleBatchConfirm } from './ArticleBatchConfirm';
 import { applyDrop, dropZone, resizePair, snapSingleWidth, type DropTarget } from './articleLayout';
-import { ElementTray, TrayElsewhereButton } from '../ElementTray';
+import { ElementTray, TRAY_CLASS, TrayActionButton, TrayElsewhereButton, TrayRowButton } from '../ElementTray';
 import { ItemSearchPicker } from '../ItemSearchPicker';
 import { Modal } from '../ui/Modal';
 
@@ -329,8 +329,9 @@ export function ArticleComposer({ spaceId, articleId, article, state }: { spaceI
     block.item?.type === 'UNDEFINED' && block.item.canEdit ? <NoteEditor spaceId={spaceId} articleId={articleId} block={block} /> : undefined;
 
   return (
-    <div className="flex items-start gap-4">
-      <div className="sticky top-0 self-start flex max-h-[75vh]" data-tour="article-tray" data-help-zone="article:panneau">
+    <div className="flex items-stretch gap-4 min-h-full">
+      {/* Panneau « À ajouter » : même forme et mêmes boutons que celui d'un process (ElementTray, 2026-11-26) */}
+      <div className="sticky top-0 self-start flex h-[calc(100vh-14rem)]" data-tour="article-tray" data-help-zone="article:panneau">
         <ElementTray
           items={trayItems}
           canEdit
@@ -338,29 +339,14 @@ export function ArticleComposer({ spaceId, articleId, article, state }: { spaceI
           labels={{ title: 'À ajouter', empty: pageHint('article', 'trayEmpty') ?? '', dragHint: pageHint('article', 'trayDrag') }}
           headerExtra={(<>
             <TrayElsewhereButton onClick={() => setElsewhereOpen(true)} hint={pageHint('article', 'trayElsewhere') ?? ''} />
-            <HelpHint text={pageHint('article', 'addText')} className="block mt-1.5">
-              <button type="button" onClick={() => state.addText.mutate(atEnd())}
-                className="w-full inline-flex items-center justify-center gap-1 h-7 rounded border border-dashed border-input text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
-                <Type className="w-3.5 h-3.5" /> Texte
-              </button>
-            </HelpHint>
-            <HelpHint text={pageHint('article', 'trayMultiple')} className="block mt-1.5">
-              <button type="button" onClick={() => setBrowserOpen(true)}
-                className="w-full inline-flex items-center justify-center gap-1 h-7 rounded border border-dashed border-input text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
-                <ListChecks className="w-3.5 h-3.5" /> Sélection multiple…
-              </button>
-            </HelpHint>
+            <TrayActionButton onClick={() => state.addText.mutate(atEnd())} hint={pageHint('article', 'addText') ?? ''} icon={Type} label="Texte" />
+            <TrayActionButton onClick={() => setBrowserOpen(true)} hint={pageHint('article', 'trayMultiple') ?? ''} icon={ListChecks} label="Sélection multiple…" />
           </>)}
           rowAction={(i) => (
-            <HelpHint text={pageHint('article', 'trayAdd')} className="inline-flex flex-shrink-0">
-              <button type="button" onClick={() => add(i.id, { kind: 'end' })} aria-label={`Ajouter « ${i.title || 'Sans titre'} » à la fin`}
-                className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground opacity-60 group-hover:opacity-100 hover:bg-background hover:text-foreground">
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-            </HelpHint>
+            <TrayRowButton onClick={() => add(i.id, { kind: 'end' })} hint={pageHint('article', 'trayAdd') ?? ''} icon={Plus} label={`Ajouter « ${i.title || 'Sans titre'} » à la fin`} />
           )}
           defaultCollapsed={narrow}
-          className="w-56 border border-border rounded-md"
+          className={TRAY_CLASS}
         />
       </div>
 

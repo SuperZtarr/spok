@@ -3,11 +3,13 @@
  * Ouvrir, Modifier, Organiser, Danger. Point unique — cf. skill spok-menu avant modification.
  * « Marquer comme non lu » (groupe Ouvrir) : markItemUnread, sans callback à câbler ; présent pour tout utilisateur
  * connecté (même sans droit d'édition), absent pour un visiteur anonyme (lu via useAuthStore.getState()).
- * Groupe Ouvrir : « Afficher » (onOpen(id, 'read'), modale en mode lecture) et « Ouvrir » (onOpen(id, 'edit'), fiche
- * modifiable selon les droits) — pour tout le monde ; à défaut d'onOpen, onEdit sert d'« Ouvrir » (pas d'Afficher).
- * « Lire l'article » (groupe Ouvrir) : sur un article (option item), page de lecture avec retour à la vue d'origine ; via
- * appNavigate, ce menu étant construit hors des hooks. Les vues passent toujours { item } pour que l'action apparaisse.
- * L'ancienne entrée « Modifier » (doublon d'Ouvrir) est retirée (décision Thomas 2026-10-23).
+ * Vocabulaire unique (décision Thomas 2026-11-26) : libellés et icônes lus dans le registre constants/itemActions.ts
+ * (itemAction), le même que le menu « Actions » de la fiche et le sélecteur Lire | Modifier | Composer.
+ * Groupe Ouvrir : « Lire » — Article / Process (option item) : leur page (lecture de l'article avec retour à la vue
+ * d'origine, canevas en consultation) via appNavigate, ce menu étant construit hors des hooks ; autre élément :
+ * onOpen(id, 'read') ; « Modifier » (onOpen(id, 'edit'), à défaut onEdit) seulement si canEdit ; « Composer » sur un
+ * Article / Process si canEdit (leur page en composition). Les vues passent toujours { item } pour que Lire et
+ * Composer trouvent le type.
  * Section « Séance » (Ajouter à la préparation / Présenter en séance) : ajoutée d'office si une séance live active
  * le permet (liveItemActions, lu via useActiveLiveSessionStore.getState()), indépendamment de canEdit.
  * Sous-menu « Statut » : seulement les statuts permis pour le type de l'item (statusesForType, @spok/shared) — une
@@ -19,8 +21,10 @@
  * fait sans confirmation ; hasHeadings dérive de hasDescriptionHeadings (@spok/shared).
  */
 import { hasDescriptionHeadings, nextStatusForType, statusesForType, type StatusConfig } from '@spok/shared';
-import { ArrowRight, Pencil, CheckSquare, Plus, UserPlus, Merge, ArrowDownToLine, Copy, FolderInput, FolderPlus, Trash2, Scissors, ExternalLink, BookOpen, EyeOff, Circle, Newspaper } from 'lucide-react';
-import { articlePageUrl, articleReturnState, type ItemOpenMode } from './itemOpenMode';
+import { ArrowRight, CheckSquare, Circle } from 'lucide-react';
+import { articleReturnState, type ItemOpenMode } from './itemOpenMode';
+import { workspaceOf } from './composeTargets';
+import { itemAction } from '../constants/itemActions';
 import { appNavigate } from './appNavigate';
 import type { ItemActionGroup, ItemAction } from '../components/ui/ItemActionMenu';
 import { activityApi } from './api';
@@ -57,7 +61,7 @@ export const hasChildItems = (item?: object | null) => {
 };
 
 export interface ItemMenuCallbacks {
-  /** Ouvre la modale de l'item dans le mode demandé (Afficher = 'read', Ouvrir = 'edit') */
+  /** Ouvre la fiche de l'élément dans le mode demandé (Lire = 'read', Modifier = 'edit') */
   onOpen?: (id: string, mode?: ItemOpenMode) => void;
   onOpenInNewTab?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -84,7 +88,7 @@ export interface ItemMenuOptions {
   extraSections?: Array<{ label?: string; actions: ItemAction[] }>;
   // spaceId de l'item courant (pour addChild multi-espace)
   itemSpaceId?: string;
-  // Élément du menu : son type et son espace (« Lire l'article » sur un article)
+  // Élément du menu : son type et son espace (Lire / Composer d'un Article ou d'un Process)
   item?: { type?: string; spaceId?: string | null };
   // Permissions : false = masquer toutes les actions d'écriture (delete, move, merge...)
   canEdit?: boolean;
@@ -117,25 +121,34 @@ export function buildItemMenuGroups(
   // Groupe 1 — Ouvrir (toujours visible ; « non lu » réservé aux connectés : un anonyme ne modifie rien)
   const isLoggedIn = !!useAuthStore.getState().user;
   const openFiche = onOpen ? () => onOpen(itemId, 'edit') : onEdit ? () => onEdit(itemId) : null;
-  const articleSpaceId = item?.type === 'ARTICLE' ? item.spaceId : null;
+  // Article / Process : Lire et Composer mènent à leur page (composeTargets)
+  const workspace = item?.spaceId ? workspaceOf(item.type) : undefined;
+  const goTo = (url: string) => () => appNavigate(url, { state: articleReturnState(window.location) });
+  // Vue sans onOpen : onEdit ouvre la fiche, en lecture pour qui ne peut pas modifier → c'est alors « Lire »
+  // Lire / Composer s'ouvrent dans la fiche (2026-11-26, la vue et sa barre restent derrière) ; à défaut d'onOpen, la
+  // page de l'article ou le canevas du process
+  const read = onOpen ? () => onOpen(itemId, 'read')
+    : workspace ? goTo(workspace.readUrl(item!.spaceId!, itemId))
+    : !canEdit && onEdit ? () => onEdit(itemId) : null;
+  const compose = workspace ? (onOpen ? () => onOpen(itemId, 'compose') : goTo(workspace.composeUrl(item!.spaceId!, itemId))) : null;
   const group1: ItemAction[] = [
-    ...(articleSpaceId ? [{ id: 'read-article', label: "Lire l'article", icon: Newspaper, onClick: () => appNavigate(articlePageUrl(articleSpaceId, itemId), { state: articleReturnState(window.location) }) }] : []),
-    ...(onOpen ? [{ id: 'view', label: 'Afficher', icon: BookOpen, onClick: () => onOpen(itemId, 'read') }] : []),
-    ...(openFiche ? [{ id: 'open', label: 'Ouvrir', icon: Pencil, onClick: openFiche }] : []),
-    ...(onOpenInNewTab ? [{ id: 'open-new-tab', label: 'Ouvrir dans un nouvel onglet', icon: ExternalLink, onClick: () => onOpenInNewTab(itemId) }] : []),
-    ...(isLoggedIn ? [{ id: 'mark-unread', label: 'Marquer comme non lu', icon: EyeOff, onClick: () => { void markItemUnread(itemId); } }] : []),
+    ...(read ? [itemAction('read', read)] : []),
+    ...(canEdit && openFiche ? [itemAction('edit', openFiche)] : []),
+    ...(canEdit && compose ? [itemAction('compose', compose)] : []),
+    ...(onOpenInNewTab ? [itemAction('openNewTab', () => onOpenInNewTab(itemId), { id: 'open-new-tab' })] : []),
+    ...(isLoggedIn ? [itemAction('markUnread', () => { void markItemUnread(itemId); }, { id: 'mark-unread' })] : []),
   ];
 
-  // Groupe 2 — Modifier (write) : Absorber, Éclater, Fusionner (la fiche s'ouvre par « Ouvrir »)
+  // Groupe 2 — Structure (écriture) : Absorber, Éclater, Fusionner (la fiche s'ouvre par « Modifier »)
   const group2: ItemAction[] = canEdit ? [
-    ...(onAbsorbChildren ? [{ id: 'absorb', label: 'Absorber les enfants', icon: ArrowDownToLine, onClick: () => onAbsorbChildren(itemId) }] : []),
-    ...(onSplitDescription ? [{ id: 'split', label: 'Éclater en sous-items', icon: Scissors, onClick: () => onSplitDescription(itemId) }] : []),
-    ...(onMerge ? [{ id: 'merge', label: 'Fusionner avec...', icon: Merge, onClick: () => onMerge(itemId) }] : []),
+    ...(onAbsorbChildren ? [itemAction('absorbChildren', () => onAbsorbChildren(itemId), { id: 'absorb' })] : []),
+    ...(onSplitDescription ? [itemAction('splitDescription', () => onSplitDescription(itemId), { id: 'split' })] : []),
+    ...(onMerge ? [itemAction('merge', () => onMerge(itemId))] : []),
   ] : [];
 
   // Groupe 3 — (séparateur) M'assigner, Modifier le statut, Déplacer
   const group3: ItemAction[] = canEdit ? [
-    ...(onSelfAssign ? [{ id: 'self-assign', label: "M'assigner", icon: UserPlus, onClick: () => onSelfAssign(itemId) }] : []),
+    ...(onSelfAssign ? [itemAction('selfAssign', () => onSelfAssign(itemId), { id: 'self-assign' })] : []),
     ...(onUpdateStatus && statusOptions && statusOptions.length > 0 ? [{
       id: 'status',
       // Bouton « Passer à <suivant> » (même onUpdateStatus que le sous-menu) ; statut final → sous-menu seul
@@ -150,21 +163,21 @@ export function buildItemMenuGroups(
         onClick: () => onUpdateStatus(itemId, s.id),
       })),
     }] : []),
-    ...(onMoveToSpace ? [{ id: 'move', label: 'Déplacer vers un espace', icon: FolderInput, onClick: () => onMoveToSpace(itemId) }] : []),
+    ...(onMoveToSpace ? [itemAction('move', () => onMoveToSpace(itemId))] : []),
     ...extraOrganise,
   ] : [];
 
   // Groupe 4 — Ajouter : Ajouter un enfant, Dupliquer
   const group4: ItemAction[] = canEdit ? [
-    ...(onAddChild ? [{ id: 'add-child', label: 'Ajouter un enfant', icon: Plus, onClick: () => onAddChild(itemId, itemSpaceId) }] : []),
-    ...(onDuplicateToSpace ? [{ id: 'duplicate', label: 'Dupliquer vers...', icon: Copy, onClick: () => onDuplicateToSpace(itemId) }] : []),
+    ...(onAddChild ? [itemAction('addChild', () => onAddChild(itemId, itemSpaceId), { id: 'add-child' })] : []),
+    ...(onDuplicateToSpace ? [itemAction('duplicate', () => onDuplicateToSpace(itemId))] : []),
     ...extraChildren,
   ] : [];
 
   // Groupe 5 — Autres : Convertir en espace, Supprimer
   const group5: ItemAction[] = canEdit ? [
-    ...(onConvertToSpace ? [{ id: 'convert', label: 'Convertir en espace', icon: FolderPlus, onClick: () => onConvertToSpace(itemId) }] : []),
-    ...(onDelete ? [{ id: 'delete', label: 'Supprimer', icon: Trash2, onClick: () => onDelete(itemId), variant: 'danger' as const }] : []),
+    ...(onConvertToSpace ? [itemAction('convertToSpace', () => onConvertToSpace(itemId), { id: 'convert' })] : []),
+    ...(onDelete ? [itemAction('delete', () => onDelete(itemId), { variant: 'danger' })] : []),
   ] : [];
 
   return [

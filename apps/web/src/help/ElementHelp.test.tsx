@@ -29,7 +29,7 @@ describe('ElementHelp', () => {
   });
 
   it('garde seulement l\'explication une fois la nouveauté traitée', () => {
-    useHelpAnnouncementsStore.setState({ handled: ['item-section-help'] });
+    useHelpAnnouncementsStore.setState({ handled: (modes.changes ?? []).map((c) => c.id) });
     render(<ElementHelp page="item-modal" element="modes" />);
     fireEvent.click(screen.getByRole('button', { name: `Aide : ${modes.title}` }));
     expect(screen.getByRole('dialog')).not.toHaveTextContent('Évolution');

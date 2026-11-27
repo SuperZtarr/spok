@@ -30,7 +30,10 @@
  * l'article en composition (composeTargets). Grisé si la fiche n'est pas enregistrée en ARTICLE (hint
  * openArticleUnsaved, aussi affiché en phrase visible dans le formulaire) ou a des modifications non enregistrées.
  * Un ancien lien ?mode=composition rouvre la fiche en lecture.
- * Modes (sélecteur Afficher / Modifier dans l'en-tête, « Fiche » sans droit d'édition) : readMode → ItemReadView
+ * Vocabulaire unique (2026-11-26) : sélecteur Lire | Modifier | Composer (ItemModeSwitch, constants/itemActions), le
+ * même que sur la page d'un article et le canevas d'un process ; sans droit de modifier, seulement Lire (plus de
+ * « Fiche ») ; Article / Process enregistrés : Lire et Composer mènent à leur page (composeTargets), la fiche se ferme.
+ * Modes : readMode → ItemReadView
  * (fiche en document, même contenu que « Copier la fiche », pied réduit à Fermer) ; sinon le formulaire ci-dessous.
  * Mode initial : prop initialMode (menu Afficher / Ouvrir, ?mode=lecture), défaut lecture si !canEdit (itemOpenMode.ts).
  * Afficher est bloqué tant qu'il y a des modifications non enregistrées (la lecture montre la version enregistrée).
@@ -138,7 +141,7 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
-import { PenLine, ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Building2, Eye, EyeOff, BookOpen, Workflow } from 'lucide-react';
+import { ArrowDownAZ, GitBranch, MessageSquarePlus, Trash2, Pencil, User, X, Link2, ArrowRight, Plus, ChevronRight, ChevronDown, ChevronUp, Home, Tag as TagIcon, Building2, Eye, EyeOff } from 'lucide-react';
 import { ItemReadView } from './ItemReadView';
 import { ArticleReadBlocks } from './article/ArticleReadBlocks';
 import { QuestionPanel } from './question/QuestionPanel';
@@ -146,8 +149,12 @@ import { QuestionStatusField } from './question/QuestionStatusField';
 import { printArticle } from './article/printArticle';
 import { useSpace } from '../hooks/useSpaces';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { articleReturnState, itemShareUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
+import { itemShareUrl, itemUrl, resolveItemMode, type ItemOpenMode } from '../lib/itemOpenMode';
 import { composeButton } from '../lib/composeTargets';
+import { useArticle } from '../hooks/useArticle';
+import { ArticleComposer } from './article/ArticleComposer';
+import { ProcessView } from './views/ProcessView';
+import { ItemModeSwitch } from './ui/ItemModeSwitch';
 import { Link } from 'react-router-dom';
 import { TagSelector } from './ui/TagSelector';
 import { ReactionBar } from './ReactionBar';
@@ -1094,10 +1101,40 @@ export function ItemEditModal({
     return path;
   }, [item, allItems]);
 
-  // Bouton « Composer » (Article : sa page en composition ; Process : canevas) — règles dans lib/composeTargets
-  const composeBtn = composeButton({ formType: type, savedType: item?.type, canEdit, modeAllowed: false, hasChanges });
-  const readMode = displayMode === 'read';
-  const formMode = !readMode;
+  // « Composer » (Article, Process) : l'atelier s'ouvre DANS la fiche, en plein écran, la vue et sa barre restant
+  // derrière (décision Thomas 2026-11-26) — règles d'activation dans lib/composeTargets
+  const composeBtn = composeButton({ formType: type, savedType: item?.type, canEdit, hasChanges });
+  const composing = displayMode === 'compose' && !!composeBtn && !composeBtn.disabled;
+  const workSpaceId = item?.spaceId ?? spaceId;
+  // Article en composition : ses blocs et leurs écritures (useArticle), chargés seulement dans ce mode
+  const articleState = useArticle(composing && item?.type === 'ARTICLE' ? workSpaceId : undefined, composing && item?.type === 'ARTICLE' ? (itemId ?? undefined) : undefined);
+  // Sans droit de modifier : seulement « Lire » (plus de « Fiche » en lecture seule, vocabulaire unique 2026-11-26)
+  const readMode = !composing && (displayMode !== 'edit' || !canEdit);
+  const formMode = !readMode && !composing;
+  // Canevas d'un process dans la fiche (Lire = consultation sans grille, Composer = modifiable)
+  const processCanvas = (compose: boolean) => item?.type === 'PROCESS' && itemId ? (
+    <ProcessView
+      embedded
+      composing={compose}
+      spaceId={workSpaceId}
+      processId={itemId}
+      processTitle={item.title}
+      spaceItems={allItems}
+      referentiels={referentiels}
+      onOpenItem={(ci) => {
+        if (!ci.spaceId) return;
+        if (ci.spaceId === spaceId && onNavigate) onNavigate(ci.id);
+        else window.open(itemUrl(ci.spaceId, ci.id), '_blank', 'noopener');
+      }}
+      onOpenProcess={() => setDisplayMode('edit')}
+      // « Texte » du panneau et double-clic : nouvel élément vide dans l'espace du process (comme dans la vue)
+      onCreateNote={compose ? async () => {
+        const created = await itemsApi.create(workSpaceId, { type: 'UNDEFINED', title: '', status: '' } as never);
+        queryClient.invalidateQueries({ queryKey: ['items'] });
+        return created as { id: string };
+      } : undefined}
+    />
+  ) : null;
   const articlePrintRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
@@ -1163,7 +1200,8 @@ export function ItemEditModal({
     copyThumbnail,
     copyId: () => { void navigator.clipboard?.writeText(item.id).then(() => { setIdCopied(true); setTimeout(() => setIdCopied(false), 2000); }).catch(() => {}); },
     toggleBookmark: user ? toggleBookmark : undefined,
-    markUnread: () => { void markItemUnread(itemId); onClose(); },
+    // Marque personnelle : tout utilisateur connecté, comme le menu contextuel (registre itemActions, 2026-11-26)
+    markUnread: user ? () => { void markItemUnread(itemId); onClose(); } : undefined,
     duplicate: () => setShowDuplicateModal(true),
     move: () => setShowMoveModal(true),
     convertToSpace: onConvertToSpace ? () => { onConvertToSpace(itemId); onClose(); } : undefined,
@@ -1353,59 +1391,16 @@ export function ItemEditModal({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-3">
-            {!isNewItem && (
-              <div className="flex items-center rounded-md bg-muted p-0.5 flex-shrink-0" role="group" aria-label="Mode d'affichage" data-tour="item-mode-switch">
-                <HelpHint text={itemHints?.[!readMode && hasChanges ? 'readModeUnsaved' : 'readMode']}>
-                  <button
-                    type="button"
-                    aria-pressed={readMode}
-                    disabled={!readMode && hasChanges}
-                    onClick={() => setDisplayMode('read')}
-                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${readMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <BookOpen className="w-3 h-3" />
-                    <span>Afficher</span>
-                  </button>
-                </HelpHint>
-                <HelpHint text={itemHints?.[canEdit ? 'editMode' : 'sheetMode']}>
-                  <button
-                    type="button"
-                    aria-pressed={formMode}
-                    onClick={() => setDisplayMode('edit')}
-                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${formMode ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <Pencil className="w-3 h-3" />
-                    <span>{canEdit ? 'Modifier' : 'Fiche'}</span>
-                  </button>
-                </HelpHint>
-                {/* « Composer » commun aux types à espace de travail (lib/composeTargets) : page de l'article en
-                    composition ou canevas du Process (la fiche se ferme) — même libellé, même place, mêmes règles */}
-                {composeBtn && (
-                  <HelpHint text={itemHints?.[composeBtn.hint]}>
-                    {composeBtn.target.kind === 'page' && !composeBtn.disabled && itemId ? (
-                      <Link
-                        to={composeBtn.target.url(item.spaceId ?? spaceId, itemId)}
-                        state={articleReturnState(window.location)}
-                        onClick={onClose}
-                        data-tour="item-mode-compose"
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors text-muted-foreground hover:text-foreground"
-                      >
-                        {composeBtn.reader ? (item?.type === 'ARTICLE' ? <BookOpen className="w-3 h-3" /> : <Workflow className="w-3 h-3" />) : <PenLine className="w-3 h-3" />}
-                        <span>{composeBtn.label}</span>
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        data-tour="item-mode-compose"
-                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-muted-foreground"
-                      >
-                        <PenLine className="w-3 h-3" />
-                        <span>{composeBtn.label}</span>
-                      </button>
-                    )}
-                  </HelpHint>
-                )}
+            {/* Lire | Modifier | Composer (ItemModeSwitch, registre constants/itemActions — 2026-11-26) : tout se passe
+                dans la fiche ; Article : Lire = ses blocs, Composer = composition à la souris ; Process : son canevas
+                en consultation ou modifiable. */}
+            {!isNewItem && itemId && (
+              <div className="inline-flex" data-tour="item-mode-switch">
+                <ItemModeSwitch entries={[
+                  { mode: 'read', active: readMode, onClick: () => setDisplayMode('read'), disabled: !readMode && hasChanges, hint: itemHints?.[!readMode && hasChanges ? 'readModeUnsaved' : 'readMode'] },
+                  ...(canEdit ? [{ mode: 'edit' as const, active: formMode, onClick: () => setDisplayMode('edit'), hint: itemHints?.editMode }] : []),
+                  ...(composeBtn ? [{ mode: 'compose' as const, active: composing, onClick: () => setDisplayMode('compose'), disabled: composeBtn.disabled, hint: itemHints?.[composeBtn.hint] }] : []),
+                ]} />
               </div>
             )}
               {formMode && (
@@ -1442,6 +1437,8 @@ export function ItemEditModal({
                     </div>
                   ) : item?.type === 'QUESTION' && itemId ? (
                     <QuestionPanel spaceId={item.spaceId ?? spaceId} itemId={itemId} />
+                  ) : item?.type === 'PROCESS' && itemId ? (
+                    <div className="h-[65vh] rounded-md border border-border overflow-hidden">{processCanvas(false)}</div>
                   ) : undefined}
                   contents={item?.type === 'ARTICLE' ? [] : (item?.contents ?? [])}
                   secrets={item?.type !== 'ARTICLE' && itemId ? (
@@ -1451,6 +1448,23 @@ export function ItemEditModal({
                     <ReactionBar spaceId={spaceId} itemId={item.id} summary={(item as any).reactionSummary || []} readOnly={!user} />
                   )}
                 />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
+                <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>
+                {footerActions}
+              </div>
+            </>
+          )}
+
+          {/* Composer : l'atelier de l'article (composition à la souris) ou du process (canevas modifiable), dans la
+              fiche en plein écran — la vue et sa barre restent derrière (2026-11-26). Pied réduit à Fermer. */}
+          {composing && item && (
+            <>
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-devzone="item-composer">
+                {item.type === 'ARTICLE' && articleState.article && (
+                  <ArticleComposer spaceId={workSpaceId} articleId={item.id} article={articleState.article} state={articleState} />
+                )}
+                {item.type === 'PROCESS' && <div className="h-full min-h-[60vh]">{processCanvas(true)}</div>}
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border mt-4 flex-shrink-0" data-tour="item-actions" data-devzone="item-pied">
                 <Button type="button" variant="bordered" onClick={onClose}>Fermer</Button>

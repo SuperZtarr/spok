@@ -3,7 +3,9 @@
    un process unique par espace). Écrite en éléments d'aide (help/elements.ts) : un texte par fonction, repris par le « ? »
    (ViewHelpButton), le tour (useViewOnboarding), le mode Aide (zones data-help-zone="process:*"), l'état vide
    (EmptyHelp mode="process") et les infobulles (clés de `hints`, lues par ProcessView, ProcessesView et
-   ProcessUnplacedPanel). Les messages (refus, confirmations) sont aussi ici : jamais de texte en dur dans les composants. */
+   ProcessUnplacedPanel). Les messages (refus, confirmations) sont aussi ici : jamais de texte en dur dans les composants.
+   Vocabulaire unique (2026-11-26) : élément `modes` (sélecteur Lire | Modifier | Composer, ItemModeSwitch), rappels
+   readMode / composeMode / openProcessSheet ; annonce item-modes-common (sans date, datée à la MEP). */
 import type { HelpEntry } from '../../../help/types';
 import { elementTourSteps, helpFromElements, type HelpElements } from '../../../help/elements';
 import { SPACE_TOOLBAR_STEPS } from '../../../help/commonTourSteps';
@@ -25,16 +27,26 @@ const elements: HelpElements = {
   nouveau: {
     title: 'Nouveau process',
     short: 'Crée un élément Process et ouvre sa fiche.',
-    text: 'Crée un élément de type « Process » dans cet espace et ouvre sa fiche pour lui donner un titre ; enregistrez, puis ouvrez son canevas depuis la liste ou par « Composer » en haut de la fiche. Une fiche refermée vide n\'est pas gardée.',
+    text: 'Crée un élément de type « Process » dans cet espace et ouvre sa fiche pour lui donner un titre ; enregistrez, puis ouvrez son canevas depuis la liste, ou par « Lire » ou « Composer » en haut de la fiche. Une fiche refermée vide n\'est pas gardée.',
     target: '[data-tour="process-new"]',
     noZone: true,
     side: 'bottom',
     changes: [{ id: 'compose-common', kind: 'evolution', text: 'Process : son canevas s\'ouvre par « Composer » en haut de sa fiche, comme les blocs d\'un article ; le titre du canevas rouvre la fiche.', date: '2026-11-25' }],
   },
+  modes: {
+    title: 'Lire, Modifier, Composer',
+    short: 'Passez du canevas en consultation à la fiche ou à la composition.',
+    text: 'Le même bandeau que la page d\'un article : « Retour » vous ramène là d\'où vous avez ouvert le process, puis le titre et le sélecteur. Lire : le canevas en consultation, rien ne bouge (c\'est ainsi qu\'il s\'ouvre). Modifier : la fiche du process (titre, description, statut), le canevas restant derrière. Composer : le canevas modifiable, avec le panneau des éléments à poser. Modifier et Composer n\'apparaissent que si vous pouvez modifier le process.',
+    target: '[data-tour="process-modes"]',
+    noZone: true,
+    side: 'bottom',
+    changes: [{ id: 'item-modes-common', kind: 'evolution', text: 'Un seul vocabulaire partout : Lire, Modifier, Composer, dans la fiche, sur la page d\'un article et sur le canevas d\'un process, comme dans les menus. Un process s\'ouvre en consultation ; « Composer » le rend modifiable, et « Retour » ramène là d\'où vous venez.', date: '2026-11-27' }],
+  },
   panneau: {
-    title: 'Éléments non placés',
+    title: 'À ajouter',
     short: 'Les éléments de l\'espace pas encore sur le canevas.',
-    text: 'Les éléments de l\'espace du process pas encore sur le canevas, rangés par parent comme dans l\'arborescence (chevrons pour replier). Glissez-en un pour le poser ; la recherche aide à le retrouver.',
+    text: 'En composition, les éléments de l\'espace du process pas encore sur le canevas, rangés par parent comme dans l\'arborescence (chevrons pour replier) ; la recherche donne une liste à plat. Glissez-en un pour le poser où vous voulez, ou « + » pour le poser au centre. « Ajouter d\'un autre espace » cherche dans vos autres espaces ; « Texte » crée un nouvel élément posé au centre. Le même panneau que pour composer un article.',
+    changes: [{ id: 'tray-common', kind: 'evolution', text: 'Les panneaux « À ajouter » d\'un article et d\'un process sont maintenant identiques : même place, mêmes boutons (« + », Texte, Ajouter d\'un autre espace).', date: '2026-11-27' }],
     target: '[data-tour="process-unplaced"]',
     side: 'right',
   },
@@ -114,8 +126,15 @@ export const help: HelpEntry = {
   hints: {
     ...derived.hints,
     makeLane: 'Définir comme couloir : cet élément devient une bande où ranger d\'autres éléments',
-    back: 'Tous les process : revient à la liste des process de l\'espace. Le canevas reste tel quel.',
-    openProcessSheet: 'Ouvre la fiche de ce process (titre, description, statut…). Le canevas reste affiché derrière.',
+    // Panneau « À ajouter » (uniformisé avec celui d'un article, 2026-11-26)
+    trayEmpty: 'Tous les éléments de l\'espace sont posés sur le canevas.',
+    trayDrag: 'glissez-le sur le canevas pour le poser, ou « + » pour le poser au centre',
+    trayAdd: 'Pose cet élément au centre de la vue (dans le couloir qui s\'y trouve, le cas échéant). Pour le poser ailleurs, glissez la ligne sur le canevas.',
+    addText: 'Texte : crée un nouvel élément dans l\'espace du process et le pose au centre de la vue ; sa fiche s\'ouvre pour l\'écrire.',
+    back: 'Retour : revient là d\'où vous avez ouvert le process (vue de l\'espace, liste des process, fiche…), sinon à la vue d\'ouverture de l\'espace. Le canevas reste tel quel.',
+    openProcessSheet: 'Modifier : ouvre la fiche de ce process (titre, description, statut…). Le canevas reste affiché derrière.',
+    readMode: 'Lire : le canevas en consultation, sans panneau ni déplacement. Rien n\'y est modifié.',
+    composeMode: 'Composer : le canevas devient modifiable — poser, déplacer, relier, ranger en couloirs. Les changements sont partagés avec tous les membres.',
     newProcess: 'Nouveau process : crée un élément de type « Process » dans cet espace et ouvre sa fiche',
     listEmpty: 'Un process est un canevas où poser des éléments de tous vos espaces, les ranger en couloirs et les relier. Créez-en un avec « Nouveau process », ou donnez le type « Process » à un élément depuis sa fiche.',
     searchElsewhere: 'Ajouter d\'un autre espace : cherche un élément dans vos autres espaces et le pose au centre de la vue. L\'élément reste dans son espace.',

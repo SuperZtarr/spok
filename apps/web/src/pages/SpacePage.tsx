@@ -18,7 +18,7 @@
  * seraient coupées (actions.pendingUnderItemMove).
  * Clic sur un élément dans une vue (openItemFromView) : sa fiche, sauf un article, qui s'ouvre sur sa page de lecture
  * (décision Thomas 2026-11-06) ; le menu ⋮ reste le chemin vers sa fiche. Création et ?item= ouvrent toujours la fiche.
- * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Afficher / Ouvrir, liens partagés) — itemOpenMode.ts.
+ * ?item=<id>[&mode=lecture] ouvre la modale de l'item (menu Lire / Modifier, liens partagés) — itemOpenMode.ts.
  * Le paramètre quitte aussitôt l'adresse : l'élément ouvert est publié dans useOpenItemStore (titre de l'onglet, Layout).
  * Séances live (useLiveSession, sans flux — le flux et la fenêtre en direct sont dans LiveSessionHost/App.tsx) :
  * ouvrir un espace de séance en fait la séance active (setActive) et affiche LiveSessionBar, passé à SpaceToolbar
@@ -121,7 +121,7 @@ import { MergeItemModal } from '../components/MergeItemModal';
 
 import { TYPE_ICONS, getTypeColor } from '../constants/ui';
 import { stripMarkup } from '../lib/bbcode';
-import { articlePageUrl, articleReturnState, itemUrl, parseItemMode, processPageUrl, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
+import { articleReturnState, isComposing, itemUrl, parseItemMode, processPageUrl, ITEM_MODE_PARAM, type ItemOpenMode } from '../lib/itemOpenMode';
 
 // Extracted components and hooks
 import { TreeItem, RootDropZone } from './space-tree-view';
@@ -177,7 +177,7 @@ export function SpacePage() {
   const viewContainerRef = useRef<HTMLDivElement>(null);
   const viewReadyRef = useRef(false); // true once defaultView has been applied for current space
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  // Mode demandé pour la modale (menu Afficher / Ouvrir via ?mode) ; remis à « défaut » à la fermeture
+  // Mode demandé pour la modale (menu Lire / Modifier via ?mode) ; remis à « défaut » à la fermeture
   const [itemOpenMode, setItemOpenMode] = useState<ItemOpenMode | undefined>(undefined);
   const [moveItemId, setMoveItemId] = useState<string | null>(null);
   const [duplicateItemId, setDuplicateItemId] = useState<string | null>(null);
@@ -348,30 +348,52 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   const navigate = useNavigate();
   const location = useLocation();
-  // Clic sur un élément dans une vue : un article s'ouvre sur sa page de lecture, le reste sur sa fiche.
+  // Clic sur un élément dans une vue : sa fiche. Article et Process s'ouvrent en « Lire » (blocs, canevas en
+  // consultation) dans la fiche, la vue et sa barre restant derrière (décision Thomas 2026-11-26).
   const openItemFromView = (itemId: string) => {
     const clicked = itemsData?.data?.find((i) => i.id === itemId);
-    if (clicked?.type === 'ARTICLE') {
-      navigate(articlePageUrl(clicked.spaceId ?? spaceId!, itemId), { state: articleReturnState(location) });
-    } else if (clicked?.type === 'PROCESS') {
-      navigate(processPageUrl(clicked.spaceId ?? spaceId!, itemId));
-    } else {
-      setEditingItemId(itemId);
-    }
+    if (clicked?.type === 'ARTICLE' || clicked?.type === 'PROCESS') setItemOpenMode('read');
+    setEditingItemId(itemId);
   };
 
   // Vue Process : process ouvert sur son canevas (?process=<id>), sinon la liste des process de l'espace
+  // (ouverture : processPageUrl avec l'écran d'origine en state ; fermeture : closeProcess)
   const openProcessId = viewMode === 'process' ? searchParams.get('process') : null;
-  const setOpenProcessId = (id: string | null) => setSearchParams(prev => {
+  // Canevas en composition (« Composer ») ou en consultation (« Lire », défaut) : gardé dans l'adresse (mode=composition,
+  // processComposeUrl), comme la page d'un article — vocabulaire unique 2026-11-26
+  const processComposing = !!openProcessId && isComposing(searchParams.get(ITEM_MODE_PARAM));
+  const setProcessComposing = (on: boolean) => setSearchParams(prev => {
     const next = new URLSearchParams(prev);
-    if (id) next.set('process', id); else next.delete('process');
+    if (on) next.set(ITEM_MODE_PARAM, 'composition'); else next.delete(ITEM_MODE_PARAM);
     return next;
-  });
+  }, { replace: true });
+  // « Retour » du canevas (bandeau commun, 2026-11-26) : là d'où l'on vient (state.from posé à l'ouverture : vue
+  // d'origine, liste des process, fiche…), sinon la vue d'ouverture de l'espace — plus seulement la liste des process
+  // L'origine est mémorisée par process (sessionStorage) dès l'ouverture : les changements d'adresse de la page
+  // (Lire / Composer, fiche ouverte puis fermée) effacent l'état de navigation. Une origine qui est ce process lui-même
+  // (fiche du process → « Lire ») est ignorée, pour ne pas tourner en rond.
+  const fromState = (location.state as { from?: string } | null)?.from;
+  useEffect(() => {
+    if (openProcessId && fromState && !fromState.includes(`process=${openProcessId}`)) {
+      sessionStorage.setItem(`process-return:${openProcessId}`, fromState);
+    }
+  }, [openProcessId, fromState]);
+  const closeProcess = () => {
+    const from = openProcessId ? sessionStorage.getItem(`process-return:${openProcessId}`) : null;
+    if (openProcessId) sessionStorage.removeItem(`process-return:${openProcessId}`);
+    if (from) { navigate(from); return; }
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      ['process', 'view', ITEM_MODE_PARAM].forEach((k) => next.delete(k));
+      return next;
+    });
+  };
   // Élément du canevas : fiche ici s'il est de l'espace, sinon dans un nouvel onglet (son espace) ; un process imbriqué
   // ouvre son propre canevas (openItemFromView)
-  const openCanvasItem = (item: CanvasItem) => {
+  // mode : « Lire » des menus du canevas (fiche en lecture) ; sans mode = ouverture par défaut (clic sur l'élément)
+  const openCanvasItem = (item: CanvasItem, mode?: ItemOpenMode) => {
     if (!item.spaceId) return;
-    if (item.spaceId === spaceId) { openItemFromView(item.id); return; }
+    if (item.spaceId === spaceId) { if (mode) setItemOpenMode(mode); openItemFromView(item.id); return; }
     window.open(item.type === 'PROCESS' ? processPageUrl(item.spaceId, item.id) : itemUrl(item.spaceId, item.id), '_blank', 'noopener');
   };
 
@@ -610,7 +632,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
 
   // Ouvrir la modale si ?item=:itemId (lien "ouvrir dans un nouvel onglet" ou returnTo)
   // Ou restaurer depuis sessionStorage si item était ouvert avant F5 / reconnexion
-  // ?item est traité à CHAQUE apparition (menu « Afficher / Ouvrir » sur un item du même espace) ; la restauration
+  // ?item est traité à CHAQUE apparition (menu « Lire / Modifier » sur un élément du même espace) ; la restauration
   // sessionStorage, elle, une seule fois. &mode=lecture → modale en mode Afficher (itemOpenMode.ts).
   const itemParamHandledRef = useRef(false);
   useEffect(() => {
@@ -993,8 +1015,10 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 searchMatchIds={searchMatchIds}
                 onOpenItem={openCanvasItem}
                 onCreateNote={canEdit ? () => createItemMutation.mutateAsync({ type: 'UNDEFINED', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); return created; }) : undefined}
-                onBack={() => setOpenProcessId(null)}
+                onBack={closeProcess}
                 onOpenProcess={() => setEditingItemId(openProcessId)}
+                composing={processComposing}
+                onComposingChange={setProcessComposing}
                 onStartTour={() => startViewTour(viewMode)}
                 pulseHelp={pulseHelp}
               />
@@ -1004,7 +1028,7 @@ const { startViewTour, pulseHelp } = useViewOnboarding(viewMode);
                 currentSpaceId={spaceId!}
                 canEdit={canEdit}
                 canEditItem={canEditItem}
-                onOpenProcess={(p) => setOpenProcessId(p.id)}
+                onOpenProcess={(p) => navigate(processPageUrl(spaceId!, p.id), { state: articleReturnState(location) })}
                 onCreateProcess={canEdit ? () => { createItemMutation.mutateAsync({ type: 'PROCESS', title: '', status: '' }).then((created: any) => { setEditingItemId(created.id); queryClient.invalidateQueries({ queryKey: ['sidebar-spaces'] }); }); } : undefined}
                 onEdit={(id) => setEditingItemId(id)}
                 onDelete={actions.handleDelete}

@@ -32,7 +32,7 @@ const elements: HelpElements = {
   compose: {
     title: 'Lire | Composer',
     short: "Passez de la lecture à la composition de l'article.",
-    text: "Si vous pouvez modifier l'article, « Composer » le montre tel qu'il se lit, avec un panneau d'éléments à gauche : vous placez les blocs à la souris et voyez tout de suite le résultat. « Lire » revient à la lecture. Le bouton « Composer » de la fiche mène ici.",
+    text: "Si vous pouvez modifier l'article, « Composer » le montre tel qu'il se lit, avec un panneau d'éléments à gauche : vous placez les blocs à la souris et voyez tout de suite le résultat. « Lire » revient à la lecture. On compose aussi depuis la fiche de l\'article (Composer), en plein écran par-dessus la vue.",
     target: '[data-tour="article-compose"]',
     noZone: true,
     side: 'bottom',
@@ -68,6 +68,8 @@ export const help: HelpEntry = {
     empty: 'Cet article est vide. Passez sur « Composer » pour y ajouter des éléments ou du texte.',
     composeEmpty: 'Glissez ici un élément du panneau « À ajouter », ou cliquez sur son « + ».',
     readMode: "Lire : l'article tel que le voient ses lecteurs.",
+    back: "Retour : revient là d'où vous avez ouvert l'article (vue de l'espace, recherche…), sinon au contenu de l'espace.",
+    editMode: "Modifier : ouvre la fiche de l'article (titre, chapeau, statut, dates) dans son espace.",
     print: 'Ouvre l\'impression du navigateur (papier ou PDF), sans le cadre de l\'application.',
     openSource: 'Ouvre la fiche de l\'élément d\'origine.',
     addText: "Crée un nouvel élément de texte dans l'espace de l'article et l'ajoute à la fin ; écrivez directement dans le bloc, puis glissez-le où vous voulez.",

@@ -1,7 +1,11 @@
 /*
  * ProcessView — canevas d'un élément Process (type PROCESS, 2026-11-21 ; avant : un process unique par espace) : on y
  * pose des éléments de tous les espaces lisibles, puis on les relie par de vraies relations SPOK.
- * - En-tête : « Tous les process » (onBack) ; titre cliquable = fiche de l'élément Process (onOpenProcess, 2026-11-21).
+ * - En-tête : bandeau commun ItemPageHeader (le même que la page d'un article, 2026-11-26) — « Retour » (onBack : là
+ *   d'où l'on vient, cf. SpacePage), titre (texte), sélecteur Lire | Modifier | Composer (ItemModeSwitch, le même
+ *   que la fiche et la page d'un article — vocabulaire unique 2026-11-26) : Lire = canevas en consultation (rien ne se
+ *   modifie, panneau masqué), Modifier = fiche de l'élément Process (onOpenProcess), Composer = canevas modifiable
+ *   (composing, onComposingChange) ; Modifier et Composer seulement si canEditProcess. Avant : titre cliquable.
  * - Barre de vue : data-compact="600" (index.css) — libellés masqués (icônes seules) puis défilement si la place manque.
  * - Données : useProcessCanvas(spaceId, processId) — places, couloirs, relations entre éléments montrés, droit de
  *   modifier (canEditProcess). Un élément devenu illisible pour la personne qui l'a posé est une case « indisponible ».
@@ -15,7 +19,7 @@
  *   RelationEditDialog (modifier / supprimer), même règle.
  * - Question (type QUESTION, demande Thomas 2026-11-21) : losange (ProcessNode) ; ses réponses qui renvoient à un
  *   élément posé sont des flèches en pointillés étiquetées (buildQuestionEdges), réponse retenue en vert — non modifiables ici.
- * - Menu ⋯ d'un nœud : Ouvrir (si le lecteur peut l'ouvrir), Définir comme couloir, Retirer du process (l'élément n'est
+ * - Menu ⋯ d'un nœud : Lire (fiche en lecture, si le lecteur peut l'ouvrir ; registre itemActions), Définir comme couloir, Retirer du process (l'élément n'est
  *   pas supprimé). Les autres actions (statut, déplacement…) se font depuis la fiche : l'élément peut venir d'un autre espace.
  * - Clic sur un élément : onOpenItem (SpacePage : fiche dans l'espace courant, ou nouvel onglet pour un autre espace).
  * - Filtres type/statut et recherche de la barre d'espace : surbrillance (dim), jamais de retrait de nœud.
@@ -34,11 +38,11 @@
 import { matchesStatus, matchesType } from '../../lib/itemHighlight';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ReactFlow, ReactFlowProvider, Background, Controls, useNodesState, useReactFlow,
+  ReactFlow, ReactFlowProvider, Background, Controls, useNodesState, useReactFlow, useStore,
   type Connection, type Edge, type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, ExternalLink, Rows3, Undo2, Wand2 } from 'lucide-react';
+import { Rows3, Undo2, Wand2 } from 'lucide-react';
 import { HelpHint } from '../../help/HelpHint';
 import { help as processHelp } from './help/process.help';
 import type { Item, SpaceReferentiels } from '@spok/shared';
@@ -48,6 +52,9 @@ import { useProcessCanvas } from '../../hooks/useProcessCanvas';
 import { useTrackpadPinchZoom } from '../../hooks/useTrackpadPinchZoom';
 import type { ItemActionGroup } from '../ui/ItemActionMenu';
 import { ViewHelpButton } from '../ViewHelpButton';
+import { ItemModeSwitch } from '../ui/ItemModeSwitch';
+import { ItemPageHeader } from '../ui/ItemPageHeader';
+import { itemAction } from '../../constants/itemActions';
 import { EmptyHelp } from '../../help/EmptyHelp';
 import { Modal } from '../ui/Modal';
 import { ConfirmModal } from '../ConfirmModal';
@@ -88,14 +95,20 @@ export interface ProcessViewProps {
   highlightType?: string[];
   highlightStatus?: string[];
   searchMatchIds?: Set<string>;
-  /** Ouvrir un élément du canevas (appelé seulement si le lecteur peut l'ouvrir) */
-  onOpenItem: (item: CanvasItem) => void;
+  /** Ouvre la fiche d'un élément du canevas (seulement si le lecteur peut l'ouvrir) ; mode 'read' depuis « Lire » */
+  onOpenItem: (item: CanvasItem, mode?: 'read' | 'edit') => void;
   /** Double-clic : crée un élément dans l'espace du process et ouvre sa fiche */
   onCreateNote?: () => Promise<{ id: string }>;
-  /** Retour à la liste des process de l'espace */
+  /** « Retour » du bandeau : là d'où l'on vient (vue d'origine), sinon la liste des process (SpacePage) */
   onBack?: () => void;
-  /** Ouvre la fiche de l'élément Process (clic sur le titre de l'en-tête) */
+  /** « Modifier » du sélecteur : ouvre la fiche de l'élément Process */
   onOpenProcess?: () => void;
+  /** Canevas en composition (modifiable) ; sinon en consultation (« Lire ») — mode gardé dans l'adresse par SpacePage */
+  composing?: boolean;
+  onComposingChange?: (composing: boolean) => void;
+  /** Affiché dans la fiche (ItemEditModal, Lire / Composer d'un process — 2026-11-26) : sans bandeau propre, le
+   *  sélecteur de la fiche commande le mode */
+  embedded?: boolean;
   onStartTour?: () => void;
   pulseHelp?: boolean;
 }
@@ -111,14 +124,18 @@ export function ProcessView(props: ProcessViewProps) {
 function ProcessCanvas({
   spaceId, processId, processTitle, spaceItems, referentiels,
   highlightType, highlightStatus, searchMatchIds,
-  onOpenItem, onCreateNote, onBack, onOpenProcess, onStartTour, pulseHelp,
+  onOpenItem, onCreateNote, onBack, onOpenProcess, composing = false, onComposingChange, embedded = false, onStartTour, pulseHelp,
 }: ProcessViewProps) {
   const {
     view, isLoading, isError, move, placeNew, remove, placeMany, addLane, reorderLanes, removeLane, moveLanes,
     createRelation, updateRelation, deleteRelation,
   } = useProcessCanvas(spaceId, processId);
-  const canEdit = !!view?.canEditProcess;
+  // Droit de modifier le process ; le canevas ne se modifie qu'en « Composer » (sinon consultation)
+  const canEditProcess = !!view?.canEditProcess;
+  const canEdit = canEditProcess && composing;
   const { screenToFlowPosition, fitView } = useReactFlow();
+  // Zoom courant : la grille de points compense le zoom pour garder la même taille à l'écran
+  const zoom = useStore((s) => s.transform[2]) || 1;
   const canvasRef = useRef<HTMLDivElement>(null);
   useTrackpadPinchZoom(canvasRef, PROCESS_MIN_ZOOM, PROCESS_MAX_ZOOM);
   const statuses = referentiels?.statuses ?? DEFAULT_REFERENTIELS.statuses;
@@ -239,9 +256,10 @@ function ProcessCanvas({
 
   const openRef = useRef(onOpenItem);
   openRef.current = onOpenItem;
-  const openById = useCallback((id: string) => {
+  // mode : 'read' depuis les menus (« Lire », vocabulaire unique 2026-11-26) ; sans mode = ouverture par défaut (clic)
+  const openById = useCallback((id: string, mode?: 'read' | 'edit') => {
     const item = itemById.get(id);
-    if (item?.canOpen) openRef.current(item);
+    if (item?.canOpen) openRef.current(item, mode);
   }, [itemById]);
 
   const laneNodes = useMemo<ProcessLaneFlowNode[]>(() => laneLayout.lanes.map((l, index) => ({
@@ -275,7 +293,7 @@ function ProcessCanvas({
       || (highlightStatus ? !matchesStatus(highlightStatus, item.status ?? undefined) : false)
       || (searchMatchIds ? !searchMatchIds.has(item.id) : false);
     const menuGroups: ItemActionGroup[] = [
-      ...(item.canOpen ? [{ actions: [{ id: 'process-open', label: 'Ouvrir', icon: ExternalLink, onClick: () => openById(item.id) }] }] : []),
+      ...(item.canOpen ? [{ actions: [itemAction('read', () => openById(item.id, 'read'), { id: 'process-open' })] }] : []),
       ...(canEdit ? [{ actions: [
         ...(item.available ? [{ id: 'process-lane', label: 'Définir comme couloir', icon: Rows3, onClick: () => makeLane(item.id) }] : []),
         { id: 'process-remove', label: 'Retirer du process', icon: Undo2, onClick: () => remove(item.id) },
@@ -397,26 +415,40 @@ function ProcessCanvas({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-1 px-2 py-1 border-b border-border bg-background flex-shrink-0" id="view-header" data-compact="600" data-devzone="contenu-barre-vue">
-        {onBack && (
-          <HelpHint text={PH.back}>
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> <span className="hidden sm:inline vh-label">Tous les process</span>
-            </button>
-          </HelpHint>
+      {/* Bandeau commun des pages de travail (ItemPageHeader) : le même que la page d'un article (2026-11-26) ;
+          « Retour » = là d'où l'on vient (onBack, SpacePage), plus seulement la liste des process */}
+      {embedded ? (
+        // Dans la fiche : le sélecteur de la fiche commande le mode ; ici seulement Réorganiser (en composition)
+        canEdit && (
+          <div className="flex items-center gap-2 px-2 py-1 border-b border-border flex-shrink-0">
+            <div className="flex-1" />
+            <HelpHint text={PH.reorganize}>
+              <button type="button" onClick={reorganize} disabled={placed.length === 0} data-tour="process-reorganize"
+                className="inline-flex items-center gap-1 h-8 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                <Wand2 className="w-4 h-4 flex-shrink-0" /> Réorganiser en processus
+              </button>
+            </HelpHint>
+          </div>
+        )
+      ) : (
+      <ItemPageHeader
+        className="sticky top-0 z-10 px-2 py-1 border-b border-border bg-background flex-shrink-0"
+        containerProps={{ id: 'view-header', 'data-compact': '600', 'data-devzone': 'contenu-barre-vue' }}
+        back={{ onClick: () => onBack?.() }}
+        backHint={PH.back}
+        title={processTitle && <span data-tour="process-title">{processTitle}</span>}
+        modes={(
+          <div className="inline-flex" data-tour="process-modes">
+            <ItemModeSwitch size="sm" entries={[
+              { mode: 'read', active: !composing, onClick: () => onComposingChange?.(false), hint: PH.readMode },
+              ...(canEditProcess ? [
+                ...(onOpenProcess ? [{ mode: 'edit' as const, onClick: onOpenProcess, hint: PH.openProcessSheet }] : []),
+                { mode: 'compose' as const, active: composing, onClick: () => onComposingChange?.(true), hint: PH.composeMode },
+              ] : []),
+            ]} />
+          </div>
         )}
-        {/* Titre = retour à la fiche de l'élément Process (signalement cmwqhjvuf000n7icc1phb14fg, 2026-11-21) */}
-        {processTitle && (onOpenProcess ? (
-          <HelpHint text={PH.openProcessSheet}>
-            <button type="button" onClick={onOpenProcess} data-tour="process-title"
-              className="min-w-0 truncate text-sm font-semibold px-1 rounded hover:bg-accent hover:underline">{processTitle}</button>
-          </HelpHint>
-        ) : <span className="min-w-0 truncate text-sm font-semibold px-1" data-tour="process-title">{processTitle}</span>)}
-        {canEdit && (
+        actions={canEdit && (
           <HelpHint text={PH.reorganize}>
             <button
               type="button"
@@ -424,16 +456,16 @@ function ProcessCanvas({
               disabled={placed.length === 0}
               data-tour="process-reorganize"
               aria-label="Réorganiser en processus"
-              className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              className="inline-flex items-center gap-1 h-8 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
             >
-              <Wand2 className="w-3.5 h-3.5 flex-shrink-0" />
+              <Wand2 className="w-4 h-4 flex-shrink-0" />
               <span className="hidden sm:inline vh-label">Réorganiser en processus</span>
             </button>
           </HelpHint>
         )}
-        <div className="flex-1" />
-        <ViewHelpButton viewMode="process" onStartTour={onStartTour} pulse={pulseHelp} />
-      </div>
+        help={<ViewHelpButton viewMode="process" onStartTour={onStartTour} pulse={pulseHelp} />}
+      />
+      )}
       {notice && (
         <div className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-border bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="status">
           <span className="flex-1">{notice}</span>
@@ -441,7 +473,17 @@ function ProcessCanvas({
         </div>
       )}
       <div className="flex flex-1 min-h-0">
-        <ProcessUnplacedPanel items={unplaced} canEdit={canEdit} onMakeLane={makeLane} onSearchElsewhere={() => setPickerOpen(true)} />
+        {/* Panneau « Non placés » : seulement en composition (en « Lire », le canevas se consulte) */}
+        {canEdit && (
+          <ProcessUnplacedPanel
+            items={unplaced}
+            canEdit={canEdit}
+            onAdd={(id) => { const at = centerOfView(); void tryPlaceNew(id, at.x, at.y, at.laneId); }}
+            onAddText={onCreateNote ? async () => { const at = centerOfView(); const created = await onCreateNote(); void tryPlaceNew(created.id, at.x, at.y, at.laneId); } : undefined}
+            onMakeLane={makeLane}
+            onSearchElsewhere={() => setPickerOpen(true)}
+          />
+        )}
         <div
           ref={canvasRef}
           className="relative flex-1 min-w-0"
@@ -472,7 +514,10 @@ function ProcessCanvas({
             maxZoom={PROCESS_MAX_ZOOM}
             proOptions={{ hideAttribution: true }}
           >
-            <Background gap={16} />
+            {/* Grille de points : repère pour poser, seulement en composition (demande Thomas 2026-11-26) */}
+            {/* Points foncés, de taille et d'espacement fixes à l'écran (demande Thomas « accentue le contraste ») : la
+                bibliothèque réduit les points avec le zoom, et un canevas cadré en vue d'ensemble les rendait invisibles */}
+            {canEdit && <Background gap={18 / zoom} size={2 / zoom} color="#334155" />}
             <Controls showInteractive={false} />
           </ReactFlow>
           {!isLoading && placed.length === 0 && lanes.length === 0 && (

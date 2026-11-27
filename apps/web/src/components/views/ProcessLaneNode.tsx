@@ -3,19 +3,20 @@
  * item de l'espace, où l'on range visuellement des items (les membres ont parentId = id du couloir, x/y relatifs).
  * Titre à gauche (LANE_HEADER_WIDTH) : chevron = replier / déplier (préférence locale, items masqués, compteur ;
  * replié = petite boîte LANE_COLLAPSED_WIDTH × LANE_COLLAPSED_HEIGHT, réduite en hauteur ET en longueur) ;
- * clic sur le nom = fiche de l'item ; menu Ouvrir / Monter / Descendre / Retirer le couloir.
+ * clic sur le nom = fiche de l'item ; menu Lire (fiche en lecture, registre itemActions) / Monter / Descendre / Retirer le couloir.
  * Poignées entrée (gauche) / sortie (droite), reliables si canEdit : les liens vers l'item du couloir (ou vers un
  * membre d'un couloir replié) s'y rattachent ; en tirer une crée une relation avec l'item du couloir (sous-processus).
  * La bande n'est ni déplaçable ni reliable ; sa taille vient de computeLaneLayout (ProcessView).
  * Clics : xyflow rend ce nœud transparent aux clics (pointer-events: none) ; seule la zone de titre les réactive
  * (pointer-events: auto) — ne pas le retirer, sinon le titre et son menu deviennent inaccessibles (bug 2026-10-21).
  * data-lane-body : repère du corps de bande, lu par le double-clic de ProcessView (nouvelle note dans le couloir).
- * Élément Process (2026-11-21) : l'élément du couloir peut venir d'un autre espace (CanvasItem) — « Ouvrir » et le clic
+ * Élément Process (2026-11-21) : l'élément du couloir peut venir d'un autre espace (CanvasItem) — « Lire » et le clic
  * sur le nom seulement si le lecteur peut l'ouvrir ; indisponible → nom « Élément indisponible », non cliquable.
  */
 import { memo } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { itemAction } from '../../constants/itemActions';
 import { ItemActionMenu, type ItemActionGroup } from '../ui/ItemActionMenu';
 import { LANE_HEADER_WIDTH, type CanvasItem } from './process-utils';
 
@@ -32,7 +33,8 @@ export type ProcessLaneData = {
   collapsed: boolean;
   memberCount: number;
   onToggleCollapse: (laneId: string) => void;
-  onOpen?: (itemId: string) => void;
+  /** Ouvre la fiche de l'élément du couloir (titre : ouverture par défaut ; menu « Lire » : mode 'read') */
+  onOpen?: (itemId: string, mode?: 'read' | 'edit') => void;
   onMoveUp: (laneId: string) => void;
   onMoveDown: (laneId: string) => void;
   onRemove: (laneId: string) => void;
@@ -53,7 +55,7 @@ function ProcessLaneNodeComponent({ data }: NodeProps<ProcessLaneFlowNode>) {
   const color = LANE_COLORS[colorIndex % LANE_COLORS.length];
 
   const groups: ItemActionGroup[] = [
-    ...(item.canOpen ? [{ actions: [{ id: 'lane-open', label: 'Ouvrir l\'élément', icon: ExternalLink, onClick: () => onOpen?.(item.id) }] }] : []),
+    ...(item.canOpen ? [{ actions: [itemAction('read', () => onOpen?.(item.id, 'read'), { id: 'lane-open' })] }] : []),
     ...(canEdit ? [{
       actions: [
         { id: 'lane-up', label: 'Monter', icon: ArrowUp, onClick: () => onMoveUp(laneId), disabled: isFirst },

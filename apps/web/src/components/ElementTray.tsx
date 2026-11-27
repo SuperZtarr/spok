@@ -11,6 +11,9 @@
  * le test de couverture de l'aide (help/coverage.test.ts) ne reconnaît que les littéraux.
  * Règle (guider l'utilisateur) : le glisser ne doit jamais être le seul accès — l'appelant fournit une action visible
  * (rowAction ou bouton) qui fait la même chose. Ne pas y mettre de logique propre au Process ou à l'Article.
+ * Uniformité (demande Thomas 2026-11-26) : les deux panneaux s'appellent « À ajouter », ont la même forme (TRAY_CLASS),
+ * les mêmes boutons sous la recherche (TrayActionButton : Ajouter d'un autre espace, Texte, puis ceux du type) et les
+ * mêmes boutons de ligne (TrayRowButton : « + » d'abord, puis ceux du type), visibles de la même façon.
  */
 import { useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Globe, Search } from 'lucide-react';
@@ -58,8 +61,11 @@ export function trayRows<T extends TrayItem>(items: T[], query: string, collapse
   return out;
 }
 
-/** Bouton « Ajouter d'un autre espace » des panneaux (ouvre la recherche ItemSearchPicker de l'appelant). */
-export function TrayElsewhereButton({ onClick, hint }: { onClick: () => void; hint: string }) {
+/** Forme commune des panneaux « À ajouter » (article et process, uniformisés le 2026-11-26) : colonne de gauche */
+export const TRAY_CLASS = 'flex-shrink-0 w-64 border-r border-border';
+
+/** Bouton d'action sous la recherche d'un panneau (même aspect pour toutes les actions, dans tous les panneaux) */
+export function TrayActionButton({ onClick, hint, icon: Icon, label }: { onClick: () => void; hint: string; icon: typeof Globe; label: string }) {
   return (
     <HelpHint text={hint} className="block mt-1.5">
       <button
@@ -67,7 +73,24 @@ export function TrayElsewhereButton({ onClick, hint }: { onClick: () => void; hi
         onClick={onClick}
         className="w-full inline-flex items-center justify-center gap-1 h-7 rounded border border-dashed border-input text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
       >
-        <Globe className="w-3.5 h-3.5" /> Ajouter d'un autre espace
+        <Icon className="w-3.5 h-3.5" /> {label}
+      </button>
+    </HelpHint>
+  );
+}
+
+/** Bouton « Ajouter d'un autre espace » des panneaux (ouvre la recherche ItemSearchPicker de l'appelant). */
+export function TrayElsewhereButton({ onClick, hint }: { onClick: () => void; hint: string }) {
+  return <TrayActionButton onClick={onClick} hint={hint} icon={Globe} label="Ajouter d'un autre espace" />;
+}
+
+/** Bouton d'une ligne du panneau (« + », « Définir comme couloir »…) : même aspect et même visibilité partout */
+export function TrayRowButton({ onClick, hint, icon: Icon, label }: { onClick: () => void; hint: string; icon: typeof Globe; label: string }) {
+  return (
+    <HelpHint text={hint} className="inline-flex flex-shrink-0">
+      <button type="button" onClick={onClick} aria-label={label}
+        className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground opacity-60 group-hover:opacity-100 focus:opacity-100 hover:bg-background hover:text-foreground">
+        <Icon className="w-3.5 h-3.5" />
       </button>
     </HelpHint>
   );
