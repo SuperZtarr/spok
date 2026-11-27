@@ -1,5 +1,7 @@
 /* Liste des communautés avec leurs espaces en arborescence (accueil/communautés).
-   Visibilité de chaque carte : VisibilityPill sur la cover (lue sur visibility, jamais isPublic). */
+   Visibilité de chaque carte : VisibilityPill sur la cover (lue sur visibility, jamais isPublic).
+   Groupes de communautés (2026-11-27) : CommunityGroupSelector en tête ; chaque section ne montre que les communautés
+   du groupe actif (même filtre et même groupe actif que la sidebar, lib/communityGroupFilter). */
 import { useState, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
 import { useDialogFocus } from '../../hooks/useDialogFocus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +13,10 @@ import { CommunityCard } from '../ui/CommunityCard';
 import { VisibilityPill } from '../ui/VisibilityPill';
 import { DevModalBadge } from '../ui/DevModalBadge';
 import { FieldHelp } from '../../help/FieldHelp';
+import { CommunityGroupSelector } from '../CommunityGroupSelector';
+import { useCommunityGroups } from '../../hooks/useCommunityGroups';
+import { useCommunityGroupFilterStore } from '../../stores/communityGroupFilter';
+import { filterCommunitiesByGroup } from '../../lib/communityGroupFilter';
 
 type CreateStep = 'awareness' | 'form';
 
@@ -89,6 +95,9 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
       queryClient.invalidateQueries({ queryKey: ['communities'] });
     },
   });
+
+  const { groups: personalGroups } = useCommunityGroups();
+  const activeGroup = useCommunityGroupFilterStore((s) => s.active);
 
   const joinableCommunities = useMemo(() => {
     if (!publicCommunities) return [];
@@ -186,9 +195,14 @@ export const CommunityListView = forwardRef<CommunityListViewHandle>(function Co
     { title: 'Communautés publiques',  icon: Globe,    iconColor: 'text-green-500',           items: [...publicNonMember, ...joinableCommunities.filter(jc => !publicNonMember.some((p: any) => p.id === jc.id))], renderCard: (c) => c.role === null ? <CommunityCard key={c.id} community={c} /> : renderJoinableCard(c) },
     { title: 'Autres communautés',  icon: ShieldCheck, iconColor: 'text-purple-500',          items: adminViewCommunities, renderCard: (c) => <CommunityCard key={c.id} community={c} /> },
   ];
+  const allCommunityIds = [...new Set(sections.flatMap(s => s.items.map((c: { id: string }) => c.id)))];
+  for (const section of sections) section.items = filterCommunitiesByGroup(section.items, personalGroups, activeGroup);
 
   return (
     <div className="p-4 md:p-6 flex-1 overflow-auto" data-tour="communities-grid" data-help-zone="communities:grille">
+      {user && allCommunityIds.length > 0 && (
+        <CommunityGroupSelector communityIds={allCommunityIds} className="max-w-sm mb-6" />
+      )}
       {sections.every(s => s.items.length === 0) ? (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">

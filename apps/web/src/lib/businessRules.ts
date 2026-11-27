@@ -245,6 +245,14 @@ export const ITEM_BUSINESS_RULES: ItemBusinessRule[] = [
     location: 'apps/api/src/routes/admin/tags.ts (POST /:id/move, GET /:id/move-preview), apps/web/src/pages/admin/MoveTagModal.tsx',
   },
   {
+    id: 'community-groups',
+    category: 'type',
+    appliesToValues: [],
+    trigger: 'Groupes de communautés : sélecteur de la barre latérale et de la page Communautés, modale « Groupes de communautés »',
+    effect: "Chaque utilisateur range les communautés qu'il voit dans ses propres groupes nommés : invisibles des autres, sans effet sur les droits. Une communauté est dans au plus un groupe par utilisateur. Le groupe affiché (Toutes, un groupe, Non classées) filtre la barre latérale (mode global seulement : le mode immersif garde la communauté courante) et la page Communautés ; il est mémorisé sur l'appareil, et un groupe supprimé ramène à Toutes. Supprimer un groupe ne supprime aucune communauté : elles redeviennent non classées (décision Thomas 2026-11-27)",
+    location: 'apps/api/src/routes/community-groups.ts, apps/web/src/lib/communityGroupFilter.ts, apps/web/src/components/CommunityGroupSelector.tsx, apps/web/src/components/CommunityGroupsModal.tsx',
+  },
+  {
     id: 'type-shows-hours-mode',
     category: 'type',
     appliesToValues: ['MEETING'],

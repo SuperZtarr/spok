@@ -75,6 +75,8 @@ model User {
   questionVotes               QuestionVote[]
   itemContentsAdded           ItemContent[]      @relation("ItemContentCreatedBy")
   itemSecrets                 ItemSecret[]       @relation("ItemSecretCreatedBy")
+  communityGroups             CommunityGroup[]
+  communityGroupAssignments   CommunityGroupAssignment[]
 
   @@map("users")
 }
@@ -205,8 +207,45 @@ model Community {
   tags        Tag[]
   invitations Invitation[]
   emails      CommunityEmail[]
+  groupAssignments CommunityGroupAssignment[]
 
   @@map("communities")
+}
+
+// Groupes personnels de communautés (2026-11-27) : chaque utilisateur range les communautés qu'il voit dans ses
+// propres groupes nommés, pour filtrer la sidebar et la liste des communautés quand elles sont trop nombreuses.
+// Propres à l'utilisateur : invisibles des autres, sans effet sur les droits. Supprimer un groupe ne supprime aucune
+// communauté : ses rangements disparaissent (cascade), les communautés redeviennent « non classées ».
+model CommunityGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments CommunityGroupAssignment[]
+
+  @@index([userId])
+  @@map("community_groups")
+}
+
+// Rangement d'une communauté dans un groupe personnel : une communauté est dans au plus un groupe par utilisateur
+// (unique userId+communityId). Table à part de CommunityMembership pour ranger aussi les communautés vues sans en
+// être membre (publiques, invitations).
+model CommunityGroupAssignment {
+  id          String @id @default(cuid())
+  userId      String
+  communityId String
+  groupId     String
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  group     CommunityGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@index([groupId])
+  @@map("community_group_assignments")
 }
 
 model CommunityEmail {

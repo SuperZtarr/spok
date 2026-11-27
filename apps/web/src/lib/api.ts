@@ -11,6 +11,7 @@
  * adminApi.tags : tags globaux et doublons de tags (page /admin/tags, AdminTag).
  * itemsApi.location : espace d'un élément par son identifiant, pour le lien court /items/:id (ItemLinkPage).
  * itemsApi.bulkTags : ajout / retrait de tags sur plusieurs éléments (vue Tags, via useSpaceActions.handleBulkTags).
+ * communityGroupsApi : groupes personnels de communautés — via hooks/useCommunityGroups.
  * searchApi.advanced : totaux typés par le registre des catégories de recherche (SearchCategory, @spok/shared).
  */
 import type {
@@ -1359,6 +1360,29 @@ export const itemTemplatesApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+};
+
+/** Groupe personnel de communautés (filtre de la sidebar et de la liste des communautés). */
+export interface CommunityGroup {
+  id: string;
+  name: string;
+  order: number;
+  communityIds: string[];
+}
+
+// Groupes personnels de communautés — via hooks/useCommunityGroups, pas d'appel direct dans les composants
+export const communityGroupsApi = {
+  list: () => fetchApi<CommunityGroup[]>('/community-groups'),
+  create: (name: string) =>
+    fetchApi<CommunityGroup>('/community-groups', { method: 'POST', body: JSON.stringify({ name }) }),
+  rename: (id: string, name: string) =>
+    fetchApi<{ id: string; name: string }>(`/community-groups/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  reorder: (ids: string[]) =>
+    fetchApi<{ success: boolean }>('/community-groups/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+  delete: (id: string) =>
+    fetchApi<{ success: boolean }>(`/community-groups/${id}`, { method: 'DELETE' }),
+  assign: (communityId: string, groupId: string | null) =>
+    fetchApi<{ success: boolean }>('/community-groups/assign', { method: 'PUT', body: JSON.stringify({ communityId, groupId }) }),
 };
 
 // Tags

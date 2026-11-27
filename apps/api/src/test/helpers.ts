@@ -59,6 +59,8 @@ export function createMockPrisma() {
     communityMembership: mockModel(),
     communityEmail: mockModel(),
     communityEmailRecipient: mockModel(),
+    communityGroup: mockModel(),
+    communityGroupAssignment: mockModel(),
     invitation: mockModel(),
     auditLog: mockModel(),
     refreshToken: mockModel(),

@@ -2,12 +2,19 @@
    Pastille de visibilité + raccourci paramètres groupés en bas à droite de la carte, sous l'image (OWNER ou admin en mode admin ; showActions=false
    pour l'aperçu de CommunitySettingsPage). Boutons dans un Link : preventDefault + stopPropagation.
    Bouton « Masquer / Afficher l'activité » (onMute) : sourdine de la communauté = retrait du fil d'activité seulement,
-   jamais de la cloche — ne pas lui redonner un libellé ou une icône de notification (spec Activité). */
+   jamais de la cloche — ne pas lui redonner un libellé ou une icône de notification (spec Activité).
+   Bouton « Ranger dans un groupe » (2026-11-27, compte connecté, showActions) : ouvre CommunityGroupsModal centrée sur
+   cette communauté. La modale est en portail, mais ses clics remontent l'arbre React jusqu'au Link : le wrapper les arrête. */
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { VisibilityPill } from './VisibilityPill';
 import { useAdminMode } from '../DevDbStatus';
-import { Settings, Users, Crown, User, Eye, EyeOff, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut } from 'lucide-react';
+import { Settings, Users, Crown, User, Eye, EyeOff, Mail, ShieldCheck, FolderOpen, Clock, Bell, BellOff, LogOut, FolderCog } from 'lucide-react';
 import { Button } from './Button';
+import { useAuthStore } from '../../stores/auth';
+import { CommunityGroupsModal } from '../CommunityGroupsModal';
+import { HelpHint } from '../../help/HelpHint';
+import { pageHint } from '../../help/pageHint';
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof Crown; color: string }> = {
   OWNER:      { label: 'Propriétaire', icon: Crown,      color: 'text-amber-500' },
@@ -133,6 +140,8 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
   const showMuteButton = onMute && ['OWNER', 'MEMBER', 'VIEWER'].includes(community.role || '');
   const showLeaveButton = onLeave && community.role === 'MEMBER';
   const canEditSettings = showActions && (community.role === 'OWNER' || adminMode);
+  const isLoggedIn = useAuthStore((s) => !!s.user);
+  const [groupsOpen, setGroupsOpen] = useState(false);
 
   return (
     <Link
@@ -205,6 +214,23 @@ export function CommunityCard({ community, to, onMute, isMutePending, onLeave, i
                 </span>
               )}
               <VisibilityPill visibility={community.visibility} />
+              {showActions && isLoggedIn && (
+                <HelpHint text={pageHint('community-groups', 'ranger')}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setGroupsOpen(true); }}
+                    className="p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Ranger dans un groupe"
+                  >
+                    <FolderCog className="w-4 h-4" />
+                  </button>
+                </HelpHint>
+              )}
+              {groupsOpen && (
+                <span onClick={(e) => e.stopPropagation()}>
+                  <CommunityGroupsModal isOpen onClose={() => setGroupsOpen(false)} focusCommunityId={community.id} />
+                </span>
+              )}
               {canEditSettings && (
                 <button
                   type="button"

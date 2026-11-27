@@ -10,6 +10,9 @@ _(aucun lot en attente)_
 
 ## EN COURS
 
+- 2026-11-27 — MEP : groupes personnels de communautés (2 tables ajoutées par le db push du démarrage, sans perte). Annonce community-groups-new datée. Typecheck OK, TNR 3212/3212.
+- 2026-11-27 — Groupes personnels de communautés (filtre sidebar + page Communautés, modale de gestion) : inscrit PRÊT POUR MEP, NON COMMITÉ. Spec SPOK créée en to_validate (Modales & Overlays, Modèle de données, enfants de Sidebar et CommunitiesListPage).
+
 - 2026-11-27 — MEP : 2 lots (vocabulaire unique Lire | Modifier | Composer ; économie de tokens : TODO dans SPOK, plugins). 3 annonces datées. Typecheck OK, TNR 3186/3186. Skills modifiées (spok-deploy, spok-doc, spok-start) : redémarrer Claude. Toujours en attente de l'accord de Thomas : orphelins anciens à la corbeille (Volumétrie).
 - 2026-11-26 — MEP : 3 lots (éclater / absorber partie par partie, composition des articles sur la page, corbeille du stockage avec table storage_trash créée par le db push du démarrage). 3 annonces datées. Typecheck OK, TNR 3178/3178. APRÈS, sur accord de Thomas : orphelins anciens à la corbeille (Volumétrie). Mise en page des anciens articles : Thomas la reprend lui-même à la main (2026-11-26), ne pas lancer migrate-article-layout.ts. (Statuts des périodes : déjà restaurés le 2026-11-25, voir plus bas.)
 

@@ -25,6 +25,9 @@
  * Favoris et Récents (2026-11-25) : transverses, jamais filtrés par la communauté courante — un seul bloc
  * (favoritesAndRecents) rendu en mode global et en mode communauté immersif.
  * Accueil (2026-11-18) : titre « SPOK — » + menuLabel('home') ; l'ancien store dashboardTab (liste recopiée, code mort) est supprimé.
+ * Groupes de communautés (2026-11-27) : en mode global, CommunityGroupSelector au-dessus des communautés et liste filtrée
+ * par le groupe actif (filteredCommunityGroups). Le mode immersif et currentCommunityGroup lisent la liste complète :
+ * la communauté où l'on est reste trouvée même hors du groupe affiché.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
 import logoUrl from '../assets/logo.png';
@@ -73,6 +76,10 @@ import { useMenuItems } from '../hooks/useMenuItems';
 import { useInterfaceModeStore, MODE_GLOBAL_EXCLUDED, INTERFACE_MODE_LABELS, modeForContext, type InterfaceMode } from '../stores/interfaceMode';
 import { SPACE_VIEW_SECTION_IDS, MODE_REGISTRY, menuLabel, type SpaceWithRole } from '@spok/shared';
 import { modeHint } from '../lib/modeTexts';
+import { CommunityGroupSelector } from './CommunityGroupSelector';
+import { useCommunityGroups } from '../hooks/useCommunityGroups';
+import { useCommunityGroupFilterStore } from '../stores/communityGroupFilter';
+import { filterCommunitiesByGroup } from '../lib/communityGroupFilter';
 
 /** Boutons d'option du mode d'interface (header) : dérivés du registre des modes (MODE_REGISTRY, @spok/shared,
  *  2026-11-13), infobulle générée (description + favoris, lib/modeTexts). Jamais de liste de modes ici. */
@@ -682,6 +689,15 @@ export function Layout() {
     };
   }, [allSpaces, communities]);
 
+  // Filtre par groupe personnel de communautés (mode global seulement, cf. en-tête)
+  const { groups: personalCommunityGroups } = useCommunityGroups();
+  const activeCommunityGroup = useCommunityGroupFilterStore((s) => s.active);
+  const filteredCommunityGroups = useMemo(() => {
+    const kept = new Set(filterCommunitiesByGroup(communityGroups.map((g) => g.community), personalCommunityGroups, activeCommunityGroup).map((c) => c.id));
+    return communityGroups.filter((g) => kept.has(g.community.id));
+  }, [communityGroups, personalCommunityGroups, activeCommunityGroup]);
+  const sidebarCommunityIds = useMemo(() => communityGroups.map((g) => g.community.id), [communityGroups]);
+
   // Favorite & recent spaces (separate memo to avoid coupling with main space memo)
   const favoriteIdKey = JSON.stringify(favoriteIds);
   const favoriteSpaces = useMemo(() => {
@@ -1188,8 +1204,13 @@ export function Layout() {
               </div>
             )}
 
+            {/* Groupe de communautés affiché (groupes personnels) */}
+            {user && sidebarCommunityIds.length > 0 && (
+              <CommunityGroupSelector communityIds={sidebarCommunityIds} className="px-1 pt-1.5 pb-1" />
+            )}
+
             {/* Communities with their spaces */}
-            {communityGroups.map(({ community, spaceTree }, groupIndex) => {
+            {filteredCommunityGroups.map(({ community, spaceTree }, groupIndex) => {
               const isExpanded = expandedCommunityIds.has(community.id);
               const spaceCount = (allSpaces || []).filter(s => s.type !== 'PERSONAL' && s.communityId === community.id).length;
               return (

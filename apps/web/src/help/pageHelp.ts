@@ -28,6 +28,7 @@ import { help as itemContentsHelp } from '../components/help/item-contents.help'
 import { help as liveSessionHelp } from '../components/help/live-session.help';
 import { help as moveToSpaceHelp } from '../components/help/move-to-space.help';
 import { help as duplicateToSpaceHelp } from '../components/help/duplicate-to-space.help';
+import { help as communityGroupsHelp } from '../components/help/community-groups.help';
 import { help as mergeItemHelp } from '../components/help/merge-item.help';
 import { help as itemPartsPickHelp } from '../components/help/item-parts-pick.help';
 import { help as exportFieldsHelp } from '../components/help/export-fields.help';
@@ -80,6 +81,7 @@ export const PAGE_HELP = {
   'export-fields': exportFieldsHelp,
   'move-to-space': moveToSpaceHelp,
   'duplicate-to-space': duplicateToSpaceHelp,
+  'community-groups': communityGroupsHelp,
   article: articleHelp,
   sitemap: sitemapHelp,
   'global-graph': globalGraphHelp,

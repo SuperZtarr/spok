@@ -11,6 +11,7 @@
  * Process (type PROCESS) : canevas servi par routes/item-process.ts, sous /spaces/:id/items/:id/process.
  * /admin/tags : tags globaux et doublons de tags (routes/admin/tags.ts).
  * /items/:id/location : espace d'un élément pour son lien court (routes/item-location.ts, règle item-share-link).
+ * /community-groups : groupes personnels de communautés, filtre de la sidebar (routes/community-groups.ts).
  */
 import 'dotenv/config';
 import * as Sentry from '@sentry/node';
@@ -42,6 +43,7 @@ import { mcpRoutes } from './routes/mcp.js';
 import { authRoutes } from './routes/auth.js';
 import { spacesRoutes } from './routes/spaces.js';
 import { communitiesRoutes } from './routes/communities.js';
+import { communityGroupsRoutes } from './routes/community-groups.js';
 import { invitationsRoutes } from './routes/invitations.js';
 import { adminUsersRoutes } from './routes/admin/users.js';
 import { adminSpacesRoutes } from './routes/admin/spaces.js';
@@ -319,6 +321,7 @@ async function buildApp() {
   await app.register(spacesRoutes, { prefix: '/spaces' });
   await app.register(spacePreferencesRoutes, { prefix: '/spaces' });
   await app.register(communitiesRoutes, { prefix: '/communities' });
+  await app.register(communityGroupsRoutes, { prefix: '/community-groups' });
   await app.register(invitationsRoutes, { prefix: '/invitations' });
   await app.register(adminUsersRoutes, { prefix: '/admin/users' });
   await app.register(adminSpacesRoutes, { prefix: '/admin/spaces' });
