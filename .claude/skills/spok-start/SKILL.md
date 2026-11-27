@@ -35,13 +35,17 @@ description: Démarrer l'environnement de développement SPOK. Déclencher au d�
    - Les anciens `run_broken_*` / `run.old` ne se suppriment que sur demande de Thomas.
    - Port « réservé » (bank 3002 et autres projets) : voir la mémoire windows-port-reservations.
 
+1bis. **Avant tout essai à l'écran, mettre à jour la base locale** (décision Thomas 2026-11-08) — le schéma Prisma
+   change souvent dans les autres sessions : `pnpm dev:stop` (arrêter d'abord la tâche de fond `dev:start`), puis
+   dans `packages/database` `npx prisma db push --accept-data-loss` (vérifier que la cible affichée est
+   `localhost:25432`, jamais la prod), `pnpm db:generate`, puis `pnpm dev:start` comme à l'étape 1.
+
 2. **Ouvrir l'appli dans le navigateur intégré** (outils `mcp__Claude_Browser__*`) : `preview_start` avec
    `url: "http://localhost:3000"`, puis `read_console_messages` (erreurs). Ne pas utiliser le Chrome de Thomas
    (`claude-in-chrome`) sauf demande explicite de sa part.
 
 3. **Lire le contexte de session** (en parallèle) :
    - `docs/session-journal.md` — section EN COURS
-   - `docs/TODO.md` — tâches en attente
    - `docs/ARCHITECTURE.md` — patterns de code, stores, zones fragiles
 
 4. **Présenter un résumé** : ce qui était en cours, ce qui reste à faire, proposer la suite.

@@ -30,10 +30,8 @@ description: Déployer SPOK en production depuis la session MEP (seule session q
      des commits** ; fichier partagé entre un lot prêt et un travail en cours → ne commiter que les lignes du lot.
    - Une autre session a-t-elle des fichiers indexés (`git diff --cached`) ? → ne pas commiter, signaler à Thomas.
 
-3. **Mettre à jour `docs/TODO.md`** — dans le commit du lot
-   - Cocher `[x]` les tâches terminées, avec la **date seule** (pas de hash : `git log` le retrouve, plus de commit
-     « docs: TODO - hash »)
-   - Déplacer vers la section "Terminé" si applicable
+3. **Suivi des tâches = SPOK** (« Bugs et évolutions », décision Thomas 2026-11-26) — `docs/TODO.md` n'est plus tenu
+   - Vérifier que les éléments SPOK du lot sont en `to_validate` (jamais `done` : Thomas valide après test)
 
 4. **Mettre à jour `docs/session-journal.md`**
    - Retirer de « PRÊT POUR MEP » les lots poussés (une ligne dans EN COURS : lot, date, MEP)

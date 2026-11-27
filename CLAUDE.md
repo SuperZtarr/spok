@@ -5,27 +5,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ---
 
 ## Instructions pour Claude
-Ne pas déployer, demander validation
-Ne pas coder, reflechir a la proposition d'une solution 
-Lorsqu'une solution est convenue, proposer un plan a valider avant de coder
+Les règles générales (plan validé avant de coder, micro-correction, commits, confirmations) sont dans le CLAUDE.md
+global. Ici, seulement ce qui est propre à SPOK.
 
-**Micro-correction** (moins d'une vingtaine de lignes, sans nouveau comportement — décision Thomas 2026-10-23) :
-pas de plan à valider ; dire en une phrase ce qui change, puis le faire. Si elle touche un composant, demander à
-Thomas si on actualise ses éléments de documentation (spec SPOK, fiche d'aide) plutôt que de les dérouler d'office.
-Tout le reste (nouveau comportement, plusieurs fichiers, choix d'architecture) : plan validé + trois couches de doc.
+- Micro-correction qui touche un composant : demander si on actualise sa spec SPOK et sa fiche d'aide. Tout autre
+  changement : plan validé + trois couches de doc (skill `spok-dev`).
 
 ### Interdictions absolues
 - Ne JAMAIS modifier des données en production sans demande explicite
-- Ne JAMAIS commiter ou pusher sans demande explicite de l'utilisateur
 - Ne JAMAIS appeler `api.spok.space` directement (curl, fetch, ou tout autre outil)
 - Ne JAMAIS utiliser `isolation: "worktree"` dans l'outil Agent
 - Ne JAMAIS faire `git add -A` (risque d'inclure .env, credentials, binaires)
 
 ### Workflow Git
-- Travailler directement dans `C:\_dev\spok` sur master — pas de worktree
-- Les conversations sont séparées par thème mais partagent la même base de code
-- "commit et push" = commit + `git push origin master` = déploiement Railway prod
-- Tout enchaîner sans pause ni question intermédiaire
+- Directement dans `C:\_dev\spok` sur master, pas de worktree ; sessions séparées par thème, même base de code
+- Push sur `origin/master` = déploiement Railway prod
 
 ### Une seule session fait les MEP (décision Thomas 2026-10-23)
 Plusieurs sessions codent en parallèle dans le même dossier : deux sessions qui commitent se volent leurs fichiers
@@ -68,27 +62,12 @@ Ce fichier documente les patterns de code, les stores existants, les conventions
 
 Format : bloc `/* ... */` ou JSDoc `/** ... */` avant les imports. Une ligne suffit si c'est simple. Ne pas attendre que l'utilisateur le demande — c'est non négociable, au même titre que le TS check.
 
-### Documentation — règles obligatoires
-
-**Toute modification de code passe par la skill `spok-dev`** : elle appelle `spok-doc` avant (spec) et après
-(trois couches : spec SPOK, doc technique dans le code, aide utilisateur dans l'interface avec rappels fonctionnels).
-
-**Consulter avant de coder**
-- Avant toute modification de code sur un composant, page ou comportement : lire l'item de doc correspondant dans SPOK via `mcp__spok__search_items` ou `mcp__spok__get_space`
-- Si l'item n'existe pas → le signaler à l'utilisateur avant de coder
-- La doc décrit l'intention décidée, pas l'implémentation actuelle — si le code diverge de la doc, c'est le code qui a tort, pas la doc
-- Ne jamais déduire le comportement attendu depuis le code seul
-
-**Signaler les divergences**
-- Si le code implémenté ne correspond pas à la doc : le signaler explicitement, ne pas suivre le code silencieusement
-
-**Mettre à jour après avoir codé**
-- Après toute modification qui change un comportement documenté : mettre à jour l'item SPOK correspondant (status `to_validate`, description mise à jour)
-- Granularité : mettre à jour au niveau du composant parent, pas nécessairement chaque sous-item
-
-**Journalisation**
-- `docs/session-journal.md` : écrire après chaque action significative, garder la section EN COURS courte
-- `docs/TODO.md` : mettre à jour dans le commit du lot (date seule, pas de hash — `git log` le retrouve ; plus de commit « docs: TODO - hash »)
+### Documentation et suivi
+- **Toute modification de code passe par la skill `spok-dev`** : spec SPOK consultée avant (elle fait foi, pas le
+  code ; item absent ou divergence → le signaler), trois couches mises à jour après (spec en `to_validate`, doc dans
+  le code, aide dans l'interface), journal.
+- Tâches, bugs, évolutions : uniquement dans SPOK, espace « Bugs et évolutions » (décision Thomas 2026-11-26) —
+  `docs/TODO.md` n'est plus tenu.
 
 ---
 
@@ -161,7 +140,7 @@ scripts/
 - Dev server proxies `/api/*` to the API server (via `VITE_API_PROXY_TARGET`)
 
 ### Database Schema (packages/database/)
-Core models: User, Space (hierarchy), SpaceMembership, Community, CommunityMembership, Item (NOTE/PROJECT/TASK/MEETING/PERIOD/LINK/CONFIG/DOCUMENT/IMAGE/BUG), ItemRelation, Tag, Contribution, AuditLog, RefreshToken, PasswordResetToken
+Core models: User, Space (hierarchy), SpaceMembership, Community, CommunityMembership, Item (UNDEFINED/PROJECT/TASK/MEETING/PERIOD/ARTICLE/QUESTION/PROCESS ; images, fichiers, liens = contenus d'un item), ItemRelation, Tag, Contribution, AuditLog, RefreshToken, PasswordResetToken
 
 ## Environment Setup
 
@@ -179,17 +158,7 @@ Internal packages use `workspace:*` protocol. When importing:
 - `@spok/database` exports Prisma client
 - `@spok/shared` exports shared types/constants
 
-## Dev local
-
-- **PostgreSQL** en Docker (conteneur `spok-postgres-dev`, port 25432, partage entre projets)
-- **API + Web** en local via `pnpm dev` (hot reload natif, pas de Docker)
-- `pnpm dev:start` fait les deux : demarre postgres Docker puis lance `pnpm dev`
-
 ## Production
 
-Deploye sur Railway :
-- **API** : `docker/Dockerfile.api` (Fastify, port 3001)
-- **Web** : `docker/Dockerfile.web` (nginx, build Vite statique)
-- **PostgreSQL** : service Railway
-- Push sur `origin/master` declenche le deploiement automatique
+Railway : API `docker/Dockerfile.api`, Web `docker/Dockerfile.web` (nginx), PostgreSQL service Railway.
 

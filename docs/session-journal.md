@@ -6,15 +6,12 @@
 
 ## PRÊT POUR MEP
 
-> Une seule session (« MEP ») commite et pousse (décision Thomas 2026-10-23). Les autres sessions inscrivent ici
-> chaque lot terminé : nom, fichiers exacts (lignes concernées pour un fichier partagé), tests faits, non vérifié.
-> La session MEP retire le lot une fois poussé.
-
 _(aucun lot en attente)_
 
 ## EN COURS
 
-- 2026-11-26 — MEP : 3 lots (éclater / absorber partie par partie, composition des articles sur la page, corbeille du stockage avec table storage_trash créée par le db push du démarrage). 3 annonces datées. Typecheck OK, TNR 3178/3178. APRÈS, sur accord de Thomas : migrate-article-layout.ts --prod ; orphelins anciens à la corbeille (Volumétrie) ; restore-period-statuses.ts --prod toujours en attente.
+- 2026-11-27 — MEP : 2 lots (vocabulaire unique Lire | Modifier | Composer ; économie de tokens : TODO dans SPOK, plugins). 3 annonces datées. Typecheck OK, TNR 3186/3186. Skills modifiées (spok-deploy, spok-doc, spok-start) : redémarrer Claude. Toujours en attente de l'accord de Thomas : orphelins anciens à la corbeille (Volumétrie).
+- 2026-11-26 — MEP : 3 lots (éclater / absorber partie par partie, composition des articles sur la page, corbeille du stockage avec table storage_trash créée par le db push du démarrage). 3 annonces datées. Typecheck OK, TNR 3178/3178. APRÈS, sur accord de Thomas : orphelins anciens à la corbeille (Volumétrie). Mise en page des anciens articles : Thomas la reprend lui-même à la main (2026-11-26), ne pas lancer migrate-article-layout.ts. (Statuts des périodes : déjà restaurés le 2026-11-25, voir plus bas.)
 
 - 2026-11-26 — Corbeille du stockage (60 jours, restauration, rubrique Stockage de Volumétrie, contenus sauvegardés à la suppression d'espace) : inscrit PRÊT POUR MEP, NON COMMITÉ.
 
